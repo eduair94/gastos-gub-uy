@@ -1,54 +1,96 @@
-import { SELECTORS } from "../config/config";
-import { Logger, ParsedDocument, UrlEntry, UrlExtractor } from "../types/interfaces";
+import { UrlExtractor as IUrlExtractor, Logger, ParsedDocument, UrlEntry } from "../types/interfaces";
+import { ConsoleLogger } from "../utils/logger";
 
 /**
  * URL extractor implementation for government expenditure data
  * Following Single Responsibility Principle - only extracts URLs
  * Following Open/Closed Principle - can be extended for different URL patterns
  */
-export class GovernmentDataUrlExtractor implements UrlExtractor {
-  constructor(private readonly logger: Logger) {}
+export class GovernmentDataUrlExtractor implements IUrlExtractor {
+  private logger: Logger;
+
+  constructor(logger?: Logger) {
+    this.logger = logger || new ConsoleLogger();
+  }
 
   extractUrls(document: ParsedDocument): UrlEntry[] {
-    const urls: UrlEntry[] = [];
-    const downloadLinks = document.findAll(SELECTORS.DOWNLOAD_LINKS);
-
-    this.logger.info(`Found ${downloadLinks.length} potential download links`);
-
-    for (const link of downloadLinks) {
-      const href = link.getAttribute("href");
-      if (!href) {
-        this.logger.warn("Found link without href attribute");
-        continue;
-      }
-
-      const year = this.extractYearFromUrl(href);
-      if (!year) {
-        this.logger.warn(`Could not extract year from URL: ${href}`);
-        continue;
-      }
-
-      const fullUrl = this.buildFullUrl(href);
-      urls.push({ year, url: fullUrl });
-      this.logger.info(`Extracted: ${year} -> ${fullUrl}`);
+    this.logger.info('Extracting URLs from document...');
+    
+    // First try RSS feed format
+    const rssLinks = document.findAll('item link');
+    if (rssLinks.length > 0) {
+      this.logger.info(`Found ${rssLinks.length} RSS item links`);
+      return this.extractFromRssFeed(rssLinks);
     }
+    
+    // If no RSS links, try HTML download links
+    this.logger.info('No RSS feed found, attempting to extract download links from HTML...');
+    return this.extractFromHtmlPage(document);
+  }
 
-    // Sort by year (descending)
-    urls.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+  private extractFromRssFeed(linkElements: any[]): UrlEntry[] {
+    const urls: UrlEntry[] = [];
+    
+    linkElements.forEach((element) => {
+      const url = element.getText()?.trim();
+      if (url) {
+        const year = this.extractYearFromUrl(url);
+        if (year) {
+          urls.push({
+            url,
+            year
+          });
+        }
+      }
+    });
+    
+    this.logger.info(`Successfully extracted ${urls.length} URLs from RSS feed`);
+    return urls;
+  }
 
-    this.logger.info(`Successfully extracted ${urls.length} URLs`);
+  private extractFromHtmlPage(document: ParsedDocument): UrlEntry[] {
+    const urls: UrlEntry[] = [];
+    
+    // Look for download links (typically in buttons or anchor tags with download attribute)
+    const downloadLinks = document.findAll('a[download]');
+    this.logger.info(`Found ${downloadLinks.length} download links`);
+    
+    downloadLinks.forEach((element) => {
+      const url = element.getAttribute('href');
+      if (url && url.includes('.zip')) {
+        // Extract year from the URL or filename
+        const year = this.extractYearFromUrl(url) || this.extractYearFromFilename(url);
+        
+        if (year) {
+          urls.push({
+            url: this.normalizeUrl(url),
+            year
+          });
+        }
+      }
+    });
+    
+    this.logger.info(`Successfully extracted ${urls.length} URLs from HTML page`);
     return urls;
   }
 
   private extractYearFromUrl(url: string): string | null {
-    const match = url.match(SELECTORS.YEAR_PATTERN);
-    return match ? match[1] : null;
+    // Try to find year in URL pattern like "2012", "2013", etc.
+    const yearMatch = url.match(/(\d{4})/);
+    return yearMatch ? yearMatch[1] : null;
   }
 
-  private buildFullUrl(href: string): string {
-    if (href.startsWith("http")) {
-      return href;
+  private extractYearFromFilename(url: string): string | null {
+    const filename = url.split('/').pop() || '';
+    const yearMatch = filename.match(/(\d{4})/);
+    return yearMatch ? yearMatch[1] : null;
+  }
+
+  private normalizeUrl(url: string): string {
+    // If URL is relative, it needs the base domain
+    if (url.startsWith('/')) {
+      return `https://catalogodatos.gub.uy${url}`;
     }
-    return `${SELECTORS.BASE_URL}${href.startsWith("/") ? "" : "/"}${href}`;
+    return url;
   }
 }

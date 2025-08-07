@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { ReleaseModel } from '../../database/release-model'
+import { ReleaseModel } from '../../../shared/models'
 import { Logger } from '../../services/logger-service'
 
 const router = Router()

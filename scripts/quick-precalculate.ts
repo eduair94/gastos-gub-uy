@@ -14,6 +14,7 @@ import {
   SpendingTrendsModel,
   TopEntitiesModel
 } from '../app/server/utils/precalculated-models'
+import { mongoUri } from '../shared/config'
 
 class QuickDataPreCalculator {
   private dataVersion: string
@@ -24,7 +25,6 @@ class QuickDataPreCalculator {
 
   async connectToDatabase() {
     try {
-      const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/gastos-gub'
       await mongoose.connect(mongoUri)
       console.log('✓ Connected to MongoDB')
     } catch (error) {
@@ -91,7 +91,7 @@ class QuickDataPreCalculator {
     
     // Generate sample yearly trends
     const currentYear = new Date().getFullYear()
-    const yearlyTrends = []
+    const yearlyTrends:any[] = []
     
     for (let year = currentYear - 5; year <= currentYear; year++) {
       const baseAmount = 50000000 + (Math.random() * 20000000)
@@ -227,3 +227,4 @@ if (require.main === module) {
 }
 
 export { QuickDataPreCalculator }
+

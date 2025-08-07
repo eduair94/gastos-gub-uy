@@ -159,7 +159,7 @@ The schema analyzer produces detailed schema information:
             "nestedFields": {
               "amount": {
                 "type": "number",
-                "examples": [150000, 75000, 300000]
+                "examples": [150000, 75000, 360000]
               }
             }
           }

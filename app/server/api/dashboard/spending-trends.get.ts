@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
+import { SpendingTrendsModel } from '../../../../shared/models'
 import { connectToDatabase } from '../../utils/database'
-import { SpendingTrendsModel } from '../../utils/precalculated-models'
 
 export default defineEventHandler(async (event) => {
   try {

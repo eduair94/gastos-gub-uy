@@ -1,12 +1,6 @@
 import { defineStore } from 'pinia'
-import { useApi } from '~/composables/useApi'
-import type {
-  DashboardMetrics,
-  IAnomaly,
-  ITopCategory,
-  ITopEntity,
-  TimeSeriesData,
-} from '~/types'
+import { useApi } from '../composables/useApi'
+import type { DashboardMetrics, IAnomaly, ITopCategory, ITopEntity, TimeSeriesData } from '../types'
 
 interface DashboardState {
   metrics: DashboardMetrics | null

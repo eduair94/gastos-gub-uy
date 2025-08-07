@@ -23,10 +23,10 @@ export class GovernmentDataScraper implements WebScraper {
 
       // Step 1: Fetch HTML content
       const htmlContent = await this.httpClient.get(this.config.targetUrl);
-
+      this.logger.info(`Fetched HTML content from ${this.config.targetUrl} ${htmlContent}`);
       // Step 2: Parse HTML
       const parsedDocument = this.htmlParser.parse(htmlContent);
-
+      this.logger.info(`Parsed HTML document: ${JSON.stringify(parsedDocument)}`);
       // Step 3: Extract URLs
       const extractedUrls = this.urlExtractor.extractUrls(parsedDocument);
 

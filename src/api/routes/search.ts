@@ -1,9 +1,9 @@
 import { Router } from 'express'
-import { BuyerPatternModel, SupplierPatternModel } from '../../database/analytics-models'
+import { BuyerPatternModel, SupplierPatternModel } from '../../../shared/models'
 
 const router = Router()
 
-router.get('/suppliers', async (req, res) => {
+router.get('/suppliers', async (req, res): Promise<any> => {
   try {
     const { query, limit = 10 } = req.query
     
@@ -28,11 +28,11 @@ router.get('/suppliers', async (req, res) => {
       }))
     })
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to search suppliers' })
+    return res.status(500).json({ success: false, error: 'Failed to search suppliers' })
   }
 })
 
-router.get('/buyers', async (req, res) => {
+router.get('/buyers', async (req, res): Promise<any> => {
   try {
     const { query, limit = 10 } = req.query
     
@@ -61,7 +61,7 @@ router.get('/buyers', async (req, res) => {
   }
 })
 
-router.get('/categories', async (req, res) => {
+router.get('/categories', async (req, res): Promise<any> => {
   try {
     const { query, limit = 10 } = req.query
     

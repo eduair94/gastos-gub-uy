@@ -34,7 +34,7 @@
 - **Mongoose ODM**: Database models working correctly
 
 #### Frontend Stack ✅
-- **Nuxt.js**: Application running on port 3000
+- **Nuxt.js**: Application running on port 3600
 - **Vuetify**: UI components properly styled
 - **Pinia**: State management configured
 - **API Client**: HTTP client working with real endpoints

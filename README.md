@@ -208,16 +208,16 @@ The analytics system follows a pre-computation approach for optimal performance:
 
 ```bash
 # Get all insights
-curl http://localhost:3000/api/analytics/insights
+curl http://localhost:3600/api/analytics/insights
 
 # Get insights for a specific year
-curl http://localhost:3000/api/insights/2023
+curl http://localhost:3600/api/insights/2023
 
 # Get anomalies with filtering
-curl "http://localhost:3000/api/analytics/anomalies?severity=critical&limit=10"
+curl "http://localhost:3600/api/analytics/anomalies?severity=critical&limit=10"
 
 # Search suppliers
-curl "http://localhost:3000/api/analysis/suppliers?search=empresa&limit=20"
+curl "http://localhost:3600/api/analysis/suppliers?search=empresa&limit=20"
 ```
 
 ### ⚡ Performance Benefits

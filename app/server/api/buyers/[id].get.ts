@@ -1,3 +1,4 @@
+import { getRouterParam } from 'h3'
 import type { IBuyerPattern } from '../../../types'
 import { BuyerPatternModel } from '../../utils/models'
 
@@ -9,7 +10,6 @@ export default defineEventHandler(async (event) => {
     // Pagination parameters
     const page = parseInt(query.page as string) || 1
     const limit = parseInt(query.limit as string) || 20
-    const skip = (page - 1) * limit
 
     if (!buyerId) {
       throw createError({

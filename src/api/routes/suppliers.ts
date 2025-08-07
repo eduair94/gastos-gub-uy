@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { SupplierPatternModel } from '../../database/analytics-models'
+import { SupplierPatternModel } from '../../../shared/models'
 
 const router = Router()
 

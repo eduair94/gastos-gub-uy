@@ -7,7 +7,6 @@ declare global {
   const setHeader: typeof import('h3').setHeader
   const setCookie: typeof import('h3').setCookie
   const getCookie: typeof import('h3').getCookie
-  const useRuntimeConfig: typeof import('#app').useRuntimeConfig
 }
 
 export { }

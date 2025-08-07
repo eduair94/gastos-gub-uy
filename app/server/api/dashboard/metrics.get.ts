@@ -1,6 +1,6 @@
 import { createError, defineEventHandler } from 'h3'
+import { DashboardMetricsModel, type IDashboardMetrics } from '../../../../shared/models'
 import { ensureConnection } from '../../utils/database'
-import { DashboardMetricsModel, type IDashboardMetrics } from '../../utils/precalculated-models'
 
 export default defineEventHandler(async (_event) => {
   try {

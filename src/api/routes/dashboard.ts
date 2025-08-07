@@ -1,13 +1,12 @@
 import { Router } from 'express'
-import { AnomalyModel, BuyerPatternModel, SupplierPatternModel } from '../../database/analytics-models'
-import { ReleaseModel } from '../../database/release-model'
+import { AnomalyModel, BuyerPatternModel, ReleaseModel, SupplierPatternModel } from '../../../shared/models'
 import { Logger } from '../../services/logger-service'
 
 const router = Router()
 const logger = new Logger()
 
 // GET /api/dashboard/metrics
-router.get('/metrics', async (req, res) => {
+router.get('/metrics', async (_req, res): Promise<any> => {
   try {
     logger.info('Fetching dashboard metrics')
 
@@ -126,7 +125,7 @@ router.get('/spending-trends', async (req, res) => {
       matchStage.sourceYear = { $in: yearArray }
     }
 
-    const pipeline = [
+    const pipeline:any = [
       { $match: matchStage },
       { $unwind: '$awards' },
       { $unwind: '$awards.items' },

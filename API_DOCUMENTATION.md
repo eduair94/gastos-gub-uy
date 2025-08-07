@@ -32,7 +32,7 @@ npm run server
 ## API Endpoints
 
 ### Base URL
-`http://localhost:3000/api`
+`http://localhost:3600/api`
 
 ### Analytics Endpoints
 
@@ -164,20 +164,20 @@ API is rate limited to 100 requests per 15 minutes per IP address.
 
 ### Get High Severity Anomalies
 ```bash
-curl "http://localhost:3000/api/analytics/anomalies?severity=high&limit=5"
+curl "http://localhost:3600/api/analytics/anomalies?severity=high&limit=5"
 ```
 
 ### Get Top Suppliers for 2024
 ```bash
-curl "http://localhost:3000/api/aggregations/top-suppliers?year=2024&limit=10"
+curl "http://localhost:3600/api/aggregations/top-suppliers?year=2024&limit=10"
 ```
 
 ### Get Monthly Spending Trends
 ```bash
-curl "http://localhost:3000/api/aggregations/monthly-spending?year=2024"
+curl "http://localhost:3600/api/aggregations/monthly-spending?year=2024"
 ```
 
 ### Search Releases by Buyer
 ```bash
-curl "http://localhost:3000/api/data/releases?buyer=ANEP&page=1&limit=5"
+curl "http://localhost:3600/api/data/releases?buyer=ANEP&page=1&limit=5"
 ```

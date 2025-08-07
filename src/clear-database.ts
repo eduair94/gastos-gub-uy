@@ -1,5 +1,6 @@
 import { config } from "dotenv";
-import { ReleaseModel } from "./database/release-model";
+import { mongoUri } from "../shared/config";
+import { ReleaseModel } from "../shared/models";
 import { DatabaseService } from "./services/database-service";
 import { Logger } from "./services/logger-service";
 
@@ -7,7 +8,6 @@ import { Logger } from "./services/logger-service";
 config();
 
 async function clearDatabase(): Promise<void> {
-  const mongoUri = process.env.MONGODB_URI;
 
   if (!mongoUri) {
     console.error("MONGODB_URI environment variable is required");

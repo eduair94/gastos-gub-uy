@@ -7,7 +7,7 @@ import { Logger } from "./services/logger-service";
 config();
 
 const logger = new Logger();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3600;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 async function startServer() {
@@ -62,3 +62,4 @@ if (require.main === module) {
 }
 
 export { app };
+

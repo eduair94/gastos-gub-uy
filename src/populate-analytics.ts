@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 
-import mongoose from 'mongoose';
-import { MONGO_CONFIG } from './config/config';
-import {
-  AnomalyModel,
-  BuyerPatternModel,
-  ExpenseInsightModel,
-  SupplierPatternModel
-} from './database/analytics-models';
+import { connectToDatabase, mongoose } from '../shared/connection/database';
+import { AnomalyModel, BuyerPatternModel, ExpenseInsightModel, SupplierPatternModel } from '../shared/models';
 import { ItemModel } from './database/item-model';
 import { Logger } from './services/logger-service';
 
@@ -41,20 +35,7 @@ class EfficientAnalyticsPopulator {
   }
 
   async connectToDatabase(): Promise<void> {
-    try {
-      const mongoUri = `${MONGO_CONFIG.uri}/${MONGO_CONFIG.database}`;
-      await mongoose.connect(mongoUri, {
-        maxPoolSize: 100,
-        serverSelectionTimeoutMS: 30000,
-        socketTimeoutMS: 600000,
-        maxIdleTimeMS: 30000,
-        writeConcern: { w: 'majority', j: true },
-      });
-      this.logger.info('✓ Connected to MongoDB for efficient analytics population');
-    } catch (error) {
-      this.logger.error('Failed to connect to MongoDB', error as Error);
-      throw error;
-    }
+    await connectToDatabase()
   }
 
   /**

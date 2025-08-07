@@ -1,29 +1,6 @@
 import { Collection, Db, MongoClient } from "mongodb";
-import mongoose from "mongoose";
-import { MONGO_CONFIG } from "../config/config";
 import { DatabaseClient, Logger, MongoConfig } from "../types/interfaces";
 
-/**
- * MongoDB client implementation following Dependency Inversion Principle
- * Provides abstraction over MongoDB operations
- */
-
-// Global connection function for API server
-export async function connectToDatabase(): Promise<void> {
-  try {
-    const mongoUri = `${MONGO_CONFIG.uri}/${MONGO_CONFIG.database}`;
-    await mongoose.connect(mongoUri, {
-      maxPoolSize: 50,
-      serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 300000,
-      maxIdleTimeMS: 30000,
-    });
-    console.log('✓ Connected to MongoDB');
-  } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
-    throw error;
-  }
-}
 export class MongoDbClient implements DatabaseClient {
   private client: MongoClient | null = null;
   private db: Db | null = null;
@@ -48,7 +25,7 @@ export class MongoDbClient implements DatabaseClient {
         bufferMaxEntries: 0,
         useNewUrlParser: true,
         useUnifiedTopology: true,
-        maxIdleTimeMS: 30000,
+        maxIdleTimeMS: 36000,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 0, // No timeout for socket operations
         connectTimeoutMS: 10000,

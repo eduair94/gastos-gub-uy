@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { AnomalyModel, BuyerPatternModel, ExpenseInsightModel, SupplierPatternModel } from '../../database/analytics-models'
+import { AnomalyModel, BuyerPatternModel, ExpenseInsightModel, SupplierPatternModel } from '../../../shared/models'
 
 const router = Router()
 
@@ -204,7 +204,7 @@ router.get('/category-distribution', async (req, res) => {
       // Combine and aggregate the results
       const combined = [...supplierDist, ...buyerDist]
       const aggregated = combined.reduce((acc, item) => {
-        const existing = acc.find(a => a._id === item._id)
+        const existing = acc.find((a:any) => a._id === item._id)
         if (existing) {
           existing.totalAmount += item.totalAmount
           existing.count += item.count
@@ -215,12 +215,12 @@ router.get('/category-distribution', async (req, res) => {
       }, [] as any[])
       
       const distribution = aggregated
-        .map(item => ({
+        .map((item:any) => ({
           description: item._id,
           totalAmount: item.totalAmount,
           count: item.count
         }))
-        .sort((a, b) => b.totalAmount - a.totalAmount)
+        .sort((a:any, b:any) => b.totalAmount - a.totalAmount)
         .slice(0, 20)
       
       res.json({ success: true, data: distribution })

@@ -4,8 +4,8 @@ import { ScraperConfig } from "../types/interfaces";
  * Configuration constants for the application
  */
 export const SCRAPER_CONFIG: ScraperConfig = {
-  targetUrl: "https://www.comprasestatales.gub.uy/ocds/rss",
-  timeout: 30000,
+  targetUrl: "https://catalogodatos.gub.uy/dataset/arce-datos-historicos-de-compras",
+  timeout: 36000,
   retryAttempts: 3,
   userAgent: "Government Data Scraper Bot 1.0",
 };

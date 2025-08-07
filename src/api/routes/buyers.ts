@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { BuyerPatternModel } from '../../database/analytics-models'
+import { BuyerPatternModel } from '../../../shared/models'
 
 const router = Router()
 

@@ -140,7 +140,7 @@ CategoryDistributionSchema.index({ year: 1, rank: 1 })
 CategoryDistributionSchema.index({ dataVersion: 1, calculatedAt: -1 })
 
 // Export models using singleton pattern
-export const DashboardMetricsModel = mongoose.models.DashboardMetrics || mongoose.model<IDashboardMetrics>('DashboardMetrics', DashboardMetricsSchema)
-export const SpendingTrendsModel = mongoose.models.SpendingTrends || mongoose.model<ISpendingTrend>('SpendingTrends', SpendingTrendsSchema)
-export const TopEntitiesModel = mongoose.models.TopEntities || mongoose.model<ITopEntity>('TopEntities', TopEntitiesSchema)
-export const CategoryDistributionModel = mongoose.models.CategoryDistribution || mongoose.model<ICategoryDistribution>('CategoryDistribution', CategoryDistributionSchema)
+export const DashboardMetricsModel = mongoose.model<IDashboardMetrics>('DashboardMetrics', DashboardMetricsSchema)
+export const SpendingTrendsModel = mongoose.model<ISpendingTrend>('SpendingTrends', SpendingTrendsSchema)
+export const TopEntitiesModel = mongoose.model<ITopEntity>('TopEntities', TopEntitiesSchema)
+export const CategoryDistributionModel = mongoose.model<ICategoryDistribution>('CategoryDistribution', CategoryDistributionSchema)

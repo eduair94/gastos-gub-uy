@@ -137,6 +137,7 @@ export interface IParty {
 export interface IBuyer {
   id: string
   name: string
+  roles: string[]
 }
 
 export interface ITenderItem {
@@ -186,6 +187,7 @@ export interface IAwardItem {
 export interface ISupplier {
   id: string
   name: string
+  roles: string[]
 }
 
 export interface IAwardDocument {
@@ -242,6 +244,7 @@ export interface IRelease extends Document {
   id: string
   tender?: ITender
   buyer?: IBuyer
+  supplier?: ISupplier,
   awards?: IAward[]
   // Metadata fields for tracking data source
   sourceFileName?: string
