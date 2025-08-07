@@ -10,7 +10,7 @@
           Browse and analyze government contracts with advanced filtering and search capabilities
         </p>
       </div>
-      <div class="d-flex gap-2">
+      <div class="d-flex ga-2">
         <v-btn
           color="primary"
           prepend-icon="mdi-refresh"
@@ -70,6 +70,7 @@
               v-model="filters.yearFrom"
               label="From Year"
               item-title="label"
+              item-value="value"
               :items="availableYears"
               variant="outlined"
               density="compact"
@@ -84,6 +85,7 @@
               v-model="filters.yearTo"
               label="To Year"
               item-title="label"
+              item-value="value"
               :items="availableYears"
               variant="outlined"
               density="compact"
@@ -129,7 +131,7 @@
             <v-select
               v-model="filters.status"
               label="Contract Status"
-              :items="filterOptions.statuses"
+              :items="filterOptions.statuses as any[]"
               item-title="label"
               item-value="value"
               variant="outlined"
@@ -148,7 +150,7 @@
             <v-select
               v-model="filters.procurementMethod"
               label="Procurement Method"
-              :items="filterOptions.procurementMethods"
+              :items="filterOptions.procurementMethods as any[]"
               item-title="label"
               item-value="value"
               variant="outlined"
@@ -167,7 +169,7 @@
             <v-autocomplete
               v-model="filters.suppliers"
               label="Suppliers"
-              :items="filterOptions.suppliers"
+              :items="filterOptions.suppliers as any[]"
               item-title="label"
               item-value="value"
               variant="outlined"
@@ -187,7 +189,7 @@
             <v-autocomplete
               v-model="filters.buyers"
               label="Buyers"
-              :items="filterOptions.buyers"
+              :items="filterOptions.buyers as any[]"
               item-title="label"
               item-value="value"
               variant="outlined"
@@ -340,7 +342,7 @@
         <!-- Item Descriptions -->
         <template #item.descriptions="{ item }">
           <div v-if="item.awards && item.awards.length > 0 && item.awards[0].items && item.awards[0].items.length > 0">
-            <div class="d-flex flex-column gap-1">
+            <div class="d-flex flex-column ga-1">
               <div
                 v-for="(awardItem, index) in item.awards[0].items.slice(0, 2)"
                 :key="index"
@@ -367,7 +369,7 @@
             </div>
           </div>
           <div v-else-if="item.tender && item.tender.items && item.tender.items.length > 0">
-            <div class="d-flex flex-column gap-1">
+            <div class="d-flex flex-column ga-1">
               <div
                 v-for="(tenderItem, index) in item.tender.items.slice(0, 2)"
                 :key="index"
@@ -440,7 +442,7 @@
 
         <!-- Actions -->
         <template #item.actions="{ item }">
-          <div class="d-flex gap-1">
+          <div class="d-flex ga-1">
             <v-tooltip text="View Awards">
               <template #activator="{ props }">
                 <v-btn
@@ -651,7 +653,7 @@
                                     {{ getItemDescription(item, itemIndex) }}
                                   </v-list-item-title>
                                   <v-list-item-subtitle>
-                                    <div class="d-flex flex-wrap gap-2 mt-1">
+                                    <div class="d-flex flex-wrap ga-2 mt-1">
                                       <v-chip
                                         size="x-small"
                                         variant="outlined"
@@ -847,15 +849,17 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
 import type { IRelease } from '~/types/database'
-
+import { formatCurrency } from '~/utils'
 // Meta
 definePageMeta({
   title: 'Contract Explorer',
   description: 'Browse and analyze government contracts with advanced filtering capabilities',
 })
 
-// API client
+// Composables
 const api = useApi()
+const route = useRoute()
+const router = useRouter()
 
 // Reactive state
 const loading = ref(false)
@@ -885,7 +889,19 @@ const filterOptions = ref({
 })
 
 // Filters
-const filters = ref({
+interface FilterState {
+  search: string
+  yearFrom: string | null
+  yearTo: string | null
+  amountFrom: number | null
+  amountTo: number | null
+  status: string[]
+  procurementMethod: string[]
+  suppliers: string[]
+  buyers: string[]
+}
+
+const filters = ref<FilterState>({
   search: '',
   yearFrom: null,
   yearTo: null,
@@ -900,7 +916,7 @@ const filters = ref({
 // Table configuration
 const currentPage = ref(1)
 const itemsPerPage = ref(25)
-const sortBy = ref([{ key: 'date', order: 'desc' as const }])
+const sortBy = ref([{ key: 'date', order: 'desc' as 'asc' | 'desc' }])
 
 // Raw data dialog
 const rawDataDialog = ref(false)
@@ -913,7 +929,10 @@ const expandedAward = ref([0]) // Expand first award by default
 
 // Computed
 const availableYears = computed(() => {
-  return [...filterOptions.value.years].sort((a, b) => b.year - a.year)
+  return [...filterOptions.value.years].sort((a: any, b: any) => b.year - a.year).map((year: any) => ({
+    label: year.label || year.year?.toString() || year,
+    value: year.value || year.year?.toString() || year,
+  }))
 })
 
 const estimatedTotal = computed(() => {
@@ -1034,11 +1053,13 @@ const handleTableUpdate = (options: any) => {
   currentPage.value = options.page
   itemsPerPage.value = options.itemsPerPage
   sortBy.value = options.sortBy || [{ key: 'date', order: 'desc' }]
+  updateQueryParams()
   loadContracts()
 }
 
 const applyFilters = () => {
   currentPage.value = 1
+  updateQueryParams()
   loadContracts()
 }
 
@@ -1055,6 +1076,7 @@ const clearAllFilters = () => {
     buyers: [],
   }
   currentPage.value = 1
+  updateQueryParams()
   loadContracts()
 }
 
@@ -1123,17 +1145,90 @@ const getItemDescription = (item: Record<string, unknown>, index: number): strin
   return description || `Item ${index + 1}`
 }
 
+const formatAwardAmount = (award: any): string => {
+  if (award.value?.amount) {
+    return formatCurrency(award.value.amount, award.value.currency)
+  }
+  return 'N/A'
+}
+
+// Query parameter synchronization
+const updateQueryParams = () => {
+  const query: Record<string, any> = {}
+
+  // Add non-empty filter values to query
+  if (filters.value.search) query.search = filters.value.search
+  if (filters.value.yearFrom) query.yearFrom = filters.value.yearFrom
+  if (filters.value.yearTo) query.yearTo = filters.value.yearTo
+  if (filters.value.amountFrom) query.amountFrom = filters.value.amountFrom.toString()
+  if (filters.value.amountTo) query.amountTo = filters.value.amountTo.toString()
+  if (filters.value.status.length > 0) query.status = filters.value.status.join(',')
+  if (filters.value.procurementMethod.length > 0) query.procurementMethod = filters.value.procurementMethod.join(',')
+  if (filters.value.suppliers.length > 0) query.suppliers = filters.value.suppliers.join(',')
+  if (filters.value.buyers.length > 0) query.buyers = filters.value.buyers.join(',')
+
+  // Add pagination and sorting
+  if (currentPage.value > 1) query.page = currentPage.value.toString()
+  if (itemsPerPage.value !== 25) query.limit = itemsPerPage.value.toString()
+  if (sortBy.value[0]?.key !== 'date') query.sortBy = sortBy.value[0]?.key
+  if (sortBy.value[0]?.order !== 'desc') query.sortOrder = sortBy.value[0]?.order
+
+  // Update URL without navigation
+  router.replace({ query })
+}
+
+const loadFiltersFromQuery = () => {
+  const query = route.query
+
+  // Load filter values from query parameters
+  if (query.search) filters.value.search = query.search as string
+  if (query.yearFrom) filters.value.yearFrom = query.yearFrom as string
+  if (query.yearTo) filters.value.yearTo = query.yearTo as string
+  if (query.amountFrom) filters.value.amountFrom = Number(query.amountFrom)
+  if (query.amountTo) filters.value.amountTo = Number(query.amountTo)
+  if (query.status) filters.value.status = (query.status as string).split(',').filter(s => s)
+  if (query.procurementMethod) filters.value.procurementMethod = (query.procurementMethod as string).split(',').filter(s => s)
+  if (query.suppliers) filters.value.suppliers = (query.suppliers as string).split(',').filter(s => s)
+  if (query.buyers) filters.value.buyers = (query.buyers as string).split(',').filter(s => s)
+
+  // Load pagination and sorting
+  if (query.page) currentPage.value = Number(query.page)
+  if (query.limit) itemsPerPage.value = Number(query.limit)
+  if (query.sortBy || query.sortOrder) {
+    sortBy.value = [{
+      key: (query.sortBy as string) || 'date',
+      order: (query.sortOrder as 'asc' | 'desc') || 'desc',
+    }]
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   loadFilterOptions()
+  loadFiltersFromQuery()
   loadContracts()
 })
 
 // Watch for filter changes
 watch(() => itemsPerPage.value, () => {
   currentPage.value = 1
+  updateQueryParams()
   loadContracts()
 })
+
+// Watch for filter changes to auto-sync with query params
+watch(filters, () => {
+  // Only update query params if filters have been manually changed (not during initial load)
+  if (meta.value.searchPerformed) {
+    updateQueryParams()
+  }
+}, { deep: true })
+
+// Watch for navigation changes (back/forward buttons)
+watch(() => route.query, () => {
+  loadFiltersFromQuery()
+  loadContracts()
+}, { deep: true })
 </script>
 
 <style scoped>
@@ -1141,12 +1236,11 @@ watch(() => itemsPerPage.value, () => {
   padding: 24px;
 }
 
-.gap-2 {
+.ga-2 {
   gap: 8px;
 }
 
 pre {
-  background-color: rgb(var(--v-theme-surface-variant));
   padding: 16px;
   border-radius: 4px;
   overflow-x: auto;

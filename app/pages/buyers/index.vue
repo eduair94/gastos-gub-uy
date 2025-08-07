@@ -10,7 +10,7 @@
           Explore government agencies and entities, analyze their procurement activities and spending patterns
         </p>
       </div>
-      <div class="d-flex gap-2">
+      <div class="d-flex ga-2">
         <v-btn
           color="primary"
           prepend-icon="mdi-refresh"
@@ -289,7 +289,7 @@
 
         <!-- Actions -->
         <template #[`item.actions`]="{ item }">
-          <div class="d-flex gap-1">
+          <div class="d-flex ga-1">
             <v-tooltip text="View Details">
               <template #activator="{ props }">
                 <v-btn
@@ -555,7 +555,7 @@ const selectedBuyerForAnalytics = ref<IBuyer | null>(null)
 // Computed
 const quickStats = computed(() => {
   if (!selectedBuyerForAnalytics.value) return []
-  
+
   const buyer = selectedBuyerForAnalytics.value
   return [
     {
@@ -771,12 +771,11 @@ watch(() => itemsPerPage.value, () => {
   padding: 24px;
 }
 
-.gap-2 {
+.ga-2 {
   gap: 8px;
 }
 
 pre {
-  background-color: rgb(var(--v-theme-surface-variant));
   padding: 16px;
   border-radius: 4px;
   overflow-x: auto;

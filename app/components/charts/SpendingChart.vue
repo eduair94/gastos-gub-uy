@@ -1,5 +1,37 @@
 <template>
   <div class="spending-trends-chart">
+    <!-- Timeframe selector -->
+    <div class="d-flex justify-end mb-4">
+      <v-btn-group
+        v-model="selectedTimeframe"
+        mandatory
+        density="compact"
+        variant="outlined"
+      >
+        <v-btn
+          value="5y"
+          size="small"
+          @click="updateTimeframe('5y')"
+        >
+          5Y
+        </v-btn>
+        <v-btn
+          value="10y"
+          size="small"
+          @click="updateTimeframe('10y')"
+        >
+          10Y
+        </v-btn>
+        <v-btn
+          value="all"
+          size="small"
+          @click="updateTimeframe('all')"
+        >
+          All
+        </v-btn>
+      </v-btn-group>
+    </div>
+
     <div
       v-if="chartData && chartData.datasets.length > 0"
       class="chart-wrapper"
@@ -46,8 +78,9 @@ import {
   Title,
   Tooltip,
 } from 'chart.js'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Line } from 'vue-chartjs'
+import { useDashboardStore } from '../../stores/dashboard'
 
 // Register Chart.js components
 ChartJS.register(
@@ -62,31 +95,98 @@ ChartJS.register(
 )
 
 // Props
-interface SpendingTrend {
-  date: string
-  value: number
-  count?: number
-}
-
 interface Props {
-  trends: SpendingTrend[]
-  timeframe: string
+  initialTimeframe?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  trends: () => [],
-  timeframe: '10y',
+  initialTimeframe: '10y',
 })
+
+// Store and reactive state
+const dashboardStore = useDashboardStore()
+const selectedTimeframe = ref(props.initialTimeframe)
+
+// Get trends from store
+const spendingTrends = computed(() => dashboardStore.spendingTrends)
+
+const getLastYear = () => {
+  if (!spendingTrends.value) return new Date().getFullYear()
+  return parseInt((spendingTrends.value as any).at(-1).date.split('-')[0])
+}
+
+// Filtered trends based on timeframe
+const filteredTrends = computed(() => {
+  if (!spendingTrends.value || spendingTrends.value.length === 0) return []
+
+  console.log('All spending trends:', spendingTrends.value)
+
+  if (selectedTimeframe.value === 'all') return spendingTrends.value
+
+  const yearsToShow = selectedTimeframe.value === '5y' ? 5 : 10
+  const lastAvailableYear = getLastYear()
+  const cutoffYear = lastAvailableYear - yearsToShow + 1
+
+  console.log(`Filtering for ${yearsToShow} years, from ${cutoffYear} to ${lastAvailableYear}`)
+
+  const filtered = spendingTrends.value.filter((trend) => {
+    const year = new Date(trend.date).getFullYear() + 1 // Adjust to next year for display
+    const inRange = year >= cutoffYear && year <= lastAvailableYear
+    console.log(`Trend date: ${trend.date}, year: ${year}, in range: ${inRange}`)
+    return inRange
+  }).slice(-yearsToShow)
+
+  console.log('Filtered trends:', filtered)
+  return filtered
+})
+
+// Method to update timeframe and fetch new data
+const updateTimeframe = async (timeframe: string) => {
+  selectedTimeframe.value = timeframe
+
+  // Calculate years array based on timeframe
+  let years: number[] | undefined
+
+  if (timeframe !== 'all') {
+    const lastAvailableYear = getLastYear() // Data goes up to current year
+    const yearsCount = timeframe === '5y' ? 5 : 10
+    years = Array.from({ length: yearsCount }, (_, i) => lastAvailableYear - yearsCount + 1 + i)
+  }
+
+  // Fetch filtered data from API
+  await dashboardStore.fetchSpendingTrends({
+    years,
+    groupBy: 'year',
+  })
+}
+
+// Watch for initial load to fetch data
+watch(() => selectedTimeframe.value, (newTimeframe) => {
+  if (spendingTrends.value.length === 0) {
+    updateTimeframe(newTimeframe)
+  }
+}, { immediate: true })
 
 // Chart data computation
 const chartData = computed(() => {
-  if (!props.trends || props.trends.length === 0) {
+  const trends = filteredTrends.value
+
+  if (!trends || trends.length === 0) {
     return null
   }
 
-  const labels = props.trends.map(trend => new Date(trend.date).getFullYear().toString())
-  const spendingData = props.trends.map(trend => trend.value / 1000000) // Convert to millions
-  const contractData = props.trends.map(trend => trend.count || 0)
+  console.log('Raw trends data:', trends)
+
+  const labels = trends.map((trend) => {
+    const year = new Date(trend.date).getFullYear() + 1
+    console.log(`Date: ${trend.date}, Parsed Year: ${year}`)
+    return year.toString()
+  })
+
+  console.log('Chart labels:', labels)
+
+  const spendingData = trends.map(trend => trend.value / 1000000) // Convert to millions
+  const contractData = trends.map(trend => trend.count || 0)
 
   return {
     labels,

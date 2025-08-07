@@ -1,5 +1,5 @@
-import { join, basename } from 'path';
-import { DataManager, UrlEntry, FileDownloader, FileExtractor, Logger } from '../types/interfaces';
+import { basename, join } from 'path';
+import { DataManager, FileDownloader, FileExtractor, Logger, UrlEntry } from '../../shared/types/interfaces';
 
 /**
  * Data manager implementation that orchestrates download and extraction

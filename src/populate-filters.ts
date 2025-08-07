@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { connectToDatabase } from '../app/server/utils/database'
-import { FilterDataModel, ReleaseModel } from '../app/server/utils/models'
+import { FilterDataModel, ReleaseModel } from '../shared/models'
 
 /**
  * Generate and populate filter data collection for fast filter option retrieval

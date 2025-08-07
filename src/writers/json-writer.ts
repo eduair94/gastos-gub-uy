@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
+import { DataWriter, Logger, UrlEntry } from "../../shared/types/interfaces";
 import { OUTPUT_CONFIG } from "../config/config";
-import { DataWriter, Logger, UrlEntry } from "../types/interfaces";
 
 /**
  * JSON file writer implementation

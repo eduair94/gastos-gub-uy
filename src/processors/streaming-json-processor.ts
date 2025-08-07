@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { JsonProcessor, Logger } from '../types/interfaces';
+import { JsonProcessor, Logger } from '../../shared/types/interfaces';
 
 /**
  * JSON processor implementation for handling large JSON files

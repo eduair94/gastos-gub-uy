@@ -1,8 +1,7 @@
 import axios, { AxiosRequestConfig } from 'axios';
-import { createWriteStream } from 'fs';
-import { promises as fs } from 'fs';
+import { createWriteStream, promises as fs } from 'fs';
 import { dirname } from 'path';
-import { HttpClient, ScraperConfig, Logger } from '../types/interfaces';
+import { HttpClient, Logger, ScraperConfig } from '../../shared/types/interfaces';
 
 /**
  * HTTP client implementation using Axios

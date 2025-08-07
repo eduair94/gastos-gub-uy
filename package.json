@@ -6,6 +6,13 @@
   "scripts": {
     "extract": "tsx src/extract.ts",
     "upload": "tsx src/upload-releases.ts",
+    "populate-filters": "tsx src/populate-filters.ts",
+    "populate-analytics": "tsx src/populate-analytics.ts",
+    "precalculate-dashboard": "tsx src/precalculate-dashboard.ts",
+    "create-text-index": "tsx scripts/create-text-index.ts",
+    "update-text-index-exact": "tsx scripts/update-text-index-for-exact-search.ts",
+    "export-db": "tsx scripts/export-database.ts",
+    "import-db": "tsx scripts/import-database.ts",
     "build": "tsc",
     "create-items": "tsx src/create-items-collection.ts",
     "api": "tsx src/api/app.ts",

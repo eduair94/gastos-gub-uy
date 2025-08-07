@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import { HtmlParser, ParsedDocument, ParsedElement } from "../types/interfaces";
+import { HtmlParser, ParsedDocument, ParsedElement } from "../../shared/types/interfaces";
 
 /**
  * Cheerio-based HTML parser implementation

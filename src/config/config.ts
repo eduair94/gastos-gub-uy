@@ -1,4 +1,4 @@
-import { ScraperConfig } from "../types/interfaces";
+import { ScraperConfig } from "../../shared/types/interfaces";
 
 /**
  * Configuration constants for the application

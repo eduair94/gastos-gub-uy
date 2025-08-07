@@ -1,8 +1,7 @@
-import { promises as fs } from 'fs';
-import { createWriteStream } from 'fs';
-import { join, dirname } from 'path';
+import { createWriteStream, promises as fs } from 'fs';
+import { dirname, join } from 'path';
 import * as yauzl from 'yauzl';
-import { FileExtractor, Logger } from '../types/interfaces';
+import { FileExtractor, Logger } from '../../shared/types/interfaces';
 
 /**
  * File extractor implementation using yauzl

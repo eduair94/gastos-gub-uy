@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { 
-  SchemaAnalyzer, 
-  JsonSchema, 
-  FieldSchema, 
-  SchemaAnalyzerConfig,
-  Logger 
-} from '../types/interfaces';
+import {
+  FieldSchema,
+  JsonSchema,
+  Logger,
+  SchemaAnalyzer,
+  SchemaAnalyzerConfig
+} from '../../shared/types/interfaces';
 
 /**
  * JSON Schema Analyzer implementation following Single Responsibility Principle

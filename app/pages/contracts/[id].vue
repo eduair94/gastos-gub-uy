@@ -54,7 +54,7 @@
           <h1 class="text-h4 font-weight-bold mb-2">
             {{ contract.tender?.title || 'Contract Details' }}
           </h1>
-          <div class="d-flex align-center gap-2">
+          <div class="d-flex align-center ga-2">
             <v-chip
               color="primary"
               size="small"
@@ -71,7 +71,14 @@
           </div>
         </div>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex ga-2">
+          <v-btn
+            color="info"
+            prepend-icon="mdi-code-json"
+            @click="showRawJson = true"
+          >
+            View Raw JSON
+          </v-btn>
           <v-btn
             color="success"
             prepend-icon="mdi-download"
@@ -232,7 +239,7 @@
                 <div class="text-subtitle-2 text-medium-emphasis">
                   Tags
                 </div>
-                <div class="d-flex flex-wrap gap-1">
+                <div class="d-flex flex-wrap ga-1">
                   <v-chip
                     v-for="tag in contract.tag"
                     :key="tag"
@@ -292,7 +299,7 @@
                       {{ formatDate(award.date) }}
                     </div>
                   </div>
-                  <div class="d-flex align-center gap-2">
+                  <div class="d-flex align-center ga-2">
                     <v-chip
                       :color="getStatusColor(award.status)"
                       size="small"
@@ -688,127 +695,171 @@
           </v-list>
         </v-card-text>
       </v-card>
+
+      <!-- Contract Timeline -->
+      <ContractDetailCard
+        title="Contract Timeline"
+        icon="mdi-timeline-clock"
+        icon-color="info"
+      >
+        <ContractTimeline :contract="contract" />
+      </ContractDetailCard>
+
+      <!-- Contract Parties -->
+      <ContractDetailCard
+        v-if="contract.parties && contract.parties.length > 0"
+        title="Contract Parties"
+        icon="mdi-account-group"
+        icon-color="purple"
+        :badge="`${contract.parties.length} parties`"
+        badge-color="purple"
+      >
+        <ContractParties :parties="contract.parties" />
+      </ContractDetailCard>
+
+      <!-- Contract Documents -->
+      <ContractDetailCard
+        title="Contract Documents"
+        icon="mdi-file-document-multiple"
+        icon-color="orange"
+        :badge="documentCount > 0 ? `${documentCount} documents` : 'No documents'"
+        :badge-color="documentCount > 0 ? 'orange' : 'grey'"
+      >
+        <ContractDocuments :contract="contract" />
+      </ContractDetailCard>
+
+      <!-- Additional Contract Metadata -->
+      <ContractDetailCard
+        title="Additional Information"
+        icon="mdi-information"
+        icon-color="grey"
+      >
+        <v-row>
+          <v-col
+            cols="12"
+            md="6"
+          >
+            <div class="mb-4">
+              <div class="text-subtitle-2 text-medium-emphasis">
+                Initiation Type
+              </div>
+              <div class="text-body-1">
+                {{ contract.initiationType || 'N/A' }}
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <div class="text-subtitle-2 text-medium-emphasis">
+                Source File
+              </div>
+              <div class="text-body-1">
+                {{ contract.sourceFileName || 'N/A' }}
+              </div>
+            </div>
+          </v-col>
+
+          <v-col
+            cols="12"
+            md="6"
+          >
+            <div class="mb-4">
+              <div class="text-subtitle-2 text-medium-emphasis">
+                Contract Tags
+              </div>
+              <div class="d-flex flex-wrap ga-1">
+                <v-chip
+                  v-for="tag in contract.tag"
+                  :key="tag"
+                  size="small"
+                  variant="outlined"
+                  color="info"
+                >
+                  {{ tag }}
+                </v-chip>
+                <v-chip
+                  v-if="!contract.tag || contract.tag.length === 0"
+                  size="small"
+                  variant="outlined"
+                  color="grey"
+                >
+                  No tags
+                </v-chip>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <div class="text-subtitle-2 text-medium-emphasis">
+                Database ID
+              </div>
+              <div class="text-body-1 font-mono">
+                {{ contract._id }}
+              </div>
+            </div>
+          </v-col>
+        </v-row>
+      </ContractDetailCard>
     </div>
+
+    <!-- Raw JSON Dialog -->
+    <RawJsonDialog
+      v-model="showRawJson"
+      :data="contract"
+      title="Contract Raw JSON Data"
+      :filename="`contract-${contract?.id || 'unknown'}.json`"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import type { IRelease } from '../../types'
+import { formatTotalAmount } from '../../utils'
 
-// Route
-const route = useRoute()
-interface IAwardItem {
-  id: string | number
-  quantity: number
-  description?: string
-  classification: {
-    id: string
-    description: string
-    scheme: string
-  }
-  unit: {
-    id: string
-    name: string
-    value?: {
-      amount: number
-      currency: string
-    }
-  }
-}
-
-interface IAward {
-  id: string
-  title: string
-  date: string
-  status: string
-  value?: {
-    amount: number
-    currency: string
-  }
-  items?: IAwardItem[]
-  suppliers?: Array<{
-    id: string
-    name: string
-  }>
-  documents?: Array<{
-    id: string
-    documentType: string
-    description: string
-    url?: string
-    datePublished?: string
-  }>
-}
-
-interface IContract {
-  id: string
-  ocid: string
-  date: string
-  sourceYear: number
-  initiationType: string
-  tag: string[]
-  sourceFileName?: string
-  totalAmount?: number
+// Extended interface for enhanced contract data from API
+interface IEnhancedRelease extends IRelease {
   supplierCount?: number
   itemCount?: number
   documentCount?: number
-  tender?: {
-    title?: string
-    status?: string
-    description?: string
-    procurementMethod?: string
-    procurementMethodDetails?: string
-    hasEnquiries?: boolean
-    submissionMethodDetails?: string
-    tenderPeriod?: {
-      startDate: string
-      endDate: string
-    }
-    procuringEntity?: {
-      name: string
-    }
-    items?: unknown[]
-    documents?: unknown[]
-  }
-  buyer?: {
-    id: string
-    name: string
-  }
-  awards?: IAward[]
-  parties?: Array<{
-    id: string
-    name: string
-    roles: string[]
-    contactPoint?: {
-      name: string
-      telephone?: string
-      email?: string
-    }
-  }>
+  totalAmount?: number
 }
+
+// Route
+const route = useRoute()
 
 // Reactive state
 const loading = ref(false)
 const error = ref(false)
-const contract = ref<IContract | null>(null)
+const contract = ref<IEnhancedRelease | null>(null)
 const expandedAwards = ref<number[]>([])
+const showRawJson = ref(false)
 
 // Data table headers for items
 const itemHeaders = ref([
   { title: 'Item ID', key: 'id', width: '100px' },
   { title: 'Classification', key: 'classification', sortable: false },
-  { title: 'Quantity', key: 'quantity', align: 'end' },
+  { title: 'Quantity', key: 'quantity', align: 'end' as const },
   { title: 'Unit', key: 'unit', sortable: false },
-  { title: 'Total Value', key: 'total', align: 'end', sortable: false },
+  { title: 'Total Value', key: 'total', align: 'end' as const, sortable: false },
 ])
 
 // Data table headers for tender items
 const tenderItemHeaders = ref([
   { title: 'Item ID', key: 'id', width: '100px' },
   { title: 'Description/Classification', key: 'description', sortable: false },
-  { title: 'Quantity', key: 'quantity', align: 'end' },
+  { title: 'Quantity', key: 'quantity', align: 'end' as const },
   { title: 'Unit', key: 'unit', sortable: false },
-  { title: 'Estimated Value', key: 'total', align: 'end', sortable: false },
+  { title: 'Estimated Value', key: 'total', align: 'end' as const, sortable: false },
 ])
+
+// Computed properties
+const documentCount = computed(() => {
+  if (!contract.value) return 0
+  const tenderDocs = contract.value.tender?.documents?.length || 0
+  const awardDocs = contract.value.awards?.reduce((total, award) => {
+    return total + (award.documents?.length || 0)
+  }, 0) || 0
+  return tenderDocs + awardDocs
+})
 
 // Methods
 const loadContract = async () => {
@@ -836,7 +887,7 @@ const loadContract = async () => {
   }
 }
 
-const formatDate = (dateString?: string): string => {
+const formatDate = (dateString?: string | Date): string => {
   if (!dateString) return 'N/A'
   return new Intl.DateTimeFormat('es-UY', {
     year: 'numeric',
@@ -862,6 +913,15 @@ const exportContract = () => {
   console.log('Export contract:', contract.value?.id)
 }
 
+const formatCurrency = (amount?: number, currency = 'UYU'): string => {
+  if (!amount) return 'N/A'
+  return new Intl.NumberFormat('es-UY', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 0,
+  }).format(amount)
+}
+
 // Lifecycle
 onMounted(() => {
   loadContract()
@@ -873,7 +933,12 @@ onMounted(() => {
   padding: 24px;
 }
 
-.gap-2 {
+.ga-2 {
   gap: 8px;
+}
+
+.font-mono {
+  font-family: 'Roboto Mono', 'Courier New', monospace;
+  font-size: 0.875rem;
 }
 </style>

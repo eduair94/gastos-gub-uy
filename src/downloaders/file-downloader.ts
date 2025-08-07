@@ -1,8 +1,7 @@
 import axios from 'axios';
-import { createWriteStream } from 'fs';
-import { promises as fs } from 'fs';
+import { createWriteStream, promises as fs } from 'fs';
 import { dirname } from 'path';
-import { FileDownloader, Logger, ScraperConfig } from '../types/interfaces';
+import { FileDownloader, Logger, ScraperConfig } from '../../shared/types/interfaces';
 
 /**
  * File downloader implementation using Axios

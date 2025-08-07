@@ -1,4 +1,4 @@
-import { Logger } from "../types/interfaces";
+import { Logger } from "../../shared/types/interfaces";
 
 /**
  * Simple console logger implementation

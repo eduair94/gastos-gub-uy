@@ -38,16 +38,39 @@ export default defineEventHandler(async (event) => {
     const validatedPage = Math.max(Number(page), 1)
 
     // OPTIMIZATION STRATEGY:
-    // 1. Use compound indexes for filtering + sorting
-    // 2. Minimize pipeline stages and use efficient $match early
-    // 3. Set maxTimeMS to prevent hanging queries
-    // 4. Use allowDiskUse for large datasets
-    // 5. Optimize text search with proper indexes
+    // 1. Text search MUST be first stage if present (MongoDB requirement)
+    // 2. Use compound indexes for filtering + sorting after text search
+    // 3. Minimize pipeline stages and use efficient $match early
+    // 4. Set maxTimeMS to prevent hanging queries
+    // 5. Use allowDiskUse for large datasets
+    // 6. Optimize with proper indexes and hints
 
     // Build aggregation pipeline with optimized order
     const pipeline: PipelineStage[] = []
 
-    // Step 1: Early match stage for indexed filtering (most selective first)
+    // Step 1: Text search MUST be first stage if present (MongoDB requirement)
+    if (search) {
+      // Use phrase search with quotes for exact substring matching
+      const searchQuery = `"${(search as string).trim()}"`
+
+      pipeline.push({
+        $match: {
+          $text: {
+            $search: searchQuery,
+            $language: 'none', // Disable stemming for exact matching
+            $caseSensitive: false,
+            $diacriticSensitive: false,
+          },
+        },
+      })
+      pipeline.push({
+        $addFields: {
+          textScore: { $meta: 'textScore' },
+        },
+      })
+    }
+
+    // Step 2: Other filtering stages (most selective first)
     const matchStage: Record<string, unknown> = {}
 
     // Year filtering (indexed) - most selective first
@@ -97,35 +120,16 @@ export default defineEventHandler(async (event) => {
       matchStage['awards.items.unit.value.amount'] = amountFilter
     }
 
-    // Add initial match stage if there are filters
+    // Add other filters stage if there are any
     if (Object.keys(matchStage).length > 0) {
       pipeline.push({ $match: matchStage })
-    }
-
-    // Step 2: Text search (if needed)
-    if (search) {
-      pipeline.push({
-        $match: {
-          $text: {
-            $search: search as string,
-            $language: 'spanish',
-            $caseSensitive: false,
-            $diacriticSensitive: false,
-          },
-        },
-      })
-      pipeline.push({
-        $addFields: {
-          textScore: { $meta: 'textScore' },
-        },
-      })
     }
 
     // Step 3: Sort (use compound indexes)
     const sortField = getSortField(sortBy as string)
     const sortDirection = sortOrder === 'desc' ? -1 : 1
 
-    if (search) {
+    if (search && !sortField) {
       pipeline.push({
         $sort: {
           textScore: { $meta: 'textScore' },
@@ -151,11 +155,13 @@ export default defineEventHandler(async (event) => {
     }
 
     // Add hint based on sort field for optimal performance
-    if (sortField === 'date') {
-      aggregationOptions.hint = { date: -1 }
-    }
-    else if (sortField === 'sourceYear') {
-      aggregationOptions.hint = { sourceYear: -1 }
+    if (!search) {
+      if (sortField === 'date') {
+        aggregationOptions.hint = { date: -1 }
+      }
+      else if (sortField === 'sourceYear') {
+        aggregationOptions.hint = { sourceYear: -1 }
+      }
     }
 
     const contracts = await ReleaseModel.aggregate(pipeline, aggregationOptions).exec()

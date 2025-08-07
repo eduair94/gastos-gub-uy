@@ -2,12 +2,40 @@
   "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "strict": true,
+    "jsx": "preserve",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "types": [
+      "@nuxt/types",
+      "@vue/runtime-core",
+      "@nuxt/schema"
+    ],
     "paths": {
       "#shared/*": ["../shared/*"],
-      "shared/*": ["../shared/*"]
+      "shared/*": ["../shared/*"],
+      "~~/*": ["./*"],
+      "@@/*": ["./*"],
+      "~/*": ["./*"],
+      "@/*": ["./*"]
     }
   },
   "include": [
-    "../shared/**/*"
+    "../shared/**/*",
+    "./**/*",
+    "./.nuxt/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    ".nuxt/dist"
   ]
 }

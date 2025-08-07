@@ -1,22 +1,20 @@
 #!/usr/bin/env tsx
 
-import { connectToDatabase } from '../app/server/utils/database'
 import {
   AnomalyModel,
   BuyerPatternModel,
-  ReleaseModel,
-  SupplierPatternModel
-} from '../app/server/utils/models'
-import {
   CategoryDistributionModel,
   DashboardMetricsModel,
+  ICategoryDistribution,
+  IDashboardMetrics,
+  ISpendingTrend,
+  ITopEntity,
+  ReleaseModel,
   SpendingTrendsModel,
-  TopEntitiesModel,
-  type ICategoryDistribution,
-  type IDashboardMetrics,
-  type ISpendingTrend,
-  type ITopEntity,
-} from '../app/server/utils/precalculated-models'
+  SupplierPatternModel,
+  TopEntitiesModel
+} from '../app/server/utils/models'
+import { connectToDatabase } from '../shared/connection/database'
 
 class DashboardDataPreCalculator {
   private dataVersion: string
@@ -186,7 +184,14 @@ class DashboardDataPreCalculator {
       {
         $addFields: {
           year: '$sourceYear',
-          month: { $month: { $dateFromString: { dateString: '$date' } } },
+          // Use award date if available, otherwise default to month 6 (mid-year)
+          month: {
+            $cond: {
+              if: { $and: [{ $type: ['$awards.date'] }, { $eq: [{ $type: ['$awards.date'] }, 'date'] }] },
+              then: { $month: '$awards.date' },
+              else: 6 // Default to June if no date available
+            }
+          }
         },
       },
       {

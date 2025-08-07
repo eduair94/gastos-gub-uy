@@ -1,20 +1,14 @@
 #!/usr/bin/env node
 import { config } from 'dotenv'
-import mongoose from 'mongoose'
 import path from 'path'
 
 // Load environment variables
 config({ path: path.resolve(process.cwd(), '.env') })
 
 // Import models
-import { ReleaseModel } from '../app/server/utils/models'
-import {
-  CategoryDistributionModel,
-  DashboardMetricsModel,
-  SpendingTrendsModel,
-  TopEntitiesModel
-} from '../app/server/utils/precalculated-models'
-import { mongoUri } from '../shared/config'
+import { CategoryDistributionModel, DashboardMetricsModel, ReleaseModel, SpendingTrendsModel, TopEntitiesModel } from '../app/server/utils/models'
+
+import { connectToDatabase, disconnectFromDatabase } from '../shared/connection/database'
 
 class QuickDataPreCalculator {
   private dataVersion: string
@@ -24,13 +18,7 @@ class QuickDataPreCalculator {
   }
 
   async connectToDatabase() {
-    try {
-      await mongoose.connect(mongoUri)
-      console.log('✓ Connected to MongoDB')
-    } catch (error) {
-      console.error('❌ Failed to connect to MongoDB:', error)
-      throw error
-    }
+    await connectToDatabase();
   }
 
   async clearOldData() {
@@ -209,7 +197,7 @@ class QuickDataPreCalculator {
       console.error('❌ Pre-calculation failed:', error)
       throw error
     } finally {
-      await mongoose.connection.close()
+      await disconnectFromDatabase()
       console.log('🔌 Database connection closed')
     }
   }

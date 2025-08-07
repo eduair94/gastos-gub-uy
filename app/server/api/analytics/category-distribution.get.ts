@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
-import { CategoryDistributionModel } from '../../utils/precalculated-models'
+import { CategoryDistributionModel } from '../../utils/models'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -48,6 +48,7 @@ export default defineEventHandler(async (event) => {
     // Format the response to match expected interface
     const formattedCategories = filteredCategories.map((category, index) => ({
       category: category.category,
+      description: category.category,
       totalAmount: category.totalAmount,
       contractCount: category.contractCount,
       percentage: category.percentage,

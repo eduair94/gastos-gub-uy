@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { 
-  DataUploader, 
-  DatabaseClient, 
-  JsonProcessor, 
-  UploadStats, 
-  Logger 
-} from '../types/interfaces';
+import {
+  DataUploader,
+  DatabaseClient,
+  JsonProcessor,
+  Logger,
+  UploadStats
+} from '../../shared/types/interfaces';
 
 /**
  * Data uploader implementation following Single Responsibility Principle

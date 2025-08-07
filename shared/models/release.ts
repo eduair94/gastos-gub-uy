@@ -146,7 +146,57 @@ ReleaseSchema.index({ "buyer.name": 1 }); // Buyer filtering
 ReleaseSchema.index({ "awards.suppliers.name": 1 }); // Supplier filtering
 ReleaseSchema.index({ "awards.items.unit.value.amount": 1 }); // Amount filtering
 ReleaseSchema.index({ ocid: 1 }); // OCID lookup
-ReleaseSchema.index({ "tender.title": "text", "tender.description": "text", "buyer.name": "text", "awards.suppliers.name": "text" }); // Text search
+// Comprehensive text search index with weighted fields prioritizing descriptions
+ReleaseSchema.index({ 
+  // High priority: Main descriptions and titles (weight 10)
+  "tender.title": "text",
+  "tender.description": "text", 
+  "awards.title": "text",
+  
+  // Medium-high priority: Item descriptions (weight 8)
+  "tender.items.description": "text",
+  "awards.items.description": "text", 
+  
+  // Medium priority: Classifications (weight 6)
+  "tender.items.classification.description": "text",
+  "awards.items.classification.description": "text",
+  
+  // Lower priority: Entity names (weight 4)
+  "buyer.name": "text",
+  "tender.procuringEntity.name": "text",
+  "awards.suppliers.name": "text",
+  "parties.name": "text",
+  
+  // Lowest priority: OCID for exact matches (weight 2)
+  "ocid": "text"
+}, {
+  weights: {
+    // High priority: Main descriptions and titles
+    "tender.title": 10,
+    "tender.description": 10,
+    "awards.title": 10,
+    
+    // Medium-high priority: Item descriptions
+    "tender.items.description": 8,
+    "awards.items.description": 8,
+    
+    // Medium priority: Classifications
+    "tender.items.classification.description": 6,
+    "awards.items.classification.description": 6,
+    
+    // Lower priority: Entity names
+    "buyer.name": 4,
+    "tender.procuringEntity.name": 4,
+    "awards.suppliers.name": 4,
+    "parties.name": 4,
+    
+    // Lowest priority: OCID
+    "ocid": 2
+  },
+  name: "comprehensive_text_search",
+  default_language: "none", // Disable stemming for exact word matching
+  language_override: "language" // Allow per-document language override
+}); 
 // Compound indexes for common query patterns
 ReleaseSchema.index({ sourceYear: 1, date: -1 }); // Year + date sorting
 ReleaseSchema.index({ "tender.status": 1, date: -1 }); // Status + date sorting

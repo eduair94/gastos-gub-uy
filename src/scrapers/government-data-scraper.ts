@@ -1,4 +1,4 @@
-import { DataWriter, HtmlParser, HttpClient, Logger, ScraperConfig, UrlEntry, UrlExtractor, WebScraper } from "../types/interfaces";
+import { DataWriter, HtmlParser, HttpClient, Logger, ScraperConfig, UrlEntry, UrlExtractor, WebScraper } from "../../shared/types/interfaces";
 
 /**
  * Main web scraper implementation

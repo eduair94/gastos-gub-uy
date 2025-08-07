@@ -1,4 +1,4 @@
-import { UrlExtractor as IUrlExtractor, Logger, ParsedDocument, UrlEntry } from "../types/interfaces";
+import { UrlExtractor as IUrlExtractor, Logger, ParsedDocument, UrlEntry } from "../../shared/types/interfaces";
 import { ConsoleLogger } from "../utils/logger";
 
 /**

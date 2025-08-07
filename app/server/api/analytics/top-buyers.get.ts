@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
-import { TopEntitiesModel } from '../../utils/precalculated-models'
+import { TopEntitiesModel } from '../../utils/models'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -52,6 +52,7 @@ export default defineEventHandler(async (event) => {
       id: buyer.entityId,
       name: buyer.name,
       totalAmount: buyer.totalAmount,
+      transactionCount: buyer.totalContracts,
       totalContracts: buyer.totalContracts,
       avgContractValue: buyer.avgContractValue,
       rank: index + 1, // Re-rank based on filtered order

@@ -192,7 +192,8 @@ export interface ISupplier {
 
 export interface IAwardDocument {
   id: string
-  documentType: string
+  documentType: string;
+  description?:string;
   url: string
   language: string
   datePublished: Date

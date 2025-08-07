@@ -74,64 +74,13 @@
           class="dashboard-card"
           height="400"
         >
-          <v-card-title class="d-flex align-center justify-space-between">
+          <v-card-title>
             <span>Spending Trends Over Time</span>
-            <v-btn-group
-              v-model="trendsTimeframe"
-              mandatory
-              density="compact"
-              variant="outlined"
-            >
-              <v-btn
-                value="5y"
-                size="small"
-              >
-                5Y
-              </v-btn>
-              <v-btn
-                value="10y"
-                size="small"
-              >
-                10Y
-              </v-btn>
-              <v-btn
-                value="all"
-                size="small"
-              >
-                All
-              </v-btn>
-            </v-btn-group>
           </v-card-title>
           <v-card-text>
             <div class="chart-container">
               <!-- Show spending trends data -->
-              <div v-if="spendingTrends.length > 0">
-                <ChartsSpendingChart
-                  :trends="filteredSpendingTrends"
-                  :timeframe="trendsTimeframe"
-                />
-              </div>
-              <!-- Placeholder if no data -->
-              <div
-                v-else
-                class="d-flex justify-center align-center h-100"
-              >
-                <div class="text-center">
-                  <v-icon
-                    size="64"
-                    color="primary"
-                    class="mb-4"
-                  >
-                    mdi-chart-line
-                  </v-icon>
-                  <div class="text-h6">
-                    Loading Spending Trends...
-                  </div>
-                  <div class="text-body-2 text-medium-emphasis">
-                    Please wait while we fetch the data
-                  </div>
-                </div>
-              </div>
+              <ChartsSpendingChart initial-timeframe="10y" />
             </div>
           </v-card-text>
         </v-card>
@@ -154,7 +103,7 @@
                 <v-list>
                   <v-list-item
                     v-for="(category, index) in topCategories.slice(0, 8)"
-                    :key="category.category"
+                    :key="category.description"
                     class="px-0"
                   >
                     <template #prepend>
@@ -169,12 +118,12 @@
                       </v-avatar>
                     </template>
                     <v-list-item-title class="font-weight-medium">
-                      {{ category.category }}
+                      {{ category.description }}
                     </v-list-item-title>
                     <template #append>
                       <div class="text-right">
                         <div class="font-weight-bold">
-                          {{ category.percentage.toFixed(1) }}%
+                          {{ calculatePercentage(category.totalAmount) }}%
                         </div>
                         <div class="text-caption text-medium-emphasis">
                           {{ formatCurrency(category.totalAmount) }}
@@ -252,7 +201,7 @@
                   {{ supplier.name }}
                 </v-list-item-title>
                 <v-list-item-subtitle>
-                  {{ supplier.totalContracts || supplier.transactionCount || 0 }} contracts
+                  {{ supplier.transactionCount || 0 }} contracts
                 </v-list-item-subtitle>
                 <template #append>
                   <div class="text-right">
@@ -309,12 +258,12 @@
                   {{ buyer.name }}
                 </v-list-item-title>
                 <v-list-item-subtitle>
-                  {{ buyer.totalContracts || buyer.transactionCount || 0 }} contracts
+                  {{ buyer.transactionCount || 0 }} contracts
                 </v-list-item-subtitle>
                 <template #append>
                   <div class="text-right">
                     <div class="font-weight-bold">
-                      {{ formatCurrency(buyer.totalSpending || buyer.totalAmount || 0) }}
+                      {{ formatCurrency(buyer.totalAmount || 0) }}
                     </div>
                     <div class="text-caption text-medium-emphasis">
                       Total Spending
@@ -419,11 +368,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useDashboardStore } from '~/stores/dashboard'
+import { useDashboardStore } from '../stores/dashboard'
 
 // Store and reactive state
 const dashboardStore = useDashboardStore()
-const trendsTimeframe = ref('10y')
 
 // Initialize dashboard data on page load
 onMounted(async () => {
@@ -476,23 +424,7 @@ const keyMetrics = computed(() => {
 const topSuppliers = computed(() => dashboardStore.topSuppliers)
 const topBuyers = computed(() => dashboardStore.topBuyers)
 const recentAnomalies = computed(() => dashboardStore.recentAnomalies)
-const spendingTrends = computed(() => dashboardStore.spendingTrends)
 const topCategories = computed(() => dashboardStore.topCategories)
-
-// Filtered spending trends based on timeframe
-const filteredSpendingTrends = computed(() => {
-  if (!spendingTrends.value || !spendingTrends.value.length) return []
-
-  if (trendsTimeframe.value === 'all') return spendingTrends.value
-
-  const yearsToShow = trendsTimeframe.value === '5y' ? 5 : 10
-  const cutoffYear = new Date().getFullYear() - yearsToShow
-
-  return spendingTrends.value.filter((trend) => {
-    const year = new Date(trend.date).getFullYear()
-    return year >= cutoffYear
-  }).slice(-yearsToShow)
-})
 
 // Quick actions
 const quickActions = ref([
@@ -510,13 +442,13 @@ const quickActions = ref([
     color: 'success',
     to: '/suppliers',
   },
-  {
-    title: 'Generate Report',
-    description: 'Create custom reports',
-    icon: 'mdi-file-chart',
-    color: 'info',
-    to: '/reports',
-  },
+  // {
+  //   title: 'Generate Report',
+  //   description: 'Create custom reports',
+  //   icon: 'mdi-file-chart',
+  //   color: 'info',
+  //   to: '/reports',
+  // },
   {
     title: 'View Anomalies',
     description: 'Check detected irregularities',
@@ -550,6 +482,11 @@ const formatCurrency = (amount: number): string => {
     currency: 'UYU',
     minimumFractionDigits: 0,
   }).format(amount)
+}
+
+const calculatePercentage = (amount: number): string => {
+  if (!dashboardStore.metrics?.totalSpending) return '0.0'
+  return ((amount / dashboardStore.metrics.totalSpending) * 100).toFixed(1)
 }
 
 const formatDate = (dateString: string): string => {

@@ -1,34 +1,33 @@
-import { SCRAPER_CONFIG } from "../config/config";
-import { GovernmentDataUrlExtractor } from "../extractors/url-extractor";
-import { ZipFileExtractor } from "../extractors/file-extractor";
-import { AxiosHttpClient } from "../http/axios-client";
-import { AxiosFileDownloader } from "../downloaders/file-downloader";
-import { GovernmentDataManager } from "../managers/data-manager";
-import { CheerioParser } from "../parsers/cheerio-parser";
-import { GovernmentDataScraper } from "../scrapers/government-data-scraper";
-import { JsonSchemaAnalyzer } from "../analyzers/json-schema-analyzer";
-import { MongoDbClient } from "../database/mongodb-client";
-import { StreamingJsonProcessor } from "../processors/streaming-json-processor";
-import { MongoDataUploader } from "../uploaders/mongo-data-uploader";
-import { 
-  DataWriter, 
+import { MongoDbClient } from "../../shared/connection/mongodb-client";
+import {
+  DatabaseClient,
+  DataManager,
+  DataUploader,
+  DataWriter,
   FileDownloader,
   FileExtractor,
-  DataManager,
-  HtmlParser, 
-  HttpClient, 
-  Logger, 
-  ScraperConfig, 
-  UrlExtractor, 
-  WebScraper,
-  SchemaAnalyzer,
-  DatabaseClient,
+  HtmlParser,
+  HttpClient,
   JsonProcessor,
-  DataUploader
-} from "../types/interfaces";
+  Logger,
+  SchemaAnalyzer,
+  ScraperConfig,
+  UrlExtractor,
+  WebScraper
+} from "../../shared/types/interfaces";
+import { JsonSchemaAnalyzer } from "../analyzers/json-schema-analyzer";
+import { MONGO_CONFIG, SCHEMA_ANALYZER_CONFIG, SCRAPER_CONFIG } from "../config/config";
+import { AxiosFileDownloader } from "../downloaders/file-downloader";
+import { ZipFileExtractor } from "../extractors/file-extractor";
+import { GovernmentDataUrlExtractor } from "../extractors/url-extractor";
+import { AxiosHttpClient } from "../http/axios-client";
+import { GovernmentDataManager } from "../managers/data-manager";
+import { CheerioParser } from "../parsers/cheerio-parser";
+import { StreamingJsonProcessor } from "../processors/streaming-json-processor";
+import { GovernmentDataScraper } from "../scrapers/government-data-scraper";
+import { MongoDataUploader } from "../uploaders/mongo-data-uploader";
 import { ConsoleLogger } from "../utils/logger";
 import { JsonFileWriter } from "../writers/json-writer";
-import { MONGO_CONFIG, SCHEMA_ANALYZER_CONFIG } from "../config/config";
 
 /**
  * Factory class for creating scraper instances

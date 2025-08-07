@@ -54,7 +54,7 @@
           <h1 class="text-h4 font-weight-bold mb-2">
             {{ supplier.name }}
           </h1>
-          <div class="d-flex align-center gap-2">
+          <div class="d-flex align-center ga-2">
             <v-chip
               color="primary"
               size="small"
@@ -71,7 +71,7 @@
           </div>
         </div>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex ga-2">
           <v-btn
             color="success"
             prepend-icon="mdi-download"
@@ -217,7 +217,7 @@
                 </div>
                 <div
                   v-if="supplier.topCategories && supplier.topCategories.length > 0"
-                  class="d-flex flex-wrap gap-1 mt-2"
+                  class="d-flex flex-wrap ga-1 mt-2"
                 >
                   <v-chip
                     v-for="category in supplier.topCategories.slice(0, 5)"
@@ -317,7 +317,7 @@
                       {{ contract.ocid }} • {{ formatDate(contract.date) }}
                     </div>
                   </div>
-                  <div class="d-flex align-center gap-2">
+                  <div class="d-flex align-center ga-2">
                     <v-chip
                       color="primary"
                       size="small"
@@ -409,7 +409,7 @@
                           <div class="text-caption text-medium-emphasis">
                             Items: {{ award.items.length }}
                           </div>
-                          <div class="d-flex flex-wrap gap-1 mt-1">
+                          <div class="d-flex flex-wrap ga-1 mt-1">
                             <v-chip
                               v-for="item in award.items.slice(0, 3)"
                               :key="item.id"
@@ -670,7 +670,7 @@ onMounted(() => {
   padding: 24px;
 }
 
-.gap-2 {
+.ga-2 {
   gap: 8px;
 }
 

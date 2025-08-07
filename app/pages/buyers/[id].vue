@@ -30,7 +30,7 @@
       <!-- Header -->
       <div class="d-flex justify-space-between align-start mb-6">
         <div>
-          <div class="d-flex align-center gap-3 mb-3">
+          <div class="d-flex align-center ga-3 mb-3">
             <v-btn
               :to="'/buyers'"
               icon="mdi-arrow-left"
@@ -48,7 +48,7 @@
           </div>
         </div>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex ga-2">
           <v-btn
             color="primary"
             variant="tonal"
@@ -201,7 +201,7 @@
         Activity Timeline
       </v-card-title>
       <v-card-text>
-        <div class="d-flex align-center gap-4 text-body-2">
+        <div class="d-flex align-center ga-4 text-body-2">
           <div>
             <strong>First Contract:</strong> {{ formatDate(buyer.firstContractDate) }}
           </div>
