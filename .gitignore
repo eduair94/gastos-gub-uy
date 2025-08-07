@@ -4,3 +4,4 @@ db
 .env
 .output
 .nuxt
+database-export

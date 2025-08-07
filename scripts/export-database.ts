@@ -2,7 +2,7 @@
 
 /**
  * Database Export Script
- * Exports the entire gastos-gub database to facilitate migration between servers
+ * Exports the entire gastos_gub database to facilitate migration between servers
  * Supports both MongoDB dump and custom JSON export formats
  */
 
@@ -115,8 +115,8 @@ class DatabaseExporter {
     console.log('📦 Exporting with mongodump...')
 
     // Get MongoDB connection details from environment or connection string
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/gastos-gub'
-    const dbName = process.env.MONGODB_DB_NAME || 'gastos-gub'
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/gastos_gub'
+    const dbName = process.env.MONGODB_DB_NAME || 'gastos_gub'
     
     // Parse connection string to extract components
     const uriParts = mongoUri.match(/mongodb:\/\/(?:([^:]+):([^@]+)@)?([^:\/]+)(?::(\d+))?(?:\/([^?]+))?/)

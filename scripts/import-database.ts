@@ -156,8 +156,8 @@ class DatabaseImporter {
     console.log('📦 Importing with mongorestore...')
 
     // Get MongoDB connection details from environment or connection string
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/gastos-gub'
-    const dbName = process.env.MONGODB_DB_NAME || 'gastos-gub'
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/gastos_gub'
+    const dbName = process.env.MONGODB_DB_NAME || 'gastos_gub'
     
     // Parse connection string to extract components
     const uriParts = mongoUri.match(/mongodb:\/\/(?:([^:]+):([^@]+)@)?([^:\/]+)(?::(\d+))?(?:\/([^?]+))?/)
