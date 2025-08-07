@@ -1,16 +1,16 @@
-import { config } from 'dotenv';
-import { DatabaseService } from './services/database-service';
-import { Logger } from './services/logger-service';
-import { ReleaseModel } from './database/release-model';
+import { config } from "dotenv";
+import { ReleaseModel } from "./database/release-model";
+import { DatabaseService } from "./services/database-service";
+import { Logger } from "./services/logger-service";
 
 // Load environment variables
 config();
 
 async function clearDatabase(): Promise<void> {
   const mongoUri = process.env.MONGODB_URI;
-  
+
   if (!mongoUri) {
-    console.error('MONGODB_URI environment variable is required');
+    console.error("MONGODB_URI environment variable is required");
     process.exit(1);
   }
 
@@ -19,16 +19,16 @@ async function clearDatabase(): Promise<void> {
 
   try {
     await databaseService.connect(mongoUri);
-    logger.info('Connected to MongoDB');
-    
+    logger.info("Connected to MongoDB");
+
     const deleteResult = await ReleaseModel.deleteMany({});
     logger.info(`Deleted ${deleteResult.deletedCount} releases from database`);
-    
+
     await databaseService.disconnect();
-    logger.info('Database cleared successfully');
+    logger.info("Database cleared successfully");
     process.exit(0);
   } catch (error) {
-    logger.error('Failed to clear database:', error as Error);
+    logger.error("Failed to clear database:", error as Error);
     process.exit(1);
   }
 }

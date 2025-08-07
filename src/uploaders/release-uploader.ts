@@ -1,7 +1,7 @@
-import { ReleaseModel, IRelease } from '../database/release-model';
-import { IFileService } from '../services/file-service';
-import { IDatabaseService } from '../services/database-service';
-import { ILogger } from '../services/logger-service';
+import { IRelease, ReleaseModel } from "../database/release-model";
+import { IDatabaseService } from "../services/database-service";
+import { IFileService } from "../services/file-service";
+import { ILogger } from "../services/logger-service";
 
 export interface IReleaseUploader {
   uploadReleases(dataDirectory: string): Promise<void>;
@@ -22,7 +22,7 @@ export class ReleaseUploader implements IReleaseUploader {
   async uploadReleases(dataDirectory: string): Promise<void> {
     try {
       await this.databaseService.connect(this.mongoUri);
-      this.logger.info('Connected to MongoDB');
+      this.logger.info("Connected to MongoDB");
 
       const files = this.fileService.findJsonFiles(dataDirectory);
       this.logger.info(`Found ${files.length} JSON files.`);
@@ -35,12 +35,12 @@ export class ReleaseUploader implements IReleaseUploader {
           const { uploaded, skipped } = await this.processFile(file);
           totalUploaded += uploaded;
           totalSkipped += skipped;
-          
+
           // Extract year for better logging
           const yearMatch = file.match(/(\d{4})/);
-          const year = yearMatch ? yearMatch[1] : 'unknown';
-          const fileName = file.split(/[/\\]/).pop() || 'unknown';
-          
+          const year = yearMatch ? yearMatch[1] : "unknown";
+          const fileName = file.split(/[/\\]/).pop() || "unknown";
+
           this.logger.info(`Processed ${fileName} (${year}): ${uploaded} uploaded, ${skipped} skipped`);
         } catch (err) {
           this.logger.error(`Error processing ${file}:`, err as Error);
@@ -49,26 +49,26 @@ export class ReleaseUploader implements IReleaseUploader {
 
       this.logger.info(`Upload complete. Total: ${totalUploaded} uploaded, ${totalSkipped} skipped`);
     } catch (err) {
-      this.logger.error('Failed to upload releases:', err as Error);
+      this.logger.error("Failed to upload releases:", err as Error);
       throw err;
     } finally {
       if (this.databaseService.isConnected()) {
         await this.databaseService.disconnect();
-        this.logger.info('Disconnected from MongoDB');
+        this.logger.info("Disconnected from MongoDB");
       }
     }
   }
 
   private async processFile(filePath: string): Promise<{ uploaded: number; skipped: number }> {
     const data = this.fileService.readJsonFile<IJsonData>(filePath);
-    
+
     if (!Array.isArray(data.releases)) {
       this.logger.warn(`No releases array found in ${filePath}`);
       return { uploaded: 0, skipped: 0 };
     }
 
     // Extract file name and year from file path
-    const fileName = filePath.split(/[/\\]/).pop() || 'unknown';
+    const fileName = filePath.split(/[/\\]/).pop() || "unknown";
     const yearMatch = filePath.match(/(\d{4})/);
     const year = yearMatch ? parseInt(yearMatch[1], 10) : undefined;
 
@@ -94,11 +94,7 @@ export class ReleaseUploader implements IReleaseUploader {
           sourceYear: year,
         };
 
-        const result = await ReleaseModel.updateOne(
-          { id: release.id },
-          { $set: releaseWithMetadata },
-          { upsert: true }
-        );
+        const result = await ReleaseModel.updateOne({ id: release.id }, { $set: releaseWithMetadata }, { upsert: true });
 
         if (result.upsertedCount && result.upsertedCount > 0) {
           uploaded++; // New record inserted

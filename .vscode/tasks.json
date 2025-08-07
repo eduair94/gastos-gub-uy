@@ -14,9 +14,94 @@
 		{
 			"label": "run-scraper",
 			"type": "shell",
-			"command": "tsx",
+			"command": "npm",
 			"args": [
-				"src/index.ts"
+				"run",
+				"dev"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "run-batch-analytics",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"batch-analytics"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "test-analytics-api",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"src/test-analytics-api.ts"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "simple-batch-analytics",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"src/simple-batch-analytics.ts"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "fast-batch-analytics",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"src/fast-batch-analytics.ts"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "ultra-fast-analytics",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"src/ultra-fast-analytics.ts"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "basic-fast-analytics",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"src/basic-fast-analytics.ts"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "fill-missing-analytics",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"src/fill-missing-analytics.ts"
 			],
 			"group": "build",
 			"isBackground": false,

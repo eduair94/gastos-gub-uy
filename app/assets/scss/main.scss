@@ -1,0 +1,154 @@
+// Custom SCSS variables and styles
+// Government theme colors
+$primary-color: #1976d2;
+$secondary-color: #424242;
+$accent-color: #ff5722;
+$success-color: #4caf50;
+$warning-color: #ff9800;
+$error-color: #f44336;
+$info-color: #2196f3;
+
+// Typography
+$font-family-base: "Roboto", "Arial", sans-serif;
+$font-size-base: 16px;
+$line-height-base: 1.5;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// Border radius
+$border-radius-base: 4px;
+$border-radius-lg: 8px;
+
+// Shadows
+$box-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+$box-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.15);
+$box-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.18);
+
+// Utility classes
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.full-height {
+  height: 100vh;
+}
+
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+// Custom component styles
+.dashboard-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.metric-card {
+  text-align: center;
+  padding: $spacing-lg;
+
+  .metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .metric-label {
+    font-size: 0.875rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 400px;
+}
+
+// Responsive helpers
+@media (max-width: 599px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 600px) {
+  .hide-on-desktop {
+    display: none !important;
+  }
+}
+
+// Loading states
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, transparent 37%, #f0f0f0 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+// Status indicators
+.status-active {
+  color: $success-color;
+}
+
+.status-pending {
+  color: $warning-color;
+}
+
+.status-cancelled {
+  color: $error-color;
+}
+
+.status-complete {
+  color: $info-color;
+}
+
+// Data table customizations
+.v-data-table {
+  .v-data-table__th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Navigation customizations
+.app-navigation {
+  .v-list-item--active {
+    border-right: 3px solid $primary-color;
+  }
+}
+
+// Form customizations
+.form-section {
+  margin-bottom: $spacing-xl;
+
+  .form-section-title {
+    margin-bottom: $spacing-md;
+    font-weight: 600;
+    color: $primary-color;
+  }
+}

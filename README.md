@@ -160,9 +160,83 @@ const scraper = new GovernmentDataScraper(
 
 MIT
 
+## 📊 Analytics System
+
+This project includes a comprehensive analytics system for processing and analyzing government expenditure data. The system is designed for high performance by pre-computing analytics data and storing it in MongoDB collections.
+
+### 🏗️ Analytics Architecture
+
+The analytics system follows a pre-computation approach for optimal performance:
+
+1. **Batch Processing**: Analytics are computed in batches and stored in dedicated collections
+2. **Pre-computed Data**: The API serves data from pre-computed collections rather than performing real-time aggregations
+3. **Automatic Refresh**: The system automatically checks for stale data and recomputes when needed
+
+### 📈 Analytics Components
+
+#### Collections Created:
+- `expense_insights`: Yearly/monthly spending insights
+- `supplier_patterns`: Pre-computed supplier analysis
+- `buyer_patterns`: Pre-computed buyer analysis  
+- `anomalies`: Detected data anomalies
+
+#### Scripts Available:
+- `npm run batch-analytics`: Pre-compute all analytics data
+- `npm run analytics`: Run real-time analytics (for testing)
+- `npm run server`: Start the analytics API server
+
+### 🚀 Running Analytics
+
+1. **First, process the data:**
+   ```bash
+   npm run batch-analytics
+   ```
+
+2. **Start the analytics server:**
+   ```bash
+   npm run server
+   ```
+
+3. **Access the API endpoints:**
+   - `GET /api/analytics/insights` - Get expense insights
+   - `GET /api/analytics/anomalies` - Get detected anomalies
+   - `GET /api/analysis/suppliers` - Get supplier patterns
+   - `GET /api/analysis/buyers` - Get buyer patterns
+   - `GET /api/analytics/overview` - Get analytics summary
+
+### 📊 API Examples
+
+```bash
+# Get all insights
+curl http://localhost:3000/api/analytics/insights
+
+# Get insights for a specific year
+curl http://localhost:3000/api/insights/2023
+
+# Get anomalies with filtering
+curl "http://localhost:3000/api/analytics/anomalies?severity=critical&limit=10"
+
+# Search suppliers
+curl "http://localhost:3000/api/analysis/suppliers?search=empresa&limit=20"
+```
+
+### ⚡ Performance Benefits
+
+- **Fast Response Times**: Data is pre-computed, eliminating expensive real-time aggregations
+- **Scalable**: Batch processing can handle large datasets efficiently
+- **Resource Efficient**: API server focuses only on data retrieval
+- **Automatic Updates**: Stale data detection ensures freshness
+
+### 🔄 Data Refresh Strategy
+
+- Analytics data is automatically refreshed when older than 1 week
+- Manual refresh can be triggered by running `npm run batch-analytics`
+- The system checks data freshness on each API request
+
 ## 🤝 Contributing
 
 1. Follow SOLID principles
 2. Maintain type safety
 3. Add appropriate logging
 4. Update documentation
+5. Pre-compute analytics data for performance
