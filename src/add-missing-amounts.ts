@@ -1,5 +1,5 @@
-import { connectToDatabase } from "./app/server/utils/database";
-import { ReleaseModel } from "./shared/models";
+import { connectToDatabase } from "../app/server/utils/database";
+import { ReleaseModel } from "../shared/models";
 
 // Calculate total amounts function (shared logic)
 const calculateTotalAmounts = (awards: any[]) => {
