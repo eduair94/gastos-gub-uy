@@ -1,4 +1,4 @@
-import { connectToDatabase } from "../app/server/utils/database";
+import { connectToDatabase } from "../shared/connection/database";
 import { ReleaseModel } from "../shared/models";
 
 // Calculate total amounts function (shared logic)

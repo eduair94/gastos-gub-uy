@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "lib": ["ES2022"],
-    "outDir": "logs/dist",
+    "outDir": "./dist",
     "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
@@ -30,7 +30,7 @@
   ],
   "exclude": [
     "node_modules",
-    "logs/dist",
+    "dist",
     "**/*.test.ts"
   ]
 }
