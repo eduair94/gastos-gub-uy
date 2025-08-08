@@ -87,21 +87,41 @@ export default defineEventHandler(async (event) => {
     // Build aggregation pipeline with optimized order
     const pipeline: PipelineStage[] = []
 
-    // Step 1: Text search MUST be first stage if present (MongoDB requirement)
+    // Step 1: Text search using hybrid approach for better performance
     if (search) {
-      // Use phrase search with quotes for exact substring matching
-      const searchQuery = `"${(search as string).trim()}"`
-
+      const searchQuery = (search as string).trim()
+      
+      // Use first word for text index search to reduce dataset quickly
+      const firstWord = searchQuery.split(' ')[0]
+      
       pipeline.push({
         $match: {
           $text: {
-            $search: searchQuery,
-            $language: 'none', // Disable stemming for exact matching
+            $search: firstWord,
             $caseSensitive: false,
             $diacriticSensitive: false,
           },
         },
       })
+
+      // Then filter by regex that contains the full search phrase
+      const fullSearchRegex = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+      
+      pipeline.push({
+        $match: {
+          $or: [
+            { 'tender.title': fullSearchRegex },
+            { 'tender.description': fullSearchRegex },
+            { 'awards.items.description': fullSearchRegex },
+            { 'awards.items.title': fullSearchRegex },
+            { 'awards.items.classification.description': fullSearchRegex },
+            { 'buyer.name': fullSearchRegex },
+            { 'awards.suppliers.name': fullSearchRegex },
+          ],
+        },
+      })
+
+      // Add text score projection for sorting
       pipeline.push({
         $addFields: {
           textScore: { $meta: 'textScore' },
@@ -164,11 +184,12 @@ export default defineEventHandler(async (event) => {
       pipeline.push({ $match: matchStage })
     }
 
-    // Step 3: Sort (use compound indexes)
+    // Step 3: Sort (use compound indexes, prioritize text score for text searches)
     const sortField = getSortField(sortBy as string)
     const sortDirection = sortOrder === 'desc' ? -1 : 1
 
-    if (search && !sortField) {
+    if (search) {
+      // For text search, always prioritize text score, then secondary sort
       pipeline.push({
         $sort: {
           textScore: { $meta: 'textScore' },
@@ -190,10 +211,10 @@ export default defineEventHandler(async (event) => {
     // Execute aggregation with optimizations to prevent overload
     const aggregationOptions: any = {
       allowDiskUse: false, // Prevent disk usage to keep queries fast
-      maxTimeMS: 15000, // Reduced timeout from 30s to 15s
+      maxTimeMS: search ? 8000 : 15000, // Shorter timeout for text searches
     }
 
-    // Add hint based on sort field for optimal performance
+    // Add hint based on sort field for optimal performance (not for text search)
     if (!search) {
       if (sortField === 'date') {
         aggregationOptions.hint = { date: -1 }
