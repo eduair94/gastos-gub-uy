@@ -5,3 +5,4 @@ db
 .output
 .nuxt
 database-export
+dist

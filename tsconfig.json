@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2022"],
-    "outDir": "./dist",
+    "outDir": "logs/dist",
     "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
@@ -22,8 +22,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "exactOptionalPropertyTypes": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": false
   },
   "include": [
     "src/**/*",
@@ -31,7 +30,7 @@
   ],
   "exclude": [
     "node_modules",
-    "dist",
+    "logs/dist",
     "**/*.test.ts"
   ]
 }

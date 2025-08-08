@@ -5,8 +5,7 @@ import rateLimit from "express-rate-limit";
 import { query, validationResult } from "express-validator";
 import helmet from "helmet";
 
-import { AnomalyModel, ExpenseInsightModel } from "../database/analytics-models";
-import { ReleaseModel } from "../database/release-model";
+import { AnomalyModel, ExpenseInsightModel, ReleaseModel } from "../../shared/models";
 import { AnalyticsDataService } from "../services/analytics-data-service";
 import { Logger } from "../services/logger-service";
 

@@ -1,5 +1,5 @@
 import { AnomalyModel, BuyerPatternModel, ExpenseInsightModel, SupplierPatternModel } from "../../shared/models";
-import { IAnomaly, IBuyerPattern, IExpenseInsight, ISupplierPattern } from "../database/release-model";
+import { IAnomaly, IBuyerPattern, IExpenseInsight, ISupplierPattern } from "../../shared/types";
 import { ILogger } from "./logger-service";
 
 export interface IAnalyticsDataService {

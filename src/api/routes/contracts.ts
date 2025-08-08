@@ -14,8 +14,6 @@ router.get('/', async (req, res) => {
       search,
       dateFrom,
       dateTo,
-      amountFrom,
-      amountTo,
       sortBy = 'date',
       sortOrder = 'desc'
     } = req.query
@@ -77,7 +75,7 @@ router.get('/', async (req, res) => {
 })
 
 // GET /api/contracts/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req, res): Promise<any> => {
   try {
     const { id } = req.params
 
