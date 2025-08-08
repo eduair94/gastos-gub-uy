@@ -8,6 +8,7 @@ export interface IDatabaseService {
 
 export class DatabaseService implements IDatabaseService {
   async connect(uri: string): Promise<void> {
+    console.log("Connect", uri);
     await mongoose.connect(uri);
   }
 

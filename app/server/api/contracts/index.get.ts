@@ -90,10 +90,10 @@ export default defineEventHandler(async (event) => {
     // Step 1: Text search using hybrid approach for better performance
     if (search) {
       const searchQuery = (search as string).trim()
-      
+
       // Use first word for text index search to reduce dataset quickly
       const firstWord = searchQuery.split(' ')[0]
-      
+
       pipeline.push({
         $match: {
           $text: {
@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
 
       // Then filter by regex that contains the full search phrase
       const fullSearchRegex = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-      
+
       pipeline.push({
         $match: {
           $or: [
@@ -171,12 +171,12 @@ export default defineEventHandler(async (event) => {
       matchStage['awards.suppliers.name'] = { $in: supplierList.map(s => new RegExp(s as string, 'i')) }
     }
 
-    // Amount filtering (indexed)
+    // Amount filtering (using calculated primary amount for better performance)
     if (amountFrom || amountTo) {
       const amountFilter: Record<string, unknown> = {}
       if (amountFrom) amountFilter.$gte = Number(amountFrom)
       if (amountTo) amountFilter.$lte = Number(amountTo)
-      matchStage['awards.items.unit.value.amount'] = amountFilter
+      matchStage['amount.primaryAmount'] = amountFilter
     }
 
     // Add other filters stage if there are any
@@ -277,7 +277,8 @@ function getSortField(sortBy: string): string {
     title: 'tender.title',
     buyer: 'buyer.name',
     supplier: 'awards.suppliers.name', // Use array field for better indexing
-    amount: 'awards.items.unit.value.amount', // Use array field for better indexing
+    amount: 'amount.primaryAmount', // Use calculated primary amount for better performance
+    totalAmount: 'amount.primaryAmount', // Alias for amount
   }
   return sortFields[sortBy] || 'date'
 }

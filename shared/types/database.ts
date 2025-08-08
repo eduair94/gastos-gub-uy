@@ -250,6 +250,15 @@ export interface IRelease extends Document {
   // Metadata fields for tracking data source
   sourceFileName?: string
   sourceYear?: number
+  // Calculated amount field with multicurrency support
+  amount?: {
+    totalAmounts: Record<string, number> // e.g., { "UYU": 15000, "USD": 500 }
+    totalItems: number
+    currencies: string[]
+    hasAmounts: boolean
+    primaryAmount: number // Main amount in UYU for sorting/filtering
+    primaryCurrency: string
+  }
 }
 
 export interface IFilterData {

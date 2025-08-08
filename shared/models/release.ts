@@ -131,6 +131,15 @@ const ReleaseSchema = new Schema<IRelease>(
     // Metadata fields for tracking data source
     sourceFileName: { type: String },
     sourceYear: { type: Number },
+    // Calculated amount field with multicurrency support
+    amount: {
+      totalAmounts: { type: Map, of: Number }, // Map of currency to total amount
+      totalItems: { type: Number },
+      currencies: [{ type: String }],
+      hasAmounts: { type: Boolean },
+      primaryAmount: { type: Number }, // Main amount in UYU for sorting/filtering
+      primaryCurrency: { type: String }
+    }
   },
   {
     strict: false,
@@ -145,6 +154,8 @@ ReleaseSchema.index({ "tender.procurementMethod": 1 }); // Procurement method fi
 ReleaseSchema.index({ "buyer.name": 1 }); // Buyer filtering
 ReleaseSchema.index({ "awards.suppliers.name": 1 }); // Supplier filtering
 ReleaseSchema.index({ "awards.items.unit.value.amount": 1 }); // Amount filtering
+ReleaseSchema.index({ "amount.primaryAmount": 1 }); // Calculated primary amount for sorting/filtering
+ReleaseSchema.index({ "amount.currencies": 1 }); // Currency filtering
 ReleaseSchema.index({ ocid: 1 }); // OCID lookup
 // Comprehensive text search index with weighted fields prioritizing descriptions
 ReleaseSchema.index({ 

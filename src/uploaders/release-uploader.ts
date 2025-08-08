@@ -128,11 +128,58 @@ export class ReleaseUploader implements IReleaseUploader {
           release.date = new Date(release.date);
         }
 
+        // Calculate total amounts from awards (multicurrency support)
+        const calculateTotalAmounts = (awards: any[]) => {
+          const amountsByCurrency: Record<string, number> = {};
+          let totalItems = 0;
+          
+          if (awards && Array.isArray(awards)) {
+            for (const award of awards) {
+              if (award.items && Array.isArray(award.items)) {
+                for (const item of award.items) {
+                  totalItems++;
+                  if (item.unit?.value?.amount && typeof item.unit.value.amount === 'number') {
+                    const currency = item.unit.value.currency || 'UYU'; // Default to UYU if no currency
+                    const quantity = item.quantity || 1;
+                    const itemTotal = item.unit.value.amount * quantity;
+                    
+                    amountsByCurrency[currency] = (amountsByCurrency[currency] || 0) + itemTotal;
+                  }
+                }
+              }
+              
+              // Also check if award has a direct value field
+              if (award.value?.amount && typeof award.value.amount === 'number') {
+                const currency = award.value.currency || 'UYU';
+                amountsByCurrency[currency] = (amountsByCurrency[currency] || 0) + award.value.amount;
+              }
+            }
+          }
+          
+          return {
+            totalAmounts: amountsByCurrency,
+            totalItems,
+            currencies: Object.keys(amountsByCurrency),
+            hasAmounts: Object.keys(amountsByCurrency).length > 0
+          };
+        };
+
+        const amountData = calculateTotalAmounts(release.awards || []);
+
         // Add metadata to the release
         const releaseWithMetadata = {
           ...release,
           sourceFileName: fileName,
           sourceYear,
+          amount: {
+            totalAmounts: amountData.totalAmounts,
+            totalItems: amountData.totalItems,
+            currencies: amountData.currencies,
+            hasAmounts: amountData.hasAmounts,
+            // Add primary amount in UYU for easy sorting/filtering
+            primaryAmount: amountData.totalAmounts.UYU || 0,
+            primaryCurrency: 'UYU'
+          }
         };
 
         // Add bulk operation
