@@ -165,10 +165,36 @@ export default defineEventHandler(async (event) => {
       matchStage['buyer.name'] = { $in: buyerList.map(b => new RegExp(b as string, 'i')) }
     }
 
-    // Supplier filtering (indexed)
+    // Supplier filtering - support both IDs and names for backward compatibility
     if (suppliers) {
       const supplierList = Array.isArray(suppliers) ? suppliers : [suppliers]
-      matchStage['awards.suppliers.name'] = { $in: supplierList.map(s => new RegExp(s as string, 'i')) }
+
+      // Check if suppliers are IDs (contain slash) or names
+      const supplierIds = supplierList.filter(s => typeof s === 'string' && s.includes('/'))
+      const supplierNames = supplierList.filter(s => typeof s === 'string' && !s.includes('/'))
+
+      const supplierFilters: any[] = []
+
+      // Add ID-based filtering if we have supplier IDs
+      if (supplierIds.length > 0) {
+        supplierFilters.push({ 'awards.suppliers.id': { $in: supplierIds } })
+      }
+
+      // Add name-based filtering if we have supplier names (for backward compatibility)
+      if (supplierNames.length > 0) {
+        supplierFilters.push({ 'awards.suppliers.name': { $in: supplierNames.map(s => new RegExp(s as string, 'i')) } })
+      }
+
+      if (supplierFilters.length > 0) {
+        if (supplierFilters.length === 1) {
+          // If only one filter type, add it directly to matchStage
+          Object.assign(matchStage, supplierFilters[0])
+        }
+        else {
+          // If multiple filter types, use $or
+          matchStage.$or = (matchStage.$or as any[] || []).concat(supplierFilters)
+        }
+      }
     }
 
     // Amount filtering (using calculated primary amount for better performance)

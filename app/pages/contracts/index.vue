@@ -51,7 +51,7 @@
           >
             <v-text-field
               v-model="filters.search"
-              label="Search contracts, suppliers, buyers..."
+              label="Search contract items..."
               prepend-inner-icon="mdi-magnify"
               clearable
               variant="outlined"
@@ -165,18 +165,8 @@
             cols="12"
             md="3"
           >
-            <v-autocomplete
+            <SupplierAutocomplete
               v-model="filters.suppliers"
-              label="Suppliers"
-              :items="filterOptions.suppliers as any[]"
-              item-title="label"
-              item-value="value"
-              variant="outlined"
-              density="compact"
-              multiple
-              clearable
-              chips
-              :loading="isHydrated && loadingFilters"
             />
           </v-col>
 
@@ -892,6 +882,15 @@ const filterOptions = ref({
 })
 
 // Filters
+interface SupplierAutocompleteItem {
+  value: string
+  label: string
+  meta?: {
+    totalValue: number
+    totalContracts: number
+  }
+}
+
 interface FilterState {
   search: string
   yearFrom: string | null
@@ -900,7 +899,7 @@ interface FilterState {
   amountTo: number | null
   status: string[]
   procurementMethod: string[]
-  suppliers: string[]
+  suppliers: SupplierAutocompleteItem[]
   buyers: string[]
 }
 
@@ -1020,6 +1019,8 @@ const loadContracts = async () => {
       sortBy: sortBy.value[0]?.key || 'date',
       sortOrder: sortBy.value[0]?.order || 'desc',
       ...filters.value,
+      // Extract supplier IDs from supplier objects
+      suppliers: filters.value.suppliers.map(supplier => supplier.value),
     }
 
     // Clean empty filters
@@ -1208,7 +1209,7 @@ const updateQueryParams = () => {
   if (filters.value.amountTo) query.amountTo = filters.value.amountTo.toString()
   if (filters.value.status.length > 0) query.status = filters.value.status.join(',')
   if (filters.value.procurementMethod.length > 0) query.procurementMethod = filters.value.procurementMethod.join(',')
-  if (filters.value.suppliers.length > 0) query.suppliers = filters.value.suppliers.join(',')
+  if (filters.value.suppliers.length > 0) query.suppliers = JSON.stringify(filters.value.suppliers)
   if (filters.value.buyers.length > 0) query.buyers = filters.value.buyers.join(',')
 
   // Add pagination and sorting
@@ -1232,7 +1233,9 @@ const loadFiltersFromQuery = () => {
   if (query.amountTo) filters.value.amountTo = Number(query.amountTo)
   if (query.status) filters.value.status = (query.status as string).split(',').filter(s => s)
   if (query.procurementMethod) filters.value.procurementMethod = (query.procurementMethod as string).split(',').filter(s => s)
-  if (query.suppliers) filters.value.suppliers = (query.suppliers as string).split(',').filter(s => s)
+  if (query.suppliers) {
+    filters.value.suppliers = JSON.parse(query.suppliers as string)
+  }
   if (query.buyers) filters.value.buyers = (query.buyers as string).split(',').filter(s => s)
 
   // Load pagination and sorting

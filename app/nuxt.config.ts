@@ -56,7 +56,7 @@ export default defineNuxtConfig({
     // Public keys (exposed to client-side)
     public: {
       apiBase: '/api', // Use integrated API endpoints
-      appName: 'Gastos Gub - Transparency Dashboard',
+      appName: 'Con la tuya contribuyente - Transparency Dashboard',
       appDescription: 'Uruguay Government Contracts Analytics Platform',
     },
   },
@@ -64,7 +64,7 @@ export default defineNuxtConfig({
   // App configuration
   app: {
     head: {
-      title: 'Gastos Gub - Government Transparency Dashboard',
+      title: 'Con la tuya contribuyente - Government Transparency Dashboard',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },

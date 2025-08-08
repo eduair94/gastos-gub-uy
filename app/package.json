@@ -25,6 +25,7 @@
     "chartjs-adapter-date-fns": "^3.0.0",
     "date-fns": "^4.1.0",
     "h3": "^1.15.4",
+    "lodash-es": "^4.17.21",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.0",
     "nuxt": "^3.13.0",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@nuxt/typescript-build": "^3.0.2",
+    "@types/lodash-es": "^4.17.12",
     "@types/node": "^24.2.0",
     "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^8.8.0",

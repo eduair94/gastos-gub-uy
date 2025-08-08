@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
         : sortBy === 'name'
           ? 'name'
           : 'totalSpending'
-    const sortDirection = sortOrder === 'desc' ? -1 : 1
+    const sortDirection = sortOrder === 'asc' ? 1 : 1
     const sortOptions: Record<string, 1 | -1> = { [sortField]: sortDirection as 1 | -1 }
 
     // Calculate pagination

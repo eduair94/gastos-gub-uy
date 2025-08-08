@@ -21,7 +21,7 @@
           </v-avatar>
         </template>
         <v-list-item-title class="text-h6 font-weight-bold">
-          Gastos Gub
+          Con la tuya contribuyente
         </v-list-item-title>
         <v-list-item-subtitle>
           Transparency Dashboard

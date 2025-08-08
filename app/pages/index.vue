@@ -4,7 +4,7 @@
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
         <h1 class="text-h4 font-weight-bold mb-2">
-          Government Transparency Dashboard
+          Con la tuya contribuyente
         </h1>
         <p class="text-subtitle-1 text-medium-emphasis">
           Explore Uruguay's government contract data from 2002-2024
