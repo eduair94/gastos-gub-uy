@@ -56,7 +56,6 @@
               clearable
               variant="outlined"
               density="compact"
-              @keyup.enter="searchContracts"
               @click:clear="clearSearch"
             />
           </v-col>
@@ -846,7 +845,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useApi } from '~/composables/useApi'
 import type { IRelease } from '~/types/database'
 import { formatCurrency } from '~/utils'
@@ -877,6 +876,7 @@ const meta = ref({
   filtersApplied: false,
   sortBy: 'date',
   sortOrder: 'desc',
+  initialLoad: true, // Flag to prevent query param clearing during initial load
 })
 
 // Filter options
@@ -1053,12 +1053,18 @@ const handleTableUpdate = (options: any) => {
   currentPage.value = options.page
   itemsPerPage.value = options.itemsPerPage
   sortBy.value = options.sortBy || [{ key: 'date', order: 'desc' }]
-  updateQueryParams()
+
+  // Only update query params if this is not the initial load
+  if (!meta.value.initialLoad) {
+    updateQueryParams()
+  }
   loadContracts()
 }
 
 const applyFilters = () => {
   currentPage.value = 1
+  meta.value.searchPerformed = true
+  meta.value.initialLoad = false
   updateQueryParams()
   loadContracts()
 }
@@ -1076,16 +1082,16 @@ const clearAllFilters = () => {
     buyers: [],
   }
   currentPage.value = 1
+  meta.value.searchPerformed = true
+  meta.value.initialLoad = false
   updateQueryParams()
   loadContracts()
 }
 
 const clearSearch = () => {
   filters.value.search = ''
-  applyFilters()
-}
-
-const searchContracts = () => {
+  meta.value.searchPerformed = true
+  meta.value.initialLoad = false
   applyFilters()
 }
 
@@ -1207,27 +1213,37 @@ onMounted(() => {
   loadFilterOptions()
   loadFiltersFromQuery()
   loadContracts()
+
+  // Set initial load to false after first load
+  nextTick(() => {
+    meta.value.initialLoad = false
+  })
 })
 
 // Watch for filter changes
 watch(() => itemsPerPage.value, () => {
   currentPage.value = 1
-  updateQueryParams()
-  loadContracts()
+  if (!meta.value.initialLoad) {
+    updateQueryParams()
+    loadContracts()
+  }
 })
 
 // Watch for filter changes to auto-sync with query params
 watch(filters, () => {
   // Only update query params if filters have been manually changed (not during initial load)
-  if (meta.value.searchPerformed) {
+  if (!meta.value.initialLoad && meta.value.searchPerformed) {
     updateQueryParams()
   }
 }, { deep: true })
 
 // Watch for navigation changes (back/forward buttons)
-watch(() => route.query, () => {
-  loadFiltersFromQuery()
-  loadContracts()
+watch(() => route.query, (newQuery, oldQuery) => {
+  // Only reload if query actually changed and it's not the initial load
+  if (!meta.value.initialLoad && JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
+    loadFiltersFromQuery()
+    loadContracts()
+  }
 }, { deep: true })
 </script>
 

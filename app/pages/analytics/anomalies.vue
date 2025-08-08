@@ -488,7 +488,7 @@ const loadData = async () => {
     sortBy: sortBy.value.length > 0 ? sortBy.value[0].key : 'createdAt',
     sortOrder: sortBy.value.length > 0 ? sortBy.value[0].order : 'desc',
   }
-  
+
   await fetchAnomalies(filters_params)
 }
 

@@ -18,22 +18,16 @@ export class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
 
-    const config: RequestInit = {
-      ...options,
-      headers: {
-        ...this.defaultHeaders,
-        ...options.headers,
-      },
-    }
-
     try {
-      const response = await fetch(url, config)
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
+      // Use Nuxt's $fetch for better SSR support
+      const data = await $fetch(url, {
+        method: options.method as any || 'GET',
+        headers: {
+          ...this.defaultHeaders,
+          ...options.headers,
+        },
+        body: options.body,
+      }) as T
       return data
     }
     catch (error) {
@@ -232,31 +226,25 @@ export class ApiClient {
 
   // Export endpoints
   async exportContracts(filters?: any, format = 'csv'): Promise<Blob> {
-    const response = await fetch(`${this.baseURL}/export/contracts?format=${format}`, {
+    const response = await $fetch<Blob>(`${this.baseURL}/export/contracts?format=${format}`, {
       method: 'POST',
       headers: this.defaultHeaders,
-      body: JSON.stringify(filters),
+      body: filters ? JSON.stringify(filters) : undefined,
+      responseType: 'blob',
     })
 
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.statusText}`)
-    }
-
-    return response.blob()
+    return response
   }
 
   async exportSuppliers(filters?: any, format = 'csv'): Promise<Blob> {
-    const response = await fetch(`${this.baseURL}/export/suppliers?format=${format}`, {
+    const response = await $fetch<Blob>(`${this.baseURL}/export/suppliers?format=${format}`, {
       method: 'POST',
       headers: this.defaultHeaders,
-      body: JSON.stringify(filters),
+      body: filters ? JSON.stringify(filters) : undefined,
+      responseType: 'blob',
     })
 
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.statusText}`)
-    }
-
-    return response.blob()
+    return response
   }
 }
 

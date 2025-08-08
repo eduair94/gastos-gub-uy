@@ -1,5 +1,28 @@
 export * from './database'
 
+// API Response Types
+export interface ApiResponse<T = any> {
+  success: boolean
+  data: T
+  message?: string
+  error?: string
+}
+
+export interface PaginatedResponse<T = any> {
+  success: boolean
+  data: T[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  }
+  message?: string
+  error?: string
+}
+
 export interface NavigationItem {
   title: string
   icon: string
