@@ -16,7 +16,17 @@ export class ApiClient {
     endpoint: string,
     options: RequestInit = {},
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`
+    let url: string
+
+    // Handle SSR vs client-side rendering
+    if (import.meta.server) {
+      // On server-side, construct full URL
+      url = `http://localhost:3600${this.baseURL}${endpoint}`
+    }
+    else {
+      // On client-side, use relative URLs
+      url = `${this.baseURL}${endpoint}`
+    }
 
     try {
       // Use Nuxt's $fetch for better SSR support
@@ -226,7 +236,23 @@ export class ApiClient {
 
   // Export endpoints
   async exportContracts(filters?: any, format = 'csv'): Promise<Blob> {
-    const response = await $fetch<Blob>(`${this.baseURL}/export/contracts?format=${format}`, {
+    let url: string
+    const endpoint = `/export/contracts?format=${format}`
+
+    if (import.meta.server) {
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+      const host = process.env.NUXT_HOST || process.env.HOST || 'localhost'
+      const port = process.env.NUXT_PORT || process.env.PORT || '3600'
+      const fullHost = process.env.NODE_ENV === 'production' && (port === '80' || port === '443')
+        ? host
+        : `${host}:${port}`
+      url = `${protocol}://${fullHost}${this.baseURL}${endpoint}`
+    }
+    else {
+      url = `${this.baseURL}${endpoint}`
+    }
+
+    const response = await $fetch<Blob>(url, {
       method: 'POST',
       headers: this.defaultHeaders,
       body: filters ? JSON.stringify(filters) : undefined,
@@ -237,7 +263,23 @@ export class ApiClient {
   }
 
   async exportSuppliers(filters?: any, format = 'csv'): Promise<Blob> {
-    const response = await $fetch<Blob>(`${this.baseURL}/export/suppliers?format=${format}`, {
+    let url: string
+    const endpoint = `/export/suppliers?format=${format}`
+
+    if (import.meta.server) {
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+      const host = process.env.NUXT_HOST || process.env.HOST || 'localhost'
+      const port = process.env.NUXT_PORT || process.env.PORT || '3600'
+      const fullHost = process.env.NODE_ENV === 'production' && (port === '80' || port === '443')
+        ? host
+        : `${host}:${port}`
+      url = `${protocol}://${fullHost}${this.baseURL}${endpoint}`
+    }
+    else {
+      url = `${this.baseURL}${endpoint}`
+    }
+
+    const response = await $fetch<Blob>(url, {
       method: 'POST',
       headers: this.defaultHeaders,
       body: filters ? JSON.stringify(filters) : undefined,

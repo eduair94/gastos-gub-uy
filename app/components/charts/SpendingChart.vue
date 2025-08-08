@@ -111,7 +111,7 @@ const selectedTimeframe = ref(props.initialTimeframe)
 const spendingTrends = computed(() => dashboardStore.spendingTrends)
 
 const getLastYear = () => {
-  if (!spendingTrends.value) return new Date().getFullYear()
+  if (!spendingTrends.value || !spendingTrends.value.length) return new Date().getFullYear()
   return parseInt((spendingTrends.value as any).at(-1).date.split('-')[0])
 }
 
