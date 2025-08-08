@@ -5,6 +5,7 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
 export default defineNuxtPlugin((nuxtApp) => {
   const vuetify = createVuetify({
+    ssr: true, // Enable SSR support
     components,
     directives,
     theme: {

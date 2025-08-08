@@ -14,7 +14,7 @@
         <v-btn
           color="primary"
           prepend-icon="mdi-refresh"
-          :loading="loading"
+          :loading="isHydrated && loading"
           @click="refreshData"
         >
           Refresh
@@ -176,7 +176,7 @@
               multiple
               clearable
               chips
-              :loading="loadingFilters"
+              :loading="isHydrated && loadingFilters"
             />
           </v-col>
 
@@ -196,7 +196,7 @@
               multiple
               clearable
               chips
-              :loading="loadingFilters"
+              :loading="isHydrated && loadingFilters"
             />
           </v-col>
         </v-row>
@@ -210,7 +210,7 @@
             <v-select
               v-model="itemsPerPage"
               label="Items per page"
-              :items="[10, 25, 50, 100]"
+              :items="[10, 25, 50]"
               variant="outlined"
               density="compact"
             />
@@ -225,7 +225,7 @@
             <v-btn
               color="primary"
               block
-              :loading="loading"
+              :loading="isHydrated && loading"
               @click="applyFilters"
             >
               Apply Filters
@@ -267,7 +267,7 @@
         v-model:sort-by="sortBy"
         :headers="headers"
         :items="contracts"
-        :loading="loading"
+        :loading="isHydrated && loading"
         :items-length="estimatedTotal"
         class="elevation-1"
         @update:options="handleTableUpdate"
@@ -846,7 +846,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useApi } from '~/composables/useApi'
+import { useOptimizedApi } from '~/composables/useOptimizedApi'
 import type { IRelease } from '~/types/database'
 import { formatCurrency } from '~/utils'
 // Meta
@@ -856,7 +856,7 @@ definePageMeta({
 })
 
 // Composables
-const api = useApi()
+const api = useOptimizedApi()
 const route = useRoute()
 const router = useRouter()
 
@@ -878,6 +878,9 @@ const meta = ref({
   sortOrder: 'desc',
   initialLoad: true, // Flag to prevent query param clearing during initial load
 })
+
+// Hydration-safe state management
+const isHydrated = ref(false)
 
 // Filter options
 const filterOptions = ref({
@@ -918,7 +921,20 @@ const currentPage = ref(1)
 const itemsPerPage = ref(25)
 const sortBy = ref([{ key: 'date', order: 'desc' as 'asc' | 'desc' }])
 
-// Raw data dialog
+// Add request tracking to prevent rapid requests
+const lastRequestTime = ref(0)
+const minRequestInterval = 500 // Minimum 500ms between requests
+
+// Throttle function to prevent rapid requests
+const throttledLoadContracts = () => {
+  const now = Date.now()
+  if (now - lastRequestTime.value < minRequestInterval) {
+    // Skip this request if it's too soon
+    return
+  }
+  lastRequestTime.value = now
+  loadContracts()
+}// Raw data dialog
 const rawDataDialog = ref(false)
 const selectedContract = ref(null)
 
@@ -1014,7 +1030,7 @@ const loadContracts = async () => {
       }
     })
 
-    const response = await api.getContracts(cleanParams)
+    const response = await api.searchContracts(cleanParams)
 
     if (response.success) {
       contracts.value = response.data.contracts
@@ -1034,11 +1050,10 @@ const loadContracts = async () => {
 const loadFilterOptions = async () => {
   loadingFilters.value = true
   try {
-    const response = await fetch('/api/contracts/filters')
-    const data = await response.json()
+    const response = await api.getContractFilters()
 
-    if (data.success) {
-      filterOptions.value = data.data
+    if (response.success) {
+      filterOptions.value = response.data
     }
   }
   catch (error) {
@@ -1058,7 +1073,7 @@ const handleTableUpdate = (options: any) => {
   if (!meta.value.initialLoad) {
     updateQueryParams()
   }
-  loadContracts()
+  throttledLoadContracts()
 }
 
 const applyFilters = () => {
@@ -1066,7 +1081,7 @@ const applyFilters = () => {
   meta.value.searchPerformed = true
   meta.value.initialLoad = false
   updateQueryParams()
-  loadContracts()
+  throttledLoadContracts()
 }
 
 const clearAllFilters = () => {
@@ -1096,14 +1111,37 @@ const clearSearch = () => {
 }
 
 const refreshData = () => {
-  loadContracts()
+  throttledLoadContracts()
   loadFilterOptions()
 }
 
 const exportData = async () => {
   try {
-    // TODO: Implement export functionality
-    console.log('Export functionality to be implemented')
+    // Prevent export of too much data to avoid MongoDB overload
+    if (pagination.value.currentCount === 0) {
+      console.log('No data to export')
+      return
+    }
+
+    // Show warning for large exports
+    if (pagination.value.hasMore) {
+      const confirmed = confirm('This will export only the currently visible contracts. Do you want to continue?')
+      if (!confirmed) {
+        return
+      }
+    }
+
+    // Use current filters but limit the export size
+    const exportFilters = {
+      ...filters.value,
+      limit: 1000, // Maximum 1000 records to prevent overload
+    }
+
+    // TODO: Implement actual export functionality
+    console.log('Export functionality to be implemented with filters:', exportFilters)
+
+    // For now, just show the data that would be exported
+    console.log('Current contracts to export:', contracts.value.length)
   }
   catch (error) {
     console.error('Export failed:', error)
@@ -1210,11 +1248,14 @@ const loadFiltersFromQuery = () => {
 
 // Lifecycle
 onMounted(() => {
+  // Set hydration flag
+  isHydrated.value = true
+
   loadFilterOptions()
   loadFiltersFromQuery()
   loadContracts()
 
-  // Set initial load to false after first load
+  // Set initial load to false after first load and hydration
   nextTick(() => {
     meta.value.initialLoad = false
   })
@@ -1223,24 +1264,16 @@ onMounted(() => {
 // Watch for filter changes
 watch(() => itemsPerPage.value, () => {
   currentPage.value = 1
-  if (!meta.value.initialLoad) {
+  if (!meta.value.initialLoad && isHydrated.value) {
     updateQueryParams()
     loadContracts()
   }
 })
 
-// Watch for filter changes to auto-sync with query params
-watch(filters, () => {
-  // Only update query params if filters have been manually changed (not during initial load)
-  if (!meta.value.initialLoad && meta.value.searchPerformed) {
-    updateQueryParams()
-  }
-}, { deep: true })
-
 // Watch for navigation changes (back/forward buttons)
 watch(() => route.query, (newQuery, oldQuery) => {
   // Only reload if query actually changed and it's not the initial load
-  if (!meta.value.initialLoad && JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
+  if (!meta.value.initialLoad && isHydrated.value && JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
     loadFiltersFromQuery()
     loadContracts()
   }

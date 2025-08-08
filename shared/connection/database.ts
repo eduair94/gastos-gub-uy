@@ -27,10 +27,40 @@ export async function connectToDatabase() {
       await mongoose.disconnect()
     }
 
-    // MongoDB connection options optimized for performance
+    // MongoDB connection options optimized for performance and preventing overload
     const options = {
-      serverSelectionTimeoutMS: 10000,
-      bufferCommands: false,
+      // Connection pool settings to prevent MongoDB overload
+      maxPoolSize: 50, // Maximum number of connections in the connection pool
+      minPoolSize: 5, // Minimum number of connections in the connection pool
+      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
+      
+      // Timeout settings
+      serverSelectionTimeoutMS: 10000, // How long to try selecting a server
+      socketTimeoutMS: 45000, // How long a send or receive on a socket can take before timing out
+      connectTimeoutMS: 10000, // How long to wait for a connection to be established
+      
+      // Monitoring and retry settings
+      heartbeatFrequencyMS: 10000, // How often to check server availability
+      retryWrites: true, // Retry writes on transient network errors
+      retryReads: true, // Retry reads on transient network errors
+      
+      // Performance optimizations
+      bufferCommands: false, // Don't buffer commands when disconnected
+      
+      // Write concern for better performance (adjust based on your consistency needs)
+      writeConcern: {
+        w: 1, // Acknowledge writes to primary only (faster)
+        j: false, // Don't wait for journal acknowledgment (faster, but less durable)
+      },
+      
+      // Read preference for better distribution
+      readPreference: 'primaryPreferred' as const,
+      
+      // Compression to reduce network traffic
+      compressors: ['zlib'] as ('zlib' | 'none' | 'snappy' | 'zstd')[],
+      
+      // Application name for monitoring
+      appName: 'gastos-gub-dashboard',
     }
 
     // Create connection promise with proper error handling

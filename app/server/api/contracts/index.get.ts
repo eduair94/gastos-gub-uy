@@ -3,8 +3,38 @@ import type { PipelineStage } from 'mongoose'
 import { ReleaseModel } from '../../../../shared/models/release'
 import { connectToDatabase, mongoose } from '../../utils/database'
 
+// Request tracking for monitoring and preventing abuse
+const requestTracker = new Map<string, { count: number, lastReset: number }>()
+
+function trackRequest(ip: string): boolean {
+  const now = Date.now()
+  const key = ip
+  const tracker = requestTracker.get(key) || { count: 0, lastReset: now }
+
+  // Reset counter every minute
+  if (now - tracker.lastReset > 60000) {
+    tracker.count = 0
+    tracker.lastReset = now
+  }
+
+  tracker.count++
+  requestTracker.set(key, tracker)
+
+  // Allow max 30 requests per minute per IP
+  return tracker.count <= 30
+}
+
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
+
+  // Basic rate limiting per IP
+  const clientIp = event.node.req.socket.remoteAddress || 'unknown'
+  if (!trackRequest(clientIp)) {
+    throw createError({
+      statusCode: 429,
+      statusMessage: 'Too many requests - please slow down',
+    })
+  }
 
   try {
     // Ensure database connection is ready
@@ -33,9 +63,18 @@ export default defineEventHandler(async (event) => {
       sortOrder = 'desc',
     } = query
 
-    // Validate and limit page size to prevent abuse
-    const validatedLimit = Math.min(Math.max(Number(limit), 1), 100)
+    // Validate and limit page size to prevent abuse and MongoDB overload
+    const validatedLimit = Math.min(Math.max(Number(limit), 1), 50) // Reduced max limit from 100 to 50
     const validatedPage = Math.max(Number(page), 1)
+
+    // Prevent deep pagination that can overload MongoDB
+    const maxPage = 100 // Limit to first 5000 results (100 pages × 50 items)
+    if (validatedPage > maxPage) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Page number too high. Maximum allowed page is ${maxPage}`,
+      })
+    }
 
     // OPTIMIZATION STRATEGY:
     // 1. Text search MUST be first stage if present (MongoDB requirement)
@@ -148,10 +187,10 @@ export default defineEventHandler(async (event) => {
 
     console.log('Pipeline', pipeline)
 
-    // Execute aggregation with optimizations
+    // Execute aggregation with optimizations to prevent overload
     const aggregationOptions: any = {
-      allowDiskUse: true,
-      maxTimeMS: 30000, // 30 second timeout
+      allowDiskUse: false, // Prevent disk usage to keep queries fast
+      maxTimeMS: 15000, // Reduced timeout from 30s to 15s
     }
 
     // Add hint based on sort field for optimal performance
@@ -164,7 +203,8 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const contracts = await ReleaseModel.aggregate(pipeline, aggregationOptions).exec()
+    // Execute aggregation with proper await
+    const contracts = await ReleaseModel.aggregate(pipeline, aggregationOptions)
 
     // For pagination info, we estimate based on current results
     // To avoid performance issues, we don't count total documents
