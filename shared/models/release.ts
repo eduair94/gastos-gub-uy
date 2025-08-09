@@ -133,6 +133,7 @@ const ReleaseSchema = new Schema<IRelease>(
     sourceYear: { type: Number },
     // Calculated amount field with multicurrency support
     amount: {
+      version: {type: Number, default: 0},
       totalAmounts: { type: Map, of: Number }, // Map of currency to total amount
       totalItems: { type: Number },
       currencies: [{ type: String }],
