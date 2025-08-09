@@ -311,7 +311,7 @@
                 <div class="d-flex align-center justify-space-between w-100 mr-4">
                   <div>
                     <div class="font-weight-medium">
-                      {{ contract.tender?.title || 'Untitled Contract' }}
+                      {{ getContractName(contract as any as IRelease) }}
                     </div>
                     <div class="text-caption text-medium-emphasis">
                       {{ contract.ocid }} • {{ formatDate(contract.date) }}
@@ -510,6 +510,8 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import type { IRelease } from '~/types'
+import { getContractName } from '~/utils'
 
 // Route
 const route = useRoute()

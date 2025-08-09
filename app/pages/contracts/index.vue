@@ -1,31 +1,37 @@
 <template>
   <div class="contracts-explorer">
     <!-- Page Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h1 class="text-h4 font-weight-bold mb-2">
+    <div class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between mb-6 ga-4">
+      <div class="flex-grow-1">
+        <h1 class="text-h4 text-sm-h4 text-h5 font-weight-bold mb-2">
           Contract Explorer
         </h1>
-        <p class="text-subtitle-1 text-medium-emphasis">
+        <p class="text-subtitle-1 text-body-2 text-medium-emphasis">
           Browse and analyze government contracts with advanced filtering and search capabilities
         </p>
       </div>
-      <div class="d-flex ga-2">
+      <div class="d-flex flex-wrap flex-sm-row ga-2 align-stretch align-sm-center">
         <v-btn
           color="primary"
           prepend-icon="mdi-refresh"
           :loading="isHydrated && loading"
+          size="default"
+          class="flex-grow-1 flex-sm-grow-0"
           @click="refreshData"
         >
-          Refresh
+          <span class="d-none d-sm-inline">Refresh</span>
+          <span class="d-sm-none">Refresh</span>
         </v-btn>
         <v-btn
           color="success"
           prepend-icon="mdi-download"
           :disabled="contracts.length === 0"
+          size="default"
+          class="flex-grow-1 flex-sm-grow-0"
           @click="exportData"
         >
-          Export
+          <span class="d-none d-sm-inline">Export</span>
+          <span class="d-sm-none">Export</span>
         </v-btn>
       </div>
     </div>
@@ -33,13 +39,16 @@
     <!-- Filters Section -->
     <v-card class="mb-6">
       <v-card-title class="d-flex align-center justify-space-between">
-        <span>Filters & Search</span>
+        <span class="text-h6 text-sm-h6 text-subtitle-1">Filters & Search</span>
         <v-btn
           variant="text"
           size="small"
           @click="clearAllFilters"
         >
-          Clear All
+          <span class="d-none d-sm-inline">Clear All</span>
+          <v-icon class="d-sm-none">
+            mdi-close
+          </v-icon>
         </v-btn>
       </v-card-title>
       <v-card-text>
@@ -47,6 +56,7 @@
           <!-- Search -->
           <v-col
             cols="12"
+            sm="12"
             md="4"
           >
             <v-text-field
@@ -62,7 +72,8 @@
 
           <!-- Year Range -->
           <v-col
-            cols="12"
+            cols="6"
+            sm="6"
             md="2"
           >
             <v-select
@@ -77,7 +88,8 @@
             />
           </v-col>
           <v-col
-            cols="12"
+            cols="6"
+            sm="6"
             md="2"
           >
             <v-select
@@ -94,7 +106,8 @@
 
           <!-- Amount Range -->
           <v-col
-            cols="12"
+            cols="6"
+            sm="6"
             md="2"
           >
             <v-text-field
@@ -107,7 +120,8 @@
             />
           </v-col>
           <v-col
-            cols="12"
+            cols="6"
+            sm="6"
             md="2"
           >
             <v-text-field
@@ -125,6 +139,7 @@
           <!-- Status Filter -->
           <v-col
             cols="12"
+            sm="6"
             md="3"
           >
             <v-select
@@ -144,6 +159,7 @@
           <!-- Procurement Method -->
           <v-col
             cols="12"
+            sm="6"
             md="3"
           >
             <v-select
@@ -163,6 +179,7 @@
           <!-- Suppliers -->
           <v-col
             cols="12"
+            sm="6"
             md="3"
           >
             <SupplierAutocomplete
@@ -173,6 +190,7 @@
           <!-- Buyers -->
           <v-col
             cols="12"
+            sm="6"
             md="3"
           >
             <v-autocomplete
@@ -194,7 +212,8 @@
         <v-row>
           <!-- Items per page -->
           <v-col
-            cols="12"
+            cols="6"
+            sm="4"
             md="3"
           >
             <v-select
@@ -208,7 +227,8 @@
 
           <!-- Apply Filters Button -->
           <v-col
-            cols="12"
+            cols="6"
+            sm="4"
             md="3"
             class="d-flex align-top"
           >
@@ -218,7 +238,8 @@
               :loading="isHydrated && loading"
               @click="applyFilters"
             >
-              Apply Filters
+              <span class="d-none d-sm-inline">Apply Filters</span>
+              <span class="d-sm-none">Apply</span>
             </v-btn>
           </v-col>
         </v-row>
@@ -226,13 +247,22 @@
     </v-card>
 
     <!-- Results Summary -->
-    <div class="d-flex align-center justify-space-between mb-4">
-      <div class="text-subtitle-1">
+    <div class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between mb-4 ga-2">
+      <div class="text-subtitle-1 text-body-2">
         <span v-if="pagination.currentCount > 0">
           Showing {{ pagination.currentCount }} contracts
-          <span v-if="pagination.hasMore">
+          <span
+            v-if="pagination.hasMore"
+            class="d-none d-sm-inline"
+          >
             (Page {{ pagination.page }} of {{ pagination.estimatedTotalPages }}+)
           </span>
+          <div
+            v-if="pagination.hasMore"
+            class="d-sm-none text-caption text-medium-emphasis"
+          >
+            Page {{ pagination.page }} of {{ pagination.estimatedTotalPages }}+
+          </div>
         </span>
         <span v-else>
           No contracts found
@@ -255,24 +285,65 @@
         v-model:items-per-page="itemsPerPage"
         v-model:page="currentPage"
         v-model:sort-by="sortBy"
-        :headers="headers"
+        :headers="isMobile ? mobileHeaders : headers"
         :items="contracts"
         :loading="isHydrated && loading"
         :items-length="estimatedTotal"
+        :mobile="isMobile"
+        :mobile-breakpoint="960"
         class="elevation-1"
+        density="compact"
         @update:options="handleTableUpdate"
       >
         <!-- Contract Title -->
         <template #item.title="{ item }">
-          <div class="d-flex flex-column">
+          <div
+            v-if="!isMobile"
+            class="d-flex flex-column"
+          >
             <router-link
               :to="`/contracts/${item.id}`"
               class="text-decoration-none font-weight-medium text-primary"
             >
-              {{ item.tender?.title || 'Untitled Contract' }}
+              {{ getContractName(item as any as IRelease) }}
             </router-link>
             <div class="text-caption text-medium-emphasis">
               {{ item.ocid }}
+            </div>
+          </div>
+          <!-- Mobile compact view -->
+          <div
+            v-else
+            class="d-flex flex-column py-2"
+          >
+            <!-- Title and OCID -->
+            <router-link
+              :to="`/contracts/${item.id}`"
+              class="text-decoration-none font-weight-medium text-primary text-body-2"
+            >
+              {{ item.tender?.title || 'Untitled Contract' }}
+            </router-link>
+            <div class="text-caption text-medium-emphasis mb-2">
+              {{ item.ocid }}
+            </div>
+
+            <!-- Mobile Summary -->
+            <div class="d-flex align-center justify-space-between mb-1 flex-wrap">
+              <div class="text-caption ml-auto">
+                {{ formatDate(item.date) }} • {{ item.sourceYear }}
+              </div>
+              <v-chip
+                class="ml-auto"
+                :color="getStatusColor(item.tender?.status || '')"
+                size="x-small"
+                variant="tonal"
+              >
+                {{ item.tender?.status || 'Unknown' }}
+              </v-chip>
+            </div>
+
+            <div class="text-caption text-medium-emphasis">
+              {{ item.buyer?.name || item.tender?.procuringEntity?.name || 'Unknown Buyer' }}
             </div>
           </div>
         </template>
@@ -415,7 +486,7 @@
               color="success"
               variant="outlined"
             >
-              {{ formatTotalAmount(item) }}
+              {{ formatTotalAmount(item as IRelease) }}
             </v-chip>
           </div>
         </template>        <!-- Status -->
@@ -430,8 +501,12 @@
         </template>
 
         <!-- Actions -->
+        <!-- Actions -->
         <template #item.actions="{ item }">
-          <div class="d-flex ga-1">
+          <div
+            v-if="!isMobile"
+            class="d-flex ga-1 py-3"
+          >
             <v-tooltip text="View Awards">
               <template #activator="{ props }">
                 <v-btn
@@ -469,9 +544,43 @@
               </template>
             </v-tooltip>
           </div>
-        </template>
-
-        <!-- Loading -->
+          <!-- Mobile actions menu -->
+          <div v-else>
+            <v-menu
+              location="bottom end"
+            >
+              <template #activator="{ props }">
+                <v-btn
+                  class="my-3"
+                  icon="mdi-dots-vertical"
+                  size="small"
+                  variant="text"
+                  v-bind="props"
+                />
+              </template>
+              <v-list density="compact">
+                <v-list-item
+                  :to="`/contracts/${item.id}`"
+                  prepend-icon="mdi-eye"
+                >
+                  <v-list-item-title>View Details</v-list-item-title>
+                </v-list-item>
+                <v-list-item
+                  prepend-icon="mdi-trophy"
+                  @click="viewAwards(item)"
+                >
+                  <v-list-item-title>View Awards</v-list-item-title>
+                </v-list-item>
+                <v-list-item
+                  prepend-icon="mdi-code-json"
+                  @click="viewRawData(item)"
+                >
+                  <v-list-item-title>View JSON</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </div>
+        </template>        <!-- Loading -->
         <template #loading>
           <v-skeleton-loader type="table-row@10" />
         </template>
@@ -497,348 +606,25 @@
       </v-data-table-server>
     </v-card>
 
-    <!-- Raw Data Dialog -->
-    <v-dialog
+    <!-- Dialog Components -->
+    <ContractRawDataDialog
       v-model="rawDataDialog"
-      max-width="800px"
-      scrollable
-    >
-      <v-card>
-        <v-card-title class="d-flex align-center justify-space-between">
-          <span>Contract Raw Data</span>
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="rawDataDialog = false"
-          />
-        </v-card-title>
-        <v-card-text>
-          <pre class="text-body-2">{{ JSON.stringify(selectedContract, null, 2) }}</pre>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+      :contract="selectedContract"
+    />
 
-    <!-- Awards Dialog -->
-    <v-dialog
+    <ContractAwardsDialog
       v-model="awardsDialog"
-      max-width="1000px"
-      scrollable
-    >
-      <v-card>
-        <v-card-title class="d-flex align-center justify-space-between">
-          <div>
-            <span>Contract Awards</span>
-            <div class="text-subtitle-2 text-medium-emphasis">
-              {{ selectedContractForAwards?.tender?.title || 'Contract Details' }}
-            </div>
-          </div>
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="awardsDialog = false"
-          />
-        </v-card-title>
-        <v-card-text>
-          <div v-if="selectedContractForAwards?.awards && selectedContractForAwards.awards.length > 0">
-            <v-expansion-panels
-              v-model="expandedAward"
-              multiple
-            >
-              <v-expansion-panel
-                v-for="(award, awardIndex) in selectedContractForAwards.awards"
-                :key="awardIndex"
-                :value="awardIndex"
-              >
-                <v-expansion-panel-title>
-                  <div class="d-flex align-center justify-space-between w-100">
-                    <div class="d-flex flex-column">
-                      <span class="font-weight-medium">{{ award.title || `Award ${awardIndex + 1}` }}</span>
-                      <div class="text-caption text-medium-emphasis">
-                        Status: {{ award.status || 'Unknown' }} • Date: {{ formatDate(award.date) }}
-                      </div>
-                    </div>
-                    <v-chip
-                      :color="getStatusColor(award.status)"
-                      size="small"
-                      variant="tonal"
-                    >
-                      {{ award.status || 'Unknown' }}
-                    </v-chip>
-                  </div>
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <v-row>
-                    <!-- Suppliers -->
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <v-card
-                        variant="outlined"
-                        class="mb-4"
-                      >
-                        <v-card-title class="text-h6">
-                          <v-icon
-                            class="mr-2"
-                            color="success"
-                          >
-                            mdi-factory
-                          </v-icon>
-                          Suppliers
-                        </v-card-title>
-                        <v-card-text>
-                          <div v-if="award.suppliers && award.suppliers.length > 0">
-                            <v-chip
-                              v-for="(supplier, supplierIndex) in award.suppliers"
-                              :key="supplierIndex"
-                              class="ma-1"
-                              color="success"
-                              variant="tonal"
-                            >
-                              <v-icon start>
-                                mdi-domain
-                              </v-icon>
-                              {{ supplier.name }}
-                            </v-chip>
-                          </div>
-                          <div
-                            v-else
-                            class="text-medium-emphasis"
-                          >
-                            No suppliers listed
-                          </div>
-                        </v-card-text>
-                      </v-card>
-                    </v-col>
-
-                    <!-- Award Items -->
-                    <v-col
-                      cols="12"
-                      md="6"
-                    >
-                      <v-card
-                        variant="outlined"
-                        class="mb-4"
-                      >
-                        <v-card-title class="text-h6">
-                          <v-icon
-                            class="mr-2"
-                            color="primary"
-                          >
-                            mdi-package-variant
-                          </v-icon>
-                          Items ({{ award.items?.length || 0 }})
-                        </v-card-title>
-                        <v-card-text>
-                          <div v-if="award.items && award.items.length > 0">
-                            <v-list dense>
-                              <v-list-item
-                                v-for="(item, itemIndex) in award.items"
-                                :key="itemIndex"
-                                class="px-0"
-                              >
-                                <template #default>
-                                  <v-list-item-title class="font-weight-medium">
-                                    {{ getItemDescription(item, itemIndex) }}
-                                  </v-list-item-title>
-                                  <v-list-item-subtitle>
-                                    <div class="d-flex flex-wrap ga-2 mt-1">
-                                      <v-chip
-                                        size="x-small"
-                                        variant="outlined"
-                                      >
-                                        Qty: {{ item.quantity || 'N/A' }}
-                                      </v-chip>
-                                      <v-chip
-                                        v-if="item.unit?.value?.amount"
-                                        size="x-small"
-                                        variant="outlined"
-                                        color="success"
-                                      >
-                                        {{ formatCurrency(item.unit.value.amount, item.unit.value.currency) }}
-                                      </v-chip>
-                                      <v-chip
-                                        v-if="item.unit?.name"
-                                        size="x-small"
-                                        variant="outlined"
-                                      >
-                                        {{ item.unit.name }}
-                                      </v-chip>
-                                      <v-chip
-                                        v-if="item.classification?.description"
-                                        size="x-small"
-                                        variant="outlined"
-                                        color="info"
-                                      >
-                                        {{ item.classification.description }}
-                                      </v-chip>
-                                    </div>
-                                  </v-list-item-subtitle>
-                                </template>
-                              </v-list-item>
-                            </v-list>
-                          </div>
-                          <div
-                            v-else
-                            class="text-medium-emphasis"
-                          >
-                            No items listed
-                          </div>
-                        </v-card-text>
-                      </v-card>
-                    </v-col>
-                  </v-row>
-
-                  <!-- Award Summary -->
-                  <v-row>
-                    <v-col cols="12">
-                      <v-card variant="outlined">
-                        <v-card-title class="text-h6">
-                          <v-icon
-                            class="mr-2"
-                            color="info"
-                          >
-                            mdi-calculator
-                          </v-icon>
-                          Award Summary
-                        </v-card-title>
-                        <v-card-text>
-                          <v-row>
-                            <v-col
-                              cols="6"
-                              md="3"
-                            >
-                              <div class="text-center">
-                                <div class="text-h6 font-weight-bold text-success">
-                                  {{ formatAwardAmount(award) }}
-                                </div>
-                                <div class="text-caption text-medium-emphasis">
-                                  Total Amount
-                                </div>
-                              </div>
-                            </v-col>
-                            <v-col
-                              cols="6"
-                              md="3"
-                            >
-                              <div class="text-center">
-                                <div class="text-h6 font-weight-bold text-primary">
-                                  {{ award.items?.length || 0 }}
-                                </div>
-                                <div class="text-caption text-medium-emphasis">
-                                  Items
-                                </div>
-                              </div>
-                            </v-col>
-                            <v-col
-                              cols="6"
-                              md="3"
-                            >
-                              <div class="text-center">
-                                <div class="text-h6 font-weight-bold text-info">
-                                  {{ award.suppliers?.length || 0 }}
-                                </div>
-                                <div class="text-caption text-medium-emphasis">
-                                  Suppliers
-                                </div>
-                              </div>
-                            </v-col>
-                            <v-col
-                              cols="6"
-                              md="3"
-                            >
-                              <div class="text-center">
-                                <div class="text-h6 font-weight-bold text-warning">
-                                  {{ award.documents?.length || 0 }}
-                                </div>
-                                <div class="text-caption text-medium-emphasis">
-                                  Documents
-                                </div>
-                              </div>
-                            </v-col>
-                          </v-row>
-                        </v-card-text>
-                      </v-card>
-                    </v-col>
-                  </v-row>
-
-                  <!-- Documents -->
-                  <v-row v-if="award.documents && award.documents.length > 0">
-                    <v-col cols="12">
-                      <v-card variant="outlined">
-                        <v-card-title class="text-h6">
-                          <v-icon
-                            class="mr-2"
-                            color="warning"
-                          >
-                            mdi-file-document
-                          </v-icon>
-                          Documents ({{ award.documents.length }})
-                        </v-card-title>
-                        <v-card-text>
-                          <v-list dense>
-                            <v-list-item
-                              v-for="(document, docIndex) in award.documents"
-                              :key="docIndex"
-                              :href="document.url"
-                              target="_blank"
-                              class="px-0"
-                            >
-                              <template #prepend>
-                                <v-icon color="warning">
-                                  mdi-file-document-outline
-                                </v-icon>
-                              </template>
-                              <v-list-item-title>
-                                {{ document.description || `Document ${docIndex + 1}` }}
-                              </v-list-item-title>
-                              <v-list-item-subtitle>
-                                Type: {{ document.documentType || 'Unknown' }} •
-                                Format: {{ document.format || 'Unknown' }} •
-                                Published: {{ formatDate(document.datePublished) }}
-                              </v-list-item-subtitle>
-                              <template #append>
-                                <v-icon>mdi-open-in-new</v-icon>
-                              </template>
-                            </v-list-item>
-                          </v-list>
-                        </v-card-text>
-                      </v-card>
-                    </v-col>
-                  </v-row>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-          </div>
-          <div
-            v-else
-            class="text-center py-8"
-          >
-            <v-icon
-              size="64"
-              color="grey-lighten-2"
-              class="mb-4"
-            >
-              mdi-trophy-outline
-            </v-icon>
-            <div class="text-h6 mb-2">
-              No Awards Found
-            </div>
-            <div class="text-body-2 text-medium-emphasis">
-              This contract doesn't have any awards listed.
-            </div>
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+      :contract="selectedContractForAwards"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useDisplay } from 'vuetify'
 import { useOptimizedApi } from '~/composables/useOptimizedApi'
 import type { IRelease } from '~/types/database'
-import { formatCurrency } from '~/utils'
+import { formatTotalAmount, getContractName } from '~/utils'
 // Meta
 definePageMeta({
   title: 'Contract Explorer',
@@ -849,6 +635,7 @@ definePageMeta({
 const api = useOptimizedApi()
 const route = useRoute()
 const router = useRouter()
+const { mobile } = useDisplay()
 
 // Reactive state
 const loading = ref(false)
@@ -935,14 +722,15 @@ const throttledLoadContracts = () => {
   loadContracts()
 }// Raw data dialog
 const rawDataDialog = ref(false)
-const selectedContract = ref(null)
+const selectedContract = ref<any>(null)
 
 // Awards dialog
 const awardsDialog = ref(false)
-const selectedContractForAwards = ref<IRelease | null>(null)
-const expandedAward = ref([0]) // Expand first award by default
+const selectedContractForAwards = ref<any>(null)
 
 // Computed
+const isMobile = computed(() => mobile.value)
+
 const availableYears = computed(() => {
   return [...filterOptions.value.years].sort((a: any, b: any) => b.year - a.year).map((year: any) => ({
     label: year.label || year.year?.toString() || year,
@@ -1006,6 +794,27 @@ const headers = [
     key: 'actions',
     sortable: false,
     width: '7%',
+  },
+]
+
+// Mobile-optimized headers
+const mobileHeaders = [
+  {
+    title: 'Contract Details',
+    key: 'title',
+    sortable: true,
+  },
+  {
+    title: 'Amount',
+    key: 'amount',
+    sortable: true,
+    align: 'end' as const,
+  },
+  {
+    title: '',
+    key: 'actions',
+    sortable: false,
+    width: '60px',
   },
 ]
 
@@ -1156,7 +965,6 @@ const viewRawData = (contract: any) => {
 
 const viewAwards = (contract: any) => {
   selectedContractForAwards.value = contract
-  expandedAward.value = [0] // Expand first award by default
   awardsDialog.value = true
 }
 
@@ -1188,13 +996,6 @@ const getItemDescription = (item: Record<string, unknown>, index: number): strin
     || (item.classification as Record<string, unknown>)?.description?.toString()?.trim()
 
   return description || `Item ${index + 1}`
-}
-
-const formatAwardAmount = (award: any): string => {
-  if (award.value?.amount) {
-    return formatCurrency(award.value.amount, award.value.currency)
-  }
-  return 'N/A'
 }
 
 // Query parameter synchronization
@@ -1284,22 +1085,6 @@ watch(() => route.query, (newQuery, oldQuery) => {
 </script>
 
 <style scoped>
-.contracts-explorer {
-  padding: 24px;
-}
-
-.ga-2 {
-  gap: 8px;
-}
-
-pre {
-  padding: 16px;
-  border-radius: 4px;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
 :deep(.v-data-table-server) {
   .v-data-table__td {
     padding: 8px 16px;
