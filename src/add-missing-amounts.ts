@@ -15,6 +15,41 @@ interface CurrencyResponse {
   last_update?: string;
 }
 
+// Interface for UYI (Unidades Indexadas) API response
+interface UYIResponse {
+  code: string;
+  date: string;
+  origin: string;
+  type: string;
+  buy: number;
+  name: string;
+  sell: number;
+}
+
+// Function to fetch UYI (Unidades Indexadas) exchange rate
+async function fetchUYIRate(): Promise<number | null> {
+  try {
+    console.log("🏦 Fetching UYI (Unidades Indexadas) exchange rate...");
+    const response = await axios.get('https://api.cambio-uruguay.com/exchange/bcu/UI', {
+      timeout: 10000, // 10 second timeout
+    });
+    
+    const data = response.data as UYIResponse;
+    
+    if (data.code !== 'UI' || typeof data.buy !== 'number') {
+      throw new Error('Invalid UYI API response format');
+    }
+    
+    console.log(`✅ Fetched UYI rate: 1 UYI = ${data.buy} UYU (${data.date})`);
+    
+    return data.buy; // Return the buy rate (UYI to UYU conversion rate)
+  } catch (error) {
+    console.error("❌ Error fetching UYI rate:", error);
+    console.log("⚠️  Will use fallback UYI rate");
+    return null;
+  }
+}
+
 // Function to fetch current currency rates
 async function fetchCurrencyRates(): Promise<CurrencyResponse | null> {
   try {
@@ -46,18 +81,21 @@ const FALLBACK_RATES: Record<string, number> = {
   'EUR': 44, // 1 EUR = 44 UYU (approximate)
   'ARS': 0.045, // 1 ARS = 0.045 UYU (approximate)
   'BRL': 8, // 1 BRL = 8 UYU (approximate)
-  'UUYI': 1, // Probably a typo for UYU, treat as 1:1
+  // UUYI Y UYI son unidades indexadas
+  'UUYI': 6.36, // Fallback rate for UYI (approximate)
+  'UYI': 6.36, // 1 UYI = 6.36 UYU (approximate, will be updated with live rate)
+  'UI': 6.36, // Alternative code for Unidades Indexadas
 };
 
 // Current version of the amount calculation logic
-const AMOUNT_CALCULATION_VERSION = 1; // Updated to include currency conversion
+const AMOUNT_CALCULATION_VERSION = 2; // Updated to include currency conversion
 
 const fullQuery = { 
   "awards.items.unit.value.amount": { $exists: true, $ne: null },
   "amount.version": { $ne: AMOUNT_CALCULATION_VERSION } 
 };
 // Calculate total amounts function (shared logic) with currency conversion
-const calculateTotalAmounts = (awards: any[], currencyRates: CurrencyResponse | null) => {
+const calculateTotalAmounts = (awards: any[], currencyRates: CurrencyResponse | null, uyiRate: number | null) => {
   const amountsByCurrency: Record<string, number> = {};
   let totalItems = 0;
   let totalUYUAmount = 0; // Total amount converted to UYU
@@ -66,6 +104,13 @@ const calculateTotalAmounts = (awards: any[], currencyRates: CurrencyResponse | 
   const convertToUYU = (amount: number, currency: string): number => {
     if (currency === 'UYU' || currency === 'UUYI') {
       return amount;
+    }
+
+    // Handle UYI/UI currencies (Unidades Indexadas) with live rate
+    if (currency === 'UYI' || currency === 'UI') {
+      const rate = uyiRate || FALLBACK_RATES.UYI;
+      console.log(`💱 Converting ${amount} ${currency} to UYU using rate: ${rate}`);
+      return amount * rate;
     }
 
     // Try to use live rates first
@@ -136,6 +181,9 @@ async function addMissingAmounts() {
 
     // Fetch current currency exchange rates
     const currencyRates = await fetchCurrencyRates();
+    
+    // Fetch current UYI (Unidades Indexadas) exchange rate
+    const uyiRate = await fetchUYIRate();
 
     // Find releases that don't have the amount field or have outdated version
     console.log("🔍 Finding releases without amount field or outdated version...");
@@ -193,7 +241,7 @@ async function addMissingAmounts() {
 
       for (const release of releases) {
         try {
-          const amountData = calculateTotalAmounts(release.awards || [], currencyRates);
+          const amountData = calculateTotalAmounts(release.awards || [], currencyRates, uyiRate);
           
           // Check if this is a version update
           const isVersionUpdate = release.amount && (release.amount as any).version !== AMOUNT_CALCULATION_VERSION;
@@ -212,6 +260,7 @@ async function addMissingAmounts() {
             originalUYUAmount: amountData.originalUYUAmount,
             // Store exchange rate info for reference
             exchangeRateDate: currencyRates?.last_update || new Date().toISOString(),
+            uyiExchangeRate: uyiRate, // Store UYI rate for reference
             hasConvertedAmounts: amountData.primaryAmount > amountData.originalUYUAmount,
             // Version tracking for future updates
             version: AMOUNT_CALCULATION_VERSION,
@@ -245,7 +294,7 @@ async function addMissingAmounts() {
           // Show sample of calculated amounts
           if (releases.length > 0) {
             const sampleRelease = releases[0];
-            const sampleAmountData = calculateTotalAmounts(sampleRelease.awards || [], currencyRates);
+            const sampleAmountData = calculateTotalAmounts(sampleRelease.awards || [], currencyRates, uyiRate);
             console.log(`   💰 Sample amount calculation:`);
             console.log(`      Original currencies: ${JSON.stringify(sampleAmountData.totalAmounts)}`);
             console.log(`      Total items: ${sampleAmountData.totalItems}`);
