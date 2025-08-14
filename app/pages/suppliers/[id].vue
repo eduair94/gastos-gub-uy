@@ -416,7 +416,7 @@
                               size="x-small"
                               variant="outlined"
                             >
-                              {{ item.description || `Item ${item.id}` }}
+                              {{ item.classification.description || `Item ${item.id}` }}
                             </v-chip>
                             <v-chip
                               v-if="award.items.length > 3"
@@ -550,40 +550,11 @@ interface ISupplier {
   lastUpdated: string
 }
 
-interface IContract {
-  id: string
-  ocid: string
-  date: string
-  sourceYear: number
-  tender?: {
-    title?: string
-    status?: string
-    procurementMethod?: string
-  }
-  buyer?: {
-    name: string
-  }
-  awards: Array<{
-    id: string
-    title?: string
-    status: string
-    date: string
-    value?: {
-      amount: number
-      currency: string
-    }
-    items?: Array<{
-      id: string | number
-      description?: string
-    }>
-  }>
-}
-
 // Reactive state
 const loading = ref(false)
 const error = ref(false)
 const supplier = ref<ISupplier | null>(null)
-const recentContracts = ref<IContract[]>([])
+const recentContracts = ref<IRelease[]>([])
 const expandedContracts = ref<number[]>([])
 
 // Data table headers for items

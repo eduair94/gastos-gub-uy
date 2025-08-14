@@ -153,7 +153,8 @@ ReleaseSchema.index({ sourceYear: 1 }); // Year filtering
 ReleaseSchema.index({ "tender.status": 1 }); // Status filtering
 ReleaseSchema.index({ "tender.procurementMethod": 1 }); // Procurement method filtering
 ReleaseSchema.index({ "buyer.name": 1 }); // Buyer filtering
-ReleaseSchema.index({ "awards.suppliers.name": 1 }); // Supplier filtering
+ReleaseSchema.index({ "awards.suppliers.name": 1 }); // Supplier name filtering
+ReleaseSchema.index({ "awards.suppliers.id": 1 }); // Supplier ID filtering for pipeline aggregations
 ReleaseSchema.index({ "awards.items.unit.value.amount": 1 }); // Amount filtering
 ReleaseSchema.index({ "amount.primaryAmount": 1 }); // Calculated primary amount for sorting/filtering
 ReleaseSchema.index({ "amount.currencies": 1 }); // Currency filtering

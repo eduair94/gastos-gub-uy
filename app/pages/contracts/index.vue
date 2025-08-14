@@ -212,7 +212,7 @@
         <v-row>
           <!-- Items per page -->
           <v-col
-            cols="6"
+            cols="12"
             sm="4"
             md="3"
           >
@@ -222,6 +222,22 @@
               :items="[10, 25, 50]"
               variant="outlined"
               density="compact"
+            />
+          </v-col>
+
+          <!-- Amount Field Filter -->
+          <v-col
+            cols="12"
+            sm="4"
+            md="3"
+            class="d-flex align-center mb-5"
+          >
+            <v-checkbox
+              v-model="filters.hasAmount"
+              label="Only with calculated amounts"
+              color="primary"
+              density="compact"
+              hide-details
             />
           </v-col>
 
@@ -321,7 +337,7 @@
               :to="`/contracts/${item.id}`"
               class="text-decoration-none font-weight-medium text-primary text-body-2"
             >
-              {{ item.tender?.title || 'Untitled Contract' }}
+              {{ getContractName(item as any as IRelease) }}
             </router-link>
             <div class="text-caption text-medium-emphasis mb-2">
               {{ item.ocid }}
@@ -376,16 +392,21 @@
         <!-- Suppliers -->
         <template #item.suppliers="{ item }">
           <div v-if="item.awards && item.awards.length > 0 && item.awards[0].suppliers">
-            <v-chip
-              v-for="(supplier, index) in item.awards[0].suppliers.slice(0, 2)"
-              :key="index"
-              size="x-small"
-              color="success"
-              variant="tonal"
-              class="mr-1 mb-1"
+            <nuxt-link
+              target="blank_"
+              :to="`/suppliers/${encodeURIComponent(item.awards[0].suppliers[0]?.id || '')}`"
             >
-              {{ supplier.name }}
-            </v-chip>
+              <v-chip
+                v-for="(supplier, index) in item.awards[0].suppliers.slice(0, 2)"
+                :key="index"
+                size="x-small"
+                color="success"
+                variant="tonal"
+                class="mr-1 mb-1 chip_suppliers"
+              >
+                {{ supplier.name }}
+              </v-chip>
+            </nuxt-link>
             <div
               v-if="item.awards[0].suppliers.length > 2"
               class="text-caption text-medium-emphasis"
@@ -688,6 +709,7 @@ interface FilterState {
   procurementMethod: string[]
   suppliers: SupplierAutocompleteItem[]
   buyers: string[]
+  hasAmount: boolean
 }
 
 const filters = ref<FilterState>({
@@ -700,6 +722,7 @@ const filters = ref<FilterState>({
   procurementMethod: [],
   suppliers: [],
   buyers: [],
+  hasAmount: false,
 })
 
 // Table configuration
@@ -769,6 +792,7 @@ const headers = [
     key: 'suppliers',
     sortable: false,
     width: '15%',
+    maxWidth: '200px',
   },
   {
     title: 'Item Descriptions',
@@ -905,6 +929,7 @@ const clearAllFilters = () => {
     procurementMethod: [],
     suppliers: [],
     buyers: [],
+    hasAmount: false,
   }
   currentPage.value = 1
   meta.value.searchPerformed = true
@@ -1012,6 +1037,7 @@ const updateQueryParams = () => {
   if (filters.value.procurementMethod.length > 0) query.procurementMethod = filters.value.procurementMethod.join(',')
   if (filters.value.suppliers.length > 0) query.suppliers = JSON.stringify(filters.value.suppliers)
   if (filters.value.buyers.length > 0) query.buyers = filters.value.buyers.join(',')
+  if (filters.value.hasAmount) query.hasAmount = 'true'
 
   // Add pagination and sorting
   if (currentPage.value > 1) query.page = currentPage.value.toString()
@@ -1038,6 +1064,7 @@ const loadFiltersFromQuery = () => {
     filters.value.suppliers = JSON.parse(query.suppliers as string)
   }
   if (query.buyers) filters.value.buyers = (query.buyers as string).split(',').filter(s => s)
+  if (query.hasAmount) filters.value.hasAmount = query.hasAmount === 'true'
 
   // Load pagination and sorting
   if (query.page) currentPage.value = Number(query.page)
@@ -1093,5 +1120,12 @@ watch(() => route.query, (newQuery, oldQuery) => {
 
 :deep(.v-chip) {
   font-size: 0.75rem;
+}
+
+.chip_suppliers {
+  text-wrap: wrap;
+  height: fit-content;
+  padding: 5px;
+  border-radius: 5px;
 }
 </style>

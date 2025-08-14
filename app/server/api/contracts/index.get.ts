@@ -59,6 +59,7 @@ export default defineEventHandler(async (event) => {
       suppliers,
       buyers,
       procurementMethod,
+      hasAmount,
       sortBy = 'date',
       sortOrder = 'desc',
     } = query
@@ -205,6 +206,11 @@ export default defineEventHandler(async (event) => {
       matchStage['amount.primaryAmount'] = amountFilter
     }
 
+    // Filter for contracts with calculated amounts
+    if (hasAmount === 'true' || hasAmount === true) {
+      matchStage['amount.hasAmounts'] = true
+    }
+
     // Add other filters stage if there are any
     if (Object.keys(matchStage).length > 0) {
       pipeline.push({ $match: matchStage })
@@ -218,7 +224,6 @@ export default defineEventHandler(async (event) => {
       // For text search, always prioritize text score, then secondary sort
       pipeline.push({
         $sort: {
-          textScore: { $meta: 'textScore' },
           [sortField]: sortDirection,
         },
       })

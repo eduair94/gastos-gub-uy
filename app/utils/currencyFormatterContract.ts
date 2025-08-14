@@ -104,6 +104,7 @@ export const formatCurrency = (amount: number, currency?: string): string => {
 
   // Use appropriate locale based on currency
   const locale = currency === 'UYU' ? 'es-UY' : 'en-US'
+  if (amount > 1500) amount = Math.round(amount)
 
   return `${formatMoney(amount, currencyCode, locale)} ${currencyCode}`
 }

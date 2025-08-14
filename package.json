@@ -4,6 +4,7 @@
   "description": "A TypeScript web scraper following SOLID principles to extract government expenditure data URLs",
   "main": "dist/index.js",
   "scripts": {
+    "add_amounts": "tsx src/add-missing-amounts.ts",
     "extract": "tsx src/extract.ts",
     "upload": "tsx src/upload-releases.ts",
     "populate-filters": "tsx src/populate-filters.ts",
