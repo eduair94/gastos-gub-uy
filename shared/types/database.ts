@@ -166,7 +166,7 @@ export interface ITenderDocument {
 }
 
 export interface IAwardItem {
-  id: number
+  id: string  // Changed from number to string to match OCDS spec
   description?: string
   quantity: number
   classification: {

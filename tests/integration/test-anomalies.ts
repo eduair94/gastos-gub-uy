@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { connectToDatabase } from '../shared/connection/database'
-import { AnomalyModel } from '../shared/models/anomaly'
+import { connectToDatabase } from '../../shared/connection/database'
+import { AnomalyModel } from '../../shared/models/anomaly'
 
 async function testAnomalies() {
   console.log('🔗 Connecting to database...')

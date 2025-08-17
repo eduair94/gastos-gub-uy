@@ -1,5 +1,5 @@
-import { connectToDatabase } from '../shared/connection/database';
-import { ReleaseModel } from '../shared/models';
+import { connectToDatabase } from '../../shared/connection/database';
+import { ReleaseModel } from '../../shared/models';
 
 async function testSupplierIdIndexPerformance() {
   try {

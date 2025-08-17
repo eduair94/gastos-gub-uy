@@ -1,5 +1,5 @@
-import { connectToDatabase } from './app/server/utils/database'
-import { ReleaseModel } from './shared/models'
+import { connectToDatabase } from '../../app/server/utils/database'
+import { ReleaseModel } from '../../shared/models'
 
 async function testSupplierIds() {
   try {

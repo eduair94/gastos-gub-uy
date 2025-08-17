@@ -1,5 +1,5 @@
-import { connectToDatabase } from './app/server/utils/database'
-import { SupplierPatternModel } from './shared/models'
+import { connectToDatabase } from '../../app/server/utils/database'
+import { SupplierPatternModel } from '../../shared/models'
 
 async function testSupplierPatterns() {
   try {

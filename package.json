@@ -4,7 +4,6 @@
   "description": "A TypeScript web scraper following SOLID principles to extract government expenditure data URLs",
   "main": "dist/index.js",
   "scripts": {
-    "add_amounts": "tsx src/add-missing-amounts.ts",
     "extract": "tsx src/extract.ts",
     "upload": "tsx src/upload-releases.ts",
     "populate-filters": "tsx src/populate-filters.ts",
@@ -16,6 +15,7 @@
     "import-db": "tsx scripts/import-database.ts",
     "build": "tsc",
     "create-items": "tsx src/create-items-collection.ts",
+    "add_amounts": "tsx src/add-missing-amounts.ts",
     "api": "tsx src/api/app.ts",
     "pm2:start": "pm2 start ecosystem.config.js",
     "pm2:stop": "pm2 stop ecosystem.config.js",
@@ -54,6 +54,7 @@
   },
   "dependencies": {
     "@types/mongodb": "^4.0.6",
+    "@types/xml2js": "^0.4.14",
     "axios": "^1.7.0",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
@@ -67,6 +68,7 @@
     "mongoose-aggregate-paginate-v2": "^1.1.0",
     "mongoose-paginate-v2": "^1.8.0",
     "stream-json": "^1.9.1",
+    "xml2js": "^0.6.2",
     "yauzl": "^3.0.0"
   },
   "engines": {
