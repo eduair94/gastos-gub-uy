@@ -1,8 +1,8 @@
 {
   "apps": [
     {
-      "name": "add-missing-amounts",
-      "script": "dist/src/add-missing-amounts.js",
+      "name": "upload-gub",
+      "script": "dist/src/uploaders/release-uploader-new.js",
       "node_args": "--max-old-space-size=4096",
       "instances": 1,
       "autorestart": false,
