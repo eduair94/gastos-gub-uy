@@ -48,7 +48,7 @@ const TenderDocumentSchema = new Schema<ITenderDocument>({
 });
 
 const AwardItemSchema = new Schema<IAwardItem>({
-  id: { type: Number, required: true },
+  id: { type: String, required: true }, // Changed from Number to String to match OCDS spec
   description: { type: String },
   quantity: { type: Number, required: true },
   classification: {

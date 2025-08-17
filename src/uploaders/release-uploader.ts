@@ -3,6 +3,12 @@ import { IRelease } from "../../shared/types";
 import { IDatabaseService } from "../services/database-service";
 import { IFileService } from "../services/file-service";
 import { ILogger } from "../services/logger-service";
+import {
+  calculateTotalAmounts,
+  fetchCurrencyRates,
+  fetchUYIRate,
+  type CurrencyResponse
+} from "../utils/amount-calculator";
 
 export interface IReleaseUploader {
   uploadReleases(dataDirectory: string): Promise<void>;
@@ -24,6 +30,12 @@ export class ReleaseUploader implements IReleaseUploader {
     try {
       await this.databaseService.connect(this.mongoUri);
       this.logger.info("Connected to MongoDB");
+
+      // Fetch current currency exchange rates
+      const currencyRates = await fetchCurrencyRates();
+      
+      // Fetch current UYI (Unidades Indexadas) exchange rate
+      const uyiRate = await fetchUYIRate();
 
       const files = this.fileService.findJsonFiles(dataDirectory);
       this.logger.info(`Found ${files.length} JSON files.`);
@@ -49,7 +61,7 @@ export class ReleaseUploader implements IReleaseUploader {
         // Process files in this batch concurrently
         const batchPromises = batch.map(async (file) => {
           try {
-            const result = await this.processFile(file);
+            const result = await this.processFile(file, currencyRates, uyiRate);
             
             // Extract year for better logging
             const yearMatch = file.match(/(\d{4})/);
@@ -89,7 +101,11 @@ export class ReleaseUploader implements IReleaseUploader {
     }
   }
 
-  private async processFile(filePath: string): Promise<{ uploaded: number; skipped: number }> {
+  private async processFile(
+    filePath: string,
+    currencyRates: CurrencyResponse | null,
+    uyiRate: number | null
+  ): Promise<{ uploaded: number; skipped: number }> {
     const data = this.fileService.readJsonFile<IJsonData>(filePath);
 
     if (!Array.isArray(data.releases)) {
@@ -128,58 +144,24 @@ export class ReleaseUploader implements IReleaseUploader {
           release.date = new Date(release.date);
         }
 
-        // Calculate total amounts from awards (multicurrency support)
-        const calculateTotalAmounts = (awards: any[]) => {
-          const amountsByCurrency: Record<string, number> = {};
-          let totalItems = 0;
-          
-          if (awards && Array.isArray(awards)) {
-            for (const award of awards) {
-              if (award.items && Array.isArray(award.items)) {
-                for (const item of award.items) {
-                  totalItems++;
-                  if (item.unit?.value?.amount && typeof item.unit.value.amount === 'number') {
-                    const currency = item.unit.value.currency || 'UYU'; // Default to UYU if no currency
-                    const quantity = item.quantity || 1;
-                    const itemTotal = item.unit.value.amount * quantity;
-                    
-                    amountsByCurrency[currency] = (amountsByCurrency[currency] || 0) + itemTotal;
-                  }
-                }
-              }
-              
-              // Also check if award has a direct value field
-              if (award.value?.amount && typeof award.value.amount === 'number') {
-                const currency = award.value.currency || 'UYU';
-                amountsByCurrency[currency] = (amountsByCurrency[currency] || 0) + award.value.amount;
-              }
-            }
+        // Calculate total amounts from awards (multicurrency support with conversion)
+        const amountData = calculateTotalAmounts(
+          release.awards || [], 
+          currencyRates, 
+          uyiRate,
+          {
+            includeVersionInfo: true,
+            wasVersionUpdate: false, // This is initial upload, not an update
+            previousAmount: null,
           }
-          
-          return {
-            totalAmounts: amountsByCurrency,
-            totalItems,
-            currencies: Object.keys(amountsByCurrency),
-            hasAmounts: Object.keys(amountsByCurrency).length > 0
-          };
-        };
-
-        const amountData = calculateTotalAmounts(release.awards || []);
+        );
 
         // Add metadata to the release
         const releaseWithMetadata = {
           ...release,
           sourceFileName: fileName,
           sourceYear,
-          amount: {
-            totalAmounts: amountData.totalAmounts,
-            totalItems: amountData.totalItems,
-            currencies: amountData.currencies,
-            hasAmounts: amountData.hasAmounts,
-            // Add primary amount in UYU for easy sorting/filtering
-            primaryAmount: amountData.totalAmounts.UYU || 0,
-            primaryCurrency: 'UYU'
-          }
+          amount: amountData
         };
 
         // Add bulk operation
