@@ -1,9 +1,4 @@
-import {
-    AMOUNT_CALCULATION_VERSION,
-    calculateTotalAmounts,
-    fetchCurrencyRates,
-    fetchUYIRate
-} from "../../src/utils/amount-calculator";
+import { AMOUNT_CALCULATION_VERSION, calculateTotalAmounts, fetchCurrencyRates, fetchUYIRate } from "../../src/utils/amount-calculator";
 
 // Test data similar to what would be in a release
 const testRelease = {
@@ -13,18 +8,18 @@ const testRelease = {
       items: [
         {
           unit: { value: { amount: 1000, currency: "USD" } },
-          quantity: 2
+          quantity: 2,
         },
         {
           unit: { value: { amount: 500, currency: "UYU" } },
-          quantity: 1
-        }
-      ]
+          quantity: 1,
+        },
+      ],
     },
     {
-      value: { amount: 2000, currency: "EUR" }
-    }
-  ]
+      value: { amount: 2000, currency: "EUR" },
+    },
+  ],
 };
 
 async function testReleaseUploaderAmountStructure() {
@@ -38,29 +33,19 @@ async function testReleaseUploaderAmountStructure() {
 
   // Calculate amounts exactly as release uploader would
   console.log("\n📊 Calculating amounts for release uploader...");
-  const uploaderAmountData = calculateTotalAmounts(
-    testRelease.awards || [], 
-    currencyRates, 
-    uyiRate,
-    {
-      includeVersionInfo: true,
-      wasVersionUpdate: false, // Initial upload, not update
-      previousAmount: null,
-    }
-  );
+  const uploaderAmountData = calculateTotalAmounts(testRelease.awards || [], currencyRates, uyiRate, {
+    includeVersionInfo: true,
+    wasVersionUpdate: false, // Initial upload, not update
+    previousAmount: null,
+  });
 
   // Calculate amounts exactly as add-missing-amounts would (for comparison)
   console.log("📊 Calculating amounts for migration script...");
-  const migrationAmountData = calculateTotalAmounts(
-    testRelease.awards || [], 
-    currencyRates, 
-    uyiRate,
-    {
-      includeVersionInfo: true,
-      wasVersionUpdate: true, // This would be true for existing records
-      previousAmount: 1000, // Some previous amount
-    }
-  );
+  const migrationAmountData = calculateTotalAmounts(testRelease.awards || [], currencyRates, uyiRate, {
+    includeVersionInfo: true,
+    wasVersionUpdate: true, // This would be true for existing records
+    previousAmount: 1000, // Some previous amount
+  });
 
   console.log("\n🔍 Comparing structures:");
   console.log("========================");
@@ -90,20 +75,15 @@ async function testReleaseUploaderAmountStructure() {
   // Verify they have the same version and similar structure
   console.log("\n✅ Validation Results:");
   console.log("======================");
-  
+
   const sameVersion = uploaderAmountData.version === migrationAmountData.version;
   const samePrimaryAmount = Math.abs(uploaderAmountData.primaryAmount - migrationAmountData.primaryAmount) < 1;
-  const sameStructure = 
-    uploaderAmountData.hasOwnProperty('totalAmounts') &&
-    uploaderAmountData.hasOwnProperty('primaryAmount') &&
-    uploaderAmountData.hasOwnProperty('exchangeRateDate') &&
-    uploaderAmountData.hasOwnProperty('version') &&
-    uploaderAmountData.version === AMOUNT_CALCULATION_VERSION;
+  const sameStructure = uploaderAmountData.hasOwnProperty("totalAmounts") && uploaderAmountData.hasOwnProperty("primaryAmount") && uploaderAmountData.hasOwnProperty("exchangeRateDate") && uploaderAmountData.hasOwnProperty("version") && uploaderAmountData.version === AMOUNT_CALCULATION_VERSION;
 
   console.log(`   ✅ Same version (${AMOUNT_CALCULATION_VERSION}): ${sameVersion}`);
   console.log(`   ✅ Same primary amount: ${samePrimaryAmount}`);
   console.log(`   ✅ Complete structure: ${sameStructure}`);
-  
+
   if (sameVersion && samePrimaryAmount && sameStructure) {
     console.log(`\n🎉 SUCCESS: Both scripts create identical amount structures!`);
   } else {
@@ -117,7 +97,7 @@ async function testReleaseUploaderAmountStructure() {
     ...testRelease,
     sourceFileName: "test-2024.json",
     sourceYear: 2024,
-    amount: uploaderAmountData
+    amount: uploaderAmountData,
   };
 
   console.log(`   Release ID: ${releaseWithMetadata.id}`);
@@ -125,7 +105,7 @@ async function testReleaseUploaderAmountStructure() {
   console.log(`   Source Year: ${releaseWithMetadata.sourceYear}`);
   console.log(`   Amount Version: ${releaseWithMetadata.amount.version}`);
   console.log(`   Primary Amount: ${Math.round(releaseWithMetadata.amount.primaryAmount)} UYU`);
-  console.log(`   Currencies: ${releaseWithMetadata.amount.currencies.join(', ')}`);
+  console.log(`   Currencies: ${releaseWithMetadata.amount.currencies.join(", ")}`);
 }
 
 // Run the test

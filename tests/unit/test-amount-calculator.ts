@@ -1,10 +1,4 @@
-import {
-    AMOUNT_CALCULATION_VERSION,
-    calculateSimpleTotalAmounts,
-    calculateTotalAmounts,
-    fetchCurrencyRates,
-    fetchUYIRate
-} from "../../src/utils/amount-calculator";
+import { AMOUNT_CALCULATION_VERSION, calculateSimpleTotalAmounts, calculateTotalAmounts, fetchCurrencyRates, fetchUYIRate } from "../../src/utils/amount-calculator";
 
 // Test data
 const testAwards = [
@@ -12,17 +6,17 @@ const testAwards = [
     items: [
       {
         unit: { value: { amount: 1000, currency: "USD" } },
-        quantity: 2
+        quantity: 2,
       },
       {
         unit: { value: { amount: 500, currency: "UYU" } },
-        quantity: 1
-      }
-    ]
+        quantity: 1,
+      },
+    ],
   },
   {
-    value: { amount: 2000, currency: "EUR" }
-  }
+    value: { amount: 2000, currency: "EUR" },
+  },
 ];
 
 async function testAmountCalculator() {
@@ -36,7 +30,7 @@ async function testAmountCalculator() {
     totalAmounts: simpleResult.totalAmounts,
     totalItems: simpleResult.totalItems,
     primaryAmount: simpleResult.primaryAmount,
-    version: simpleResult.version
+    version: simpleResult.version,
   });
 
   // Test advanced calculation (with currency conversion)
@@ -47,7 +41,7 @@ async function testAmountCalculator() {
   const advancedResult = calculateTotalAmounts(testAwards, currencyRates, uyiRate, {
     includeVersionInfo: true,
     wasVersionUpdate: false,
-    previousAmount: null
+    previousAmount: null,
   });
 
   console.log("Advanced result:", {
@@ -58,7 +52,7 @@ async function testAmountCalculator() {
     hasConvertedAmounts: advancedResult.hasConvertedAmounts,
     version: advancedResult.version,
     exchangeRateDate: advancedResult.exchangeRateDate,
-    uyiExchangeRate: advancedResult.uyiExchangeRate
+    uyiExchangeRate: advancedResult.uyiExchangeRate,
   });
 
   console.log(`\n✅ Current version: ${AMOUNT_CALCULATION_VERSION}`);
