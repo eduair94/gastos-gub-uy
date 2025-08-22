@@ -2,19 +2,18 @@ module.exports = {
   apps: [
     {
       name: 'gastos-gub-cronserver',
-      script: 'tsx',
-      args: 'src/cronserver.ts',
+      args: 'dist/src/cronserver.js',
       instances: 1,
       exec_mode: 'fork',
       cwd: './',
       env: {
         NODE_ENV: 'production',
-        CRON_SERVER_PORT: 3002,
+        CRON_SERVER_PORT: 3902,
         MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/gastos_gub'
       },
       env_production: {
         NODE_ENV: 'production',
-        CRON_SERVER_PORT: 3002,
+        CRON_SERVER_PORT: 3902,
         MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/gastos_gub'
       },
       // PM2 configuration
