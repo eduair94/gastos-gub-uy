@@ -28,7 +28,6 @@ module.exports = {
         NODE_ENV: 'production',
         CRON_SERVER_PORT: 3902,
         // Prefer existing environment variable if present, otherwise fallback
-        MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/gastos_gub'
       }
     }
   ]
