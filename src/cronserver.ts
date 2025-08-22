@@ -318,13 +318,13 @@ class CronServer {
 
     try {
       this.logger.info("=".repeat(50));
-      this.logger.info("Starting daily release upload job");
+      this.logger.info("Starting daily release upload job (last 7 days)");
       this.logger.info("=".repeat(50));
 
       const uploader = new ReleaseUploaderNew(this.databaseService, this.logger, this.mongoUri);
 
-      // Run the upload process for current month only
-      await uploader.uploadCurrentMonthFromWeb();
+      // Run the upload process for last 7 days only
+      await uploader.uploadLastSevenDaysFromWeb();
 
       this.jobStatus.status = "idle";
       this.jobStatus.successfulRuns++;
@@ -346,7 +346,7 @@ class CronServer {
       this.logger.info(`Cron server started on port ${port}`);
       this.logger.info("Health endpoint: http://localhost:" + port + "/health");
       this.logger.info("Cron status endpoint: http://localhost:" + port + "/cron/status");
-      this.logger.info("Manual trigger endpoint: POST http://localhost:" + port + "/cron/trigger");
+      this.logger.info("Manual trigger endpoint: GET/POST http://localhost:" + port + "/cron/trigger");
     });
   }
 }

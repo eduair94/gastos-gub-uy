@@ -8,6 +8,7 @@ import { calculateTotalAmounts, fetchCurrencyRates, fetchUYIRate, type CurrencyR
 export interface IReleaseUploaderNew {
   uploadReleasesFromWeb(): Promise<void>;
   uploadCurrentMonthFromWeb(): Promise<void>;
+  uploadLastSevenDaysFromWeb(): Promise<void>;
 }
 
 export class ReleaseUploaderNew implements IReleaseUploaderNew {
@@ -140,6 +141,79 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
       this.logger.info(`Current month upload complete.`);
     } catch (err) {
       this.logger.error("Failed to upload current month releases from web:", err as Error);
+      throw err;
+    } finally {
+      if (this.databaseService.isConnected()) {
+        await this.databaseService.disconnect();
+        this.logger.info("Disconnected from MongoDB");
+      }
+    }
+  }
+
+  async uploadLastSevenDaysFromWeb(): Promise<void> {
+    try {
+      await this.databaseService.connect(this.mongoUri);
+      this.logger.info("Connected to MongoDB");
+
+      // Fetch current currency exchange rates
+      this.logger.info("Fetching current currency exchange rates...");
+      const currencyRates = await fetchCurrencyRates();
+
+      // Fetch current UYI (Unidades Indexadas) exchange rate
+      const uyiRate = await fetchUYIRate();
+      this.logger.info("Currency rates fetched successfully");
+
+      const currentDate = new Date();
+      const sevenDaysAgo = new Date(currentDate);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      this.logger.info(`Starting last 7 days upload (from ${sevenDaysAgo.toISOString().split("T")[0]} to ${currentDate.toISOString().split("T")[0]})`);
+
+      // Determine which months to check (current month and possibly previous month)
+      const monthsToCheck = new Set<{ year: number; month: number }>();
+
+      // Add current month
+      monthsToCheck.add({
+        year: currentDate.getFullYear(),
+        month: currentDate.getMonth() + 1,
+      });
+
+      // Add previous month if the 7-day window crosses month boundaries
+      if (sevenDaysAgo.getMonth() !== currentDate.getMonth() || sevenDaysAgo.getFullYear() !== currentDate.getFullYear()) {
+        monthsToCheck.add({
+          year: sevenDaysAgo.getFullYear(),
+          month: sevenDaysAgo.getMonth() + 1,
+        });
+      }
+
+      let totalUploaded = 0;
+      let totalSkipped = 0;
+      let totalProcessed = 0;
+
+      // Process each month
+      for (const monthInfo of monthsToCheck) {
+        const monthStr = monthInfo.month.toString().padStart(2, "0");
+        this.logger.info(`Processing ${monthInfo.year}-${monthStr} for last 7 days...`);
+
+        try {
+          // Get releases for this month and filter by date
+          const result = await this.processLastSevenDaysInMonth(monthInfo.year, monthInfo.month, sevenDaysAgo, currentDate, currencyRates, uyiRate, monthStr);
+
+          totalUploaded += result.uploaded;
+          totalSkipped += result.skipped;
+          totalProcessed += result.totalProcessed;
+
+          this.logger.info(`${monthInfo.year}-${monthStr} complete: ${result.uploaded} uploaded, ${result.skipped} skipped from last 7 days`);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.error(`Error processing ${monthInfo.year}-${monthStr}:`, errorMessage);
+          // Continue with next month instead of failing completely
+        }
+      }
+
+      this.logger.info(`Last 7 days upload complete. Total: ${totalProcessed} processed, ${totalUploaded} uploaded, ${totalSkipped} skipped`);
+    } catch (err) {
+      this.logger.error("Failed to upload last 7 days releases from web:", err as Error);
       throw err;
     } finally {
       if (this.databaseService.isConnected()) {
@@ -388,6 +462,124 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
     }
 
     return { uploaded, skipped };
+  }
+
+  private async processLastSevenDaysInMonth(year: number, month: number, startDate: Date, endDate: Date, currencyRates: CurrencyResponse | null, uyiRate: number | null, monthStr: string): Promise<{ uploaded: number; skipped: number; totalProcessed: number }> {
+    // First get all release IDs for this month
+    const releaseIds = await this.rssFetcher.fetchReleaseIds(year, month);
+
+    if (releaseIds.length === 0) {
+      this.logger.warn(`No releases found for ${year}-${monthStr}`);
+      return { uploaded: 0, skipped: 0, totalProcessed: 0 };
+    }
+
+    this.logger.info(`Found ${releaseIds.length} releases for ${year}-${monthStr}. Filtering by last 7 days...`);
+
+    // Filter releases by publish date (last 7 days)
+    const recentReleases = releaseIds.filter((release) => {
+      const publishDate = new Date(release.publishDate);
+      return publishDate >= startDate && publishDate <= endDate;
+    });
+
+    if (recentReleases.length === 0) {
+      this.logger.info(`No releases found in the last 7 days for ${year}-${monthStr}`);
+      return { uploaded: 0, skipped: 0, totalProcessed: 0 };
+    }
+
+    this.logger.info(`Found ${recentReleases.length} releases from last 7 days in ${year}-${monthStr}. Checking which ones already exist...`);
+
+    // Extract just the IDs for database lookup
+    const releaseIdStrings = recentReleases.map((release) => release.id);
+
+    // Check which releases already exist in the database
+    const existingReleases = await ReleaseModel.find({ id: { $in: releaseIdStrings } }, { id: 1 }).lean();
+    const existingIds = new Set(existingReleases.map((release) => release.id));
+
+    // Filter out releases that already exist
+    const newReleaseIds = recentReleases.filter((release) => !existingIds.has(release.id));
+
+    this.logger.info(`Found ${existingIds.size} existing releases, ${newReleaseIds.length} new releases from last 7 days to process`);
+
+    if (newReleaseIds.length === 0) {
+      this.logger.info(`All recent releases for ${year}-${monthStr} already exist in database`);
+      return { uploaded: 0, skipped: recentReleases.length, totalProcessed: recentReleases.length };
+    }
+
+    let totalUploaded = 0;
+    let totalSkipped = 0;
+    const FETCH_BATCH_SIZE = 200; // Process 200 new releases at a time
+
+    // Process only new releases in batches
+    for (let i = 0; i < newReleaseIds.length; i += FETCH_BATCH_SIZE) {
+      const batchIds = newReleaseIds.slice(i, i + FETCH_BATCH_SIZE);
+      const batchNumber = Math.floor(i / FETCH_BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(newReleaseIds.length / FETCH_BATCH_SIZE);
+
+      this.logger.info(`Processing batch ${batchNumber}/${totalBatches} (${batchIds.length} new releases from last 7 days)...`);
+
+      try {
+        // Prepare batch data for parallel fetching
+        const batchPromises = batchIds.map(async (releaseInfo) => {
+          try {
+            // Fetch OCDS data for this individual release
+            const releaseData = await this.rssFetcher.fetchReleaseData(releaseInfo.link);
+            return {
+              ...releaseInfo,
+              ocdsData: releaseData,
+              fetchError: undefined,
+            };
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            return {
+              ...releaseInfo,
+              ocdsData: undefined,
+              fetchError: errorMessage,
+            };
+          }
+        });
+
+        // Execute all fetches in this batch with controlled concurrency (20 at a time)
+        const batchResults = [];
+        const concurrency = 20;
+        for (let j = 0; j < batchPromises.length; j += concurrency) {
+          const concurrentBatch = batchPromises.slice(j, j + concurrency);
+          const concurrentResults = await Promise.all(concurrentBatch);
+          batchResults.push(...concurrentResults);
+
+          // Small delay between concurrent groups
+          if (j + concurrency < batchPromises.length) {
+            await this.delay(1000); // 1 second between concurrent groups
+          }
+        }
+
+        this.logger.info(`Fetched data for batch ${batchNumber}, processing...`);
+
+        // Process and upload this batch immediately
+        const batchResult = await this.processReleasesFromWeb(batchResults, currencyRates, uyiRate, year, monthStr);
+
+        totalUploaded += batchResult.uploaded;
+        totalSkipped += batchResult.skipped;
+
+        this.logger.info(`Batch ${batchNumber} complete: ${batchResult.uploaded} uploaded, ${batchResult.skipped} skipped`);
+
+        // Delay between batches to avoid overwhelming the server
+        if (i + FETCH_BATCH_SIZE < newReleaseIds.length) {
+          this.logger.info("Waiting 2 seconds before next batch...");
+          await this.delay(2000);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Error processing batch ${batchNumber}:`, errorMessage);
+        totalSkipped += batchIds.length;
+        // Continue with next batch instead of failing completely
+      }
+    }
+
+    // Add the existing releases to the skipped count for accurate reporting
+    totalSkipped += existingIds.size;
+    const totalProcessed = totalUploaded + totalSkipped;
+
+    return { uploaded: totalUploaded, skipped: totalSkipped, totalProcessed };
   }
 
   private delay(ms: number): Promise<void> {
