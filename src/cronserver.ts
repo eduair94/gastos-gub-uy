@@ -80,7 +80,7 @@ class CronServer {
       });
     });
 
-    // Manual trigger endpoint for testing
+    // Manual trigger endpoint for testing (POST)
     this.app.post("/cron/trigger", async (_req, res) => {
       if (this.isJobRunning) {
         res.status(409).json({
@@ -91,7 +91,37 @@ class CronServer {
       }
 
       try {
-        this.logger.info("Manual cronjob trigger initiated");
+        this.logger.info("Manual cronjob trigger initiated (POST)");
+        // Don't await this to avoid request timeout
+        this.runDailyUploadJob().catch((error) => {
+          this.logger.error("Manual trigger failed:", error);
+        });
+
+        res.json({
+          message: "Cronjob triggered manually",
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        res.status(500).json({
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+
+    // Manual trigger endpoint for testing (GET)
+    this.app.get("/cron/trigger", async (_req, res) => {
+      if (this.isJobRunning) {
+        res.status(409).json({
+          error: "Cronjob is already running",
+          status: this.jobStatus,
+        });
+        return;
+      }
+
+      try {
+        this.logger.info("Manual cronjob trigger initiated (GET)");
         // Don't await this to avoid request timeout
         this.runDailyUploadJob().catch((error) => {
           this.logger.error("Manual trigger failed:", error);
