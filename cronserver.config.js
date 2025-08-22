@@ -2,7 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'gastos-gub-cronserver',
-      args: 'dist/src/cronserver.js',
+      script: 'node',
+      args: ['dist/src/cronserver.js'],
       instances: 1,
       exec_mode: 'fork',
       cwd: './',
