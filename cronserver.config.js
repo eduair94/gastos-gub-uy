@@ -27,7 +27,8 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         CRON_SERVER_PORT: 3902,
-        MONGODB_URI: 'mongodb://localhost:27017/gastos_gub'
+        // Prefer existing environment variable if present, otherwise fallback
+        MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/gastos_gub'
       }
     }
   ]
