@@ -131,7 +131,6 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
         const result = await this.processReleasesInBatches(currentYear, currentMonth, currencyRates, uyiRate, monthStr);
 
         this.logger.info(`${currentYear}-${monthStr} complete: ${result.uploaded} uploaded, ${result.skipped} skipped, ${result.totalProcessed} total processed`);
-
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         this.logger.error(`Error processing ${currentYear}-${monthStr}:`, errorMessage);

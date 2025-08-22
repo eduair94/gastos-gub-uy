@@ -2,6 +2,10 @@ import { exec } from "child_process";
 import express from "express";
 import cron from "node-cron";
 import { promisify } from "util";
+// Load .env as early as possible so process.env values are available
+import dotenv from "dotenv";
+dotenv.config();
+
 import { DatabaseService } from "./services/database-service";
 import { Logger } from "./services/logger-service";
 import { ReleaseUploaderNew } from "./uploaders/release-uploader-new";
