@@ -28,6 +28,9 @@ class CronServer {
   private mongoUri: string;
   private jobStatus: CronJobStatus;
   private isJobRunning: boolean = false;
+  private reconcileStatus: CronJobStatus;
+  private isReconcileRunning: boolean = false;
+  private readonly reconcileMonthsBack: number = 5;
 
   constructor() {
     this.app = express();
@@ -36,6 +39,15 @@ class CronServer {
     this.mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/gastos_gub";
 
     this.jobStatus = {
+      lastRun: null,
+      nextRun: null,
+      status: "idle",
+      lastError: null,
+      successfulRuns: 0,
+      failedRuns: 0,
+    };
+
+    this.reconcileStatus = {
       lastRun: null,
       nextRun: null,
       status: "idle",
@@ -144,6 +156,40 @@ class CronServer {
       }
     });
 
+    // Reconciliation status endpoint
+    this.app.get("/cron/reconcile/status", (_req, res) => {
+      res.json({
+        ...this.reconcileStatus,
+        isRunning: this.isReconcileRunning,
+        monthsBack: this.reconcileMonthsBack,
+      });
+    });
+
+    // Manual reconciliation trigger (GET/POST) - re-checks non-final releases from the last N months
+    const triggerReconcile = (_req: express.Request, res: express.Response): void => {
+      if (this.isReconcileRunning) {
+        res.status(409).json({
+          error: "Reconciliation job is already running",
+          status: this.reconcileStatus,
+        });
+        return;
+      }
+
+      this.logger.info("Manual reconciliation trigger initiated");
+      // Don't await to avoid request timeout
+      this.runReconcileJob().catch((error) => {
+        this.logger.error("Manual reconcile trigger failed:", error);
+      });
+
+      res.json({
+        message: "Reconciliation job triggered manually",
+        monthsBack: this.reconcileMonthsBack,
+        timestamp: new Date().toISOString(),
+      });
+    };
+    this.app.post("/cron/reconcile", triggerReconcile);
+    this.app.get("/cron/reconcile", triggerReconcile);
+
     // MongoDB restart endpoint
     this.app.post("/admin/restart-mongodb", async (_req, res) => {
       try {
@@ -178,6 +224,11 @@ class CronServer {
         ...this.jobStatus,
         nextRun: this.getNextRunTime(),
         isRunning: this.isJobRunning,
+      },
+      reconcile: {
+        ...this.reconcileStatus,
+        isRunning: this.isReconcileRunning,
+        monthsBack: this.reconcileMonthsBack,
       },
     };
 
@@ -291,6 +342,32 @@ class CronServer {
 
     this.logger.info(`Cronjob scheduled with expression: ${cronExpression} (Uruguay timezone)`);
     this.jobStatus.nextRun = this.getNextRunTime();
+
+    // Weekly reconciliation: every Sunday at 02:00 (Uruguay time) re-check non-final releases
+    // from the last N months against the live API to catch late awards / silent edits.
+    const reconcileExpression = "0 2 * * 0";
+    cron.schedule(
+      reconcileExpression,
+      async () => {
+        if (this.isReconcileRunning) {
+          this.logger.warn("Skipping scheduled reconciliation - previous reconcile still running");
+          return;
+        }
+        if (this.isJobRunning) {
+          this.logger.warn("Skipping scheduled reconciliation - daily upload job is running");
+          return;
+        }
+
+        this.logger.info("Starting scheduled weekly reconciliation job...");
+        await this.runReconcileJob();
+      },
+      {
+        scheduled: true,
+        timezone: "America/Montevideo",
+      }
+    );
+
+    this.logger.info(`Reconciliation job scheduled with expression: ${reconcileExpression} (Uruguay timezone)`);
   }
 
   private getNextRunTime(): Date {
@@ -338,6 +415,34 @@ class CronServer {
     } finally {
       this.isJobRunning = false;
       this.jobStatus.nextRun = this.getNextRunTime();
+    }
+  }
+
+  private async runReconcileJob(): Promise<void> {
+    this.isReconcileRunning = true;
+    this.reconcileStatus.status = "running";
+    this.reconcileStatus.lastRun = new Date();
+    this.reconcileStatus.lastError = null;
+
+    try {
+      this.logger.info("=".repeat(50));
+      this.logger.info(`Starting reconciliation job (non-final releases, last ${this.reconcileMonthsBack} months)`);
+      this.logger.info("=".repeat(50));
+
+      const uploader = new ReleaseUploaderNew(this.databaseService, this.logger, this.mongoUri);
+      const result = await uploader.reconcileNonFinalReleases(this.reconcileMonthsBack);
+
+      this.reconcileStatus.status = "idle";
+      this.reconcileStatus.successfulRuns++;
+      this.logger.info(`Reconciliation job completed: scanned ${result.scanned}, updated ${result.updated}, failed ${result.failed}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.reconcileStatus.status = "error";
+      this.reconcileStatus.lastError = errorMessage;
+      this.reconcileStatus.failedRuns++;
+      this.logger.error("Reconciliation job failed:", errorMessage);
+    } finally {
+      this.isReconcileRunning = false;
     }
   }
 

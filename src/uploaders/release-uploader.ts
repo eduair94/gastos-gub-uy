@@ -157,18 +157,52 @@ export class ReleaseUploader implements IReleaseUploader {
         );
 
         // Add metadata to the release
+        const { awards: incomingAwards, ...releaseWithoutAwards } = release;
         const releaseWithMetadata = {
-          ...release,
+          ...releaseWithoutAwards,
           sourceFileName: fileName,
-          sourceYear,
-          amount: amountData
+          sourceYear
         };
+        const incomingAwardsCount = Array.isArray(incomingAwards) ? incomingAwards.length : 0;
 
-        // Add bulk operation
+        // Pipeline-style $set evaluates every value as an aggregation expression, so plain
+        // nested objects get parsed instead of treated as data - and MongoDB rejects an empty
+        // object (e.g. buyer.contactPoint: {}) found that way. $literal-wrap each field's raw
+        // value so it's always taken verbatim.
+        const literalFields = Object.fromEntries(
+          Object.entries(releaseWithMetadata).map(([key, value]) => [key, { $literal: value }])
+        );
+
+        // Same OCDS release `id` can be republished multiple times across the source files
+        // (e.g. a tender-stage "l-" file and a later award-stage "a-" file share one id).
+        // A plain $set would let whichever file is processed last silently overwrite awards
+        // data with an earlier, less-complete snapshot. Use a pipeline update so MongoDB
+        // decides server-side: keep the existing awards/amount only if they already have
+        // strictly more awards than what we're about to write.
         bulkOps.push({
           updateOne: {
             filter: { id: release.id },
-            update: { $set: releaseWithMetadata },
+            update: [
+              {
+                $set: {
+                  ...literalFields,
+                  awards: {
+                    $cond: [
+                      { $gt: [{ $size: { $ifNull: ["$awards", []] } }, incomingAwardsCount] },
+                      "$awards",
+                      { $literal: incomingAwards || [] }
+                    ]
+                  },
+                  amount: {
+                    $cond: [
+                      { $gt: [{ $size: { $ifNull: ["$awards", []] } }, incomingAwardsCount] },
+                      "$amount",
+                      { $literal: amountData }
+                    ]
+                  }
+                }
+              }
+            ],
             upsert: true
           }
         });
