@@ -3,6 +3,7 @@ import type { PipelineStage } from 'mongoose'
 import { ReleaseModel } from '../../../../shared/models/release'
 import { connectToDatabase, mongoose } from '../../utils/database'
 import { FilterDataModel } from '../../utils/models'
+import { toArray } from '../../utils/query'
 import { buildContractFilters, toMatchDocument } from './index.get'
 
 /**
@@ -107,6 +108,108 @@ async function typicalContract(match: Record<string, unknown> = {}): Promise<num
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
+/**
+ * Does this filter set narrow the collection enough to total?
+ *
+ * These params each cut 2.2M documents down to something a `$facet` can
+ * sum inside the time budget. `tag` deliberately is NOT one of them: the
+ * default `tag=award` still matches 1.4M releases.
+ */
+const SELECTIVE_PARAMS = [
+  'search', 'year', 'yearFrom', 'yearTo', 'amountFrom', 'amountTo',
+  'buyers', 'buyerIds', 'suppliers', 'supplierIds',
+  'procurementMethodDetails', 'procurementMethod', 'category', 'minItems',
+] as const
+
+function isSelective(query: Record<string, unknown>): boolean {
+  return SELECTIVE_PARAMS.some((p) => {
+    const v = query[p]
+    return v !== undefined && v !== null && String(v).trim() !== ''
+  })
+}
+
+/**
+ * Cache for the broad/default summaries.
+ *
+ * The landing view sends ONE query shape (`tag=award`) for every
+ * visitor, and counting 1.4M multikey index entries costs ~10s no matter
+ * how well indexed it is. That is fine to pay once an hour and absurd to
+ * pay per request. Stale-while-revalidate: the first caller after expiry
+ * still gets the old numbers instantly while a single refresh runs
+ * behind them.
+ */
+const BROAD_TTL_MS = 60 * 60 * 1000
+const broadCache = new Map<string, { data: unknown, at: number }>()
+const broadInflight = new Set<string>()
+
+async function cachedBroadStats(query: Record<string, unknown>, key: string) {
+  const hit = broadCache.get(key)
+  const fresh = hit && Date.now() - hit.at < BROAD_TTL_MS
+
+  if (hit && !fresh && !broadInflight.has(key)) {
+    // Refresh behind the reader; never make them wait for it.
+    broadInflight.add(key)
+    degradedStats(query)
+      .then(data => broadCache.set(key, { data, at: Date.now() }))
+      .catch(() => {})
+      .finally(() => broadInflight.delete(key))
+  }
+
+  if (hit) return { ...(hit.data as Record<string, unknown>), meta: { ...(hit.data as any).meta, cached: true, cachedAt: hit.at } }
+
+  const data = await degradedStats(query)
+  broadCache.set(key, { data, at: Date.now() })
+  return data
+}
+
+/**
+ * What we can still say truthfully when the facet ran out of time.
+ *
+ * A filter set too broad to total is a normal state of a 2.2M-document
+ * explorer, not a failure — the previous 503 blanked the whole strip to
+ * "— / Sin monto", which reads as a broken site. Counts and the median
+ * are index-backed and cheap, so serve those and say the sums were
+ * skipped.
+ */
+async function degradedStats(query: Record<string, unknown>) {
+  const match = toMatchDocument(buildContractFilters(query))
+
+  const [count, yearsDoc, median] = await Promise.all([
+    ReleaseModel.countDocuments(match, { maxTimeMS: 6000 }).catch(() => 0),
+    FilterDataModel.findOne({ type: 'years' }).select('data lastUpdated').lean(),
+    typicalContract(match),
+  ])
+
+  const byYear: StatsBucket[] = ((yearsDoc?.data || []) as Array<{ value: unknown, count: number }>)
+    .map(o => ({ year: Number(o.value), count: o.count, value: null }))
+    .filter(o => Number.isFinite(o.year) && o.year > 2000)
+    .sort((a, b) => a.year - b.year)
+
+  return {
+    count,
+    totalValue: null,
+    avgValue: null,
+    medianValue: median,
+    byYear,
+    currencies: [] as Array<{ currency: string, count: number }>,
+    topBuyers: [] as NamedBucket[],
+    topSuppliers: [] as NamedBucket[],
+    meta: {
+      unbounded: true,
+      degraded: true,
+      note: 'Filter set too broad to total within the time budget. Count and median are exact for the filter; value aggregates need a narrower filter.',
+      countSource: 'countDocuments',
+      // byYear counts are for ALL stages, not this filter — say so rather
+      // than let the histogram imply otherwise.
+      byYearSource: 'filter_data',
+      byYearScope: 'all-stages',
+      byYearAsOf: yearsDoc?.lastUpdated ?? null,
+      medianSource: 'exact',
+      medianExcludesAbove: IMPLAUSIBLE_UYU,
+    },
+  }
+}
+
 /** Unfiltered summary assembled from cheap, honest sources only. */
 async function unboundedStats() {
   const [count, yearsDoc, median] = await Promise.all([
@@ -154,6 +257,20 @@ export default defineEventHandler(async (event) => {
 
     const query = getQuery(event)
     const filters = buildContractFilters(query)
+
+    // `tag` alone is not selective: the explorer's default (`tag=award`)
+    // still matches 1.4M documents, and summing those cannot finish in
+    // the budget. Attempting the facet anyway cost ~10s before falling
+    // back, making the landing view feel broken. Detect it up front and
+    // serve the cheap exact facts immediately.
+    if (filters.hasFilters && !isSelective(query)) {
+      const key = `broad:${toArray(query.tag).sort().join(',')}|${query.currency ?? ''}|${query.status ?? ''}|${query.hasAmount ?? ''}`
+      const data = await cachedBroadStats(query, key) as Record<string, unknown>
+      return {
+        success: true,
+        data: { ...data, meta: { ...(data.meta as object), executionTimeMs: Date.now() - startTime } },
+      }
+    }
 
     if (!filters.hasFilters) {
       const data = await unboundedStats()
@@ -267,8 +384,15 @@ export default defineEventHandler(async (event) => {
     if ((error as { statusCode?: number }).statusCode) throw error
 
     const message = (error as Error).message || ''
-    // A filter set too broad/expensive to summarise should say so, not 500.
+
+    // A filter set too broad to sum is not an error — it is a normal
+    // state of a 2.2M-document explorer, and the reader still deserves a
+    // count. Returning 503 blanked the whole strip to "— / Sin monto",
+    // which looks like the site is broken. Degrade to the cheap, exact
+    // facts instead and flag that the money aggregates were skipped.
     if (message.includes('operation exceeded time limit') || message.includes('MaxTimeMSExpired')) {
+      const data = await degradedStats(getQuery(event)).catch(() => null)
+      if (data) return { success: true, data }
       throw createError({
         statusCode: 503,
         statusMessage: 'Statistics timed out for this filter set - please narrow your filters',

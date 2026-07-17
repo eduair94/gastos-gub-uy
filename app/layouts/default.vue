@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { useTheme } from 'vuetify'
 
+// `<component :is="'NuxtLink'">` does NOT resolve a string to a globally
+// registered component — it emits a literal <nuxtlink> element with no
+// href, which is why every top-bar link was unclickable. Resolve the
+// component object once and switch on that instead.
+const NuxtLinkC = resolveComponent('NuxtLink')
+
 const { t, locale, locales, setLocale } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
@@ -77,6 +83,21 @@ watch(() => route.fullPath, () => {
 
     <header class="topbar">
       <div class="topbar__inner u-container">
+        <!-- Leads the bar on small screens: the drawer opens from the
+             left, so its trigger belongs on the left. Hidden ≥900px,
+             where the horizontal nav takes over. -->
+        <button
+          class="iconbtn iconbtn--menu"
+          :aria-label="t('nav.menu')"
+          :aria-expanded="drawer"
+          aria-controls="mobile-drawer"
+          @click="drawer = !drawer"
+        >
+          <v-icon size="22">
+            mdi-menu
+          </v-icon>
+        </button>
+
         <NuxtLink
           :to="localePath('/')"
           class="brand"
@@ -93,7 +114,7 @@ watch(() => route.fullPath, () => {
           :aria-label="t('nav.sections')"
         >
           <component
-            :is="n.external ? 'a' : 'NuxtLink'"
+            :is="n.external ? 'a' : NuxtLinkC"
             v-for="n in nav"
             :key="n.key"
             :to="n.external ? undefined : n.to"
@@ -162,47 +183,130 @@ watch(() => route.fullPath, () => {
               {{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}
             </v-icon>
           </button>
+        </div>
+      </div>
+    </header>
 
-          <button
-            class="iconbtn iconbtn--menu"
-            :aria-label="t('nav.menu')"
-            :aria-expanded="drawer"
-            @click="drawer = !drawer"
+    <!-- Mobile navigation: a real side drawer, off-canvas with a scrim.
+         It sits outside <header> so the sticky bar's stacking context
+         cannot trap the overlay behind the page. -->
+    <v-navigation-drawer
+      v-model="drawer"
+      temporary
+      location="left"
+      width="288"
+      class="drawer"
+      :scrim="true"
+    >
+      <div class="drawer__head">
+        <NuxtLink
+          :to="localePath('/')"
+          class="drawer__brand"
+          @click="drawer = false"
+        >
+          <BrandMark :size="26" />
+          <span class="drawer__name">{{ t('brand.name') }}</span>
+        </NuxtLink>
+        <button
+          class="drawer__x"
+          type="button"
+          :aria-label="t('nav.close')"
+          @click="drawer = false"
+        >
+          <v-icon size="22">
+            mdi-close
+          </v-icon>
+        </button>
+      </div>
+
+      <form
+        class="drawer__search"
+        role="search"
+        @submit.prevent="submitSearch"
+      >
+        <label
+          class="u-sr-only"
+          for="drawersearch"
+        >{{ t('common.search') }}</label>
+        <v-icon
+          size="18"
+          class="drawer__searchicon"
+        >
+          mdi-magnify
+        </v-icon>
+        <input
+          id="drawersearch"
+          v-model="search"
+          class="drawer__searchinput"
+          type="search"
+          :placeholder="t('common.searchPlaceholder')"
+        >
+      </form>
+
+      <nav
+        class="drawer__nav"
+        :aria-label="t('nav.sections')"
+      >
+        <component
+          :is="n.external ? 'a' : NuxtLinkC"
+          v-for="n in nav"
+          :key="n.key"
+          :to="n.external ? undefined : n.to"
+          :href="n.external ? n.to : undefined"
+          :target="n.external ? '_blank' : undefined"
+          :rel="n.external ? 'noopener' : undefined"
+          class="drawer__link"
+          :class="{ 'drawer__link--active': !n.external && isActive(n.to) }"
+          @click="drawer = false"
+        >
+          <v-icon size="20">
+            {{ n.icon }}
+          </v-icon>
+          <span>{{ t(`nav.${n.key}`) }}</span>
+          <v-icon
+            v-if="n.external"
+            size="14"
+            class="drawer__ext"
           >
-            <v-icon size="21">
-              {{ drawer ? 'mdi-close' : 'mdi-menu' }}
+            mdi-open-in-new
+          </v-icon>
+        </component>
+      </nav>
+
+      <div class="drawer__foot">
+        <NuxtLink
+          :to="localePath('/about')"
+          class="drawer__sub"
+          @click="drawer = false"
+        >
+          {{ t('nav.about') }}
+        </NuxtLink>
+        <div class="drawer__prefs">
+          <button
+            class="drawer__pref"
+            type="button"
+            @click="toggleTheme"
+          >
+            <v-icon size="18">
+              {{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}
             </v-icon>
+            {{ isDark ? t('nav.themeLight') : t('nav.themeDark') }}
+          </button>
+          <button
+            v-for="l in otherLocales"
+            :key="l.code"
+            class="drawer__pref"
+            type="button"
+            @click="setLocale(l.code)"
+          >
+            <v-icon size="18">
+              mdi-translate
+            </v-icon>
+            {{ l.name }}
           </button>
         </div>
       </div>
-
-      <!-- Mobile navigation: a plain disclosure panel rather than an
-           overlay drawer. Fewer moving parts, no scroll-lock bugs. -->
-      <Transition name="sheet">
-        <nav
-          v-if="drawer"
-          class="mobilenav"
-          :aria-label="t('nav.sections')"
-        >
-          <component
-            :is="n.external ? 'a' : 'NuxtLink'"
-            v-for="n in nav"
-            :key="n.key"
-            :to="n.external ? undefined : n.to"
-            :href="n.external ? n.to : undefined"
-            :target="n.external ? '_blank' : undefined"
-            :rel="n.external ? 'noopener' : undefined"
-            class="mobilenav__link"
-            :class="{ 'mobilenav__link--active': !n.external && isActive(n.to) }"
-          >
-            <v-icon size="20">
-              {{ n.icon }}
-            </v-icon>
-            {{ t(`nav.${n.key}`) }}
-          </component>
-        </nav>
-      </Transition>
-    </header>
+    </v-navigation-drawer>
 
     <v-main>
       <div id="contenido">
@@ -417,16 +521,95 @@ watch(() => route.fullPath, () => {
 
 .iconbtn--menu { display: none; }
 
-/* ---- Mobile nav ---- */
-.mobilenav {
-  display: none;
-  flex-direction: column;
-  padding: var(--s-2) clamp(var(--s-4), 3vw, var(--s-6)) var(--s-4);
-  border-top: 1px solid var(--rule);
+/* ---- Mobile drawer ---- */
+.drawer {
+  background: var(--surface) !important;
+  border-left: 1px solid var(--rule) !important;
+}
+
+.drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.drawer__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.drawer__name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: 0.875rem;
+  letter-spacing: -0.025em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer__x {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.drawer__x:hover { color: var(--text); background: var(--surface-sunken); }
+
+.drawer__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: var(--s-4);
+}
+
+.drawer__searchicon {
+  position: absolute;
+  left: 10px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.drawer__searchinput {
+  width: 100%;
+  padding: 9px var(--s-3) 9px 34px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+}
+
+.drawer__searchinput:focus {
+  outline: none;
+  border-color: var(--celeste);
   background: var(--surface);
 }
 
-.mobilenav__link {
+.drawer__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--s-3);
+}
+
+.drawer__link {
   display: flex;
   align-items: center;
   gap: var(--s-3);
@@ -435,18 +618,55 @@ watch(() => route.fullPath, () => {
   color: var(--text-muted);
   text-decoration: none;
   font-weight: 500;
+  font-size: var(--t-base);
 }
 
-.mobilenav__link--active {
+.drawer__link:hover { background: var(--surface-sunken); color: var(--text); }
+
+.drawer__link--active {
   color: var(--text);
   background: var(--surface-sunken);
   box-shadow: inset 3px 0 0 var(--sol);
 }
 
-.sheet-enter-active,
-.sheet-leave-active { transition: opacity var(--dur) var(--ease); }
-.sheet-enter-from,
-.sheet-leave-to { opacity: 0; }
+.drawer__ext { margin-left: auto; opacity: 0.6; }
+
+.drawer__foot {
+  margin-top: auto;
+  padding: var(--s-4);
+  border-top: 1px solid var(--rule);
+}
+
+.drawer__sub {
+  display: block;
+  padding: var(--s-2) var(--s-1);
+  font-size: var(--t-sm);
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
+
+.drawer__prefs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin-top: var(--s-2);
+}
+
+.drawer__pref {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-1);
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.drawer__pref:hover { color: var(--text); }
 
 /* ---- Footer ---- */
 .foot {
@@ -501,12 +721,17 @@ watch(() => route.fullPath, () => {
 @media (max-width: 900px) {
   .topnav { display: none; }
   .iconbtn--menu { display: grid; }
-  .mobilenav { display: flex; }
 }
 
 @media (max-width: 620px) {
   .topsearch { display: none; }
   .brand__name { font-size: 0.875rem; }
   .foot__links { margin-left: 0; }
+
+  /* The drawer carries the theme and language controls on a phone, so
+     the bar keeps only the brand and the menu. This is also what was
+     pushing 27px of horizontal overflow at 360px. */
+  .topbar__actions .iconbtn:not(.iconbtn--menu) { display: none; }
+  .topbar__inner { gap: var(--s-2); }
 }
 </style>

@@ -1,9 +1,17 @@
 import { createError, defineEventHandler, getQuery, getRouterParam } from 'h3'
 import type { IBuyerPattern } from '../../../types'
+import { connectToDatabase } from '../../utils/database'
 import { BuyerPatternModel } from '../../utils/models'
 
 export default defineEventHandler(async (event) => {
   try {
+    // Connections are opened on demand per route (the database plugin is
+    // disabled). Without this the first request after a cold start —
+    // typically someone opening a shared agency link — dies with
+    // "Cannot call buyer_patterns.findOne() before initial connection is
+    // complete". Every sibling route already does this.
+    await connectToDatabase()
+
     const buyerId = getRouterParam(event, 'id')
     const query = getQuery(event)
 

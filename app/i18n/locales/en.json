@@ -71,7 +71,9 @@
     "unitPrice": "Unit price",
     "description": "Description",
     "updated": "Updated",
-    "since": "since"
+    "since": "since",
+    "yes": "Yes",
+    "no": "No"
   },
   "home": {
     "eyebrow": "Uruguay's public procurement",
@@ -132,7 +134,8 @@
       "title": "Search or filter to start",
       "body": "Type what the state bought, or pick an agency in the filter panel."
     },
-    "tooMany": "Showing the first {shown}. Narrow the filters to see fewer results."
+    "tooMany": "Showing the first {shown}. Narrow the filters to see fewer results.",
+    "moreItems": "+{n} more item | +{n} more items"
   },
   "filters": {
     "title": "Filters",
@@ -167,7 +170,8 @@
     "presetRecent": "This year",
     "presetSingleBidder": "Direct award",
     "noOptions": "No options",
-    "loadingOptions": "Loading options"
+    "loadingOptions": "Loading options",
+    "tagHelp": "Each stage of the process is its own record. Only the award reports a supplier and an amount."
   },
   "contract": {
     "eyebrow": "Contract",
@@ -186,10 +190,13 @@
     "sections": {
       "summary": "Summary",
       "items": "What was bought",
-      "parties": "Who's involved",
+      "parties": "Who is involved",
       "timeline": "Timeline",
       "documents": "Official documents",
-      "raw": "Raw data"
+      "raw": "Raw data",
+      "amendments": "Amendments",
+      "provenance": "Record origin",
+      "amount": "Amount detail"
     },
     "itemsHelp": "Awarded items with quantity and unit price.",
     "noItems": "The official record lists no items for this contract.",
@@ -215,8 +222,76 @@
       "contractAnnexe": "Annexe",
       "clarifications": "Clarifications",
       "evaluationReports": "Evaluation report",
-      "technicalSpecifications": "Technical specifications"
-    }
+      "technicalSpecifications": "Technical specifications",
+      "cancellationDetails": "Cancellation record"
+    },
+    "roles": {
+      "buyer": "Buyer",
+      "procuringEntity": "Procuring entity",
+      "supplier": "Supplier"
+    },
+    "submissionMethods": {
+      "electronicSubmission": "Online",
+      "written": "In writing",
+      "inPerson": "In person"
+    },
+    "stage": {
+      "label": "Stage",
+      "award": "Award",
+      "awardUpdate": "Award adjustment",
+      "awardCancellation": "Award cancelled",
+      "tender": "Tender",
+      "tenderUpdate": "Clarification",
+      "tenderAmendment": "Tender amendment",
+      "tenderCancellation": "Tender cancelled"
+    },
+    "stageHelp": {
+      "award": "The state awarded the purchase to a supplier. This is the stage that reports amounts.",
+      "awardUpdate": "A correction to an already published award.",
+      "awardCancellation": "The award was set aside.",
+      "tender": "Published call. No supplier or amount yet.",
+      "tenderUpdate": "A clarification or answer to questions about a tender.",
+      "tenderAmendment": "A change to the tender conditions.",
+      "tenderCancellation": "The tender was cancelled."
+    },
+    "stageTitle": {
+      "award": "Award {ref}",
+      "awardUpdate": "Award adjustment {ref}",
+      "awardCancellation": "Award cancelled {ref}",
+      "tender": "Tender {ref}",
+      "tenderUpdate": "Clarification to tender {ref}",
+      "tenderAmendment": "Amendment to tender {ref}",
+      "tenderCancellation": "Tender cancelled {ref}"
+    },
+    "noMoneyStage": "This stage reports no amounts. The figure appears once the award is published.",
+    "fields": {
+      "tag": "Stage",
+      "initiationType": "Initiation type",
+      "tenderId": "Tender no.",
+      "awardId": "Award no.",
+      "awardStatus": "Award status",
+      "legalName": "Legal name",
+      "rut": "Tax ID / identifier",
+      "roles": "Role",
+      "classification": "Catalogue code",
+      "unit": "Unit",
+      "hasEnquiries": "Accepts enquiries",
+      "submissionMethod": "Submission method",
+      "submissionMethodDetails": "Submission conditions",
+      "procuringEntity": "Procuring entity",
+      "sourceFile": "Source file",
+      "sourceYear": "Source year",
+      "fetched": "Imported on",
+      "rssLink": "Source link",
+      "totalItems": "Items",
+      "currencies": "Currencies",
+      "version": "Calculation version",
+      "exchangeRateDate": "Exchange rate as of",
+      "originalUYU": "Original amount in pesos",
+      "converted": "Includes conversion"
+    },
+    "amendmentOf": "Amends {id}",
+    "itemsCount": "{n} item | {n} items"
   },
   "suppliers": {
     "title": "State suppliers",

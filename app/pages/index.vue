@@ -42,6 +42,11 @@ const topSuppliers = computed(() => suppliersRes.value?.data ?? [])
 const topBuyers = computed(() => buyersRes.value?.data ?? [])
 const anomalies = computed(() => anomaliesRes.value?.data?.anomalies ?? anomaliesRes.value?.data ?? [])
 
+// Years the data actually covers, from filter_data via stats.byYear.
+const knownYears = computed<Set<number>>(() =>
+  new Set((stats.value?.byYear ?? []).map((d: any) => d.year).filter(Boolean)),
+)
+
 const trends = computed(() => {
   const raw = trendsRes.value?.data ?? []
   return raw
@@ -50,7 +55,9 @@ const trends = computed(() => {
       value: d.value ?? 0,
       count: d.count ?? 0,
     }))
-    .filter((d: any) => d.year && d.value > 0)
+    // spending_trends carries a 2001 bucket that no release falls in;
+    // plotting it contradicts the "desde 2002" the lead states.
+    .filter((d: any) => d.year && d.value > 0 && (!knownYears.value.size || knownYears.value.has(d.year)))
     .sort((a: any, b: any) => a.year - b.year)
 })
 
@@ -101,16 +108,16 @@ useSeo(() => ({
           <p class="u-eyebrow">
             {{ t('home.eyebrow') }}
           </p>
-          <h1 class="u-hero hero__title">
+          <h1 class="u-hero hero__title u-rise">
             {{ t('home.title') }}<br>
             <span class="hero__accent">{{ t('home.titleAccent') }}</span>
           </h1>
-          <p class="u-lead hero__lead">
+          <p class="u-lead hero__lead u-rise u-rise-1">
             {{ t('home.lead', { yearFrom: firstYear }) }}
           </p>
 
           <form
-            class="bigsearch"
+            class="bigsearch u-rise u-rise-2"
             role="search"
             @submit.prevent="submit"
           >

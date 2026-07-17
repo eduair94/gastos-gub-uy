@@ -8,18 +8,55 @@
  * re-improvised per page.
  */
 
+/**
+ * The lifecycle stages a release can carry in `tag`.
+ *
+ * One OCID spans several releases: a llamado is published, clarified and
+ * amended, then adjudicated, then possibly cancelled. Only `award` and
+ * `awardUpdate` carry money — a `tenderUpdate` legitimately has no
+ * supplier, no items and no amount. Showing those rows unlabelled next
+ * to awards is what makes the data look broken, so the stage is a
+ * first-class thing the UI must always name.
+ */
+export const RELEASE_TAGS = [
+  'award',
+  'awardUpdate',
+  'awardCancellation',
+  'tender',
+  'tenderUpdate',
+  'tenderAmendment',
+  'tenderCancellation',
+] as const
+
+export type ReleaseTag = typeof RELEASE_TAGS[number]
+
 export interface ContractLike {
   id?: string
   ocid?: string
   date?: string | Date
   sourceYear?: number
   sourceUrl?: string | null
+  tag?: string[]
+  initiationType?: string
+  rssLink?: string
+  sourceFileName?: string
+  parties?: { id?: string, name?: string, roles?: string[] }[]
+  supplier?: { id?: string, name?: string, identifier?: { id?: string, legalName?: string }, roles?: string[] }
   tender?: {
+    id?: string
     title?: string
     description?: string
     status?: string
     procurementMethod?: string
     procurementMethodDetails?: string
+    hasEnquiries?: boolean
+    submissionMethod?: string[]
+    submissionMethodDetails?: string
+    procuringEntity?: { id?: string, name?: string }
+    tenderPeriod?: { startDate?: string, endDate?: string }
+    enquiryPeriod?: { startDate?: string, endDate?: string }
+    amendments?: { id?: string, date?: string, description?: string, amendsReleaseID?: string }[]
+    documents?: unknown[]
     items?: unknown[]
   }
   buyer?: { id?: string, name?: string }
@@ -40,9 +77,47 @@ export interface ContractLike {
     primaryAmount?: number
     primaryCurrency?: string
     currencies?: string[]
+    totalAmounts?: Record<string, number>
     hasAmounts?: boolean
+    hasConvertedAmounts?: boolean
+    originalUYUAmount?: number
+    exchangeRateDate?: string
     totalItems?: number
+    version?: number
   }
+}
+
+/** Every stage tag on the release, filtered to ones we have a label for. */
+export function contractTags(c?: ContractLike | null): ReleaseTag[] {
+  const raw = Array.isArray(c?.tag) ? c!.tag : []
+  return raw.filter((t): t is ReleaseTag => (RELEASE_TAGS as readonly string[]).includes(t))
+}
+
+/** The stage to lead with when a release carries more than one tag. */
+export function primaryTag(c?: ContractLike | null): ReleaseTag | null {
+  const tags = contractTags(c)
+  for (const t of RELEASE_TAGS) if (tags.includes(t)) return t
+  return null
+}
+
+/** Only these stages ever carry money. */
+export function isMoneyStage(c?: ContractLike | null): boolean {
+  const t = primaryTag(c)
+  return t === 'award' || t === 'awardUpdate'
+}
+
+const TAG_TONE: Record<ReleaseTag, string> = {
+  award: 'tag--activo',
+  awardUpdate: 'tag--celeste',
+  awardCancellation: 'tag--alerta',
+  tender: 'tag--celeste',
+  tenderUpdate: 'tag--neutral',
+  tenderAmendment: 'tag--neutral',
+  tenderCancellation: 'tag--alerta',
+}
+
+export function tagTone(tag?: string | null): string {
+  return TAG_TONE[tag as ReleaseTag] ?? 'tag--neutral'
 }
 
 /** The peso figure to display. Pre-normalised upstream to UYU. */
@@ -60,9 +135,34 @@ export function isMixedCurrency(c?: ContractLike | null): boolean {
   return (c?.amount?.currencies?.length ?? 0) > 1
 }
 
+/** Distinct item descriptions a title may name before it stops listing. */
+const TITLE_MAX_PARTS = 2
+/** Hard ceiling in characters, for a single very long description. */
+const TITLE_MAX_CHARS = 140
+
+/**
+ * Joins item descriptions into a title without letting a many-line
+ * contract produce a paragraph. Truncation is marked with an ellipsis so
+ * the reader knows there is more, and the exact item count is rendered
+ * next to it.
+ */
+function joinCapped(parts: string[]): string {
+  const shown = parts.slice(0, TITLE_MAX_PARTS).join(' · ')
+  const clipped = parts.length > TITLE_MAX_PARTS
+  const base = shown.length > TITLE_MAX_CHARS
+    ? `${shown.slice(0, TITLE_MAX_CHARS).replace(/[\s·]+$/, '')}…`
+    : shown
+  return clipped && !base.endsWith('…') ? `${base}…` : base
+}
+
 /**
  * What was bought. Falls back through the layers the source actually
  * populates before giving up — a blank cell tells the reader nothing.
+ *
+ * Returns '' when the release genuinely has no subject of its own (a
+ * clarification, an amendment). Callers should then use
+ * `contractTitleFallback` to name the stage instead of printing a bare
+ * "Contrato", which is what made those rows look like missing data.
  */
 export function contractTitle(c?: ContractLike | null): string {
   const t = c?.tender?.title?.trim()
@@ -73,14 +173,44 @@ export function contractTitle(c?: ContractLike | null): string {
   // "R/211203010017"), which is noise as a heading.
   if (awardTitle && !/^[A-Z]?\/?\d[\d/-]*$/.test(awardTitle)) return awardTitle
 
-  const item = c?.awards?.[0]?.items?.[0]
-  const desc = item?.description?.trim() || item?.classification?.description?.trim()
-  if (desc) return desc
+  // Name what was bought, but a title is a label — not a manifest.
+  // `adjudicacion-1356714` has 19 items / 17 distinct descriptions, and
+  // joining them all produced a 590-character "title" that broke the
+  // table and the detail header. Cap it: the exact count sits in the
+  // badge beside it and every line is on the detail page.
+  const descs = (c?.awards ?? [])
+    .flatMap(a => a.items ?? [])
+    .map(i => i.description?.trim() || i.classification?.description?.trim())
+    .filter((d): d is string => !!d)
+  const unique = [...new Set(descs)]
+  if (unique.length) return joinCapped(unique)
 
+  // A tender description can run to a full paragraph — cap it too.
   const tenderDesc = c?.tender?.description?.trim()
-  if (tenderDesc) return tenderDesc
+  if (tenderDesc) return joinCapped([tenderDesc])
+
+  const tenderItems = (c?.tender?.items ?? []) as { description?: string, classification?: { description?: string } }[]
+  const tItems = [...new Set(tenderItems
+    .map(i => i.description?.trim() || i.classification?.description?.trim())
+    .filter((d): d is string => !!d))]
+  if (tItems.length) return joinCapped(tItems)
 
   return ''
+}
+
+/**
+ * How to name a release that has no subject line of its own.
+ * Returns an i18n key plus params for the caller to translate — utils
+ * has no access to `t`, and a hardcoded Spanish string here would break
+ * the English locale.
+ */
+export function contractTitleFallback(c?: ContractLike | null): { key: string, params: Record<string, string> } {
+  const tag = primaryTag(c)
+  const ref = c?.tender?.id || c?.ocid?.replace(/^ocds-\w+-/, '') || ''
+  return {
+    key: tag ? `contract.stageTitle.${tag}` : 'common.contract',
+    params: { ref },
+  }
 }
 
 export function contractSuppliers(c?: ContractLike | null): { id?: string, name: string }[] {

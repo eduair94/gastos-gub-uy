@@ -1,118 +1,183 @@
 <script setup lang="ts">
 /**
- * Spending by year. Bars are gold because they are money — the same
- * rule the magnitude scale follows.
+ * Spending by year, on Chart.js.
  *
- * Deliberately not chart.js: this is one series of ~24 bars, and a
- * canvas chart would ship 60kb, render nothing server-side, and be
- * invisible to a screen reader. Plain elements are lighter, SSR fine,
- * and keyboard reachable.
+ * This was hand-rolled bars + CSS at first. That was the wrong call: at
+ * 24 years the axis collapsed into "010203040506…", the hover card was a
+ * homemade div, and none of it adapted to a phone. Chart.js already
+ * solves tick skipping, hit-testing and tooltips properly, and it is
+ * already a dependency of this project — so use it.
+ *
+ * Renders client-side only (canvas cannot SSR); the server sends a
+ * fixed-height placeholder so the page does not jump on hydration.
  */
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  Title,
+  Tooltip,
+} from 'chart.js'
+import { Bar } from 'vue-chartjs'
+
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+
 const props = withDefaults(defineProps<{
   data: { year: number, value: number, count?: number }[]
   height?: number
   /** Called when a bar is activated. Omit to render a non-interactive chart. */
   hrefFor?: (year: number) => string | undefined
-}>(), { height: 150 })
+}>(), { height: 180 })
 
 const { t } = useI18n()
+const router = useRouter()
 
-// Linear here, unlike the magnitude rule: within one series the reader
-// is comparing years to each other, and a log axis would flatten real
-// differences in annual spend.
-const max = computed(() => Math.max(...props.data.map(d => d.value), 1))
+// Read the live token values so the chart follows the theme (and the
+// theme toggle) instead of freezing whatever was set at mount.
+const theme = ref({ money: '#d9a441', text: '#64757f', rule: '#d3dade', ink: '#0f2233' })
 
-const bars = computed(() =>
-  props.data.map(d => ({
-    ...d,
-    pct: Math.max((d.value / max.value) * 100, 0.8),
-  })),
-)
+function readTokens() {
+  if (!import.meta.client) return
+  const cs = getComputedStyle(document.documentElement)
+  const v = (n: string, f: string) => cs.getPropertyValue(n).trim() || f
+  theme.value = {
+    money: v('--money-rule', '#d9a441'),
+    text: v('--text-muted', '#64757f'),
+    rule: v('--rule', '#d3dade'),
+    ink: v('--ink', '#0f2233'),
+  }
+}
+
+onMounted(() => {
+  readTokens()
+  const mo = new MutationObserver(readTokens)
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] })
+  onBeforeUnmount(() => mo.disconnect())
+})
+
+const sorted = computed(() => [...props.data].sort((a, b) => a.year - b.year))
+
+const chartData = computed(() => ({
+  labels: sorted.value.map(d => String(d.year)),
+  datasets: [{
+    label: t('home.trendsTitle'),
+    data: sorted.value.map(d => d.value),
+    backgroundColor: theme.value.money,
+    hoverBackgroundColor: theme.value.money,
+    borderRadius: 3,
+    borderSkipped: false,
+    maxBarThickness: 44,
+  }],
+}))
+
+const chartOptions = computed(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 420, easing: 'easeOutQuart' as const },
+  layout: { padding: { top: 4 } },
+  plugins: {
+    legend: { display: false },
+    title: { display: false },
+    tooltip: {
+      backgroundColor: theme.value.ink,
+      titleColor: theme.value.money,
+      bodyColor: '#fff',
+      padding: 10,
+      cornerRadius: 6,
+      displayColors: false,
+      titleFont: { family: 'IBM Plex Mono, monospace', size: 12, weight: 700 as const },
+      bodyFont: { family: 'IBM Plex Mono, monospace', size: 12 },
+      callbacks: {
+        title: (items: any[]) => items[0]?.label ?? '',
+        label: (ctx: any) => {
+          const d = sorted.value[ctx.dataIndex]
+          const money = formatMoney(d?.value, 'UYU', { compact: true })
+          if (!d?.count) return money
+          return [money, `${formatNumber(d.count)} ${t('common.contracts').toLowerCase()}`]
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      border: { color: theme.value.rule },
+      ticks: {
+        color: theme.value.text,
+        font: { family: 'IBM Plex Mono, monospace', size: 11 },
+        // Chart.js drops ticks that would collide instead of letting
+        // them run together, which is exactly what the hand-rolled axis
+        // got wrong. autoSkip does it responsively at any width.
+        autoSkip: true,
+        maxRotation: 0,
+        minRotation: 0,
+        autoSkipPadding: 12,
+      },
+    },
+    y: {
+      beginAtZero: true,
+      border: { display: false },
+      grid: { color: theme.value.rule, drawTicks: false },
+      ticks: {
+        color: theme.value.text,
+        font: { family: 'IBM Plex Mono, monospace', size: 11 },
+        maxTicksLimit: 5,
+        padding: 6,
+        callback: (v: number | string) => formatMoney(Number(v), 'UYU', { compact: true }),
+      },
+    },
+  },
+  onClick: (_e: unknown, els: any[]) => {
+    const i = els?.[0]?.index
+    if (i === undefined) return
+    const href = props.hrefFor?.(sorted.value[i]?.year)
+    if (href) router.push(href)
+  },
+  onHover: (e: any, els: any[]) => {
+    if (e?.native?.target) e.native.target.style.cursor = els?.length && props.hrefFor ? 'pointer' : 'default'
+  },
+}))
 </script>
 
 <template>
-  <div class="yb">
-    <ol
-      class="yb__plot"
-      :style="{ '--h': `${height}px` }"
-    >
-      <li
-        v-for="b in bars"
-        :key="b.year"
-        class="yb__col"
-      >
-        <component
-          :is="hrefFor?.(b.year) ? 'NuxtLink' : 'div'"
-          :to="hrefFor?.(b.year)"
-          class="yb__hit"
-          :title="`${b.year}: ${formatMoney(b.value, 'UYU', { compact: true })}${b.count ? ` · ${formatNumber(b.count)} ${t('common.contracts').toLowerCase()}` : ''}`"
-        >
-          <span class="yb__track">
-            <span
-              class="yb__bar"
-              :style="{ height: `${b.pct}%` }"
-            />
-          </span>
-          <span class="yb__year">{{ String(b.year).slice(2) }}</span>
-        </component>
-      </li>
-    </ol>
+  <div
+    class="yb"
+    :style="{ height: `${height}px` }"
+  >
+    <ClientOnly>
+      <Bar
+        :data="chartData"
+        :options="chartOptions"
+      />
+      <template #fallback>
+        <div
+          class="yb__ph"
+          aria-hidden="true"
+        />
+      </template>
+    </ClientOnly>
   </div>
 </template>
 
 <style scoped>
 .yb {
+  position: relative;
   width: 100%;
 }
 
-.yb__plot {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.yb__col {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.yb__hit {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--s-2);
-  text-decoration: none;
-  color: inherit;
-  border-radius: var(--r-sm);
-}
-
-.yb__track {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+.yb__ph {
   width: 100%;
-  height: var(--h);
-  background: linear-gradient(var(--surface-sunken), var(--surface-sunken)) bottom / 100% 1px no-repeat;
+  height: 100%;
+  border-radius: var(--r-md);
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-sunken) 37%, var(--surface) 63%);
+  background-size: 400% 100%;
+  animation: yb-shimmer 1.4s ease infinite;
 }
 
-.yb__bar {
-  width: 100%;
-  max-width: 22px;
-  background: var(--money-rule);
-  border-radius: 2px 2px 0 0;
-  transition: opacity var(--dur) var(--ease);
+@keyframes yb-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
-
-.yb__year {
-  font-family: var(--font-mono);
-  font-size: var(--t-xs);
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-a.yb__hit:hover .yb__bar { opacity: 0.72; }
-a.yb__hit:hover .yb__year { color: var(--text); }
 </style>

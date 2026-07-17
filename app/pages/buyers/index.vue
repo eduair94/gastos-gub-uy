@@ -237,11 +237,8 @@ useSeo(() => ({
     </div>
 
     <!-- ===== Table ===== -->
-    <div
-      v-else
-      class="u-scroll-x"
-    >
-      <table class="ctable">
+    <div v-else>
+      <table class="ctable dtable">
         <thead>
           <tr>
             <th scope="col">
@@ -279,7 +276,10 @@ useSeo(() => ({
             :key="b.buyerId"
             class="ctable__row"
           >
-            <td class="ctable__obj">
+            <td
+              class="ctable__obj"
+              data-primary
+            >
               <NuxtLink
                 :to="localePath(`/buyers/${encodeURIComponent(b.buyerId)}`)"
                 class="ctable__link"
@@ -290,19 +290,31 @@ useSeo(() => ({
                 {{ b.yearCount }} {{ t('buyers.table.years').toLowerCase() }}
               </span>
             </td>
-            <td class="ctable__c-num u-mono">
+            <td
+              class="ctable__c-num u-mono"
+              :data-label="t('buyers.table.contracts')"
+            >
               {{ formatNumber(b.totalContracts) }}
             </td>
-            <td class="ctable__c-num u-mono">
+            <td
+              class="ctable__c-num u-mono"
+              :data-label="t('buyers.table.suppliers')"
+            >
               {{ formatNumber(b.supplierCount) }}
             </td>
-            <td class="ctable__c-amt">
+            <td
+              class="ctable__c-amt"
+              :data-label="t('buyers.table.total')"
+            >
               <MoneyAmount
                 :amount="b.totalSpending"
                 compact
               />
             </td>
-            <td class="ctable__c-amt">
+            <td
+              class="ctable__c-amt"
+              :data-label="t('buyers.table.avg')"
+            >
               <MoneyAmount
                 :amount="b.avgContractValue"
                 compact

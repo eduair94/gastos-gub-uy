@@ -12,12 +12,30 @@ const { data: res, error } = await useFetch<any>(() => `/api/contracts/${encodeU
 const contract = computed<ContractLike | null>(() => res.value?.data ?? null)
 const notFound = computed(() => !!error.value || !contract.value)
 
-const title = computed(() => contractTitle(contract.value) || t('common.contract'))
+/**
+ * Names the page.
+ *
+ * A clarification or an amendment has no subject of its own, so
+ * `contractTitle` returns ''. Naming the stage and the tender it belongs
+ * to says what the release actually is, where a bare "Contrato" read as
+ * missing data.
+ */
+const title = computed(() => {
+  const explicit = contractTitle(contract.value)
+  if (explicit) return explicit
+  const fb = contractTitleFallback(contract.value)
+  return t(fb.key, fb.params)
+})
+
 const amount = computed(() => contractAmount(contract.value))
 const currency = computed(() => contractCurrency(contract.value))
 const suppliers = computed(() => contractSuppliers(contract.value))
-const items = computed(() => contractItems(contract.value))
 const date = computed(() => contractDate(contract.value))
+
+// Every stage the release carries. Only award/awardUpdate ever report
+// money, so the stage is what explains an absent figure.
+const tags = computed(() => contractTags(contract.value))
+const showsMoney = computed(() => isMoneyStage(contract.value))
 
 // The headline is pesos, but the source may have priced the contract in
 // dollars. Saying "$ 337.781,72" above a line reading "US$ 8.400,00"
@@ -43,6 +61,213 @@ const documents = computed(() => {
   const tender = c?.tender?.documents ?? []
   const award = (c?.awards ?? []).flatMap((a: any) => a.documents ?? [])
   return [...tender, ...award].filter((d: any) => d?.url)
+})
+
+// ---- What was bought ------------------------------------------------
+// `contractItems` flattens every award into one list, which loses both
+// the catalogue code and which award a line belongs to. The detail page
+// is the one place that must not drop either, so it reads the awards
+// directly rather than through the flattening helper.
+interface RawItem {
+  description?: string
+  quantity?: number
+  classification?: { id?: string, description?: string }
+  unit?: { name?: string, value?: { amount?: number, currency?: string } }
+}
+
+interface RawAward {
+  id?: string
+  date?: string
+  status?: string
+  suppliers?: { id?: string, name?: string }[]
+  items?: RawItem[]
+}
+
+interface ItemRow {
+  key: string
+  description: string
+  code: string
+  codeDescription: string
+  quantity: number | null
+  unitName: string
+  unitAmount: number | null
+  currency: string
+  total: number | null
+}
+
+interface ItemGroup {
+  key: string
+  awardId?: string
+  awardDate?: string
+  awardStatus?: string
+  suppliers: { id?: string, name?: string }[]
+  rows: ItemRow[]
+  hasPrices: boolean
+}
+
+function toRow(i: RawItem, key: string): ItemRow {
+  const description = i.description?.trim() || i.classification?.description?.trim() || ''
+  const codeDescription = i.classification?.description?.trim() || ''
+  const unitAmount = i.unit?.value?.amount ?? null
+  const quantity = i.quantity ?? null
+  return {
+    key,
+    description,
+    code: i.classification?.id?.trim() || '',
+    // On most records the catalogue description repeats the item
+    // description verbatim; printing it twice is noise, so it only
+    // survives when it says something the description doesn't.
+    codeDescription: codeDescription && codeDescription !== description ? codeDescription : '',
+    quantity,
+    unitName: i.unit?.name?.trim() || '',
+    unitAmount,
+    currency: i.unit?.value?.currency || 'UYU',
+    total: unitAmount === null ? null : unitAmount * (quantity ?? 1),
+  }
+}
+
+const itemGroups = computed<ItemGroup[]>(() => {
+  const c = contract.value
+  const awards = (c?.awards ?? []) as RawAward[]
+
+  if (awards.length) {
+    return awards.map((a, ai) => {
+      const rows = (a.items ?? []).map((i, ii) => toRow(i, `a${ai}-${ii}`))
+      return {
+        key: a.id || `award-${ai}`,
+        awardId: a.id,
+        awardDate: a.date,
+        awardStatus: a.status,
+        suppliers: a.suppliers ?? [],
+        rows,
+        hasPrices: rows.some(r => r.unitAmount !== null),
+      }
+    })
+  }
+
+  // A tender-stage release has no award yet, but it still lists what the
+  // state intends to buy — priced or not, that is the only item detail
+  // it has and it was previously invisible here.
+  const tenderItems = (c?.tender?.items ?? []) as RawItem[]
+  if (!tenderItems.length) return []
+  const rows = tenderItems.map((i, ii) => toRow(i, `t-${ii}`))
+  return [{ key: 'tender', suppliers: [], rows, hasPrices: rows.some(r => r.unitAmount !== null) }]
+})
+
+// ---- Who ------------------------------------------------------------
+interface PartyRow {
+  key: string
+  name: string
+  roles: string[]
+  to: string | null
+  legalName: string
+  rut: string
+}
+
+/**
+ * Supplier ids carry slashes (`R/211203010017`) and the route is a
+ * catch-all, so each segment is encoded on its own — encoding the whole
+ * id would turn the separator into `%2F` and miss the route.
+ */
+function supplierPath(id: string): string {
+  return `/suppliers/${id.split('/').map(encodeURIComponent).join('/')}`
+}
+
+function partyPath(id: string | undefined, roles: string[]): string | null {
+  if (!id) return null
+  if (roles.includes('supplier')) return supplierPath(id)
+  if (roles.includes('buyer') || roles.includes('procuringEntity')) return `/buyers/${encodeURIComponent(id)}`
+  return null
+}
+
+function roleLabel(role: string): string {
+  const key = `contract.roles.${role}`
+  return te(key) ? t(key) : role
+}
+
+function submissionLabel(method: string): string {
+  const key = `contract.submissionMethods.${method}`
+  return te(key) ? t(key) : method
+}
+
+function boolLabel(v: boolean): string {
+  return v ? t('common.yes') : t('common.no')
+}
+
+const partyRoster = computed<PartyRow[]>(() => {
+  const c = contract.value
+  const sup = c?.supplier
+  const declared = (c?.parties ?? []).filter(p => p?.name || p?.id)
+
+  // `parties[]` is the authoritative roster. Older records predate it,
+  // so fall back to the buyer/supplier the release does carry rather
+  // than showing nobody.
+  const list: { id?: string, name: string, roles: string[] }[] = declared.length
+    ? declared.map(p => ({ id: p.id, name: p.name ?? '', roles: p.roles ?? [] }))
+    : [
+        ...(c?.buyer?.name || c?.buyer?.id ? [{ id: c.buyer.id, name: c.buyer.name ?? '', roles: ['buyer'] }] : []),
+        ...contractSuppliers(c).map(s => ({ id: s.id, name: s.name, roles: ['supplier'] })),
+      ]
+
+  return list.map((p, i) => {
+    // The release states the supplier's tax identity once, at the top
+    // level. Attach it to the party it describes instead of stranding it.
+    const isSupplier = !!sup && ((!!sup.id && sup.id === p.id) || (!!sup.name && sup.name === p.name))
+    const legalName = isSupplier ? (sup.identifier?.legalName?.trim() ?? '') : ''
+    return {
+      key: `${p.id ?? p.name}-${i}`,
+      name: p.name,
+      roles: p.roles,
+      to: partyPath(p.id, p.roles),
+      legalName: legalName && legalName !== p.name ? legalName : '',
+      rut: isSupplier ? (sup.identifier?.id?.trim() ?? '') : '',
+    }
+  })
+})
+
+// ---- The tender it belongs to ---------------------------------------
+const tender = computed(() => contract.value?.tender ?? null)
+
+function periodText(p?: { startDate?: string, endDate?: string } | null): string {
+  if (!p) return ''
+  const start = p.startDate ? formatDate(p.startDate) : ''
+  const end = p.endDate ? formatDate(p.endDate) : ''
+  if (start && end) return `${start} – ${end}`
+  return start || end
+}
+
+const tenderPeriod = computed(() => periodText(tender.value?.tenderPeriod))
+const enquiryPeriod = computed(() => periodText(tender.value?.enquiryPeriod))
+
+const hasTenderFacts = computed(() => {
+  const tn = tender.value
+  if (!tn) return false
+  return !!(
+    tn.id || tn.procuringEntity?.name || tn.status || tn.procurementMethodDetails
+    || tenderPeriod.value || enquiryPeriod.value
+    || typeof tn.hasEnquiries === 'boolean'
+    || tn.submissionMethod?.length || tn.submissionMethodDetails
+  )
+})
+
+const amendments = computed(() => tender.value?.amendments ?? [])
+
+// ---- Amount internals -----------------------------------------------
+const amt = computed(() => contract.value?.amount ?? null)
+
+// Every currency the source reported, not just the headline one.
+const totalAmounts = computed(() => Object.entries(amt.value?.totalAmounts ?? {}))
+
+// A release with no money has nothing to break down — the stage note in
+// the header already explains why, and a table of zeroes would not.
+const showAmountDetail = computed(() => !!amt.value?.hasAmounts)
+
+// ---- Where the record came from -------------------------------------
+const webFetchDate = computed(() => (contract.value as any)?.webFetchDate as string | undefined)
+
+const showProvenance = computed(() => {
+  const c = contract.value
+  return !!(c?.sourceFileName || c?.sourceYear || webFetchDate.value || c?.initiationType || c?.rssLink)
 })
 
 /**
@@ -152,6 +377,15 @@ useSeo(() => ({
             {{ title }}
           </h1>
           <div class="head__meta">
+            <!-- The stage is the single fact that explains why a release
+                 may carry no supplier, no items and no amount. It leads. -->
+            <span
+              v-for="tg in tags"
+              :key="tg"
+              class="tag"
+              :class="tagTone(tg)"
+              :title="t(`contract.stageHelp.${tg}`)"
+            >{{ t(`contract.stage.${tg}`) }}</span>
             <span
               v-if="contract.tender?.status"
               class="tag"
@@ -164,27 +398,37 @@ useSeo(() => ({
         </div>
 
         <div class="head__money">
-          <p class="head__moneyl">
-            {{ t('contract.awarded') }}
-          </p>
-          <MoneyAmount
-            :amount="amount"
-            :currency="currency"
-            size="xl"
-            align="start"
-            decimals
-          />
+          <template v-if="showsMoney">
+            <p class="head__moneyl">
+              {{ t('contract.awarded') }}
+            </p>
+            <MoneyAmount
+              :amount="amount"
+              :currency="currency"
+              size="xl"
+              align="start"
+              decimals
+            />
+            <p
+              v-if="isMixedCurrency(contract)"
+              class="head__fx"
+            >
+              {{ t('money.mixedCurrency') }}
+            </p>
+            <p
+              v-else-if="wasConverted"
+              class="head__fx"
+            >
+              {{ t('money.convertedFrom', { currency: originalCurrencies.join(', ') }) }}
+            </p>
+          </template>
+          <!-- Not "Sin monto": this stage has no amount to report yet,
+               which is a fact about the process, not a gap in the data. -->
           <p
-            v-if="isMixedCurrency(contract)"
-            class="head__fx"
+            v-else
+            class="head__nomoney"
           >
-            {{ t('money.mixedCurrency') }}
-          </p>
-          <p
-            v-else-if="wasConverted"
-            class="head__fx"
-          >
-            {{ t('money.convertedFrom', { currency: originalCurrencies.join(', ') }) }}
+            {{ t('contract.noMoneyStage') }}
           </p>
         </div>
       </header>
@@ -224,41 +468,35 @@ useSeo(() => ({
               <h2>{{ t('contract.sections.parties') }}</h2>
             </div>
             <div class="panel__body parties">
-              <div class="party">
+              <!-- Driven by `parties[]`, the release's own roster: every
+                   entry, named with the role it actually played. -->
+              <div
+                v-for="p in partyRoster"
+                :key="p.key"
+                class="party"
+              >
                 <p class="party__role">
-                  {{ t('contract.purchasedBy') }}
+                  {{ p.roles.length ? p.roles.map(roleLabel).join(' · ') : t('contract.fields.roles') }}
                 </p>
                 <NuxtLink
-                  v-if="contract.buyer?.id"
-                  :to="localePath(`/buyers/${encodeURIComponent(contract.buyer.id)}`)"
+                  v-if="p.to"
+                  :to="localePath(p.to)"
                   class="party__name"
                 >
-                  {{ contract.buyer?.name }}
+                  {{ p.name || '—' }}
                 </NuxtLink>
                 <span
                   v-else
                   class="party__name party__name--plain"
-                >{{ contract.buyer?.name || '—' }}</span>
-              </div>
-
-              <div class="party">
-                <p class="party__role">
-                  {{ t('contract.awardedTo') }}
-                </p>
-                <template v-if="suppliers.length">
-                  <NuxtLink
-                    v-for="s in suppliers"
-                    :key="s.name"
-                    :to="s.id ? localePath(`/suppliers/${encodeURIComponent(s.id)}`) : localePath('/suppliers')"
-                    class="party__name"
-                  >
-                    {{ s.name }}
-                  </NuxtLink>
-                </template>
+                >{{ p.name || '—' }}</span>
                 <span
-                  v-else
-                  class="party__name party__name--plain u-muted"
-                >—</span>
+                  v-if="p.legalName"
+                  class="party__sub"
+                >{{ t('contract.fields.legalName') }}: {{ p.legalName }}</span>
+                <span
+                  v-if="p.rut"
+                  class="party__sub u-mono"
+                >{{ t('contract.fields.rut') }}: {{ p.rut }}</span>
               </div>
 
               <div class="party">
@@ -267,6 +505,89 @@ useSeo(() => ({
                 </p>
                 <span class="party__name party__name--plain u-mono">{{ formatDateLong(date) }}</span>
               </div>
+            </div>
+          </section>
+
+          <!-- ===== The tender this release belongs to ===== -->
+          <section
+            v-if="hasTenderFacts"
+            class="panel block"
+          >
+            <div class="panel__head">
+              <h2>{{ t('contract.sections.summary') }}</h2>
+            </div>
+            <div class="panel__body">
+              <dl class="facts">
+                <div
+                  v-if="tender?.id"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.tenderId') }}</dt>
+                  <dd class="u-mono">
+                    {{ tender.id }}
+                  </dd>
+                </div>
+                <div
+                  v-if="tender?.procuringEntity?.name"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.procuringEntity') }}</dt>
+                  <dd>{{ tender.procuringEntity.name }}</dd>
+                </div>
+                <div
+                  v-if="tender?.status"
+                  class="facts__row"
+                >
+                  <dt>{{ t('common.status') }}</dt>
+                  <dd>{{ tender.status }}</dd>
+                </div>
+                <div
+                  v-if="tender?.procurementMethodDetails"
+                  class="facts__row"
+                >
+                  <dt>{{ t('common.method') }}</dt>
+                  <dd>{{ tender.procurementMethodDetails }}</dd>
+                </div>
+                <div
+                  v-if="tenderPeriod"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.timeline.tender') }}</dt>
+                  <dd class="u-mono">
+                    {{ tenderPeriod }}
+                  </dd>
+                </div>
+                <div
+                  v-if="enquiryPeriod"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.timeline.enquiry') }}</dt>
+                  <dd class="u-mono">
+                    {{ enquiryPeriod }}
+                  </dd>
+                </div>
+                <div
+                  v-if="typeof tender?.hasEnquiries === 'boolean'"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.hasEnquiries') }}</dt>
+                  <dd>{{ boolLabel(tender.hasEnquiries) }}</dd>
+                </div>
+                <div
+                  v-if="tender?.submissionMethod?.length"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.submissionMethod') }}</dt>
+                  <dd>{{ tender.submissionMethod.map(submissionLabel).join(' · ') }}</dd>
+                </div>
+                <div
+                  v-if="tender?.submissionMethodDetails"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.submissionMethodDetails') }}</dt>
+                  <dd>{{ tender.submissionMethodDetails }}</dd>
+                </div>
+              </dl>
             </div>
           </section>
 
@@ -279,22 +600,85 @@ useSeo(() => ({
               </p>
             </div>
             <div
-              v-if="!items.length"
+              v-if="!itemGroups.length"
               class="panel__body"
             >
               <p class="u-muted">
                 {{ t('contract.noItems') }}
               </p>
             </div>
+
+            <!-- One block per award: the award's own id, date and status
+                 sit above the lines it paid for, so a release with more
+                 than one award never blurs into a single list. -->
             <div
-              v-else
-              class="u-scroll-x"
+              v-for="g in itemGroups"
+              :key="g.key"
+              class="agroup"
             >
-              <table class="itable">
+              <dl
+                v-if="g.awardId || g.awardDate || g.awardStatus"
+                class="facts facts--award"
+              >
+                <div
+                  v-if="g.awardId"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.awardId') }}</dt>
+                  <dd class="u-mono">
+                    {{ g.awardId }}
+                  </dd>
+                </div>
+                <div
+                  v-if="g.awardDate"
+                  class="facts__row"
+                >
+                  <dt>{{ t('common.date') }}</dt>
+                  <dd class="u-mono">
+                    {{ formatDate(g.awardDate) }}
+                  </dd>
+                </div>
+                <div
+                  v-if="g.awardStatus"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.awardStatus') }}</dt>
+                  <dd>
+                    <span
+                      class="tag"
+                      :class="statusTagClass(g.awardStatus)"
+                    >{{ g.awardStatus }}</span>
+                  </dd>
+                </div>
+                <!-- Only worth naming per award when there is more than
+                     one; otherwise the parties section already said it. -->
+                <div
+                  v-if="itemGroups.length > 1 && g.suppliers.length"
+                  class="facts__row"
+                >
+                  <dt>{{ t('common.supplier') }}</dt>
+                  <dd>{{ g.suppliers.map(s => s.name).filter(Boolean).join(' · ') }}</dd>
+                </div>
+              </dl>
+
+              <p
+                v-if="!g.rows.length"
+                class="agroup__empty u-muted"
+              >
+                {{ t('contract.noItems') }}
+              </p>
+
+              <table
+                v-else
+                class="itable dtable"
+              >
                 <thead>
                   <tr>
                     <th scope="col">
                       {{ t('common.description') }}
+                    </th>
+                    <th scope="col">
+                      {{ t('contract.fields.classification') }}
                     </th>
                     <th
                       scope="col"
@@ -302,13 +686,18 @@ useSeo(() => ({
                     >
                       {{ t('common.quantity') }}
                     </th>
+                    <th scope="col">
+                      {{ t('contract.fields.unit') }}
+                    </th>
                     <th
+                      v-if="g.hasPrices"
                       scope="col"
                       class="itable__num"
                     >
                       {{ t('common.unitPrice') }}
                     </th>
                     <th
+                      v-if="g.hasPrices"
                       scope="col"
                       class="itable__num"
                     >
@@ -318,20 +707,47 @@ useSeo(() => ({
                 </thead>
                 <tbody>
                   <tr
-                    v-for="(it, i) in items"
-                    :key="i"
+                    v-for="it in g.rows"
+                    :key="it.key"
                   >
-                    <td>
+                    <td data-primary>
                       <span class="itable__d">{{ it.description || '—' }}</span>
+                    </td>
+                    <td :data-label="t('contract.fields.classification')">
+                      <span
+                        v-if="it.code"
+                        class="itable__code u-mono"
+                      >{{ it.code }}</span>
+                      <span
+                        v-else
+                        class="u-muted"
+                      >—</span>
+                      <span
+                        v-if="it.codeDescription"
+                        class="itable__u"
+                      >{{ it.codeDescription }}</span>
+                    </td>
+                    <td
+                      class="itable__num u-mono"
+                      :data-label="t('common.quantity')"
+                    >
+                      {{ formatNumber(it.quantity) }}
+                    </td>
+                    <td :data-label="t('contract.fields.unit')">
                       <span
                         v-if="it.unitName"
                         class="itable__u"
                       >{{ it.unitName }}</span>
+                      <span
+                        v-else
+                        class="u-muted"
+                      >—</span>
                     </td>
-                    <td class="itable__num u-mono">
-                      {{ formatNumber(it.quantity) }}
-                    </td>
-                    <td class="itable__num">
+                    <td
+                      v-if="g.hasPrices"
+                      class="itable__num"
+                      :data-label="t('common.unitPrice')"
+                    >
                       <MoneyAmount
                         :amount="it.unitAmount"
                         :currency="it.currency"
@@ -340,7 +756,11 @@ useSeo(() => ({
                         decimals
                       />
                     </td>
-                    <td class="itable__num">
+                    <td
+                      v-if="g.hasPrices"
+                      class="itable__num"
+                      :data-label="t('common.total')"
+                    >
                       <MoneyAmount
                         :amount="it.total"
                         :currency="it.currency"
@@ -351,6 +771,38 @@ useSeo(() => ({
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <!-- ===== Amendments ===== -->
+          <section
+            v-if="amendments.length"
+            class="panel block"
+          >
+            <div class="panel__head">
+              <h2>{{ t('contract.sections.amendments') }}</h2>
+            </div>
+            <ol class="amds">
+              <li
+                v-for="(a, i) in amendments"
+                :key="a.id || i"
+                class="amds__row"
+              >
+                <span
+                  v-if="a.date"
+                  class="amds__date u-mono"
+                >{{ formatDate(a.date) }}</span>
+                <span class="amds__body">
+                  <span
+                    v-if="a.description"
+                    class="amds__desc"
+                  >{{ a.description }}</span>
+                  <span
+                    v-if="a.amendsReleaseID"
+                    class="amds__ref u-mono"
+                  >{{ t('contract.amendmentOf', { id: a.amendsReleaseID }) }}</span>
+                </span>
+              </li>
+            </ol>
           </section>
 
           <!-- ===== Related ===== -->
@@ -459,6 +911,158 @@ useSeo(() => ({
             </ul>
           </section>
 
+          <!-- ===== How the figure was built ===== -->
+          <section
+            v-if="showAmountDetail"
+            class="panel block"
+          >
+            <div class="panel__head">
+              <h2>{{ t('contract.sections.amount') }}</h2>
+            </div>
+            <div class="panel__body">
+              <dl class="facts">
+                <div
+                  v-for="[cur, val] in totalAmounts"
+                  :key="cur"
+                  class="facts__row"
+                >
+                  <dt>{{ cur }}</dt>
+                  <dd>
+                    <MoneyAmount
+                      :amount="val"
+                      :currency="cur"
+                      :rule="false"
+                      size="sm"
+                      align="start"
+                      decimals
+                    />
+                  </dd>
+                </div>
+                <div
+                  v-if="typeof amt?.totalItems === 'number'"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.totalItems') }}</dt>
+                  <dd class="u-mono">
+                    {{ formatNumber(amt.totalItems) }}
+                  </dd>
+                </div>
+                <div
+                  v-if="amt?.currencies?.length"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.currencies') }}</dt>
+                  <dd class="u-mono">
+                    {{ amt.currencies.join(' · ') }}
+                  </dd>
+                </div>
+                <div
+                  v-if="typeof amt?.originalUYUAmount === 'number'"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.originalUYU') }}</dt>
+                  <dd>
+                    <MoneyAmount
+                      :amount="amt.originalUYUAmount"
+                      currency="UYU"
+                      :rule="false"
+                      size="sm"
+                      align="start"
+                      decimals
+                    />
+                  </dd>
+                </div>
+                <div
+                  v-if="typeof amt?.hasConvertedAmounts === 'boolean'"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.converted') }}</dt>
+                  <dd>{{ boolLabel(amt.hasConvertedAmounts) }}</dd>
+                </div>
+                <div
+                  v-if="amt?.exchangeRateDate"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.exchangeRateDate') }}</dt>
+                  <dd class="u-mono">
+                    {{ formatDate(amt.exchangeRateDate) }}
+                  </dd>
+                </div>
+                <div
+                  v-if="typeof amt?.version === 'number'"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.version') }}</dt>
+                  <dd class="u-mono">
+                    {{ amt.version }}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </section>
+
+          <!-- ===== Where this record came from ===== -->
+          <section
+            v-if="showProvenance"
+            class="panel block"
+          >
+            <div class="panel__head">
+              <h2>{{ t('contract.sections.provenance') }}</h2>
+            </div>
+            <div class="panel__body">
+              <dl class="facts">
+                <div
+                  v-if="contract.initiationType"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.initiationType') }}</dt>
+                  <dd>{{ contract.initiationType }}</dd>
+                </div>
+                <div
+                  v-if="contract.sourceFileName"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.sourceFile') }}</dt>
+                  <dd class="u-mono">
+                    {{ contract.sourceFileName }}
+                  </dd>
+                </div>
+                <div
+                  v-if="contract.sourceYear"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.sourceYear') }}</dt>
+                  <dd class="u-mono">
+                    {{ contract.sourceYear }}
+                  </dd>
+                </div>
+                <div
+                  v-if="webFetchDate"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.fetched') }}</dt>
+                  <dd class="u-mono">
+                    {{ formatDate(webFetchDate) }}
+                  </dd>
+                </div>
+                <div
+                  v-if="contract.rssLink"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.rssLink') }}</dt>
+                  <dd>
+                    <a
+                      :href="contract.rssLink"
+                      target="_blank"
+                      rel="noopener external"
+                      class="facts__link u-truncate"
+                    >{{ contract.rssLink }}</a>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </section>
+
           <section class="panel block">
             <div class="panel__head">
               <h2>{{ t('contract.sections.raw') }}</h2>
@@ -549,6 +1153,13 @@ useSeo(() => ({
   font-size: var(--t-xs);
   color: var(--text-muted);
   max-width: 28ch;
+}
+
+.head__nomoney {
+  margin: 0;
+  max-width: 30ch;
+  font-size: var(--t-sm);
+  color: var(--text-muted);
 }
 
 /* ---- Official source ---- */
@@ -664,10 +1275,121 @@ a.party__name:hover { text-decoration: underline; }
   font-weight: 500;
 }
 
+.party__sub {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ---- Fact lists ---- */
+.facts {
+  margin: 0;
+  display: grid;
+  gap: var(--s-3);
+}
+
+.facts__row {
+  display: grid;
+  grid-template-columns: minmax(0, 11ch) minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--s-3);
+}
+
+.facts dt {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.facts dd {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--t-sm);
+  overflow-wrap: anywhere;
+}
+
+.facts__link {
+  /* `.u-truncate` sets overflow:hidden, which does nothing on an inline
+     box — the raw source URL just ran past the viewport. A block box
+     inside the min-width:0 track truncates as intended. */
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--celeste-deep);
+  font-size: var(--t-xs);
+}
+
+/* The award's own identity, sitting above the lines it paid for. */
+.facts--award {
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  justify-content: start;
+  gap: var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.facts--award .facts__row {
+  grid-template-columns: none;
+  gap: 2px;
+}
+
+.agroup + .agroup { border-top: 1px solid var(--rule-strong); }
+
+.agroup__empty {
+  margin: 0;
+  padding: var(--s-4);
+  font-size: var(--t-sm);
+}
+
+/* ---- Amendments ---- */
+.amds {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.amds__row {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-5);
+}
+
+.amds__row + .amds__row { border-top: 1px solid var(--rule); }
+
+.amds__date {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.amds__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.amds__desc {
+  font-size: var(--t-sm);
+  overflow-wrap: anywhere;
+}
+
+.amds__ref {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
 /* ---- Items table ---- */
 .itable {
   width: 100%;
-  min-width: 560px;
+  /* Tuned to still fit at the 760px card breakpoint, so the table never
+     pushes the page sideways in the gap before `.dtable` takes over. */
+  min-width: 680px;
   border-collapse: collapse;
 }
 
@@ -694,6 +1416,11 @@ a.party__name:hover { text-decoration: underline; }
 .itable tr:last-child td { border-bottom: 0; }
 
 .itable__d { display: block; }
+
+.itable__code {
+  display: block;
+  font-size: var(--t-sm);
+}
 
 .itable__u {
   display: block;
@@ -915,10 +1642,26 @@ a.party__name:hover { text-decoration: underline; }
   .grid { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 760px) {
+  /* The award meta reads as a row of pairs on desktop; stacked, it would
+     fight the item cards below it, so it wraps instead. */
+  .facts--award {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    gap: var(--s-3);
+  }
+}
+
 @media (max-width: 700px) {
   .head { grid-template-columns: 1fr; }
   .head__title { max-width: none; }
   .head__money { min-width: 0; }
+  .head__nomoney { max-width: none; }
+
+  .amds__row {
+    grid-template-columns: 1fr;
+    row-gap: var(--s-1);
+  }
 
   .rank__link {
     grid-template-columns: minmax(0, 1fr) auto;
