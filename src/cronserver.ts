@@ -466,7 +466,7 @@ class CronServer {
           return;
         }
         if (this.isJobRunning) {
-          this.logger.warn("Skipping scheduled reconciliation - daily upload job is running");
+          this.logger.warn("Skipping scheduled reconciliation - ingest job is running");
           return;
         }
 
@@ -514,13 +514,13 @@ class CronServer {
 
       this.jobStatus.status = "idle";
       this.jobStatus.successfulRuns++;
-      this.logger.info("Daily upload job completed successfully");
+      this.logger.info("Ingest job completed successfully");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.jobStatus.status = "error";
       this.jobStatus.lastError = errorMessage;
       this.jobStatus.failedRuns++;
-      this.logger.error("Daily upload job failed:", errorMessage);
+      this.logger.error("Ingest job failed:", errorMessage);
     } finally {
       this.isJobRunning = false;
       this.jobStatus.nextRun = this.getNextRunTime();
