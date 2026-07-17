@@ -98,6 +98,13 @@ export interface IBuyerPattern extends Document {
 export interface IAnomaly extends Document {
   type: 'price_spike' | 'unusual_supplier' | 'high_frequency' | 'suspicious_amount' | 'outlier_quantity'
   severity: 'low' | 'medium' | 'high' | 'critical'
+  /**
+   * Numeric mirror of `severity` (1=low, 2=medium, 3=high, 4=critical).
+   * Exists because sorting on the `severity` STRING orders
+   * critical < high < low < medium, i.e. 'low' outranks 'high'.
+   * Always sort on this instead.
+   */
+  severityRank?: number
   releaseId: string
   awardId?: string
   description: string
@@ -107,10 +114,28 @@ export interface IAnomaly extends Document {
     max: number
   }
   confidence: number // 0-1
+  /** Currency of `detectedValue` / `expectedRange`. Never assume UYU. */
+  currency?: string
+  sourceYear?: number
+  dataVersion?: string
   metadata: {
     supplierName?: string
     buyerName?: string
     itemDescription?: string
+    itemClassification?: {
+      id?: string
+      description?: string
+      scheme?: string
+    }
+    itemUnit?: {
+      id?: string
+      name?: string
+    }
+    itemQuantity?: number
+    /** Number of observations in the baseline this finding was scored against. */
+    baselineN?: number
+    /** Log-space modified z-score (Iglewicz-Hoaglin) that produced this finding. */
+    zScore?: number
     year?: number
     amount?: number
     currency?: string
@@ -118,6 +143,39 @@ export interface IAnomaly extends Document {
   }
   createdAt: Date
   detectedAt?: Date
+}
+
+/**
+ * Frozen price baseline for one {classificationId, currency, unitName} bucket,
+ * computed over a trailing window of award item unit prices.
+ *
+ * All of `medianLn` / `madLn` are in LOG space (natural log of unit price);
+ * `p25`/`p50`/`p75`/`p95`/`min`/`max` are in raw currency units.
+ */
+export interface IItemPriceBaseline extends Document {
+  classificationId: string
+  currency: string
+  unitName: string
+  /** Number of award items observed in the window. */
+  n: number
+  /** Median of ln(unitPrice). */
+  medianLn: number
+  /** Median absolute deviation of ln(unitPrice) around `medianLn`. May be 0. */
+  madLn: number
+  p25: number
+  p50: number
+  p75: number
+  p95: number
+  min: number
+  max: number
+  /** Number of distinct unit prices (histogram bins) behind this baseline. */
+  distinctPrices: number
+  windowStart: Date
+  windowEnd: Date
+  dataVersion: string
+  calculatedAt: Date
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface IContactPoint {

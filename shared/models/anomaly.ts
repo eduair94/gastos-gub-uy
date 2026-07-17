@@ -15,6 +15,10 @@ const AnomalySchema = new Schema<IAnomaly>(
       required: true,
       enum: ["low", "medium", "high", "critical"],
     },
+    // Numeric mirror of `severity` (1=low .. 4=critical). Sorting on the
+    // `severity` STRING orders critical < high < low < medium, so 'low'
+    // outranks 'high'. Sort on severityRank instead.
+    severityRank: { type: Number },
     releaseId: { type: String, required: true },
     awardId: { type: String },
     description: { type: String, required: true },
@@ -24,10 +28,29 @@ const AnomalySchema = new Schema<IAnomaly>(
       max: { type: Number, required: true },
     },
     confidence: { type: Number, required: true, min: 0, max: 1 },
+    // Currency of detectedValue/expectedRange. Never assume UYU.
+    currency: { type: String },
+    sourceYear: { type: Number },
+    dataVersion: { type: String },
+    // Set by the detector. Previously declared on IAnomaly but absent from this
+    // schema, so mongoose strict mode silently stripped it on every write.
+    detectedAt: { type: Date },
     metadata: {
       supplierName: { type: String },
       buyerName: { type: String },
       itemDescription: { type: String },
+      itemClassification: {
+        id: { type: String },
+        description: { type: String },
+        scheme: { type: String },
+      },
+      itemUnit: {
+        id: { type: String },
+        name: { type: String },
+      },
+      itemQuantity: { type: Number },
+      baselineN: { type: Number },
+      zScore: { type: Number },
       year: { type: Number },
       amount: { type: Number },
       currency: { type: String },
@@ -44,6 +67,9 @@ AnomalySchema.index({ type: 1, severity: 1 });
 AnomalySchema.index({ releaseId: 1 });
 AnomalySchema.index({ createdAt: -1 });
 AnomalySchema.index({ confidence: -1 });
+AnomalySchema.index({ sourceYear: 1, severityRank: -1 });
+AnomalySchema.index({ "metadata.supplierName": 1 });
+AnomalySchema.index({ detectedAt: -1 });
 
 
 

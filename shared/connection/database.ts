@@ -46,6 +46,16 @@ export async function connectToDatabase() {
       
       // Performance optimizations
       bufferCommands: false, // Don't buffer commands when disconnected
+
+      // Indexes are managed exclusively by scripts/ensure-indexes.ts.
+      //
+      // Mongoose defaults autoIndex to TRUE, which makes every process that
+      // connects replay all ReleaseSchema.index() calls against a live ~2.1M
+      // document collection on boot. That is slow at best, and any definition
+      // that has drifted from what is deployed (e.g. a renamed text index)
+      // turns into a hard error on startup. Build indexes deliberately, from
+      // the migration script, not as a side effect of booting the app.
+      autoIndex: false,
       
       // Write concern for better performance (adjust based on your consistency needs)
       writeConcern: {

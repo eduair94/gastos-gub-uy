@@ -159,8 +159,17 @@ ReleaseSchema.index({ "awards.items.unit.value.amount": 1 }); // Amount filterin
 ReleaseSchema.index({ "amount.primaryAmount": 1 }); // Calculated primary amount for sorting/filtering
 ReleaseSchema.index({ "amount.currencies": 1 }); // Currency filtering
 ReleaseSchema.index({ ocid: 1 }); // OCID lookup
-// Comprehensive text search index with weighted fields prioritizing descriptions
-ReleaseSchema.index({ 
+// Comprehensive text search index with weighted fields prioritizing descriptions.
+//
+// ⚠️  MongoDB allows exactly ONE text index per collection. The name below MUST
+// stay in sync with `scripts/update-text-index-for-exact-search.ts`, which is
+// what actually built the index that exists in production. If the two disagree,
+// mongoose tries to create a *second* text index next to the live one and the
+// server rejects it (IndexOptionsConflict) on every boot.
+//
+// `default_language: 'none'` disables stemming so phrase queries ("pescado")
+// match exact substrings — that is the whole point of the "_exact" variant.
+ReleaseSchema.index({
   // High priority: Main descriptions and titles (weight 10)
   "tender.title": "text",
   "tender.description": "text", 
@@ -206,7 +215,8 @@ ReleaseSchema.index({
     // Lowest priority: OCID
     "ocid": 2
   },
-  name: "comprehensive_text_search",
+  // Must match scripts/update-text-index-for-exact-search.ts exactly.
+  name: "comprehensive_text_search_exact",
   default_language: "none", // Disable stemming for exact word matching
   language_override: "language" // Allow per-document language override
 }); 

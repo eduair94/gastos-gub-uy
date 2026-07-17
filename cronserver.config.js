@@ -3,7 +3,12 @@ module.exports = {
     {
       name: 'gastos-gub-cronserver',
       script: 'dist/src/cronserver.js',
-      // Memory and performance settings
+      // Memory and performance settings.
+      //
+      // 512M is deliberate and stays: this process only schedules and fetches RSS. The heavy
+      // analytics/anomaly aggregations over ~2.2M releases run in child processes that the server
+      // spawns with their own 2GB heap (see runJobProcess in src/cronserver.ts), so they neither
+      // trip this limit nor take the scheduler down with them if they OOM.
       max_memory_restart: '512M',
       node_args: '--max-old-space-size=512',
       // Restart settings for stability

@@ -1,4 +1,5 @@
-import { exec } from "child_process";
+import { exec, spawn } from "child_process";
+import path from "path";
 import express from "express";
 import cron from "node-cron";
 import { promisify } from "util";
@@ -21,6 +22,15 @@ interface CronJobStatus {
   failedRuns: number;
 }
 
+const freshStatus = (): CronJobStatus => ({
+  lastRun: null,
+  nextRun: null,
+  status: "idle",
+  lastError: null,
+  successfulRuns: 0,
+  failedRuns: 0,
+});
+
 class CronServer {
   private app: express.Application;
   private logger: Logger;
@@ -31,6 +41,10 @@ class CronServer {
   private reconcileStatus: CronJobStatus;
   private isReconcileRunning: boolean = false;
   private readonly reconcileMonthsBack: number = 5;
+  private analyticsStatus: CronJobStatus;
+  private isAnalyticsRunning: boolean = false;
+  private anomalyStatus: CronJobStatus;
+  private isAnomalyRunning: boolean = false;
 
   constructor() {
     this.app = express();
@@ -38,27 +52,51 @@ class CronServer {
     this.databaseService = new DatabaseService();
     this.mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/gastos_gub";
 
-    this.jobStatus = {
-      lastRun: null,
-      nextRun: null,
-      status: "idle",
-      lastError: null,
-      successfulRuns: 0,
-      failedRuns: 0,
-    };
-
-    this.reconcileStatus = {
-      lastRun: null,
-      nextRun: null,
-      status: "idle",
-      lastError: null,
-      successfulRuns: 0,
-      failedRuns: 0,
-    };
+    this.jobStatus = freshStatus();
+    this.reconcileStatus = freshStatus();
+    this.analyticsStatus = freshStatus();
+    this.anomalyStatus = freshStatus();
 
     this.setupMiddleware();
     this.setupRoutes();
     this.setupCronJob();
+  }
+
+  /**
+   * Runs one of the analytics jobs as a detached child process.
+   *
+   * These aggregate over ~2.2M releases, while this server is started by pm2 with
+   * `--max-old-space-size=512` (see cronserver.config.js). Running them in-process would either OOM
+   * or take the ingest scheduler down with them. A child gets its own, larger heap and its failure
+   * is just a non-zero exit code here.
+   */
+  private runJobProcess(script: string, args: string[] = []): Promise<void> {
+    // Under pm2 this file is dist/src/cronserver.js and siblings are compiled; under `tsx` it is
+    // still TypeScript. Pick the interpreter that matches whichever one is executing.
+    const isTs = __filename.endsWith(".ts");
+    const jobPath = path.join(__dirname, "jobs", `${script}.${isTs ? "ts" : "js"}`);
+    const command = isTs ? "npx" : process.execPath;
+    const argv = isTs
+      ? ["tsx", jobPath, ...args]
+      : ["--max-old-space-size=2048", jobPath, ...args];
+
+    return new Promise((resolve, reject) => {
+      this.logger.info(`Spawning job: ${script} ${args.join(" ")}`);
+      const child = spawn(command, argv, {
+        cwd: path.resolve(__dirname, isTs ? ".." : "../.."),
+        env: process.env,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      child.stdout?.on("data", (d) => this.logger.info(`[${script}] ${String(d).trimEnd()}`));
+      child.stderr?.on("data", (d) => this.logger.warn(`[${script}] ${String(d).trimEnd()}`));
+
+      child.on("error", reject);
+      child.on("close", (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`${script} exited with code ${code}`));
+      });
+    });
   }
 
   private setupMiddleware(): void {
@@ -190,6 +228,44 @@ class CronServer {
     this.app.post("/cron/reconcile", triggerReconcile);
     this.app.get("/cron/reconcile", triggerReconcile);
 
+    // Analytics refresh: status + manual trigger
+    this.app.get("/cron/analytics/status", (_req, res) => {
+      res.json({ ...this.analyticsStatus, isRunning: this.isAnalyticsRunning });
+    });
+
+    const triggerAnalytics = (_req: express.Request, res: express.Response): void => {
+      if (this.isAnalyticsRunning) {
+        res.status(409).json({ error: "Analytics refresh is already running", status: this.analyticsStatus });
+        return;
+      }
+      this.logger.info("Manual analytics refresh trigger initiated");
+      this.runAnalyticsJob().catch((error) => {
+        this.logger.error("Manual analytics trigger failed:", error);
+      });
+      res.json({ message: "Analytics refresh triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/analytics", triggerAnalytics);
+    this.app.get("/cron/analytics", triggerAnalytics);
+
+    // Anomaly detection: status + manual trigger
+    this.app.get("/cron/anomalies/status", (_req, res) => {
+      res.json({ ...this.anomalyStatus, isRunning: this.isAnomalyRunning });
+    });
+
+    const triggerAnomalies = (_req: express.Request, res: express.Response): void => {
+      if (this.isAnomalyRunning) {
+        res.status(409).json({ error: "Anomaly detection is already running", status: this.anomalyStatus });
+        return;
+      }
+      this.logger.info("Manual anomaly detection trigger initiated");
+      this.runAnomalyJob().catch((error) => {
+        this.logger.error("Manual anomaly trigger failed:", error);
+      });
+      res.json({ message: "Anomaly detection triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/anomalies", triggerAnomalies);
+    this.app.get("/cron/anomalies", triggerAnomalies);
+
     // MongoDB restart endpoint
     this.app.post("/admin/restart-mongodb", async (_req, res) => {
       try {
@@ -229,6 +305,14 @@ class CronServer {
         ...this.reconcileStatus,
         isRunning: this.isReconcileRunning,
         monthsBack: this.reconcileMonthsBack,
+      },
+      analytics: {
+        ...this.analyticsStatus,
+        isRunning: this.isAnalyticsRunning,
+      },
+      anomalies: {
+        ...this.anomalyStatus,
+        isRunning: this.isAnomalyRunning,
       },
     };
 
@@ -320,8 +404,11 @@ class CronServer {
   }
 
   private setupCronJob(): void {
-    // Run every day at 00:00 (midnight)
-    const cronExpression = "0 0 * * *";
+    // Ingest runs hourly at :05 so newly awarded contracts show up within the hour instead of
+    // waiting for the next midnight. This is cheap despite the "last 7 days" name: it pulls the
+    // current month's RSS feed, diffs the IDs against what is already stored, and only fetches
+    // releases that are new or were re-published upstream. A quiet hour costs ~2 RSS requests.
+    const cronExpression = "5 * * * *";
 
     cron.schedule(
       cronExpression,
@@ -331,7 +418,7 @@ class CronServer {
           return;
         }
 
-        this.logger.info("Starting scheduled daily upload job...");
+        this.logger.info("Starting scheduled hourly upload job...");
         await this.runDailyUploadJob();
       },
       {
@@ -340,8 +427,33 @@ class CronServer {
       }
     );
 
-    this.logger.info(`Cronjob scheduled with expression: ${cronExpression} (Uruguay timezone)`);
+    this.logger.info(`Ingest job scheduled with expression: ${cronExpression} (Uruguay timezone)`);
     this.jobStatus.nextRun = this.getNextRunTime();
+
+    // Analytics rebuild. Every 6 hours at :30, offset from the :05 ingest so the two do not overlap.
+    // Nothing scheduled this before, which is why every pre-calculated collection was still serving
+    // figures from the last manual run.
+    const analyticsExpression = "30 */6 * * *";
+    cron.schedule(
+      analyticsExpression,
+      async () => {
+        await this.runAnalyticsJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Analytics job scheduled with expression: ${analyticsExpression} (Uruguay timezone)`);
+
+    // Anomaly detection. Daily at 04:15, after the 00:30 analytics pass. Rebuilds the price
+    // baselines and rescores recent releases against them.
+    const anomalyExpression = "15 4 * * *";
+    cron.schedule(
+      anomalyExpression,
+      async () => {
+        await this.runAnomalyJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Anomaly job scheduled with expression: ${anomalyExpression} (Uruguay timezone)`);
 
     // Weekly reconciliation: every Sunday at 02:00 (Uruguay time) re-check non-final releases
     // from the last N months against the live API to catch late awards / silent edits.
@@ -370,21 +482,18 @@ class CronServer {
     this.logger.info(`Reconciliation job scheduled with expression: ${reconcileExpression} (Uruguay timezone)`);
   }
 
+  /**
+   * Next ingest tick: the coming :05. Minute-of-hour is timezone-independent for every zone at a
+   * whole-hour offset, so unlike the old next-midnight version this needs no offset arithmetic.
+   */
   private getNextRunTime(): Date {
-    // Calculate next midnight in Uruguay timezone
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-
-    // Convert to Uruguay timezone (UTC-3)
-    const uruguayOffset = -3 * 60; // Uruguay is UTC-3
-    const localOffset = now.getTimezoneOffset();
-    const timezoneOffset = uruguayOffset - localOffset;
-
-    tomorrow.setMinutes(tomorrow.getMinutes() + timezoneOffset);
-
-    return tomorrow;
+    const next = new Date();
+    next.setSeconds(0, 0);
+    if (next.getMinutes() >= 5) {
+      next.setHours(next.getHours() + 1);
+    }
+    next.setMinutes(5);
+    return next;
   }
 
   private async runDailyUploadJob(): Promise<void> {
@@ -395,7 +504,7 @@ class CronServer {
 
     try {
       this.logger.info("=".repeat(50));
-      this.logger.info("Starting daily release upload job (last 7 days)");
+      this.logger.info("Starting release upload job (last 7 days)");
       this.logger.info("=".repeat(50));
 
       const uploader = new ReleaseUploaderNew(this.databaseService, this.logger, this.mongoUri);
@@ -443,6 +552,76 @@ class CronServer {
       this.logger.error("Reconciliation job failed:", errorMessage);
     } finally {
       this.isReconcileRunning = false;
+    }
+  }
+
+  /**
+   * Rebuilds supplier/buyer patterns and every pre-calculated dashboard collection.
+   * Skipped rather than queued if ingest or a previous pass is still going — a stale dashboard for
+   * six more hours beats two rebuilds writing the same collections at once.
+   */
+  private async runAnalyticsJob(): Promise<void> {
+    if (this.isAnalyticsRunning) {
+      this.logger.warn("Skipping analytics refresh - previous run still in progress");
+      return;
+    }
+    if (this.isJobRunning) {
+      this.logger.warn("Skipping analytics refresh - ingest job is running");
+      return;
+    }
+
+    this.isAnalyticsRunning = true;
+    this.analyticsStatus.status = "running";
+    this.analyticsStatus.lastRun = new Date();
+    this.analyticsStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting analytics refresh...");
+      await this.runJobProcess("refresh-analytics");
+      this.analyticsStatus.status = "idle";
+      this.analyticsStatus.successfulRuns++;
+      this.logger.info("Analytics refresh completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.analyticsStatus.status = "error";
+      this.analyticsStatus.lastError = errorMessage;
+      this.analyticsStatus.failedRuns++;
+      this.logger.error("Analytics refresh failed:", errorMessage);
+    } finally {
+      this.isAnalyticsRunning = false;
+    }
+  }
+
+  /** Rebuilds item price baselines, then rescores recent releases against them. */
+  private async runAnomalyJob(): Promise<void> {
+    if (this.isAnomalyRunning) {
+      this.logger.warn("Skipping anomaly detection - previous run still in progress");
+      return;
+    }
+    if (this.isAnalyticsRunning) {
+      this.logger.warn("Skipping anomaly detection - analytics refresh is running");
+      return;
+    }
+
+    this.isAnomalyRunning = true;
+    this.anomalyStatus.status = "running";
+    this.anomalyStatus.lastRun = new Date();
+    this.anomalyStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting anomaly detection...");
+      await this.runJobProcess("detect-anomalies");
+      this.anomalyStatus.status = "idle";
+      this.anomalyStatus.successfulRuns++;
+      this.logger.info("Anomaly detection completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.anomalyStatus.status = "error";
+      this.anomalyStatus.lastError = errorMessage;
+      this.anomalyStatus.failedRuns++;
+      this.logger.error("Anomaly detection failed:", errorMessage);
+    } finally {
+      this.isAnomalyRunning = false;
     }
   }
 
