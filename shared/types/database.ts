@@ -142,7 +142,10 @@ export interface IAnomaly extends Document {
     sourceFileName?: string
   }
   createdAt: Date
+  /** When the detector LAST confirmed this finding. Restamped every run: "is this still true?" */
   detectedAt?: Date
+  /** When this finding was FIRST seen. Written once via $setOnInsert: "is this new?" */
+  firstDetectedAt?: Date
 }
 
 /**

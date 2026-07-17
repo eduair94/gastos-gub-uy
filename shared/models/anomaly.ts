@@ -32,9 +32,14 @@ const AnomalySchema = new Schema<IAnomaly>(
     currency: { type: String },
     sourceYear: { type: Number },
     dataVersion: { type: String },
-    // Set by the detector. Previously declared on IAnomaly but absent from this
-    // schema, so mongoose strict mode silently stripped it on every write.
+    // When the detector LAST confirmed this finding. Restamped on every run, so it answers
+    // "is this still true?" — not "is this new?". Previously declared on IAnomaly but absent from
+    // this schema, so mongoose strict mode silently stripped it on every write.
     detectedAt: { type: Date },
+    // When this finding was FIRST seen. Written via $setOnInsert and never updated, which is what
+    // makes "recent anomalies" mean newly discovered ones. Keying that off detectedAt reported
+    // every anomaly as recent, because a full rescan restamps them all.
+    firstDetectedAt: { type: Date },
     metadata: {
       supplierName: { type: String },
       buyerName: { type: String },
@@ -70,6 +75,7 @@ AnomalySchema.index({ confidence: -1 });
 AnomalySchema.index({ sourceYear: 1, severityRank: -1 });
 AnomalySchema.index({ "metadata.supplierName": 1 });
 AnomalySchema.index({ detectedAt: -1 });
+AnomalySchema.index({ firstDetectedAt: -1 });
 
 
 

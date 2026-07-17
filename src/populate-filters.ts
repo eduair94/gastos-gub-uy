@@ -9,6 +9,12 @@ import { FilterDataModel, ReleaseModel } from '../shared/models'
  */
 async function populateFilterData() {
   try {
+    // These facets group over ~2.2M releases and outlast the shared 45s idle-socket default,
+    // which is tuned for the web app. Must be set before the first connect.
+    if (!process.env.MONGO_SOCKET_TIMEOUT_MS) {
+      process.env.MONGO_SOCKET_TIMEOUT_MS = String(30 * 60 * 1000)
+    }
+
     console.log('🔗 Connecting to database...')
     await connectToDatabase()
 

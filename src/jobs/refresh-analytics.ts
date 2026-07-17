@@ -654,11 +654,12 @@ export class AnalyticsRefresher {
         .map(t => t.year as number)
         .sort((a, b) => a - b)
 
+      // Newly DISCOVERED anomalies, keyed off firstDetectedAt (written once, on insert).
+      // detectedAt is restamped by every rescan, so counting on it reported all 22,368 as "recent"
+      // — the metric could never say anything other than the total.
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       const recentAnomalies = await AnomalyModel.countDocuments({
-        $or: [
-          { detectedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
-          { detectedAt: { $exists: false }, createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
-        ],
+        firstDetectedAt: { $gte: thirtyDaysAgo },
       })
 
       const [metrics, entities, categories] = await Promise.all([

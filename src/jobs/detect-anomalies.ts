@@ -596,7 +596,13 @@ class AnomalyDetector {
             awardId: finding.awardId,
             type: ANOMALY_TYPE,
           },
-          update: { $set: { ...finding.doc, awardId: finding.awardId } },
+          update: {
+            $set: { ...finding.doc, awardId: finding.awardId },
+            // Written only when the anomaly is first inserted, never on re-confirmation. A field
+            // may not appear in both $set and $setOnInsert — Mongo rejects the update as a
+            // conflict — so `doc` must not carry firstDetectedAt.
+            $setOnInsert: { firstDetectedAt: this.runStart },
+          },
           upsert: true,
         },
       }));
@@ -678,6 +684,7 @@ class AnomalyDetector {
       await this.scoreReleases(options);
       if (!options.dryRun) {
         await this.purgeLegacyAnomalies();
+        await this.backfillFirstDetectedAt();
       }
     }
 
@@ -702,6 +709,24 @@ class AnomalyDetector {
     if (result.deletedCount) {
       console.log(`   🧹 legacy anomalies purged: ${result.deletedCount} (pre-rewrite estimator)`);
     }
+  }
+
+  /**
+   * Gives pre-existing anomalies a firstDetectedAt.
+   *
+   * $setOnInsert only fires for new documents, so anomalies written before that field existed would
+   * never acquire one, and "recent anomalies" would read zero forever. Seeds from detectedAt, or
+   * createdAt where the finding predates detectedAt too. Idempotent: matches only documents still
+   * missing the field, so it is a no-op from the second run onward.
+   */
+  private async backfillFirstDetectedAt(): Promise<void> {
+    const missing = await AnomalyModel.countDocuments({ firstDetectedAt: { $exists: false } });
+    if (missing === 0) return;
+
+    const result = await AnomalyModel.updateMany({ firstDetectedAt: { $exists: false } }, [
+      { $set: { firstDetectedAt: { $ifNull: ["$detectedAt", "$createdAt"] } } },
+    ]);
+    console.log(`   🕓 firstDetectedAt backfilled: ${result.modifiedCount} pre-existing anomalies`);
   }
 
   private async buildBaselinesDryRunNotice(): Promise<void> {

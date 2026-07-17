@@ -63,6 +63,32 @@ class CronServer {
   }
 
   /**
+   * Names whichever job currently holds the box, or null when idle.
+   *
+   * All four jobs are mutually exclusive, and this is the single place that decides it. Each guard
+   * used to be hand-written at its own call site and every one checked a different subset: ingest
+   * never looked at reconcile, analytics never looked at reconcile, and the HTTP reconcile trigger
+   * checked neither of the other two. Ingest and reconcile both WRITE releases; analytics and the
+   * detector run multi-minute aggregations over them. Overlap risks writer-vs-writer conflict on the
+   * same releases and, at best, wastes a shared 6-core box on jobs that are individually infrequent.
+   *
+   * Serialising costs almost nothing: the schedules are already staggered (:05 hourly ingest at ~6s,
+   * :30 six-hourly analytics at ~7min, 04:15 daily detector at ~50s, Sunday 02:00 reconcile), so
+   * this only bites on manual triggers or an unusually long run — where skipping is the right call.
+   *
+   * NOTE: these are in-process booleans, not a durable lock. A pm2 restart forgets them while a
+   * spawned child keeps running, so a job triggered right after a restart could still overlap an
+   * orphan. A collection-based lock would close that; it has not been needed yet.
+   */
+  private busyWith(): string | null {
+    if (this.isJobRunning) return "ingest";
+    if (this.isReconcileRunning) return "reconciliation";
+    if (this.isAnalyticsRunning) return "analytics refresh";
+    if (this.isAnomalyRunning) return "anomaly detection";
+    return null;
+  }
+
+  /**
    * Runs one of the analytics jobs as a detached child process.
    *
    * These aggregate over ~2.2M releases, while this server is started by pm2 with
@@ -73,8 +99,11 @@ class CronServer {
   private runJobProcess(script: string, args: string[] = []): Promise<void> {
     // Under pm2 this file is dist/src/cronserver.js and siblings are compiled; under `tsx` it is
     // still TypeScript. Pick the interpreter that matches whichever one is executing.
+    //
+    // `script` is a path relative to src/ without extension, e.g. "jobs/refresh-analytics" or
+    // "populate-filters".
     const isTs = __filename.endsWith(".ts");
-    const jobPath = path.join(__dirname, "jobs", `${script}.${isTs ? "ts" : "js"}`);
+    const jobPath = path.join(__dirname, `${script}.${isTs ? "ts" : "js"}`);
     const command = isTs ? "npx" : process.execPath;
     const argv = isTs
       ? ["tsx", jobPath, ...args]
@@ -136,9 +165,10 @@ class CronServer {
 
     // Manual trigger endpoint for testing (POST)
     this.app.post("/cron/trigger", async (_req, res) => {
-      if (this.isJobRunning) {
+      const busy = this.busyWith();
+      if (busy) {
         res.status(409).json({
-          error: "Cronjob is already running",
+          error: `Cannot start ingest - ${busy} is running`,
           status: this.jobStatus,
         });
         return;
@@ -166,9 +196,10 @@ class CronServer {
 
     // Manual trigger endpoint for testing (GET)
     this.app.get("/cron/trigger", async (_req, res) => {
-      if (this.isJobRunning) {
+      const busy = this.busyWith();
+      if (busy) {
         res.status(409).json({
-          error: "Cronjob is already running",
+          error: `Cannot start ingest - ${busy} is running`,
           status: this.jobStatus,
         });
         return;
@@ -205,9 +236,10 @@ class CronServer {
 
     // Manual reconciliation trigger (GET/POST) - re-checks non-final releases from the last N months
     const triggerReconcile = (_req: express.Request, res: express.Response): void => {
-      if (this.isReconcileRunning) {
+      const busy = this.busyWith();
+      if (busy) {
         res.status(409).json({
-          error: "Reconciliation job is already running",
+          error: `Cannot start reconciliation - ${busy} is running`,
           status: this.reconcileStatus,
         });
         return;
@@ -234,8 +266,9 @@ class CronServer {
     });
 
     const triggerAnalytics = (_req: express.Request, res: express.Response): void => {
-      if (this.isAnalyticsRunning) {
-        res.status(409).json({ error: "Analytics refresh is already running", status: this.analyticsStatus });
+      const busy = this.busyWith();
+      if (busy) {
+        res.status(409).json({ error: `Cannot start analytics refresh - ${busy} is running`, status: this.analyticsStatus });
         return;
       }
       this.logger.info("Manual analytics refresh trigger initiated");
@@ -253,8 +286,9 @@ class CronServer {
     });
 
     const triggerAnomalies = (_req: express.Request, res: express.Response): void => {
-      if (this.isAnomalyRunning) {
-        res.status(409).json({ error: "Anomaly detection is already running", status: this.anomalyStatus });
+      const busy = this.busyWith();
+      if (busy) {
+        res.status(409).json({ error: `Cannot start anomaly detection - ${busy} is running`, status: this.anomalyStatus });
         return;
       }
       this.logger.info("Manual anomaly detection trigger initiated");
@@ -413,12 +447,6 @@ class CronServer {
     cron.schedule(
       cronExpression,
       async () => {
-        if (this.isJobRunning) {
-          this.logger.warn("Skipping scheduled run - previous job still running");
-          return;
-        }
-
-        this.logger.info("Starting scheduled hourly upload job...");
         await this.runDailyUploadJob();
       },
       {
@@ -461,16 +489,6 @@ class CronServer {
     cron.schedule(
       reconcileExpression,
       async () => {
-        if (this.isReconcileRunning) {
-          this.logger.warn("Skipping scheduled reconciliation - previous reconcile still running");
-          return;
-        }
-        if (this.isJobRunning) {
-          this.logger.warn("Skipping scheduled reconciliation - ingest job is running");
-          return;
-        }
-
-        this.logger.info("Starting scheduled weekly reconciliation job...");
         await this.runReconcileJob();
       },
       {
@@ -497,6 +515,12 @@ class CronServer {
   }
 
   private async runDailyUploadJob(): Promise<void> {
+    const busy = this.busyWith();
+    if (busy) {
+      this.logger.warn(`Skipping ingest - ${busy} is running`);
+      return;
+    }
+
     this.isJobRunning = true;
     this.jobStatus.status = "running";
     this.jobStatus.lastRun = new Date();
@@ -528,6 +552,12 @@ class CronServer {
   }
 
   private async runReconcileJob(): Promise<void> {
+    const busy = this.busyWith();
+    if (busy) {
+      this.logger.warn(`Skipping reconciliation - ${busy} is running`);
+      return;
+    }
+
     this.isReconcileRunning = true;
     this.reconcileStatus.status = "running";
     this.reconcileStatus.lastRun = new Date();
@@ -561,12 +591,9 @@ class CronServer {
    * six more hours beats two rebuilds writing the same collections at once.
    */
   private async runAnalyticsJob(): Promise<void> {
-    if (this.isAnalyticsRunning) {
-      this.logger.warn("Skipping analytics refresh - previous run still in progress");
-      return;
-    }
-    if (this.isJobRunning) {
-      this.logger.warn("Skipping analytics refresh - ingest job is running");
+    const busy = this.busyWith();
+    if (busy) {
+      this.logger.warn(`Skipping analytics refresh - ${busy} is running`);
       return;
     }
 
@@ -577,7 +604,15 @@ class CronServer {
 
     try {
       this.logger.info("Starting analytics refresh...");
-      await this.runJobProcess("refresh-analytics");
+      await this.runJobProcess("jobs/refresh-analytics");
+
+      // filter_data drives the frontend's filter dropdowns (years, buyers, suppliers, statuses,
+      // methods). It is a separate script and nothing ever scheduled it either, so the year filter
+      // was still offering 2002-2025 with no 2026 — 80,500 releases unreachable from the UI.
+      // Runs after the rebuild so a failure here cannot abort the analytics that already landed.
+      this.logger.info("Refreshing filter data...");
+      await this.runJobProcess("populate-filters");
+
       this.analyticsStatus.status = "idle";
       this.analyticsStatus.successfulRuns++;
       this.logger.info("Analytics refresh completed successfully");
@@ -594,12 +629,9 @@ class CronServer {
 
   /** Rebuilds item price baselines, then rescores recent releases against them. */
   private async runAnomalyJob(): Promise<void> {
-    if (this.isAnomalyRunning) {
-      this.logger.warn("Skipping anomaly detection - previous run still in progress");
-      return;
-    }
-    if (this.isAnalyticsRunning) {
-      this.logger.warn("Skipping anomaly detection - analytics refresh is running");
+    const busy = this.busyWith();
+    if (busy) {
+      this.logger.warn(`Skipping anomaly detection - ${busy} is running`);
       return;
     }
 
@@ -610,7 +642,7 @@ class CronServer {
 
     try {
       this.logger.info("Starting anomaly detection...");
-      await this.runJobProcess("detect-anomalies");
+      await this.runJobProcess("jobs/detect-anomalies");
       this.anomalyStatus.status = "idle";
       this.anomalyStatus.successfulRuns++;
       this.logger.info("Anomaly detection completed successfully");
