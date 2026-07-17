@@ -286,6 +286,53 @@ export class AnalyticsRefresher {
     return trends
   }
 
+  /**
+   * Year-over-year growth, compared like for like.
+   *
+   * The latest year is nearly always partial, so measuring all of it against all of the previous
+   * year compares eight months to twelve and reports a collapse that never happened — mid-2026 vs
+   * full-2025 read as -43%. Both sides are therefore cut at the same day-of-year, using the newest
+   * release date present rather than the wall clock, so a stalled ingest cannot masquerade as a
+   * spending drop.
+   */
+  private async computeYearOverYearGrowth(): Promise<number> {
+    const newest = await ReleaseModel.find({ ...AWARD_MATCH, date: { $ne: null, $type: 'date' } })
+      .select('date')
+      .sort({ date: -1 })
+      .limit(1)
+      .lean()
+
+    const asOf: Date | undefined = (newest[0] as any)?.date
+    if (!asOf) return 0
+
+    const year = asOf.getUTCFullYear()
+    const startOfCurrent = new Date(Date.UTC(year, 0, 1))
+    const startOfPrevious = new Date(Date.UTC(year - 1, 0, 1))
+    // Same instant one year earlier. Feb 29 lands on Mar 1 in a non-leap year, which is a day of
+    // drift on 1-in-4 runs and immaterial against a year of spending.
+    const asOfPrevious = new Date(asOf)
+    asOfPrevious.setUTCFullYear(year - 1)
+
+    const [current, previous] = await Promise.all([
+      this.spendBetween(startOfCurrent, asOf),
+      this.spendBetween(startOfPrevious, asOfPrevious),
+    ])
+
+    if (previous <= 0) return 0
+    return ((current - previous) / previous) * 100
+  }
+
+  private async spendBetween(from: Date, to: Date): Promise<number> {
+    const rows = await ReleaseModel.aggregate(
+      [
+        { $match: { ...AWARD_MATCH, date: { $gte: from, $lte: to } } },
+        { $group: { _id: null, value: { $sum: '$amount.primaryAmount' } } },
+      ],
+      AGG,
+    )
+    return rows[0]?.value ?? 0
+  }
+
   async computeDashboardMetrics(recentAnomalies: number): Promise<IDashboardMetrics> {
     const [totalContracts, totalSuppliers, totalBuyers, totals] = await Promise.all([
       ReleaseModel.countDocuments(),
@@ -309,21 +356,7 @@ export class AnalyticsRefresher {
     const totalSpending: number = totals[0]?.totalSpending ?? 0
     const awardedContracts: number = totals[0]?.awardedContracts ?? 0
 
-    // Growth compares the two most recent years that actually carry data, rather than assuming the
-    // wall-clock year exists. In January the current year is near-empty, which made the old
-    // `getFullYear()` version report a ~-100% collapse every new year.
-    const yearTotals: { _id: number, value: number }[] = await ReleaseModel.aggregate(
-      [
-        { $match: { ...AWARD_MATCH, sourceYear: { $ne: null } } },
-        { $group: { _id: '$sourceYear', value: { $sum: '$amount.primaryAmount' } } },
-        { $sort: { _id: -1 } },
-        { $limit: 2 },
-      ],
-      AGG,
-    )
-    const current = yearTotals[0]?.value ?? 0
-    const previous = yearTotals[1]?.value ?? 0
-    const currentYearGrowth = previous > 0 ? ((current - previous) / previous) * 100 : 0
+    const currentYearGrowth = await this.computeYearOverYearGrowth()
 
     return {
       totalContracts,
