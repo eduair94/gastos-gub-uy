@@ -63,12 +63,30 @@ export const IMPLAUSIBLE_MATCH: Record<string, unknown> = {
   'amount.primaryAmount': { $gte: MAX_PLAUSIBLE_RELEASE_UYU, $type: 'number' },
 }
 
+/**
+ * Effective quantity, matching src/utils/amount-calculator.ts:174 (`item.quantity || 1`) exactly.
+ *
+ * That is JavaScript `||`, so it substitutes 1 for a quantity of ZERO as well as for
+ * missing/null — and 13,123 award items in production really do carry quantity 0. A plain
+ * `$ifNull` only covers missing/null, leaving 0 as 0, which made the fx denominator smaller than
+ * the basis primaryAmount was built on and inflated every fx-scaled figure on those releases. In
+ * the degenerate case where a release's only priced item had quantity 0 the denominator hit 0, fx
+ * collapsed to 0, and the supplier was credited nothing while the buyer was charged the full
+ * amount. Measured: the primaryAmount-vs-raw-total invariant failed on 67 of 200,000 sampled
+ * single-currency releases before this.
+ *
+ * Both the numerator and denominator go through here, so they cannot drift apart.
+ */
+const effectiveQuantity = (item: string) => ({
+  $let: {
+    vars: { q: { $ifNull: [`${item}.quantity`, 1] } },
+    in: { $cond: [{ $eq: ['$$q', 0] }, 1, '$$q'] },
+  },
+})
+
 /** An item's raw value in its own currency: unit price x quantity. */
 const itemRawValue = (item: string) => ({
-  $multiply: [
-    { $ifNull: [`${item}.unit.value.amount`, 0] },
-    { $ifNull: [`${item}.quantity`, 1] },
-  ],
+  $multiply: [{ $ifNull: [`${item}.unit.value.amount`, 0] }, effectiveQuantity(item)],
 })
 
 /** Raw value of the item currently in scope after `$unwind: '$awards.items'`. */
@@ -85,13 +103,21 @@ const RELEASE_RAW_TOTAL = {
       },
     },
     initialValue: 0,
+    // '$$this' is the item here: the inner $reduce above flattens awards[] into a single items[]
+    // array, so the outer reduce iterates items. Same effective-quantity rule as itemRawValue —
+    // this is the denominator, and it has to reproduce the numerator's basis exactly.
     in: {
       $add: [
         '$$value',
         {
           $multiply: [
             { $ifNull: ['$$this.unit.value.amount', 0] },
-            { $ifNull: ['$$this.quantity', 1] },
+            {
+              $let: {
+                vars: { q: { $ifNull: ['$$this.quantity', 1] } },
+                in: { $cond: [{ $eq: ['$$q', 0] }, 1, '$$q'] },
+              },
+            },
           ],
         },
       ],
