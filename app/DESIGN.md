@@ -121,9 +121,16 @@ The OCDS shape is deep and inconsistent. Never re-improvise extraction:
 - `dashboard_metrics` is a **stale snapshot** (says 1.89M vs 2.17M actual,
   and `currentYearGrowth: -100` is garbage). Never render `currentYearGrowth`.
   Label totals with `calculatedAt`.
-- Every release links to its official record:
-  `https://www.comprasestatales.gub.uy/ocds/release/{id}` — use `govSourceUrl(id)`
-  or the API's `sourceUrl` field. **Every detail page must link to the source.**
+- Every release links to its official **public page**:
+  `https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/{id_compra}`
+  where `id_compra` is the **ocid** with `ocds-<prefix>-` stripped. Use the API's
+  `sourceUrl` field, or `govSourceUrl(ocid)`. **Every detail page must link to the source.**
+  - **Derive from `ocid`, NEVER from `id`.** They differ on adjustment/cancellation
+    releases and `id` lands on an unrelated contract: `ajuste_llamado-47064` has ocid
+    `ocds-yfs5dr-1356289` → `/id/1356289` is Compra Directa 1240/2026, while `/id/47064`
+    is Compra Directa 1023/2005. Verified for numeric, legacy `a100` and `i455643` ocids.
+  - `/ocds/release/{id}` is the raw OCDS **JSON API**, not a human page — that's
+    `ocdsJsonUrl(id)`, a secondary link at most.
 
 ## Quality floor (non-negotiable)
 

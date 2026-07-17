@@ -29,7 +29,16 @@ const props = withDefaults(defineProps<{
   height?: number
   /** Called when a bar is activated. Omit to render a non-interactive chart. */
   hrefFor?: (year: number) => string | undefined
-}>(), { height: 180 })
+  /**
+   * What `value` measures. A broad filter set can't be totalled, so the
+   * explorer plots contract counts instead of pesos — the axis and
+   * tooltip must say which, or the chart lies.
+   */
+  unit?: 'money' | 'count'
+}>(), { height: 180, unit: 'money' })
+
+const fmt = (v?: number | null) =>
+  props.unit === 'count' ? formatCount(v) : formatMoney(v, 'UYU', { compact: true })
 
 const { t } = useI18n()
 const router = useRouter()
@@ -93,9 +102,11 @@ const chartOptions = computed(() => ({
         title: (items: any[]) => items[0]?.label ?? '',
         label: (ctx: any) => {
           const d = sorted.value[ctx.dataIndex]
-          const money = formatMoney(d?.value, 'UYU', { compact: true })
-          if (!d?.count) return money
-          return [money, `${formatNumber(d.count)} ${t('common.contracts').toLowerCase()}`]
+          const head = fmt(d?.value)
+          const contracts = t('common.contracts').toLowerCase()
+          if (props.unit === 'count') return `${head} ${contracts}`
+          if (!d?.count) return head
+          return [head, `${formatNumber(d.count)} ${contracts}`]
         },
       },
     },
@@ -125,7 +136,7 @@ const chartOptions = computed(() => ({
         font: { family: 'IBM Plex Mono, monospace', size: 11 },
         maxTicksLimit: 5,
         padding: 6,
-        callback: (v: number | string) => formatMoney(Number(v), 'UYU', { compact: true }),
+        callback: (v: number | string) => fmt(Number(v)),
       },
     },
   },

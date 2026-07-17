@@ -74,6 +74,37 @@ function unitName(a: any): string | null {
   return a?.metadata?.itemUnit?.name ?? null
 }
 
+/**
+ * The usual range, as one legible string.
+ *
+ * Interpolating the two figures either side of a bare en-dash produced
+ * "$ 135–$ 102.275": no breathing room, the currency stated twice, and
+ * the template's own newlines leaking in as stray spaces. Build it in
+ * script instead — thin spaces around the dash, currency once, and
+ * non-breaking so the range never wraps in half.
+ */
+const DASH = '\u2013'
+
+function rangeLabel(a: any): string {
+  const min = a?.expectedRange?.min
+  const max = a?.expectedRange?.max
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return '—'
+
+  const c = cur(a)
+  const lo = formatMoney(min, c, { compact: true })
+  const hi = formatMoney(max, c, { compact: true })
+
+  // Drop the repeated symbol when both sides carry the same one:
+  // "$ 135 – 102 mil" reads better than "$ 135 – $ 102 mil".
+  const sym = lo.split(' ')[0]
+  const hiShort = hi.startsWith(`${sym} `) ? hi.slice(sym.length + 1) : hi
+
+  // Non-breaking throughout, written as an escape: a literal U+00A0 in
+  // source is invisible to the next reader and trips no-irregular-whitespace.
+  const NB = '\u00A0'
+  return [lo, NB, DASH, NB, hiShort].join('').split(' ').join(NB)
+}
+
 useSeo(() => ({
   title: t('seo.anomalies.title'),
   description: t('seo.anomalies.description'),
@@ -238,10 +269,7 @@ useSeo(() => ({
             </div>
             <div class="flags__fig flags__fig--exp">
               <span class="flags__figl">{{ t('anomalies.expected') }}</span>
-              <span class="flags__range u-mono">
-                {{ formatMoney(a.expectedRange?.min, cur(a), { compact: true }) }}–{{
-                  formatMoney(a.expectedRange?.max, cur(a), { compact: true }) }}
-              </span>
+              <span class="flags__range u-mono">{{ rangeLabel(a) }}</span>
             </div>
           </div>
         </NuxtLink>

@@ -53,17 +53,46 @@ export function toArray(v: unknown): string[] {
 }
 
 /**
- * The canonical public URL for a release on the government site.
+ * The public page for a purchase on the government site — the thing a
+ * reader can actually open and check against.
  *
- * This is pure derivation from the stored `id` — the source RSS feed
- * hands us this link at ingest time and then discards it, so nothing
- * is persisted and no migration is needed. Keep it in one place: if
- * Compras Estatales ever moves, this function is the only edit.
+ * Derived from `ocid`, NOT `id`. The ocid suffix is the `id_compra` the
+ * government's own site keys on, which `rssTitle` confirms
+ * (`id_compra:1356289` ↔ `ocds-yfs5dr-1356289`). `id` is a per-release
+ * key that does NOT match it on adjustment/cancellation records, and
+ * using it silently links to a different contract:
  *
- * @example sourceUrl('adjudicacion-i455643')
- *   -> 'https://www.comprasestatales.gub.uy/ocds/release/adjudicacion-i455643'
+ *   ajuste_llamado-47064  (ocid ocds-yfs5dr-1356289)
+ *     /id/1356289 -> Compra Directa 1240/2026   <- correct
+ *     /id/47064   -> Compra Directa 1023/2005   <- a real, unrelated contract
+ *
+ * On a site whose whole claim is "go check the source", pointing at the
+ * wrong source is the worst bug available. Verified against the live
+ * site for numeric (1355780), legacy alpha (a100) and i-prefixed
+ * (i455643) ocids — all resolve.
+ *
+ * @example sourceUrl('ocds-yfs5dr-1352393')
+ *   -> 'https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1352393'
  */
-export function sourceUrl(releaseId?: string | null): string | null {
+export function sourceUrl(ocid?: string | null): string | null {
+  const compraId = compraIdFromOcid(ocid)
+  if (!compraId) return null
+  return `https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/${encodeURIComponent(compraId)}`
+}
+
+/** The government's `id_compra`: the ocid with its `ocds-<prefix>-` stripped. */
+export function compraIdFromOcid(ocid?: string | null): string | null {
+  if (!ocid || typeof ocid !== 'string') return null
+  const m = /^ocds-[a-z0-9]+-(.+)$/i.exec(ocid.trim())
+  const id = (m?.[1] ?? '').trim()
+  return id || null
+}
+
+/**
+ * The raw OCDS JSON for a release, keyed by `id` (not ocid) because this
+ * endpoint is per-release. Useful to link alongside the human page.
+ */
+export function ocdsJsonUrl(releaseId?: string | null): string | null {
   if (!releaseId || typeof releaseId !== 'string') return null
   return `https://www.comprasestatales.gub.uy/ocds/release/${encodeURIComponent(releaseId)}`
 }

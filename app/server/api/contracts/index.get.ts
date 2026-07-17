@@ -396,7 +396,9 @@ export default defineEventHandler(async (event) => {
     // `sourceUrl` is derived, not stored — see server/utils/query.ts.
     const contracts = rawContracts.map(doc => ({
       ...doc,
-      sourceUrl: sourceUrl(doc.id),
+      // Keyed on ocid: `id` points at a different contract on
+      // adjustment/cancellation records. See utils/query.ts#sourceUrl.
+      sourceUrl: sourceUrl(doc.ocid),
     }))
 
     const hasMore = total !== null

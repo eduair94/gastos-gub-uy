@@ -135,7 +135,10 @@
       "body": "Type what the state bought, or pick an agency in the filter panel."
     },
     "tooMany": "Showing the first {shown}. Narrow the filters to see fewer results.",
-    "moreItems": "+{n} more item | +{n} more items"
+    "moreItems": "+{n} more item | +{n} more items",
+    "histogramCount": "Contracts per year",
+    "histogramValue": "Amount per year",
+    "needFilter": "Add a filter (year, agency, supplier or amount) to see totals."
   },
   "filters": {
     "title": "Filters",
@@ -196,7 +199,8 @@
       "raw": "Raw data",
       "amendments": "Amendments",
       "provenance": "Record origin",
-      "amount": "Amount detail"
+      "amount": "Amount detail",
+      "itemsTender": "What is requested"
     },
     "itemsHelp": "Awarded items with quantity and unit price.",
     "noItems": "The official record lists no items for this contract.",
@@ -288,10 +292,13 @@
       "version": "Calculation version",
       "exchangeRateDate": "Exchange rate as of",
       "originalUYU": "Original amount in pesos",
-      "converted": "Includes conversion"
+      "converted": "Includes conversion",
+      "ocdsJson": "OCDS document (JSON)",
+      "contact": "Contact"
     },
     "amendmentOf": "Amends {id}",
-    "itemsCount": "{n} item | {n} items"
+    "itemsCount": "{n} item | {n} items",
+    "itemsTenderHelp": "Items included in the tender. Prices appear only once it is awarded."
   },
   "suppliers": {
     "title": "State suppliers",

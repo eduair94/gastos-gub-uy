@@ -27,6 +27,19 @@ const title = computed(() => {
   return t(fb.key, fb.params)
 })
 
+/**
+ * What is actually being bought, when the title doesn't say.
+ *
+ * Shown only when it adds something the heading doesn't already carry.
+ */
+const subject = computed(() => {
+  const d = contract.value?.tender?.description?.trim()
+  if (!d) return ''
+  const heading = title.value.trim()
+  if (!heading || d === heading || heading.startsWith(d)) return ''
+  return d
+})
+
 const amount = computed(() => contractAmount(contract.value))
 const currency = computed(() => contractCurrency(contract.value))
 const suppliers = computed(() => contractSuppliers(contract.value))
@@ -53,7 +66,13 @@ const wasConverted = computed(() =>
 // The API returns `sourceUrl`; derive it locally if a cached response
 // predates that field.
 const officialUrl = computed(() =>
-  (contract.value as any)?.sourceUrl ?? govSourceUrl(contract.value?.id),
+  (contract.value as any)?.sourceUrl ?? govSourceUrl(contract.value?.ocid),
+)
+
+// The raw OCDS document we actually parsed — keyed on the release `id`,
+// unlike the human page above which keys on the ocid.
+const ocdsUrl = computed(() =>
+  (contract.value as any)?.ocdsUrl ?? ocdsJsonUrl(contract.value?.id),
 )
 
 const documents = computed(() => {
@@ -155,6 +174,13 @@ const itemGroups = computed<ItemGroup[]>(() => {
 })
 
 // ---- Who ------------------------------------------------------------
+interface ContactPoint {
+  name?: string
+  email?: string
+  telephone?: string
+  faxNumber?: string
+}
+
 interface PartyRow {
   key: string
   name: string
@@ -162,6 +188,7 @@ interface PartyRow {
   to: string | null
   legalName: string
   rut: string
+  contact: { name: string, email: string, phone: string } | null
 }
 
 /**
@@ -202,8 +229,8 @@ const partyRoster = computed<PartyRow[]>(() => {
   // `parties[]` is the authoritative roster. Older records predate it,
   // so fall back to the buyer/supplier the release does carry rather
   // than showing nobody.
-  const list: { id?: string, name: string, roles: string[] }[] = declared.length
-    ? declared.map(p => ({ id: p.id, name: p.name ?? '', roles: p.roles ?? [] }))
+  const list: { id?: string, name: string, roles: string[], contactPoint?: ContactPoint }[] = declared.length
+    ? declared.map(p => ({ id: p.id, name: p.name ?? '', roles: p.roles ?? [], contactPoint: (p as any).contactPoint }))
     : [
         ...(c?.buyer?.name || c?.buyer?.id ? [{ id: c.buyer.id, name: c.buyer.name ?? '', roles: ['buyer'] }] : []),
         ...contractSuppliers(c).map(s => ({ id: s.id, name: s.name, roles: ['supplier'] })),
@@ -214,6 +241,18 @@ const partyRoster = computed<PartyRow[]>(() => {
     // level. Attach it to the party it describes instead of stranding it.
     const isSupplier = !!sup && ((!!sup.id && sup.id === p.id) || (!!sup.name && sup.name === p.name))
     const legalName = isSupplier ? (sup.identifier?.legalName?.trim() ?? '') : ''
+
+    // Who to actually contact about this tender. The source carries it
+    // per party and the government's own page prints it; we were
+    // dropping it entirely. `faxNumber` is routinely a copy of
+    // `telephone` in this data, so it is not surfaced.
+    const cp = p.contactPoint
+    const contact = {
+      name: cp?.name?.trim() ?? '',
+      email: cp?.email?.trim() ?? '',
+      phone: cp?.telephone?.trim() ?? '',
+    }
+
     return {
       key: `${p.id ?? p.name}-${i}`,
       name: p.name,
@@ -221,6 +260,7 @@ const partyRoster = computed<PartyRow[]>(() => {
       to: partyPath(p.id, p.roles),
       legalName: legalName && legalName !== p.name ? legalName : '',
       rut: isSupplier ? (sup.identifier?.id?.trim() ?? '') : '',
+      contact: (contact.name || contact.email || contact.phone) ? contact : null,
     }
   })
 })
@@ -228,13 +268,53 @@ const partyRoster = computed<PartyRow[]>(() => {
 // ---- The tender it belongs to ---------------------------------------
 const tender = computed(() => contract.value?.tender ?? null)
 
+/**
+ * A period, with the closing time when the source gives one.
+ *
+ * "Recepción de ofertas hasta 30 sept 2026" loses the fact that it
+ * closes at 15:00 — which is exactly the detail a bidder needs, and
+ * which the government's page prints.
+ */
 function periodText(p?: { startDate?: string, endDate?: string } | null): string {
   if (!p) return ''
   const start = p.startDate ? formatDate(p.startDate) : ''
-  const end = p.endDate ? formatDate(p.endDate) : ''
+  const end = p.endDate ? formatDateTime(p.endDate) : ''
   if (start && end) return `${start} – ${end}`
   return start || end
 }
+
+/**
+ * `submissionMethodDetails` is a packed string, not a sentence.
+ *
+ * The source ships it as semicolon-joined "key: value" pairs with raw
+ * ISO timestamps inside:
+ *
+ *   "Lugar entrega de ofertas: Municipio de Carmelo- José Pedro Varela
+ *    275 ;Fecha solicitud de prorroga: 2026-09-21T00:00:00Z"
+ *
+ * Printed verbatim that is machine exhaust. The government's own page
+ * splits it into labelled lines and renders the date as a date, so do
+ * the same. Anything that doesn't fit the pattern is passed through
+ * untouched rather than mangled.
+ */
+const submissionParts = computed(() => {
+  const raw = tender.value?.submissionMethodDetails?.trim()
+  if (!raw) return []
+
+  return raw.split(';').map(s => s.trim()).filter(Boolean).map((part) => {
+    const m = /^([^:]{2,40}):\s*(.+)$/.exec(part)
+    if (!m) return { label: '', value: part }
+
+    const label = m[1].trim()
+    let value = m[2].trim()
+
+    // Turn any bare ISO timestamp into a readable date.
+    const iso = /^\d{4}-\d{2}-\d{2}T[\d:.]+Z?$/.exec(value)
+    if (iso) value = formatDateTime(value)
+
+    return { label: `${label}:`, value }
+  })
+})
 
 const tenderPeriod = computed(() => periodText(tender.value?.tenderPeriod))
 const enquiryPeriod = computed(() => periodText(tender.value?.enquiryPeriod))
@@ -376,6 +456,21 @@ useSeo(() => ({
           <h1 class="head__title">
             {{ title }}
           </h1>
+
+          <!-- The subject, in the source's own words.
+               On tender releases `tender.title` is the bureaucratic
+               label ("Llamado a Expresiones de Interés 14339/2026") and
+               `tender.description` is what is actually being bought
+               ("Terminal de Ómnibus de la ciudad de Carmelo"). The
+               government's own page prints both; we were dropping the
+               one that says something. -->
+          <p
+            v-if="subject"
+            class="head__subject"
+          >
+            {{ subject }}
+          </p>
+
           <div class="head__meta">
             <!-- The stage is the single fact that explains why a release
                  may carry no supplier, no items and no amount. It leads. -->
@@ -497,6 +592,31 @@ useSeo(() => ({
                   v-if="p.rut"
                   class="party__sub u-mono"
                 >{{ t('contract.fields.rut') }}: {{ p.rut }}</span>
+
+                <!-- Who to actually ask. The source carries this per
+                     party and the government's own page prints it. -->
+                <div
+                  v-if="p.contact"
+                  class="contact"
+                >
+                  <p class="contact__l">
+                    {{ t('contract.fields.contact') }}
+                  </p>
+                  <span
+                    v-if="p.contact.name"
+                    class="contact__name"
+                  >{{ p.contact.name }}</span>
+                  <a
+                    v-if="p.contact.email"
+                    :href="`mailto:${p.contact.email}`"
+                    class="contact__link u-truncate"
+                  >{{ p.contact.email }}</a>
+                  <a
+                    v-if="p.contact.phone"
+                    :href="`tel:${p.contact.phone.replace(/[^\d+]/g, '')}`"
+                    class="contact__link u-mono"
+                  >{{ p.contact.phone }}</a>
+                </div>
               </div>
 
               <div class="party">
@@ -585,7 +705,19 @@ useSeo(() => ({
                   class="facts__row"
                 >
                   <dt>{{ t('contract.fields.submissionMethodDetails') }}</dt>
-                  <dd>{{ tender.submissionMethodDetails }}</dd>
+                  <dd>
+                    <span
+                      v-for="(part, i) in submissionParts"
+                      :key="i"
+                      class="subm__part"
+                    >
+                      <span
+                        v-if="part.label"
+                        class="subm__k"
+                      >{{ part.label }}</span>
+                      <span>{{ part.value }}</span>
+                    </span>
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -594,9 +726,13 @@ useSeo(() => ({
           <!-- ===== What was bought ===== -->
           <section class="panel block">
             <div class="panel__head">
-              <h2>{{ t('contract.sections.items') }}</h2>
+              <!-- A tender lists what the state INTENDS to buy; nothing
+                   is awarded yet and there are no prices. Calling that
+                   "qué se compró / artículos adjudicados" states a fact
+                   that hasn't happened. -->
+              <h2>{{ showsMoney ? t('contract.sections.items') : t('contract.sections.itemsTender') }}</h2>
               <p class="panel__help">
-                {{ t('contract.itemsHelp') }}
+                {{ showsMoney ? t('contract.itemsHelp') : t('contract.itemsTenderHelp') }}
               </p>
             </div>
             <div
@@ -1059,6 +1195,23 @@ useSeo(() => ({
                     >{{ contract.rssLink }}</a>
                   </dd>
                 </div>
+                <!-- The machine-readable original, distinct from the
+                     human page linked at the top. Someone checking our
+                     arithmetic wants the exact document we parsed. -->
+                <div
+                  v-if="ocdsUrl"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.ocdsJson') }}</dt>
+                  <dd>
+                    <a
+                      :href="ocdsUrl"
+                      target="_blank"
+                      rel="noopener external"
+                      class="facts__link u-truncate"
+                    >{{ ocdsUrl }}</a>
+                  </dd>
+                </div>
               </dl>
             </div>
           </section>
@@ -1123,6 +1276,14 @@ useSeo(() => ({
 .head__title {
   margin: var(--s-2) 0 var(--s-3);
   max-width: 24ch;
+}
+
+.head__subject {
+  margin: calc(var(--s-2) * -1) 0 var(--s-3);
+  max-width: 60ch;
+  font-size: var(--t-md);
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 .head__meta {
@@ -1280,6 +1441,55 @@ a.party__name:hover { text-decoration: underline; }
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
+
+/* ---- Submission conditions ---- */
+.subm__part {
+  display: block;
+}
+
+.subm__part + .subm__part { margin-top: var(--s-1); }
+
+.subm__k {
+  margin-right: var(--s-1);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+/* ---- Contact ---- */
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--s-2);
+  padding-top: var(--s-2);
+  border-top: 1px dashed var(--rule);
+  min-width: 0;
+}
+
+.contact__l {
+  margin: 0 0 2px;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.contact__name {
+  font-size: var(--t-xs);
+  color: var(--text);
+}
+
+.contact__link {
+  font-size: var(--t-xs);
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
+
+.contact__link:hover { text-decoration: underline; }
 
 /* ---- Fact lists ---- */
 .facts {

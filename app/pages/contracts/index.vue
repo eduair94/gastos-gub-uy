@@ -73,7 +73,7 @@ const activeCount = computed(() => {
 })
 
 /** The params both /contracts and /contracts/stats accept. */
-const apiQuery = computed(() => {
+const apiQueryNow = computed(() => {
   const f = filters.value
   const q: Record<string, unknown> = {}
   if (f.search) q.search = f.search
@@ -91,6 +91,19 @@ const apiQuery = computed(() => {
   return q
 })
 
+/**
+ * Debounced before it reaches the network.
+ *
+ * The search box and the amount fields are free-text, and every
+ * keystroke used to fire BOTH `/api/contracts` and
+ * `/api/contracts/stats`. Typing "tomografo" issued 18 requests — each a
+ * text search or aggregation over 2.2M documents — which stalled the
+ * server, tripped the 30/min rate limiter, and froze the page. The
+ * discrete controls (chips, selects) pay 300ms they don't need; that is
+ * imperceptible and not worth two code paths.
+ */
+const apiQuery = refDebounced(apiQueryNow, 300)
+
 const listQuery = computed(() => ({
   ...apiQuery.value,
   page: page.value,
@@ -104,8 +117,10 @@ watch(filters, () => {
   page.value = 1
 }, { deep: true })
 
-// Push state to the URL; the fetches below react to the same refs.
-watch([filters, page, sort], () => {
+// Push state to the URL once the query settles. Driven by the debounced
+// value so the address bar reflects what was actually fetched, rather
+// than lagging a keystroke behind it.
+watch([apiQuery, page, sort], () => {
   const q: Record<string, string> = {}
   for (const [k, v] of Object.entries(apiQuery.value)) q[k] = String(v)
   // `tag` is always written, including as an empty string, so that
@@ -127,9 +142,33 @@ const contracts = computed<ContractLike[]>(() => listRes.value?.data?.contracts 
 const pagination = computed(() => listRes.value?.data?.pagination ?? null)
 const stats = computed(() => statsRes.value?.data ?? null)
 
+/**
+ * The histogram plots money when we could total it, and contract counts
+ * when we couldn't.
+ *
+ * A broad filter set (the default `tag=award` matches 1.4M releases)
+ * can't be summed inside the time budget, so `byYear[].value` comes back
+ * null — which plotted a chart of nulls: an empty frame with a "$ 0"
+ * axis. The counts are always exact, so show those and say so, rather
+ * than render an empty box.
+ */
+const byYearIsCount = computed(() =>
+  (stats.value?.byYear ?? []).some((d: any) => d.value === null || d.value === undefined),
+)
+
+/** True when the API actually totalled this filter set. */
+const canTotal = computed(() =>
+  typeof stats.value?.totalValue === 'number' && stats.value.totalValue > 0,
+)
+
 const byYear = computed(() =>
   (stats.value?.byYear ?? [])
-    .filter((d: any) => d.year)
+    .filter((d: any) => d.year && (byYearIsCount.value ? d.count > 0 : d.value > 0))
+    .map((d: any) => ({
+      year: d.year,
+      value: byYearIsCount.value ? d.count : d.value,
+      count: d.count,
+    }))
     .sort((a: any, b: any) => a.year - b.year),
 )
 
@@ -176,6 +215,30 @@ function itemCount(c: ContractLike): number {
 const PREVIEW_ITEMS = 3
 
 /**
+ * "6 unidades", not "6unidad".
+ *
+ * The unit comes from the source in singular upper case ("UNIDAD",
+ * "MENSUAL"). Lower-casing it is not enough — it has to agree with the
+ * quantity, and only some of these units are nouns that pluralise. The
+ * ones that are adjectival periods ("MENSUAL", "ANUAL") do not take an
+ * -s here, so only pluralise the plain nouns.
+ */
+const PLURALISABLE = new Set(['unidad', 'kilo', 'kilogramo', 'litro', 'metro', 'hora', 'día', 'dia', 'mes', 'año', 'ano', 'caja', 'bolsa', 'paquete', 'juego', 'rollo', 'tonelada', 'gramo'])
+
+function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
+  const n = it.quantity ?? 0
+  const qty = formatNumber(n)
+  const raw = (it.unitName ?? '').trim().toLowerCase()
+  if (!raw) return qty
+
+  const plural = n !== 1 && PLURALISABLE.has(raw)
+    ? (/[aeiou]$/.test(raw) ? `${raw}s` : `${raw}es`)
+    : raw
+
+  return `${qty} ${plural}`
+}
+
+/**
  * The lines actually bought, previewed under each row.
  *
  * A title alone reduces a three-line contract to one phrase, which is
@@ -190,6 +253,32 @@ function itemPreview(c: ContractLike) {
     more: Math.max(0, rows.length - PREVIEW_ITEMS),
   }
 }
+
+// ---- Full item list, in place ---------------------------------------
+const itemsDialog = ref(false)
+const itemsFor = ref<ContractLike | null>(null)
+
+function openItems(c: ContractLike) {
+  itemsFor.value = c
+  itemsDialog.value = true
+}
+
+const dialogItems = computed(() => (itemsFor.value ? contractItems(itemsFor.value) : []))
+const dialogTitle = computed(() => (itemsFor.value ? rowTitle(itemsFor.value) : ''))
+
+/**
+ * The sum of the lines shown, so the dialog answers "does this add up?"
+ * without the reader doing the arithmetic. Only meaningful when every
+ * line shares one currency — the source mixes them, and adding pesos to
+ * dollars would be worse than showing nothing.
+ */
+const dialogTotal = computed(() => {
+  const rows = dialogItems.value.filter(r => typeof r.total === 'number' && r.total > 0)
+  if (!rows.length) return null
+  const currencies = new Set(rows.map(r => r.currency))
+  if (currencies.size !== 1) return null
+  return { amount: rows.reduce((s, r) => s + (r.total ?? 0), 0), currency: [...currencies][0] }
+})
 
 useSeo(() => ({
   title: t('seo.contracts.title'),
@@ -289,24 +378,37 @@ useSeo(() => ({
               <span class="strip__n">{{ statsPending ? '·····' : formatNumber(stats?.count) }}</span>
               <span class="strip__l">{{ t('common.contracts') }}</span>
             </div>
-            <div class="strip__fig">
-              <MoneyAmount
-                :amount="statsPending ? null : stats?.totalValue"
-                compact
-                size="lg"
-                align="start"
-              />
-              <span class="strip__l">{{ t('home.statSpending') }}</span>
-            </div>
-            <div class="strip__fig strip__fig--avg">
-              <MoneyAmount
-                :amount="statsPending ? null : stats?.avgValue"
-                compact
-                size="sm"
-                align="start"
-              />
-              <span class="strip__l">{{ t('suppliers.detail.avgContract') }}</span>
-            </div>
+
+            <!-- Totals only exist for a filter set narrow enough to sum.
+                 A stack of "Sin monto" reads as broken; say what to do
+                 instead. -->
+            <template v-if="!statsPending && canTotal">
+              <div class="strip__fig">
+                <MoneyAmount
+                  :amount="stats?.totalValue"
+                  compact
+                  size="lg"
+                  align="start"
+                />
+                <span class="strip__l">{{ t('home.statSpending') }}</span>
+              </div>
+              <div class="strip__fig strip__fig--avg">
+                <MoneyAmount
+                  :amount="stats?.medianValue ?? stats?.avgValue"
+                  compact
+                  size="sm"
+                  align="start"
+                />
+                <span class="strip__l">{{ stats?.medianValue ? t('home.statTypical') : t('suppliers.detail.avgContract') }}</span>
+              </div>
+            </template>
+
+            <p
+              v-else-if="!statsPending"
+              class="strip__hint"
+            >
+              {{ t('contracts.needFilter') }}
+            </p>
           </div>
 
           <div
@@ -314,11 +416,12 @@ useSeo(() => ({
             class="strip__hist"
           >
             <p class="u-eyebrow strip__histl">
-              {{ t('contracts.histogramTitle') }}
+              {{ byYearIsCount ? t('contracts.histogramCount') : t('contracts.histogramValue') }}
             </p>
             <YearBars
               :data="byYear"
-              :height="52"
+              :height="64"
+              :unit="byYearIsCount ? 'count' : 'money'"
             />
           </div>
         </div>
@@ -497,7 +600,7 @@ useSeo(() => ({
                       <span
                         v-if="it.quantity"
                         class="items__qty"
-                      >{{ formatNumber(it.quantity) }}<template v-if="it.unitName"> {{ it.unitName.toLowerCase() }}</template></span>
+                      >{{ qtyLabel(it) }}</span>
                       <MoneyAmount
                         v-if="it.unitAmount !== null"
                         :amount="it.unitAmount"
@@ -507,13 +610,20 @@ useSeo(() => ({
                         compact
                       />
                     </li>
+                    <!-- Opens the full item list in place. Sending the
+                         reader to the detail page to answer "what else is
+                         in this contract?" loses their filters and their
+                         scroll position for one question. -->
                     <li
                       v-if="itemPreview(c).more"
                       class="items__more"
                     >
-                      <NuxtLink :to="localePath(`/contracts/${c.id}`)">
+                      <button
+                        type="button"
+                        @click="openItems(c)"
+                      >
                         {{ t('contracts.moreItems', itemPreview(c).more, { n: itemPreview(c).more }) }}
-                      </NuxtLink>
+                      </button>
                     </li>
                   </ul>
                 </td>
@@ -585,6 +695,130 @@ useSeo(() => ({
         </nav>
       </div>
     </div>
+
+    <!-- Every line of a contract, without leaving the results. -->
+    <v-dialog
+      v-model="itemsDialog"
+      max-width="820"
+      scrollable
+    >
+      <div class="idlg">
+        <div class="idlg__head">
+          <div class="idlg__headtext">
+            <p class="u-eyebrow">
+              {{ t('contract.sections.items') }}
+            </p>
+            <h2 class="idlg__title">
+              {{ dialogTitle }}
+            </h2>
+          </div>
+          <button
+            class="idlg__x"
+            type="button"
+            :aria-label="t('nav.close')"
+            @click="itemsDialog = false"
+          >
+            <v-icon>mdi-close</v-icon>
+          </button>
+        </div>
+
+        <div class="idlg__body u-scroll-x">
+          <table class="itable dtable">
+            <thead>
+              <tr>
+                <th scope="col">
+                  {{ t('common.description') }}
+                </th>
+                <th
+                  scope="col"
+                  class="itable__num"
+                >
+                  {{ t('common.quantity') }}
+                </th>
+                <th
+                  scope="col"
+                  class="itable__num"
+                >
+                  {{ t('common.unitPrice') }}
+                </th>
+                <th
+                  scope="col"
+                  class="itable__num"
+                >
+                  {{ t('common.total') }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(it, i) in dialogItems"
+                :key="i"
+              >
+                <td data-primary>
+                  {{ it.description || '—' }}
+                </td>
+                <td
+                  class="itable__num"
+                  :data-label="t('common.quantity')"
+                >
+                  {{ qtyLabel(it) }}
+                </td>
+                <td
+                  class="itable__num"
+                  :data-label="t('common.unitPrice')"
+                >
+                  <MoneyAmount
+                    :amount="it.unitAmount"
+                    :currency="it.currency"
+                    :rule="false"
+                    size="sm"
+                    decimals
+                  />
+                </td>
+                <td
+                  class="itable__num"
+                  :data-label="t('common.total')"
+                >
+                  <MoneyAmount
+                    :amount="it.total"
+                    :currency="it.currency"
+                    size="sm"
+                  />
+                </td>
+              </tr>
+            </tbody>
+            <tfoot v-if="dialogTotal">
+              <tr>
+                <td :colspan="3">
+                  {{ t('common.total') }}
+                </td>
+                <td class="itable__num">
+                  <MoneyAmount
+                    :amount="dialogTotal.amount"
+                    :currency="dialogTotal.currency"
+                    size="sm"
+                    decimals
+                  />
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="idlg__foot">
+          <NuxtLink
+            v-if="itemsFor"
+            :to="localePath(`/contracts/${itemsFor.id}`)"
+            class="idlg__go"
+          >
+            {{ t('common.viewDetail') }}
+            <v-icon size="16">
+              mdi-arrow-right
+            </v-icon>
+          </NuxtLink>
+        </div>
+      </div>
+    </v-dialog>
   </div>
 </template>
 
@@ -689,6 +923,15 @@ useSeo(() => ({
 .strip__l {
   font-size: var(--t-xs);
   color: var(--text-muted);
+}
+
+.strip__hint {
+  margin: 0;
+  max-width: 34ch;
+  font-size: var(--t-xs);
+  line-height: 1.45;
+  color: var(--text-muted);
+  align-self: center;
 }
 
 .strip__hist { min-width: 0; }
@@ -826,14 +1069,167 @@ useSeo(() => ({
   padding-top: 2px;
 }
 
-.items__more a {
+.items__more button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-body);
   font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--celeste-deep);
+  cursor: pointer;
+}
+
+.items__more button:hover { text-decoration: underline; }
+
+/* ---- Items dialog ---- */
+.idlg {
+  display: flex;
+  flex-direction: column;
+  max-height: 84dvh;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+}
+
+.idlg__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.idlg__headtext { min-width: 0; }
+
+.idlg__title {
+  margin: var(--s-1) 0 0;
+  /* The dialog names a contract; it is not the page's headline. At the
+     global h2 scale it shouted over the very table it introduces. */
+  font-size: var(--t-md);
+  font-stretch: 100%;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.idlg__x {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.idlg__x:hover { color: var(--text); background: var(--surface-sunken); }
+
+.idlg__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--s-2) var(--s-5) var(--s-4);
+}
+
+.idlg__foot {
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--rule);
+  text-align: right;
+}
+
+.idlg__go {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
   font-weight: 600;
   color: var(--celeste-deep);
   text-decoration: none;
 }
 
-.items__more a:hover { text-decoration: underline; }
+.idlg__go:hover { text-decoration: underline; }
+
+.idlg .itable {
+  width: 100%;
+  border-collapse: collapse;
+  /* Fixed layout stops one long description from starving the numeric
+     columns — the widths below then actually hold. */
+  table-layout: fixed;
+}
+
+.idlg .itable th {
+  padding: var(--s-2) var(--s-3);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+
+.idlg .itable td {
+  padding: var(--s-3);
+  font-size: var(--t-sm);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--rule);
+  overflow-wrap: anywhere;
+}
+
+.idlg .itable tbody tr:hover { background: var(--surface-sunken); }
+
+.idlg .itable th.itable__num,
+.idlg .itable td.itable__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Numerals line up in their own columns; the description takes the rest. */
+.idlg .itable th:nth-child(1) { width: auto; }
+.idlg .itable th:nth-child(2) { width: 16%; }
+.idlg .itable th:nth-child(3) { width: 20%; }
+.idlg .itable th:nth-child(4) { width: 20%; }
+
+.idlg .itable td.itable__num .money { align-items: flex-end; }
+
+/* The sum: set apart from the lines, and the only bold figure. */
+.idlg .itable tfoot td {
+  padding-top: var(--s-3);
+  border-top: 2px solid var(--rule-strong);
+  border-bottom: 0;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+@media (max-width: 760px) {
+  /* The card layout owns the widths below the breakpoint. */
+  .idlg .itable { table-layout: auto; }
+  .idlg .itable tfoot td { border-top: 0; }
+
+  .idlg .itable tfoot tr {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--r-lg);
+    background: var(--surface-sunken);
+  }
+}
 
 .ctable__c-buyer,
 .ctable__c-sup {
@@ -949,6 +1345,13 @@ useSeo(() => ({
   padding: var(--s-4) var(--s-5);
   border-bottom: 1px solid var(--rule);
   background: var(--surface);
+}
+
+/* A sheet header is a label, not a page title — the global h2 scale
+   (up to 2rem) is sized for section headings on a full page. */
+.railsheet__head h2 {
+  font-size: var(--t-md);
+  letter-spacing: -0.01em;
 }
 
 .railsheet__x {

@@ -135,7 +135,10 @@
       "body": "Escribí qué compró el Estado, o elegí un organismo en el panel de filtros."
     },
     "tooMany": "Mostrando los primeros {shown}. Afiná los filtros para ver menos resultados.",
-    "moreItems": "+{n} artículo más | +{n} artículos más"
+    "moreItems": "+{n} artículo más | +{n} artículos más",
+    "histogramCount": "Contratos por año",
+    "histogramValue": "Monto por año",
+    "needFilter": "Agregá un filtro (año, organismo, proveedor o monto) para ver totales."
   },
   "filters": {
     "title": "Filtros",
@@ -196,7 +199,8 @@
       "raw": "Datos crudos",
       "amendments": "Modificaciones",
       "provenance": "Origen del registro",
-      "amount": "Detalle del monto"
+      "amount": "Detalle del monto",
+      "itemsTender": "Qué se pide"
     },
     "itemsHelp": "Artículos adjudicados con su cantidad y precio unitario.",
     "noItems": "El registro oficial no detalla artículos para este contrato.",
@@ -288,10 +292,13 @@
       "version": "Versión del cálculo",
       "exchangeRateDate": "Tipo de cambio al",
       "originalUYU": "Importe original en pesos",
-      "converted": "Incluye conversión"
+      "converted": "Incluye conversión",
+      "ocdsJson": "Documento OCDS (JSON)",
+      "contact": "Contacto"
     },
     "amendmentOf": "Modifica a {id}",
-    "itemsCount": "{n} artículo | {n} artículos"
+    "itemsCount": "{n} artículo | {n} artículos",
+    "itemsTenderHelp": "Artículos incluidos en el llamado. Los precios aparecen recién con la adjudicación."
   },
   "suppliers": {
     "title": "Proveedores del Estado",

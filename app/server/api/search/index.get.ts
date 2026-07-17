@@ -64,7 +64,8 @@ export default defineEventHandler(async (event) => {
 
       results.contracts = contracts.map(doc => ({
         ...doc,
-        sourceUrl: sourceUrl(doc.id),
+        // ocid, not id — see utils/query.ts#sourceUrl.
+        sourceUrl: sourceUrl(doc.ocid),
       }))
     }
 

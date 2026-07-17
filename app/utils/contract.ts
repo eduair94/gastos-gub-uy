@@ -262,27 +262,97 @@ export function statusTagClass(status?: string | null): string {
   return STATUS_TAG[status ?? ''] ?? 'tag--neutral'
 }
 
-/** es-UY short date. */
+/**
+ * es-UY short date, read in UTC.
+ *
+ * These timestamps are Uruguayan wall-clock stamped with a `Z`: an award
+ * dated 1 July is stored `2026-07-01T00:00:00.000Z`. Formatting that in
+ * the reader's zone (UTC-3 in Uruguay) rolls it back to 30 June — every
+ * midnight date on the site was showing the day before, and
+ * contradicting the government's own page. Reading in UTC returns the
+ * date the source actually recorded.
+ */
 export function formatDate(d?: Date | string | null): string {
   if (!d) return '—'
   const date = d instanceof Date ? d : new Date(d)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat('es-UY', { day: '2-digit', month: 'short', year: 'numeric' }).format(date)
+  return new Intl.DateTimeFormat('es-UY', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date)
 }
 
 export function formatDateLong(d?: Date | string | null): string {
   if (!d) return '—'
   const date = d instanceof Date ? d : new Date(d)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat('es-UY', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
+  return new Intl.DateTimeFormat('es-UY', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date)
 }
 
 /**
- * The official record for a release on the government's own site.
- * Mirrors `server/utils/query.ts#sourceUrl` for the cases where the API
- * response predates that field.
+ * True when a timestamp carries a real time-of-day rather than midnight.
+ *
+ * Read in UTC on purpose — see `formatDateTime`.
  */
-export function govSourceUrl(id?: string | null): string | null {
+export function hasTimeOfDay(d?: Date | string | null): boolean {
+  if (!d) return false
+  const date = d instanceof Date ? d : new Date(d)
+  if (Number.isNaN(date.getTime())) return false
+  return date.getUTCHours() !== 0 || date.getUTCMinutes() !== 0
+}
+
+/**
+ * Date + time, rendered in UTC.
+ *
+ * The source stamps local Uruguayan wall-clock times with a `Z` suffix:
+ * a tender closing at 15:00 in Montevideo is stored as
+ * `2026-09-30T15:00:00.000Z`. Converting that to America/Montevideo
+ * would render 12:00 and contradict the government's own page, which
+ * says 15:00. Echoing the source's wall clock is the honest read — a
+ * deadline is only useful if it matches the official one.
+ */
+export function formatDateTime(d?: Date | string | null): string {
+  if (!d) return '—'
+  const date = d instanceof Date ? d : new Date(d)
+  if (Number.isNaN(date.getTime())) return '—'
+  if (!hasTimeOfDay(date)) return formatDate(date)
+  return new Intl.DateTimeFormat('es-UY', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'UTC',
+  }).format(date)
+}
+
+/**
+ * The public government page for a purchase — the page a reader opens to
+ * check us. Mirrors `server/utils/query.ts#sourceUrl`; keep the two in
+ * step.
+ *
+ * Takes the **ocid**, not the release `id`. The ocid suffix is the
+ * government's `id_compra`; `id` differs on adjustment and cancellation
+ * records and resolves to an unrelated contract there.
+ */
+export function govSourceUrl(ocid?: string | null): string | null {
+  if (!ocid) return null
+  const m = /^ocds-[a-z0-9]+-(.+)$/i.exec(ocid.trim())
+  const compraId = (m?.[1] ?? '').trim()
+  if (!compraId) return null
+  return `https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/${encodeURIComponent(compraId)}`
+}
+
+/** The raw OCDS JSON for one release. Keyed on `id`, unlike the page above. */
+export function ocdsJsonUrl(id?: string | null): string | null {
   if (!id) return null
   return `https://www.comprasestatales.gub.uy/ocds/release/${encodeURIComponent(id)}`
 }

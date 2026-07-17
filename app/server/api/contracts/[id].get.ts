@@ -3,7 +3,7 @@ import { isValidObjectId } from 'mongoose'
 import type { IRelease } from '../../../types'
 import { connectToDatabase } from '../../utils/database'
 import { ReleaseModel } from '../../utils/models'
-import { sourceUrl } from '../../utils/query'
+import { ocdsJsonUrl, sourceUrl } from '../../utils/query'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -44,8 +44,12 @@ export default defineEventHandler(async (event) => {
     // Calculate additional fields for the detailed view
     const enhancedContract = {
       ...contract,
-      // Derived from the stored `id` — see server/utils/query.ts.
-      sourceUrl: sourceUrl(contract.id),
+      // The human-facing government page, keyed on ocid — `id` resolves
+      // to a DIFFERENT contract on adjustment/cancellation records.
+      // See server/utils/query.ts#sourceUrl.
+      sourceUrl: sourceUrl(contract.ocid),
+      // The raw OCDS document for this specific release, keyed on id.
+      ocdsUrl: ocdsJsonUrl(contract.id),
       totalAmount: contract.awards?.reduce((total, award) => {
         const awardTotal = award.items?.reduce((awardSum, item) => {
           return awardSum + (item.unit?.value?.amount || 0)

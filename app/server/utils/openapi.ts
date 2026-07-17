@@ -713,11 +713,15 @@ export const openApiDocument = {
           sourceUrl: {
             type: ['string', 'null'],
             format: 'uri',
-            description: 'Canonical public record for this release on the government site '
-              + '(`https://www.comprasestatales.gub.uy/ocds/release/{id}`). Derived from `id` rather than '
-              + 'stored, and `null` if the release has no usable id. Link here when displaying a contract '
-              + 'so readers can verify any figure against the official source.',
-            example: 'https://www.comprasestatales.gub.uy/ocds/release/adjudicacion-496833',
+            description: 'The public government page for this purchase '
+              + '(`https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/{id_compra}`). '
+              + 'Derived, not stored: `id_compra` is the `ocid` with its `ocds-<prefix>-` stripped. '
+              + 'Derived from **ocid, not id** — on adjustment and cancellation releases the two differ and '
+              + '`id` resolves to an unrelated contract (e.g. `ajuste_llamado-47064` has ocid '
+              + '`ocds-yfs5dr-1356289`: `/id/1356289` is Compra Directa 1240/2026 while `/id/47064` is '
+              + 'Compra Directa 1023/2005). `null` if the release has no usable ocid. Link here when '
+              + 'displaying a contract so readers can verify any figure against the official source.',
+            example: 'https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1352393',
           },
           date: { type: 'string', format: 'date-time', example: '2026-07-15T20:15:00.000Z' },
           tag: { type: 'array', items: { type: 'string' }, example: ['award'] },
@@ -747,7 +751,7 @@ export const openApiDocument = {
           _id: { type: 'string', description: 'Mongo document id. Accepted by `/api/contracts/{id}`.', example: '6894de0cfbc85dc56b8ca856' },
           id: { type: 'string', example: 'adjudicacion-496833' },
           ocid: { type: 'string', example: 'ocds-70d2nz-496833' },
-          sourceUrl: { type: ['string', 'null'], format: 'uri', description: 'Canonical public record on comprasestatales.gub.uy.', example: 'https://www.comprasestatales.gub.uy/ocds/release/adjudicacion-496833' },
+          sourceUrl: { type: ['string', 'null'], format: 'uri', description: 'Public government page for this purchase, derived from `ocid` (not `id`). See the Contract schema.', example: 'https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1352393' },
           date: { type: 'string', format: 'date-time' },
           tender: { type: 'object', properties: { title: { type: 'string' } } },
           buyer: { type: 'object', properties: { name: { type: 'string' } } },

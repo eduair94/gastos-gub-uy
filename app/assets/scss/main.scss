@@ -324,13 +324,28 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 
   .dtable tr:hover { border-color: var(--rule-strong); }
 
+  // A fixed, narrow label column. `auto` sized the label to its own text,
+  // so "ORGANISMO" or "PRECIO UNITARIO" ate half the card and forced the
+  // value to wrap into a ragged right-aligned column.
+  //
+  // `max-width` and `width` MUST be reset: the desktop column widths
+  // (e.g. `.ctable__c-buyer { max-width: 190px }`) still cascade here,
+  // and a 190px cell minus the 92px label left the value 54px — which is
+  // what made "Jefatura de Policía de Rivera" wrap onto four lines.
+  // `align-items: start`, not `baseline`: <MoneyAmount> is a column flex
+  // (figure above its magnitude rule), so its baseline sits low and the
+  // MONTO row's label dropped out of line with every other label.
+  // Aligning both tracks to the top lines the labels up regardless of
+  // what the value renders as.
   .dtable td {
     display: grid;
-    grid-template-columns: minmax(0, auto) 1fr;
-    align-items: baseline;
-    gap: var(--s-4);
+    grid-template-columns: 92px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--s-3);
     padding: var(--s-2) 0;
     border: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
   }
 
   // Hairlines between the label/value rows give the card structure
@@ -350,6 +365,10 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
     text-transform: uppercase;
     color: var(--text-muted);
     white-space: nowrap;
+    // Nudge the label onto the value's first text line: the label is
+    // 11px mono and the value 13px body, so top-aligning the boxes alone
+    // leaves them visibly off.
+    padding-top: 2px;
   }
 
   // The headline cell owns the full width and needs no label — it is
@@ -364,24 +383,29 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 
   .dtable td[data-primary]::before { content: none; }
 
-  // Values sit hard right, opposite their label, so a column of
-  // amounts still reads as a column.
-  .dtable td > *:not(::before) { justify-self: end; }
-  .dtable td .money { align-items: flex-end; }
+  // Values start where the label ends and read left-to-right. Right
+  // alignment belongs to a table column, where figures stack; inside a
+  // card there is no column to line up with, and a wrapped name pushed
+  // hard right just looks broken.
+  //
+  // (`> *` cannot match ::before — a pseudo-element is not a child — so
+  // no exclusion is needed. The earlier `:not(::before)` was an invalid
+  // selector, which made the browser drop this whole rule.)
+  .dtable td > * {
+    justify-self: stretch;
+    text-align: left;
+    min-width: 0;
+  }
 
-  // Nested detail (the item preview) is content of the primary cell,
-  // not a label/value pair — let it use the full width, left aligned.
-  .dtable td[data-primary] > * { justify-self: stretch; }
+  .dtable td .money { align-items: flex-start; }
 
   // Nothing is clamped once each cell has a row to itself.
   .dtable td .u-clamp-2 {
     -webkit-line-clamp: unset;
     line-clamp: unset;
     display: block;
-    text-align: right;
+    text-align: left;
   }
-
-  .dtable td[data-primary] .u-clamp-2 { text-align: left; }
 
   // A card layout has no minimum width to enforce.
   .dtable { min-width: 0 !important; }
