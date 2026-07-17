@@ -238,11 +238,23 @@ export function buildContractFilters(query: Record<string, unknown>): ContractFi
   const currency = toArray(query.currency).map(c => c.toUpperCase())
   if (currency.length) and.push({ 'amount.currencies': { $in: currency } })
 
-  // --- Category -------------------------------------------------------------
+  // --- Category (by free-text description) -----------------------------------
   // Maps to the award item classification description. NOT indexed, so this is
   // a refinement filter: cheap alongside a year/buyer filter, expensive alone.
+  // Prefer `categoryId` below wherever the exact catalogue code is known — the
+  // description is unnormalised and frequently contains commas, which the list
+  // parsing splits into bogus fragments.
   const categoryFilter = nameFilter('awards.items.classification.description', toArray(query.category))
   if (categoryFilter) and.push(categoryFilter)
+
+  // --- Category by catalogue code (classification.id) ------------------------
+  // The canonical product key: exact, comma-safe, and index-backed by
+  // `awards.items.classification.id_1_date_-1` (see scripts/ensure-indexes.ts).
+  // This is what the product pages and the price-reference "comparables" link
+  // use, so a code like "8172" selects exactly the population its baseline was
+  // computed from — unlike the description, which is many-to-many with codes.
+  const categoryIds = toArray(query.categoryId)
+  if (categoryIds.length) and.push({ 'awards.items.classification.id': { $in: categoryIds } })
 
   // --- Minimum item count ---------------------------------------------------
   const minItems = toNumberOrNull(query.minItems)

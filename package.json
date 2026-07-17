@@ -10,6 +10,7 @@
     "populate-analytics": "tsx src/populate-analytics.ts",
     "precalculate-dashboard": "tsx src/precalculate-dashboard.ts",
     "refresh-analytics": "tsx src/jobs/refresh-analytics.ts",
+    "refresh-product-analytics": "tsx src/jobs/refresh-product-analytics.ts",
     "detect-anomalies": "tsx src/jobs/detect-anomalies.ts",
     "ensure-indexes": "tsx scripts/ensure-indexes.ts",
     "create-text-index": "tsx scripts/create-text-index.ts",

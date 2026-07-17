@@ -5,6 +5,7 @@ export * from './expense_insight';
 export * from './filter_data';
 export * from './item_price_baseline';
 export * from './precalculated-models';
+export * from './product_analytics';
 export * from './release';
 export * from './supplier_pattern';
 

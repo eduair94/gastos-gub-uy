@@ -132,6 +132,23 @@ const INDEX_SPECS: IndexSpec[] = [
     key: { 'sourceYear': 1, 'tender.procurementMethodDetails': 1 },
     rationale: 'Year + procedure-name combined filter',
   },
+
+  // Catalogue code (classification.id). Multikey over the awards.items array.
+  // Backs the product pages and the price-reference "comparables" link, which
+  // filter `awards.items.classification.id` exactly and sort by date/amount.
+  // Without it, a categoryId filter degrades to the same unindexed full-range
+  // walk that timed out the description-keyed `category` filter (15s aggregate
+  // / 4s count), surfacing as a 500 on the comparables link.
+  {
+    name: 'awards.items.classification.id_1_date_-1',
+    key: { 'awards.items.classification.id': 1, 'date': -1 },
+    rationale: 'Catalogue-code filter + date sort (product pages, comparables link)',
+  },
+  {
+    name: 'awards.items.classification.id_1_amount.primaryAmount_-1',
+    key: { 'awards.items.classification.id': 1, 'amount.primaryAmount': -1 },
+    rationale: 'Catalogue-code filter + amount sort',
+  },
 ]
 
 /** Ordered [field, direction] pairs. Order matters for compound indexes. */
@@ -335,6 +352,34 @@ async function main(): Promise<void> {
     console.log('✅ Connected')
 
     const failed = await ensureIndexes(client.db(DB_NAME), dryRun)
+
+    // Side collections. Mongoose `autoIndex` is off globally (replaying
+    // schema indexes against the live 2.1M `releases` collection on every
+    // boot is what it protects against), so schema-declared indexes on the
+    // small side collections must be ensured here instead.
+    //
+    // `contract_item_features` is the per-compra cache of scraped item
+    // características (see server/api/contracts/[id]/features.get.ts); the
+    // unique key is what makes its upsert idempotent.
+    if (!dryRun) {
+      await client.db(DB_NAME)
+        .collection('contract_item_features')
+        .createIndex({ compraId: 1 }, { unique: true, background: true })
+      console.log('✅ contract_item_features.compraId_1 (unique) ensured')
+
+      // product_analytics is rebuilt (compute-then-swap) by
+      // src/jobs/refresh-product-analytics.ts. `code` is the point-lookup key
+      // the detail API uses; the rank indexes back the list page's sort.
+      const products = client.db(DB_NAME).collection('product_analytics')
+      await products.createIndex({ code: 1 }, { unique: true, background: true })
+      await products.createIndex({ rankBySpend: 1 }, { background: true })
+      await products.createIndex({ rankByLines: 1 }, { background: true })
+      console.log('✅ product_analytics indexes ensured (code unique, rankBySpend, rankByLines)')
+    }
+    else {
+      console.log('   plan: contract_item_features.compraId_1 (unique)')
+      console.log('   plan: product_analytics.code_1 (unique), rankBySpend_1, rankByLines_1')
+    }
 
     if (failed > 0) {
       console.error(`\n❌ ${failed} index build(s) failed. Re-run to retry — completed indexes are skipped.`)

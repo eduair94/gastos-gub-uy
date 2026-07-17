@@ -26,6 +26,7 @@ watch(() => route.query.search, (q) => {
 const nav = computed(() => [
   { key: 'home', to: localePath('/'), icon: 'mdi-view-dashboard-outline' },
   { key: 'contracts', to: localePath('/contracts'), icon: 'mdi-file-document-outline' },
+  { key: 'products', to: localePath('/products'), icon: 'mdi-package-variant-closed' },
   { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
   { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
   { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
@@ -83,6 +84,15 @@ watch(() => route.fullPath, () => {
 
 <template>
   <v-app>
+    <!-- Two-tier navigation feedback: an instant top bar for every route
+         change, and a dim overlay (NavLoading) that only appears when a
+         navigation blocks on data long enough to feel unresponsive. -->
+    <NuxtLoadingIndicator
+      color="var(--celeste)"
+      :height="3"
+    />
+    <NavLoading />
+
     <a
       class="u-skip"
       href="#contenido"

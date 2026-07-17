@@ -6,3 +6,4 @@ db
 .nuxt
 database-export
 dist
+logs

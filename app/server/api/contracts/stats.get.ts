@@ -118,7 +118,7 @@ async function typicalContract(match: Record<string, unknown> = {}): Promise<num
 const SELECTIVE_PARAMS = [
   'search', 'year', 'yearFrom', 'yearTo', 'amountFrom', 'amountTo',
   'buyers', 'buyerIds', 'suppliers', 'supplierIds',
-  'procurementMethodDetails', 'procurementMethod', 'category', 'minItems',
+  'procurementMethodDetails', 'procurementMethod', 'category', 'categoryId', 'minItems',
 ] as const
 
 function isSelective(query: Record<string, unknown>): boolean {

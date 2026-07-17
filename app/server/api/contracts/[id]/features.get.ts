@@ -49,7 +49,13 @@ function decodeEntities(s: string): string {
  * the `buy-item-title-small` heading for variación), so a layout change
  * that breaks one still yields the other.
  */
-export function parseItemFeatures(html: string): ScrapedItem[] {
+export function parseItemFeatures(rawHtml: string): ScrapedItem[] {
+  // Normalise every non-breaking space form to a plain space BEFORE the regexes
+  // run: the gov pages emit `&nbsp;`, but numeric `&#160;` / `&#xa0;` also occur,
+  // and an item heading using the numeric form would otherwise not match headRe
+  // and lose that item's variación.
+  const html = rawHtml.replace(/&nbsp;|&#0*160;|&#x0*a0;/gi, ' ')
+
   const byNro = new Map<number, ScrapedItem>()
   const item = (nro: number): ScrapedItem => {
     let it = byNro.get(nro)
@@ -191,18 +197,27 @@ export default defineEventHandler(async (event) => {
 
     let items: ScrapedItem[] | null = null
     let source: 'adjudicacion' | 'llamado' = urls[0]!.source
+    // A page we tried to fetch but couldn't (network/5xx) — distinct from a page
+    // that loaded fine and simply has no características.
+    let anyTransient = false
     for (const u of urls) {
       if (!u.url) continue
       const scraped = await scrape(u.url)
-      if (scraped === null) continue
+      if (scraped === null) {
+        anyTransient = true
+        continue
+      }
       items = scraped
       source = u.source
       if (scraped.length) break
     }
 
-    // Both fetches failed -> transient gov outage. Report empty but do
-    // NOT cache, so the next view retries.
-    if (items === null) {
+    // Don't cache a confirmed-empty result when a page we needed failed
+    // transiently: if the adjudicación timed out and the llamado merely returned
+    // an empty 200, the real características may still be on the page we couldn't
+    // reach. Report empty for this view but leave the cache unset so the next
+    // view retries, instead of poisoning it with a false "no características".
+    if (items === null || (items.length === 0 && anyTransient)) {
       return { success: true, data: { compraId, source, items: [], transient: true } }
     }
 

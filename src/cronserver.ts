@@ -613,6 +613,15 @@ class CronServer {
       this.logger.info("Refreshing filter data...");
       await this.runJobProcess("populate-filters");
 
+      // Per catalogue-code analytics (product_analytics), for the /products pages. Non-fatal and
+      // last, like populate-filters: a slow product rebuild must not roll back analytics that
+      // already landed. Sets a long socket timeout because its four grouped scans over ~2.2M
+      // releases legitimately run for minutes (see shared/connection/database.ts).
+      this.logger.info("Refreshing product analytics...");
+      await this.runJobProcess("jobs/refresh-product-analytics").catch((error) => {
+        this.logger.error("Product analytics refresh failed (non-fatal):", error);
+      });
+
       this.analyticsStatus.status = "idle";
       this.analyticsStatus.successfulRuns++;
       this.logger.info("Analytics refresh completed successfully");

@@ -7,6 +7,7 @@
     "skip": "Ir al contenido",
     "home": "Panel",
     "contracts": "Contratos",
+    "products": "Productos",
     "suppliers": "Proveedores",
     "buyers": "Organismos",
     "anomalies": "Alertas",
@@ -315,7 +316,8 @@
       "typical": "Habitual (mediana)",
       "range": "Rango usual",
       "comparables": "Comparables",
-      "viewComparables": "Ver los {n} comparables",
+      "viewComparables": "Ver compras comparables",
+      "viewProduct": "Ficha del producto",
       "presNote": "El precio unitario de los datos abiertos no incluye la presentación del artículo (p. ej. envase de 250 g vs. 1 g), y eso puede cambiar la lectura de la comparación. Cuando la conseguimos figura junto al artículo; siempre podés verificarla en",
       "presNoteSource": "la página oficial de la compra.",
       "method": "Cómo se calculan las alertas de precio",
@@ -329,6 +331,54 @@
     },
     "officialAward": "Ver adjudicación",
     "officialTender": "Ver llamado"
+  },
+  "products": {
+    "title": "Qué compra el Estado",
+    "lead": "Cada producto y servicio del catálogo estatal: quién lo compra, a quién y en qué cantidad.",
+    "help": "Agrupado por el código de catálogo (no por el texto libre, que fragmenta un mismo rubro en variantes de escritura). Las cantidades reflejan todas las compras; el gasto en pesos aparece cuando el origen informó el monto.",
+    "searchPlaceholder": "Buscar un producto o código",
+    "count": "{n} productos",
+    "codeLabel": "Cód. {code}",
+    "sortLabel": "Ordenar por",
+    "sort": {
+      "spend": "Mayor gasto",
+      "contracts": "Más contratos",
+      "buyers": "Más organismos",
+      "lines": "Más comprado"
+    },
+    "cols": {
+      "spend": "Gasto (pesos)",
+      "contracts": "Contratos",
+      "buyers": "Organismos",
+      "suppliers": "Proveedores"
+    },
+    "empty": {
+      "title": "Ningún producto coincide con esa búsqueda",
+      "body": "Probá con parte del nombre del artículo o su código de catálogo."
+    },
+    "detail": {
+      "eyebrow": "Producto",
+      "totalSpent": "Gasto informado",
+      "contracts": "Contratos",
+      "buyers": "Organismos compradores",
+      "suppliers": "Proveedores",
+      "lines": "Ítems comprados",
+      "byYearTitle": "Compras por año",
+      "topBuyersTitle": "Quién lo compra",
+      "topBuyersHelp": "Organismos que más veces compraron este producto.",
+      "topSuppliersTitle": "Quién lo vende",
+      "topSuppliersHelp": "Proveedores que más veces vendieron este producto al Estado.",
+      "nPurchases": "{n} compras",
+      "priceTitle": "Precios de referencia",
+      "priceHelp": "Distribución de precios por unidad y moneda en los últimos 36 meses — la misma referencia que usan las alertas de precio.",
+      "unit": "Unidad",
+      "viewAllContracts": "Ver todos los contratos de este producto",
+      "notFound": {
+        "title": "No encontramos ese producto",
+        "body": "El código de catálogo puede no existir o no tener compras registradas.",
+        "action": "Ver todos los productos"
+      }
+    }
   },
   "suppliers": {
     "title": "Proveedores del Estado",
@@ -497,6 +547,14 @@
     "contractDetail": {
       "title": "{title} — {buyer}",
       "description": "{buyer} adjudicó {amount} a {supplier} el {date}. Detalle completo del contrato, artículos y documentos oficiales."
+    },
+    "products": {
+      "title": "Qué compra el Estado uruguayo — productos y servicios",
+      "description": "Explorá cada producto del catálogo estatal: quién lo compra, a qué proveedores y a qué precio. Datos abiertos oficiales."
+    },
+    "productDetail": {
+      "title": "{name} — compras del Estado",
+      "description": "{name}: {contracts} contratos y {buyers} organismos compradores. Quién lo compra, a quién y a qué precio."
     },
     "suppliers": {
       "title": "Proveedores del Estado uruguayo",

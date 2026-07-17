@@ -377,7 +377,10 @@ const hasTenderFacts = computed(() => {
 // ---- Price reference -------------------------------------------------
 interface PriceRef {
   description: string
-  /** Catalogue description — the value the explorer's `category` filter matches. */
+  /** Catalogue code (classification.id) — the exact, comma-safe key the baseline buckets on and
+   *  the explorer's `categoryId` filter matches. Used for the comparables + product links. */
+  code: string
+  /** Catalogue description — display only; NOT used to filter (it is many-to-many with codes). */
   catDesc: string
   /** Gov item Nº, to join the scraped presentación características. */
   nro: number | null
@@ -440,6 +443,7 @@ const priceReferences = computed<PriceRef[]>(() => {
 
       out.push({
         description: item.description?.trim() || item.classification?.description?.trim() || '—',
+        code: classificationId,
         catDesc: item.classification?.description?.trim() || '',
         nro: (() => {
           const m = /^(\d+)/.exec(item.id ?? '')
@@ -494,25 +498,30 @@ function refPresentation(r: PriceRef): string {
 }
 
 /**
- * The explorer, pre-filtered to (approximately) this row's baseline
- * population: same catalogue article, same currency, awards of the last
- * three years with a real amount. The baseline buckets on catalogue *id*
- * while the explorer's `category` param matches the catalogue
- * *description* — a 1:1 pair in this catalogue — so the reader lands on
- * the actual purchases the "muy por encima" flag was scored against.
+ * The explorer, filtered to exactly this row's catalogue code.
+ *
+ * Filters by `categoryId` (classification.id), NOT the description: the baseline buckets on the
+ * code, the code is index-backed, and — unlike the description — it is comma-safe and not
+ * many-to-many with codes. So the reader lands on precisely the purchases the flag was scored
+ * against, rather than a comma-shattered or wrong-code set. No count is advertised because the
+ * explorer counts releases while the baseline counts item-price observations.
  */
 function comparablesLink(r: PriceRef): string | null {
-  if (!r.catDesc) return null
+  if (!r.code) return null
   return localePath({
     path: '/contracts',
     query: {
-      category: r.catDesc,
+      categoryId: r.code,
       currency: r.currency,
       tag: 'award',
       hasAmount: 'true',
-      yearFrom: String(new Date().getFullYear() - 3),
     },
   })
+}
+
+/** The product page for this catalogue code — its full who/how-much/price profile. */
+function productLink(code: string): string | null {
+  return code ? localePath(`/products/${encodeURIComponent(code)}`) : null
 }
 
 const referenceColumns = computed(() => [
@@ -1047,6 +1056,7 @@ useSeo(() => ({
                 :rows="g.rows"
                 :row-key="it => it.key"
                 min-width="560px"
+                :framed="false"
               >
                 <template #cell:description="{ row }">
                   {{ row.description || '—' }}
@@ -1066,7 +1076,13 @@ useSeo(() => ({
                   </template>
                 </template>
                 <template #cell:code="{ row }">
-                  <span v-if="row.code" class="u-mono">{{ row.code }}</span>
+                  <!-- The catalogue code links to its product page: what else
+                       the state buys under it, from whom, at what price. -->
+                  <NuxtLink
+                    v-if="row.code"
+                    :to="localePath(`/products/${encodeURIComponent(row.code)}`)"
+                    class="itable__code u-mono"
+                  >{{ row.code }}</NuxtLink>
                   <span v-else class="u-muted">—</span>
                   <span v-if="row.codeDescription" class="itable__u">{{ row.codeDescription }}</span>
                 </template>
@@ -1107,6 +1123,7 @@ useSeo(() => ({
               :rows="priceReferences"
               :row-key="(_r, i) => i"
               min-width="600px"
+              :framed="false"
             >
               <template #cell:description="{ row }">
                 <span class="refcell__name">{{ row.description }}</span>
@@ -1120,11 +1137,18 @@ useSeo(() => ({
                   v-if="refPresentation(row)"
                   class="refcell__pres u-mono"
                 >{{ refPresentation(row) }}</span>
-                <NuxtLink
-                  v-if="comparablesLink(row)"
-                  :to="comparablesLink(row)!"
-                  class="refcell__link"
-                >{{ t('contract.reference.viewComparables', { n: row.n }) }}</NuxtLink>
+                <span class="refcell__links">
+                  <NuxtLink
+                    v-if="comparablesLink(row)"
+                    :to="comparablesLink(row)!"
+                    class="refcell__link"
+                  >{{ t('contract.reference.viewComparables') }}</NuxtLink>
+                  <NuxtLink
+                    v-if="productLink(row.code)"
+                    :to="productLink(row.code)!"
+                    class="refcell__link"
+                  >{{ t('contract.reference.viewProduct') }}</NuxtLink>
+                </span>
               </template>
               <template #cell:paid="{ row }">
                 <MoneyAmount :amount="row.paid" :currency="row.currency" :rule="false" size="sm" decimals />
@@ -1139,25 +1163,29 @@ useSeo(() => ({
                 {{ formatNumber(row.n) }}
               </template>
             </DataTable>
-            <!-- The one caveat this table needs: the feed's unit price
-                 ignores the presentación, so "per G" can mean "per
-                 250 G envase". Without saying so, a correct row reads
-                 as a 250× scandal — or a real one reads as normal. -->
-            <p class="reftable__note">
-              {{ t('contract.reference.presNote') }}
-              <a
-                v-if="awardLink"
-                :href="awardLink"
-                target="_blank"
-                rel="noopener"
-              >{{ t('contract.reference.presNoteSource') }}</a>
-            </p>
-            <NuxtLink
-              :to="localePath('/analytics/anomalies')"
-              class="reftable__link"
-            >
-              {{ t('contract.reference.method') }}
-            </NuxtLink>
+            <!-- The note + method link get a real padded footer instead of
+                 sitting flush against the card's left and bottom edges. -->
+            <div class="panel__foot">
+              <!-- The one caveat this table needs: the feed's unit price
+                   ignores the presentación, so "per G" can mean "per
+                   250 G envase". Without saying so, a correct row reads
+                   as a 250× scandal — or a real one reads as normal. -->
+              <p class="reftable__note">
+                {{ t('contract.reference.presNote') }}
+                <a
+                  v-if="awardLink"
+                  :href="awardLink"
+                  target="_blank"
+                  rel="noopener"
+                >{{ t('contract.reference.presNoteSource') }}</a>
+              </p>
+              <NuxtLink
+                :to="localePath('/analytics/anomalies')"
+                class="reftable__link"
+              >
+                {{ t('contract.reference.method') }}
+              </NuxtLink>
+            </div>
           </section>
 
           <!-- ===== Amendments ===== -->
@@ -1805,9 +1833,14 @@ a.party__name:hover { text-decoration: underline; }
   color: var(--text-muted);
 }
 
-.refcell__link {
-  display: block;
+.refcell__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
   margin-top: var(--s-1);
+}
+
+.refcell__link {
   font-size: var(--t-xs);
   font-weight: 600;
   color: var(--celeste-deep);
@@ -1817,7 +1850,8 @@ a.party__name:hover { text-decoration: underline; }
 .refcell__link:hover { text-decoration: underline; }
 
 .reftable__note {
-  margin: var(--s-3) 0 0;
+  /* .panel__foot owns the outer spacing now. */
+  margin: 0;
   font-size: var(--t-xs);
   color: var(--text-muted);
   max-width: 70ch;
@@ -1893,7 +1927,9 @@ a.party__name:hover { text-decoration: underline; }
   grid-auto-columns: max-content;
   justify-content: start;
   gap: var(--s-5);
-  padding: var(--s-3) var(--s-4);
+  /* s-5 inline so the award bar lines up with the panel head and the
+     unframed items table below it. */
+  padding: var(--s-3) var(--s-5);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -1906,7 +1942,7 @@ a.party__name:hover { text-decoration: underline; }
 
 .agroup__empty {
   margin: 0;
-  padding: var(--s-4);
+  padding: var(--s-4) var(--s-5);
   font-size: var(--t-sm);
 }
 
@@ -1986,7 +2022,11 @@ a.party__name:hover { text-decoration: underline; }
 .itable__code {
   display: block;
   font-size: var(--t-sm);
+  color: var(--celeste-deep);
+  text-decoration: none;
 }
+
+a.itable__code:hover { text-decoration: underline; }
 
 .itable__u {
   display: block;

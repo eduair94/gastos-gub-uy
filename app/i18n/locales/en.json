@@ -7,6 +7,7 @@
     "skip": "Skip to content",
     "home": "Dashboard",
     "contracts": "Contracts",
+    "products": "Products",
     "suppliers": "Suppliers",
     "buyers": "Agencies",
     "anomalies": "Flags",
@@ -315,7 +316,8 @@
       "typical": "Typical (median)",
       "range": "Usual range",
       "comparables": "Comparables",
-      "viewComparables": "View the {n} comparables",
+      "viewComparables": "View comparable purchases",
+      "viewProduct": "Product page",
       "presNote": "The open-data unit price does not carry the article's presentation (e.g. a 250 g container vs. 1 g), which can change how this comparison reads. When we can recover it, it appears next to the article; you can always check it on",
       "presNoteSource": "the official purchase page.",
       "method": "How price flags are calculated",
@@ -329,6 +331,54 @@
     },
     "officialAward": "View award",
     "officialTender": "View tender"
+  },
+  "products": {
+    "title": "What the state buys",
+    "lead": "Every product and service in the state catalogue: who buys it, from whom, and in what quantity.",
+    "help": "Grouped by catalogue code (not free-text, which fragments one category across spelling variants). Counts reflect every purchase; peso spend appears where the source reported an amount.",
+    "searchPlaceholder": "Search a product or code",
+    "count": "{n} products",
+    "codeLabel": "Code {code}",
+    "sortLabel": "Sort by",
+    "sort": {
+      "spend": "Highest spend",
+      "contracts": "Most contracts",
+      "buyers": "Most agencies",
+      "lines": "Most purchased"
+    },
+    "cols": {
+      "spend": "Spend (pesos)",
+      "contracts": "Contracts",
+      "buyers": "Agencies",
+      "suppliers": "Suppliers"
+    },
+    "empty": {
+      "title": "No product matches that search",
+      "body": "Try part of the article name or its catalogue code."
+    },
+    "detail": {
+      "eyebrow": "Product",
+      "totalSpent": "Reported spend",
+      "contracts": "Contracts",
+      "buyers": "Buying agencies",
+      "suppliers": "Suppliers",
+      "lines": "Items bought",
+      "byYearTitle": "Purchases by year",
+      "topBuyersTitle": "Who buys it",
+      "topBuyersHelp": "Agencies that bought this product most often.",
+      "topSuppliersTitle": "Who sells it",
+      "topSuppliersHelp": "Suppliers that sold this product to the state most often.",
+      "nPurchases": "{n} purchases",
+      "priceTitle": "Price reference",
+      "priceHelp": "Price distribution per unit and currency over the last 36 months — the same baseline the price flags use.",
+      "unit": "Unit",
+      "viewAllContracts": "View all contracts for this product",
+      "notFound": {
+        "title": "We couldn't find that product",
+        "body": "The catalogue code may not exist or may have no recorded purchases.",
+        "action": "View all products"
+      }
+    }
   },
   "suppliers": {
     "title": "State suppliers",
@@ -497,6 +547,14 @@
     "contractDetail": {
       "title": "{title} — {buyer}",
       "description": "{buyer} awarded {amount} to {supplier} on {date}. Full contract detail, items, and official documents."
+    },
+    "products": {
+      "title": "What the Uruguayan state buys — products and services",
+      "description": "Explore every product in the state catalogue: who buys it, from which suppliers, and at what price. Official open data."
+    },
+    "productDetail": {
+      "title": "{name} — state purchases",
+      "description": "{name}: {contracts} contracts across {buyers} buying agencies. Who buys it, from whom, and at what price."
     },
     "suppliers": {
       "title": "Suppliers to the Uruguayan state",

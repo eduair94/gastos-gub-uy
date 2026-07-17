@@ -51,8 +51,17 @@ const props = withDefaults(defineProps<{
   rowClass?: (row: T) => string | undefined
   /** Min desktop width before the table scrolls horizontally in its own box. */
   minWidth?: string
+  /**
+   * Whether the table draws its own frame (border + radius + surface).
+   * Default true: the table is its own card. Set false when it lives
+   * inside a `.panel` — the panel is then the single frame, and the
+   * table aligns its cell inset to the panel's `--s-5` so columns line
+   * up with the panel head. Avoids the "box inside a box" double border.
+   */
+  framed?: boolean
 }>(), {
   minWidth: '640px',
+  framed: true,
 })
 
 const primaryKey = computed(() => props.columns.find(c => c.primary)?.key ?? props.columns[0]?.key)
@@ -69,7 +78,10 @@ function rowComponent(row: T) {
 </script>
 
 <template>
-  <div class="dt">
+  <div
+    class="dt"
+    :class="{ 'dt--bare': !framed }"
+  >
     <!-- One table, scrolling inside its own box on desktop so a wide row
          can never push the page body sideways. -->
     <div class="dt__scroll">
@@ -324,6 +336,24 @@ tbody .dt__row:hover .dt__td { background: var(--surface-sunken); }
     border-top: 0;
     background: var(--surface-sunken);
     border-radius: var(--r-lg);
+  }
+}
+
+/* ---- Unframed: the parent .panel is the single frame ---- */
+.dt--bare .dt__scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+@media (min-width: 761px) {
+  /* Line the columns up with the panel's s-5 head/foot inset rather
+     than the table's own s-4. Desktop only — mobile cards reset cell
+     padding to 0 and must stay that way. */
+  .dt--bare .dt__th,
+  .dt--bare .dt__td,
+  .dt--bare .dt__tfoot td {
+    padding-inline: var(--s-5);
   }
 }
 </style>

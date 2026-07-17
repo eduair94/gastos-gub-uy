@@ -188,6 +188,18 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 
 .panel__body { padding: var(--s-5); }
 
+// The footer counterpart to .panel__head. Trailing notes, method
+// links and captions that follow a full-bleed table or body get a
+// real padded region instead of sitting flush against the card's
+// edges. Same s-5 horizontal inset as head/body, so everything in a
+// panel lines up on one vertical rule.
+.panel__foot {
+  padding: var(--s-4) var(--s-5);
+  border-top: 1px solid var(--rule);
+}
+
+.panel__foot > :first-child { margin-top: 0; }
+
 .u-container {
   width: 100%;
   max-width: var(--container);
