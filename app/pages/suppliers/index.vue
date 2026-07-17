@@ -191,8 +191,8 @@ useSeo(() => ({
       </button>
     </div>
 
-    <div v-else class="u-scroll-x">
-      <table class="ctable">
+    <div v-else>
+      <table class="ctable dtable">
         <thead>
           <tr>
             <th scope="col">
@@ -214,22 +214,22 @@ useSeo(() => ({
         </thead>
         <tbody>
           <tr v-for="s in suppliers" :key="s.supplierId" class="ctable__row">
-            <td class="ctable__obj">
+            <td class="ctable__obj" data-primary>
               <NuxtLink :to="supplierPath(s.supplierId)" class="ctable__link">
                 {{ s.name }}
               </NuxtLink>
               <span class="ctable__id">{{ s.supplierId }}</span>
             </td>
-            <td class="ctable__c-n u-mono">
+            <td class="ctable__c-n u-mono" :data-label="t('suppliers.table.contracts')">
               {{ formatNumber(s.totalContracts) }}
             </td>
-            <td class="ctable__c-n u-mono">
+            <td class="ctable__c-n u-mono" :data-label="t('suppliers.table.buyers')">
               {{ formatNumber(s.buyerCount) }}
             </td>
-            <td class="ctable__c-amt">
+            <td class="ctable__c-amt" :data-label="t('suppliers.table.total')">
               <MoneyAmount :amount="s.totalValue" compact />
             </td>
-            <td class="ctable__c-amt">
+            <td class="ctable__c-amt" :data-label="t('suppliers.table.avg')">
               <MoneyAmount :amount="s.avgContractValue" compact size="sm" />
             </td>
           </tr>

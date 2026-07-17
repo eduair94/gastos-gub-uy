@@ -501,11 +501,8 @@ useSeo(() => ({
           </p>
         </div>
 
-        <div
-          v-else
-          class="u-scroll-x"
-        >
-          <table class="ctable">
+        <div v-else>
+          <table class="ctable dtable">
             <thead>
               <tr>
                 <th scope="col">
@@ -537,7 +534,10 @@ useSeo(() => ({
                 :key="c.id"
                 class="ctable__row"
               >
-                <td class="ctable__obj">
+                <td
+                  class="ctable__obj"
+                  data-primary
+                >
                   <NuxtLink
                     :to="localePath(`/contracts/${c.id}`)"
                     class="ctable__link"
@@ -551,7 +551,10 @@ useSeo(() => ({
                     {{ c.tender.procurementMethodDetails }}
                   </span>
                 </td>
-                <td class="ctable__c-sup">
+                <td
+                  class="ctable__c-sup"
+                  :data-label="t('contracts.table.supplier')"
+                >
                   <template v-if="contractSuppliers(c).length">
                     <NuxtLink
                       v-for="s in contractSuppliers(c)"
@@ -567,10 +570,16 @@ useSeo(() => ({
                     class="u-muted"
                   >—</span>
                 </td>
-                <td class="ctable__c-date u-mono">
+                <td
+                  class="ctable__c-date u-mono"
+                  :data-label="t('contracts.table.date')"
+                >
                   {{ formatDate(contractDate(c)) }}
                 </td>
-                <td class="ctable__c-amt">
+                <td
+                  class="ctable__c-amt"
+                  :data-label="t('contracts.table.amount')"
+                >
                   <MoneyAmount
                     :amount="amountOf(c)"
                     :currency="contractCurrency(c)"

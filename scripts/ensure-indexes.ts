@@ -43,6 +43,25 @@ interface IndexSpec {
  * instead of doing an in-memory SORT stage.
  */
 const INDEX_SPECS: IndexSpec[] = [
+  // `tag` is the lifecycle stage (award / tender / tenderUpdate / …). The
+  // explorer defaults to `tag: 'award'` because only award releases carry a
+  // supplier and an amount, so this is now on the hot path for the landing
+  // view — and it was previously unindexed, which timed the stats facet out.
+  {
+    name: 'tag_1_date_-1',
+    key: { tag: 1, date: -1 },
+    rationale: 'Stage filter + default date sort (explorer landing view)',
+  },
+  {
+    name: 'tag_1_amount.primaryAmount_-1',
+    key: { 'tag': 1, 'amount.primaryAmount': -1 },
+    rationale: 'Stage filter + amount sort, and the index-seek median',
+  },
+  {
+    name: 'tag_1_sourceYear_1',
+    key: { tag: 1, sourceYear: 1 },
+    rationale: 'Stage filter + per-year histogram in the stats facet',
+  },
   {
     name: 'sourceYear_1_amount.primaryAmount_-1',
     key: { 'sourceYear': 1, 'amount.primaryAmount': -1 },

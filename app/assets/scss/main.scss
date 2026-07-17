@@ -40,6 +40,12 @@ h1, h2, h3, h4,
   letter-spacing: -0.02em;
   color: var(--text);
   font-stretch: 112%; // Archivo's wide cut — the form title block
+
+  // Source data contains 85-character single words and unbroken
+  // identifiers. A heading must wrap them rather than push the layout
+  // sideways — the copy is not under our control, the layout is.
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 h1 { font-size: var(--t-2xl); }
@@ -222,10 +228,19 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
   &:focus { top: var(--s-4); }
 }
 
+// `overflow` and `text-overflow` are ignored on inline boxes, so an
+// inline <a> or <span> with this class used to keep `white-space: nowrap`
+// and push the layout sideways instead of clipping. Forcing an
+// inline-level block box makes the ellipsis actually apply, and
+// `max-width` keeps it inside its track.
 .u-truncate {
+  display: inline-block;
+  max-width: 100%;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .u-clamp-2 {
@@ -243,6 +258,173 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
 }
+
+// ============================================================
+// Responsive data tables
+//
+// A five-column procurement table cannot reach 360px without either
+// truncating past legibility or scrolling sideways, and a sideways
+// scroller hides whole columns — including the amount — behind a
+// gesture most people never discover.
+//
+// So below the breakpoint the table stops being a table: each row
+// becomes a card, the header row is dropped, and every cell carries
+// its own column name from `data-label`. The markup stays one
+// semantic <table>, so screen readers and the desktop layout are
+// unaffected.
+//
+// Usage:
+//   <table class="dtable">
+//     <td data-primary>…</td>                 <- the row's headline cell
+//     <td :data-label="t('…')">…</td>         <- everything else
+// ============================================================
+.dtable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+@media (max-width: 760px) {
+  .dtable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .dtable,
+  .dtable tbody,
+  .dtable tr,
+  .dtable td {
+    display: block;
+    width: 100%;
+  }
+
+  // The table itself stops being a surface — each row becomes one.
+  .dtable {
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .dtable tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+  }
+
+  // A real card: its own surface, border, radius and lift.
+  .dtable tr {
+    padding: var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-1);
+  }
+
+  .dtable tr:hover { border-color: var(--rule-strong); }
+
+  .dtable td {
+    display: grid;
+    grid-template-columns: minmax(0, auto) 1fr;
+    align-items: baseline;
+    gap: var(--s-4);
+    padding: var(--s-2) 0;
+    border: 0 !important;
+  }
+
+  // Hairlines between the label/value rows give the card structure
+  // without boxing every cell.
+  .dtable td + td {
+    border-top: 1px solid color-mix(in srgb, var(--rule) 60%, transparent) !important;
+  }
+
+  .dtable td[data-primary] + td { border-top: 0 !important; }
+
+  .dtable td::before {
+    content: attr(data-label);
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  // The headline cell owns the full width and needs no label — it is
+  // what the reader is scanning for.
+  .dtable td[data-primary] {
+    display: block;
+    margin-bottom: var(--s-1);
+    padding-top: 0;
+    padding-bottom: var(--s-3);
+    border-bottom: 1px solid var(--rule) !important;
+  }
+
+  .dtable td[data-primary]::before { content: none; }
+
+  // Values sit hard right, opposite their label, so a column of
+  // amounts still reads as a column.
+  .dtable td > *:not(::before) { justify-self: end; }
+  .dtable td .money { align-items: flex-end; }
+
+  // Nested detail (the item preview) is content of the primary cell,
+  // not a label/value pair — let it use the full width, left aligned.
+  .dtable td[data-primary] > * { justify-self: stretch; }
+
+  // Nothing is clamped once each cell has a row to itself.
+  .dtable td .u-clamp-2 {
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    display: block;
+    text-align: right;
+  }
+
+  .dtable td[data-primary] .u-clamp-2 { text-align: left; }
+
+  // A card layout has no minimum width to enforce.
+  .dtable { min-width: 0 !important; }
+}
+
+// ============================================================
+// Motion
+//
+// One idea, applied consistently: content arrives by settling into
+// place, never by sliding across the screen. A short rise + fade reads
+// as the page composing itself; anything longer reads as waiting.
+// ============================================================
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 180ms var(--ease), transform 180ms var(--ease);
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+// The page-load sequence: the hero's parts settle in order rather than
+// appearing all at once. Purely decorative, so it never gates content —
+// the elements are visible and readable even if the animation is
+// skipped.
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.u-rise {
+  animation: rise-in 460ms var(--ease) both;
+}
+
+.u-rise-1 { animation-delay: 60ms; }
+.u-rise-2 { animation-delay: 130ms; }
+.u-rise-3 { animation-delay: 200ms; }
 
 @media (prefers-reduced-motion: reduce) {
   *,

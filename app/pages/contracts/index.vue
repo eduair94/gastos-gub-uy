@@ -19,10 +19,25 @@ function parseNum(v: unknown): number | null {
   return v !== undefined && v !== '' && Number.isFinite(n) ? n : null
 }
 
+/**
+ * The explorer opens on awards.
+ *
+ * One OCID emits a release per lifecycle step, and the newest are always
+ * `tenderUpdate` clarifications — no supplier, no items, no amount. Left
+ * unfiltered and sorted by date, the landing view is a wall of "$ 0"
+ * rows, which reads as broken data rather than as the tender paperwork
+ * it is. "Contrato" means the award to a citizen, so that is the default.
+ * Nothing is hidden: every other stage is one chip away in the rail.
+ */
+const DEFAULT_TAGS = ['award']
+
 function fromRoute(): FilterState {
   const q = route.query
   return {
     search: (q.search as string) ?? '',
+    // `tag=` (explicitly empty) means "all stages" and must survive a
+    // reload; a missing param means the reader hasn't chosen yet.
+    tag: q.tag === undefined ? [...DEFAULT_TAGS] : parseList(q.tag),
     buyers: parseList(q.buyers),
     suppliers: parseList(q.suppliers),
     procurementMethodDetails: parseList(q.procurementMethodDetails),
@@ -51,7 +66,7 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
 const activeCount = computed(() => {
   const f = filters.value
   return [
-    f.search, f.buyers.length, f.suppliers.length, f.procurementMethodDetails.length,
+    f.search, f.tag.length, f.buyers.length, f.suppliers.length, f.procurementMethodDetails.length,
     f.status.length, f.currency.length, f.yearFrom, f.yearTo,
     f.amountFrom, f.amountTo, f.hasAmount || null,
   ].filter(Boolean).length
@@ -62,6 +77,7 @@ const apiQuery = computed(() => {
   const f = filters.value
   const q: Record<string, unknown> = {}
   if (f.search) q.search = f.search
+  if (f.tag.length) q.tag = f.tag.join(',')
   if (f.buyers.length) q.buyers = f.buyers.join(',')
   if (f.suppliers.length) q.suppliers = f.suppliers.join(',')
   if (f.procurementMethodDetails.length) q.procurementMethodDetails = f.procurementMethodDetails.join(',')
@@ -92,6 +108,10 @@ watch(filters, () => {
 watch([filters, page, sort], () => {
   const q: Record<string, string> = {}
   for (const [k, v] of Object.entries(apiQuery.value)) q[k] = String(v)
+  // `tag` is always written, including as an empty string, so that
+  // "show me every stage" survives a reload instead of snapping back to
+  // the award default.
+  q.tag = filters.value.tag.join(',')
   if (page.value > 1) q.page = String(page.value)
   if (sort.value !== 'dateDesc') q.sort = sort.value
   router.replace({ query: q })
@@ -122,7 +142,9 @@ const totalPages = computed(() => {
 
 function clearAll() {
   filters.value = {
-    search: '', buyers: [], suppliers: [], procurementMethodDetails: [],
+    // Back to the default view, not to an empty one: clearing should
+    // land the reader on contracts again, not on a wall of $0 paperwork.
+    search: '', tag: [...DEFAULT_TAGS], buyers: [], suppliers: [], procurementMethodDetails: [],
     status: [], currency: [], yearFrom: null, yearTo: null,
     amountFrom: null, amountTo: null, hasAmount: false,
   }
@@ -130,6 +152,44 @@ function clearAll() {
 }
 
 const railOpen = ref(false)
+
+/**
+ * Names every row.
+ *
+ * A clarification or an amendment has no subject of its own, so
+ * `contractTitle` returns ''. Printing a bare "Contrato" there made the
+ * row look like broken data; naming the stage and the tender it belongs
+ * to says what it actually is.
+ */
+function rowTitle(c: ContractLike): string {
+  const title = contractTitle(c)
+  if (title) return title
+  const fb = contractTitleFallback(c)
+  return t(fb.key, fb.params)
+}
+
+function itemCount(c: ContractLike): number {
+  return (c.awards ?? []).reduce((n, a) => n + (a.items?.length ?? 0), 0)
+}
+
+/** How many item lines a row previews before collapsing to a count. */
+const PREVIEW_ITEMS = 3
+
+/**
+ * The lines actually bought, previewed under each row.
+ *
+ * A title alone reduces a three-line contract to one phrase, which is
+ * how the item detail went missing from the table. Showing the real
+ * lines — with quantity, unit and unit price — is the difference between
+ * a list of names and a record you can read.
+ */
+function itemPreview(c: ContractLike) {
+  const rows = contractItems(c)
+  return {
+    rows: rows.slice(0, PREVIEW_ITEMS),
+    more: Math.max(0, rows.length - PREVIEW_ITEMS),
+  }
+}
 
 useSeo(() => ({
   title: t('seo.contracts.title'),
@@ -352,11 +412,8 @@ useSeo(() => ({
           </button>
         </div>
 
-        <div
-          v-else
-          class="u-scroll-x"
-        >
-          <table class="ctable">
+        <div v-else>
+          <table class="ctable dtable">
             <thead>
               <tr>
                 <th scope="col">
@@ -394,30 +451,95 @@ useSeo(() => ({
                 :key="c.id"
                 class="ctable__row"
               >
-                <td class="ctable__obj">
+                <td
+                  class="ctable__obj"
+                  data-primary
+                >
                   <NuxtLink
                     :to="localePath(`/contracts/${c.id}`)"
                     class="ctable__link"
                   >
-                    {{ contractTitle(c) || t('common.contract') }}
+                    {{ rowTitle(c) }}
                   </NuxtLink>
-                  <span
-                    v-if="c.tender?.procurementMethodDetails"
-                    class="ctable__method"
-                  >
-                    {{ c.tender.procurementMethodDetails }}
+                  <span class="ctable__sub">
+                    <!-- The stage is why a row may carry no supplier or
+                         amount. Naming it turns "missing data" into a
+                         fact the reader can act on. -->
+                    <span
+                      v-if="primaryTag(c)"
+                      class="tag"
+                      :class="tagTone(primaryTag(c))"
+                      :title="t(`contract.stageHelp.${primaryTag(c)}`)"
+                    >{{ t(`contract.stage.${primaryTag(c)}`) }}</span>
+                    <span
+                      v-if="c.tender?.procurementMethodDetails"
+                      class="ctable__method"
+                    >{{ c.tender.procurementMethodDetails }}</span>
+                    <span
+                      v-if="itemCount(c) > 1"
+                      class="ctable__method"
+                    >{{ t('contract.itemsCount', itemCount(c), { n: itemCount(c) }) }}</span>
                   </span>
+
+                  <!-- What was actually bought. The title collapses a
+                       multi-line contract into one phrase; these are the
+                       lines behind it. -->
+                  <ul
+                    v-if="itemPreview(c).rows.length"
+                    class="items"
+                  >
+                    <li
+                      v-for="(it, i) in itemPreview(c).rows"
+                      :key="i"
+                      class="items__row"
+                    >
+                      <span class="items__desc">{{ it.description || '—' }}</span>
+                      <span
+                        v-if="it.quantity"
+                        class="items__qty"
+                      >{{ formatNumber(it.quantity) }}<template v-if="it.unitName"> {{ it.unitName.toLowerCase() }}</template></span>
+                      <MoneyAmount
+                        v-if="it.unitAmount !== null"
+                        :amount="it.unitAmount"
+                        :currency="it.currency"
+                        :rule="false"
+                        size="sm"
+                        compact
+                      />
+                    </li>
+                    <li
+                      v-if="itemPreview(c).more"
+                      class="items__more"
+                    >
+                      <NuxtLink :to="localePath(`/contracts/${c.id}`)">
+                        {{ t('contracts.moreItems', itemPreview(c).more, { n: itemPreview(c).more }) }}
+                      </NuxtLink>
+                    </li>
+                  </ul>
                 </td>
-                <td class="ctable__c-buyer">
+                <td
+                  class="ctable__c-buyer"
+                  :data-label="t('contracts.table.buyer')"
+                >
                   <span class="u-clamp-2">{{ c.buyer?.name || '—' }}</span>
                 </td>
-                <td class="ctable__c-sup">
+                <td
+                  class="ctable__c-sup"
+                  :data-label="t('contracts.table.supplier')"
+                >
                   <span class="u-clamp-2">{{ contractSuppliers(c)[0]?.name || '—' }}</span>
                 </td>
-                <td class="ctable__c-date u-mono">
+                <td
+                  class="ctable__c-date u-mono"
+                  :data-label="t('contracts.table.date')"
+                >
                   {{ formatDate(contractDate(c)) }}
                 </td>
-                <td class="ctable__c-amt">
+                <td
+                  class="ctable__c-amt"
+                  :data-label="t('contracts.table.amount')"
+                  :title="!isMoneyStage(c) ? t('contract.noMoneyStage') : undefined"
+                >
                   <MoneyAmount
                     :amount="contractAmount(c)"
                     :currency="contractCurrency(c)"
@@ -637,6 +759,12 @@ useSeo(() => ({
 .ctable__obj { max-width: 340px; }
 
 .ctable__link {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   font-weight: 600;
   color: var(--text);
   text-decoration: none;
@@ -647,13 +775,65 @@ useSeo(() => ({
   text-decoration: underline;
 }
 
+.ctable__sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+
 .ctable__method {
-  display: block;
-  margin-top: 2px;
   font-family: var(--font-mono);
   font-size: var(--t-xs);
   color: var(--text-muted);
 }
+
+/* ---- Item preview ----
+   Indented under the title and set on a rule, so it reads as detail
+   belonging to the row rather than as more rows. */
+.items {
+  margin: var(--s-2) 0 0;
+  padding: 0 0 0 var(--s-3);
+  list-style: none;
+  border-left: 2px solid var(--rule);
+}
+
+.items__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-3);
+  padding: 2px 0;
+}
+
+.items__desc {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.items__qty {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.items__more {
+  padding-top: 2px;
+}
+
+.items__more a {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
+
+.items__more a:hover { text-decoration: underline; }
 
 .ctable__c-buyer,
 .ctable__c-sup {

@@ -11,6 +11,7 @@
  */
 export interface FilterState {
   search: string
+  tag: string[]
   buyers: string[]
   suppliers: string[]
   procurementMethodDetails: string[]
@@ -49,6 +50,18 @@ function patch(part: Partial<FilterState>) {
   emit('update:modelValue', { ...props.modelValue, ...part })
 }
 
+// Ordered by what a reader is most likely to want: the money stages
+// first. Sourced from the shared vocabulary so the chips can never drift
+// from the badges rendered on each row.
+const STAGES = RELEASE_TAGS
+
+function toggleTag(tag: string) {
+  const next = props.modelValue.tag.includes(tag)
+    ? props.modelValue.tag.filter(x => x !== tag)
+    : [...props.modelValue.tag, tag]
+  patch({ tag: next })
+}
+
 const years = computed(() => (props.options?.years ?? []).map(o => Number(o.value)).sort((a, b) => a - b))
 const minYear = computed(() => years.value[0] ?? 2002)
 const maxYear = computed(() => years.value[years.value.length - 1] ?? new Date().getFullYear())
@@ -77,6 +90,29 @@ function optLabel(o: Option) {
       />
       <p class="rail__help">
         {{ t('filters.searchHelp') }}
+      </p>
+    </section>
+
+    <!-- Stage first: it is the filter that explains why some rows carry
+         no supplier or amount, so it belongs before the reader wonders. -->
+    <section class="rail__sec">
+      <span class="rail__label">{{ t('contract.stage.label') }}</span>
+      <div class="rail__stages">
+        <button
+          v-for="s in STAGES"
+          :key="s"
+          class="stagechip"
+          :class="{ 'stagechip--on': modelValue.tag.includes(s) }"
+          type="button"
+          :title="t(`contract.stageHelp.${s}`)"
+          :aria-pressed="modelValue.tag.includes(s)"
+          @click="toggleTag(s)"
+        >
+          {{ t(`contract.stage.${s}`) }}
+        </button>
+      </div>
+      <p class="rail__help">
+        {{ t('filters.tagHelp') }}
       </p>
     </section>
 
@@ -308,6 +344,36 @@ function optLabel(o: Option) {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--s-2);
+}
+
+.rail__stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.stagechip {
+  padding: 5px var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.stagechip:hover {
+  color: var(--text);
+  border-color: var(--rule-strong);
+}
+
+.stagechip--on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
 }
 
 .rail__clear {

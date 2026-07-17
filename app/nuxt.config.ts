@@ -112,6 +112,13 @@ export default defineNuxtConfig({
   },
 
   app: {
+    // One short cross-fade on navigation. Enough to make the app feel
+    // continuous rather than stuttering between full page swaps; short
+    // enough that it never delays a reader. `prefers-reduced-motion` is
+    // honoured globally in main.scss.
+    pageTransition: { name: 'page', mode: 'out-in' },
+    layoutTransition: { name: 'page', mode: 'out-in' },
+
     head: {
       htmlAttrs: { lang: 'es-UY' },
       meta: [

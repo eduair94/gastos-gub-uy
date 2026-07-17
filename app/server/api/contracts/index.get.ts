@@ -248,6 +248,15 @@ export function buildContractFilters(query: Record<string, unknown>): ContractFi
   const minItems = toNumberOrNull(query.minItems)
   if (minItems !== null && minItems > 0) and.push({ 'amount.totalItems': { $gte: minItems } })
 
+  // --- Lifecycle stage ------------------------------------------------------
+  // One OCID spans several releases: llamado -> aclaraciones -> adjudicación.
+  // Only `award`/`awardUpdate` carry money, so a default sort by date leads
+  // with `tenderUpdate` rows that have no supplier and no amount — which reads
+  // as missing data. Letting callers filter the stage is the fix; we do not
+  // silently exclude anything.
+  const tag = toArray(query.tag)
+  if (tag.length) and.push({ tag: { $in: tag } })
+
   return {
     and,
     text,

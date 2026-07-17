@@ -71,7 +71,9 @@
     "unitPrice": "Precio unitario",
     "description": "Descripción",
     "updated": "Actualizado",
-    "since": "desde"
+    "since": "desde",
+    "yes": "Sí",
+    "no": "No"
   },
   "home": {
     "eyebrow": "Compras públicas del Uruguay",
@@ -132,7 +134,8 @@
       "title": "Buscá o filtrá para empezar",
       "body": "Escribí qué compró el Estado, o elegí un organismo en el panel de filtros."
     },
-    "tooMany": "Mostrando los primeros {shown}. Afiná los filtros para ver menos resultados."
+    "tooMany": "Mostrando los primeros {shown}. Afiná los filtros para ver menos resultados.",
+    "moreItems": "+{n} artículo más | +{n} artículos más"
   },
   "filters": {
     "title": "Filtros",
@@ -167,7 +170,8 @@
     "presetRecent": "Este año",
     "presetSingleBidder": "Compra directa",
     "noOptions": "Sin opciones",
-    "loadingOptions": "Cargando opciones"
+    "loadingOptions": "Cargando opciones",
+    "tagHelp": "Cada etapa del proceso es un registro. Solo la adjudicación informa proveedor y monto."
   },
   "contract": {
     "eyebrow": "Contrato",
@@ -189,7 +193,10 @@
       "parties": "Quiénes participan",
       "timeline": "Cronología",
       "documents": "Documentos oficiales",
-      "raw": "Datos crudos"
+      "raw": "Datos crudos",
+      "amendments": "Modificaciones",
+      "provenance": "Origen del registro",
+      "amount": "Detalle del monto"
     },
     "itemsHelp": "Artículos adjudicados con su cantidad y precio unitario.",
     "noItems": "El registro oficial no detalla artículos para este contrato.",
@@ -215,8 +222,76 @@
       "contractAnnexe": "Anexo",
       "clarifications": "Aclaraciones",
       "evaluationReports": "Informe de evaluación",
-      "technicalSpecifications": "Especificaciones técnicas"
-    }
+      "technicalSpecifications": "Especificaciones técnicas",
+      "cancellationDetails": "Constancia de anulación"
+    },
+    "roles": {
+      "buyer": "Comprador",
+      "procuringEntity": "Unidad ejecutora",
+      "supplier": "Proveedor"
+    },
+    "submissionMethods": {
+      "electronicSubmission": "En línea",
+      "written": "Por escrito",
+      "inPerson": "Presencial"
+    },
+    "stage": {
+      "label": "Etapa",
+      "award": "Adjudicación",
+      "awardUpdate": "Ajuste de adjudicación",
+      "awardCancellation": "Adjudicación anulada",
+      "tender": "Llamado",
+      "tenderUpdate": "Aclaración",
+      "tenderAmendment": "Modificación del llamado",
+      "tenderCancellation": "Llamado anulado"
+    },
+    "stageHelp": {
+      "award": "El Estado adjudicó la compra a un proveedor. Es la etapa que informa montos.",
+      "awardUpdate": "Corrección de una adjudicación ya publicada.",
+      "awardCancellation": "La adjudicación fue dejada sin efecto.",
+      "tender": "Convocatoria publicada. Todavía no hay proveedor ni monto.",
+      "tenderUpdate": "Aclaración o respuesta a consultas sobre un llamado.",
+      "tenderAmendment": "Cambio en las condiciones del llamado.",
+      "tenderCancellation": "El llamado fue anulado."
+    },
+    "stageTitle": {
+      "award": "Adjudicación {ref}",
+      "awardUpdate": "Ajuste de adjudicación {ref}",
+      "awardCancellation": "Adjudicación anulada {ref}",
+      "tender": "Llamado {ref}",
+      "tenderUpdate": "Aclaración al llamado {ref}",
+      "tenderAmendment": "Modificación del llamado {ref}",
+      "tenderCancellation": "Llamado anulado {ref}"
+    },
+    "noMoneyStage": "Esta etapa no informa montos. El importe aparece recién cuando se publica la adjudicación.",
+    "fields": {
+      "tag": "Etapa",
+      "initiationType": "Tipo de inicio",
+      "tenderId": "N.º de llamado",
+      "awardId": "N.º de adjudicación",
+      "awardStatus": "Estado de la adjudicación",
+      "legalName": "Razón social",
+      "rut": "RUT / identificador",
+      "roles": "Rol",
+      "classification": "Código de catálogo",
+      "unit": "Unidad",
+      "hasEnquiries": "Admite consultas",
+      "submissionMethod": "Forma de presentación",
+      "submissionMethodDetails": "Condiciones de presentación",
+      "procuringEntity": "Unidad ejecutora",
+      "sourceFile": "Archivo de origen",
+      "sourceYear": "Año de origen",
+      "fetched": "Importado el",
+      "rssLink": "Enlace del origen",
+      "totalItems": "Artículos",
+      "currencies": "Monedas",
+      "version": "Versión del cálculo",
+      "exchangeRateDate": "Tipo de cambio al",
+      "originalUYU": "Importe original en pesos",
+      "converted": "Incluye conversión"
+    },
+    "amendmentOf": "Modifica a {id}",
+    "itemsCount": "{n} artículo | {n} artículos"
   },
   "suppliers": {
     "title": "Proveedores del Estado",
