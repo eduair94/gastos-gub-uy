@@ -38,6 +38,34 @@ export const MAD_Z_CONSTANT = 0.6745;
  */
 export const MAD_LN_EPSILON = 1e-3;
 
+/**
+ * The IQR counterpart to MAD_LN_EPSILON, as a fraction of the median price.
+ *
+ * Same failure, second estimator: `p75 - p25` is zero whenever three quarters of the count mass
+ * sits on one price, but interpolation leaves residue, so an `iqr > 0` check passes and
+ * `(price - p75) / iqr` divides into ~1e-8. Fixing only the MAD path made this worse, not better —
+ * degenerate baselines were rerouted here and came out at z = 5.4e7 instead of 1.9e7.
+ *
+ * This is relative because IQR is in price units, and prices here span 0.0001 to billions, so no
+ * absolute floor can be right for both.
+ *
+ * When it trips there is genuinely nothing to measure: every robust dispersion estimator is zero on
+ * a distribution that concentrated, which is a fact about the data, not a bug to work around. Such
+ * items are skipped and counted rather than flagged on a fabricated scale. The cost is real — an
+ * item priced at 1.53M in 75% of purchases will not flag at 3.28M — and catching those needs a
+ * deviation-from-mode rule rather than a dispersion rule. See scoreUnitPrice.
+ */
+export const IQR_REL_EPSILON = 1e-6;
+
+/**
+ * Ceiling on the reported z magnitude.
+ *
+ * Severity already saturates at |z| > 10, so anything past this changes no decision; the only thing
+ * an unbounded value adds is a number in the UI that reads as broken. Clamping keeps the field
+ * meaningful without discarding the finding.
+ */
+export const MAX_REPORTED_Z = 1000;
+
 /** Flag when the modified z-score exceeds this. The Iglewicz-Hoaglin recommendation. */
 export const Z_FLAG_THRESHOLD = 3.5;
 
@@ -309,9 +337,10 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
     if (rank === null) {
       return null;
     }
+    const reported = clampZ(z);
     return {
-      zScore: z,
-      absZ,
+      zScore: reported,
+      absZ: Math.abs(reported),
       severity: SEVERITY_BY_RANK[rank]!,
       severityRank: rank,
       confidence: confidenceFromZ(absZ, n),
@@ -322,8 +351,11 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
 
   // IQR extreme fence. Upper tail only, by construction.
   const iqr = baseline.p75 - baseline.p25;
-  if (!Number.isFinite(iqr) || iqr <= 0) {
-    // Degenerate constant-price item: no dispersion to measure against.
+  // Degenerate when there is no dispersion to divide by. The floor is relative to the median price
+  // because IQR carries price units; see IQR_REL_EPSILON for why an absolute one cannot work.
+  const medianPrice = Math.exp(baseline.medianLn);
+  const iqrFloor = Number.isFinite(medianPrice) ? Math.abs(medianPrice) * IQR_REL_EPSILON : 0;
+  if (!Number.isFinite(iqr) || iqr <= 0 || iqr < iqrFloor) {
     return null;
   }
   const excess = (price - baseline.p75) / iqr;
@@ -342,13 +374,21 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
     return null;
   }
   const cappedRank = Math.min(rank, severityCap);
+  const reported = clampZ(pseudoZ);
   return {
-    zScore: pseudoZ,
-    absZ: pseudoZ,
+    zScore: reported,
+    absZ: Math.abs(reported),
     severity: SEVERITY_BY_RANK[cappedRank]!,
     severityRank: cappedRank,
     confidence: confidenceFromZ(pseudoZ, n),
     method: "iqr_fence",
     direction: "above",
   };
+}
+
+/** Clamps a z magnitude to MAX_REPORTED_Z, preserving sign. */
+function clampZ(z: number): number {
+  if (!Number.isFinite(z)) return z;
+  const sign = z < 0 ? -1 : 1;
+  return sign * Math.min(Math.abs(z), MAX_REPORTED_Z);
 }

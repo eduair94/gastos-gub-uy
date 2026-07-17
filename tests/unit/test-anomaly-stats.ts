@@ -5,7 +5,7 @@
  *   npx tsx tests/unit/test-anomaly-stats.ts
  */
 
-import { BaselineInput, computeBaselineStats, confidenceFromZ, HistogramBin, MAD_LN_EPSILON, modifiedZScore, scoreUnitPrice, severityRankFromAbsZ, weightedPercentile } from "../../src/jobs/anomaly-stats";
+import { BaselineInput, computeBaselineStats, confidenceFromZ, HistogramBin, MAD_LN_EPSILON, MAX_REPORTED_Z, modifiedZScore, scoreUnitPrice, severityRankFromAbsZ, weightedPercentile } from "../../src/jobs/anomaly-stats";
 
 let passed = 0;
 let failed = 0;
@@ -245,6 +245,41 @@ console.log("\n📊 degenerate madLn falls back to the IQR fence");
   // Exactly at the epsilon boundary the z path is allowed again.
   const atEpsilon: BaselineInput = { n: 45, medianLn: Math.log(100), madLn: MAD_LN_EPSILON, p25: 90, p75: 110 };
   check("madLn exactly at epsilon -> z path usable", Number.isFinite(modifiedZScore(150, atEpsilon.medianLn, atEpsilon.madLn)));
+}
+
+// --- degenerate IQR -------------------------------------------------------
+// The same residue defect in the fallback. Guarding madLn alone made this WORSE: degenerate
+// baselines rerouted to the fence and divided by a ~1e-8 IQR, so production z went 1.9e7 -> 5.4e7.
+// Numbers below are the real NEUROESTIMULADOR baseline that exposed it.
+console.log("\n📊 degenerate IQR does not fabricate a pseudo-z");
+{
+  const concentrated: BaselineInput = {
+    n: 45,
+    medianLn: Math.log(1_532_486),
+    madLn: 1.7e-8,           // degenerate -> forced onto the fence path
+    p25: 1_532_486,
+    p75: 1_532_486 + 1e-8,   // interpolation residue, NOT real dispersion
+  };
+
+  const scored = scoreUnitPrice(3_280_780, concentrated);
+  check("residue IQR -> skipped, not flagged on a fabricated scale", scored === null);
+
+  // Real dispersion at the same median must still work.
+  const dispersed: BaselineInput = { n: 45, medianLn: Math.log(1_532_486), madLn: 1.7e-8, p25: 1_400_000, p75: 1_700_000 };
+  const realOutlier = scoreUnitPrice(10_000_000, dispersed);
+  check("real IQR dispersion still flags outliers", realOutlier !== null);
+  check("fence z is clamped to MAX_REPORTED_Z", realOutlier === null || Math.abs(realOutlier.zScore) <= MAX_REPORTED_Z);
+}
+
+// --- reported z is bounded ------------------------------------------------
+console.log("\n📊 reported z magnitude is bounded");
+{
+  // Severity saturates at |z|>10, so an unbounded value changes no decision and only reads as broken.
+  const tiny: BaselineInput = { n: 100, medianLn: Math.log(100), madLn: MAD_LN_EPSILON, p25: 99, p75: 101 };
+  const huge = scoreUnitPrice(1e9, tiny);
+  check("extreme z clamped", huge !== null && Math.abs(huge.zScore) <= MAX_REPORTED_Z);
+  check("clamped finding is still critical", huge !== null && huge.severity === "critical");
+  check("clamped z keeps its sign", huge !== null && huge.zScore > 0);
 }
 
 console.log("\n=====================");
