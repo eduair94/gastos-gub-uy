@@ -19,6 +19,25 @@
 /** Iglewicz-Hoaglin constant: E[MAD] = 0.6745 * sigma for a normal distribution. */
 export const MAD_Z_CONSTANT = 0.6745;
 
+/**
+ * Smallest madLn that can carry a z-score. Below this the baseline is treated as
+ * degenerate and scoring falls back to the IQR fence.
+ *
+ * Guarding only madLn === 0 is not enough. When over half the count mass sits on a
+ * single price the true MAD is zero, but the percentile helpers interpolate, so
+ * medianLn lands a hair off the dominant bin and the deviations come back as float
+ * residue near 1e-8 rather than exactly 0. That passes a `> 0` check and then divides
+ * into it: production produced z-scores of 1.9e7 on a NEUROESTIMULADOR whose price
+ * merely equalled its own p95, and 325 anomalies scored |z| > 10000.
+ *
+ * 1e-3 is a behavioural floor, not just a numerical one: it means the middle of the
+ * distribution spans under ~0.1% in price, i.e. a fixed-price item where the
+ * denominator is interpolation noise rather than real dispersion. Measured against
+ * production, this routes 238 of 40,948 baselines (0.6%) to the IQR fence, which is
+ * built on actual p25/p75 and stays honest for exactly these commodities.
+ */
+export const MAD_LN_EPSILON = 1e-3;
+
 /** Flag when the modified z-score exceeds this. The Iglewicz-Hoaglin recommendation. */
 export const Z_FLAG_THRESHOLD = 3.5;
 
@@ -209,7 +228,7 @@ export function modifiedZScore(x: number, medianLn: number, madLn: number): numb
   if (!Number.isFinite(x) || x <= 0) {
     return Number.NaN;
   }
-  if (!Number.isFinite(madLn) || madLn <= 0) {
+  if (!Number.isFinite(madLn) || madLn < MAD_LN_EPSILON) {
     return Number.NaN;
   }
   if (!Number.isFinite(medianLn)) {
@@ -277,7 +296,8 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
   }
 
   const severityCap = n < ROBUST_MIN_N ? 2 : 4;
-  const canUseRobustZ = n >= ROBUST_MIN_N && Number.isFinite(baseline.madLn) && baseline.madLn > 0;
+  const canUseRobustZ =
+    n >= ROBUST_MIN_N && Number.isFinite(baseline.madLn) && baseline.madLn >= MAD_LN_EPSILON;
 
   if (canUseRobustZ) {
     const z = modifiedZScore(price, baseline.medianLn, baseline.madLn);

@@ -5,7 +5,7 @@
  *   npx tsx tests/unit/test-anomaly-stats.ts
  */
 
-import { BaselineInput, computeBaselineStats, confidenceFromZ, HistogramBin, modifiedZScore, scoreUnitPrice, severityRankFromAbsZ, weightedPercentile } from "../../src/jobs/anomaly-stats";
+import { BaselineInput, computeBaselineStats, confidenceFromZ, HistogramBin, MAD_LN_EPSILON, modifiedZScore, scoreUnitPrice, severityRankFromAbsZ, weightedPercentile } from "../../src/jobs/anomaly-stats";
 
 let passed = 0;
 let failed = 0;
@@ -220,6 +220,31 @@ console.log("\n📊 input hygiene");
   check("NaN price -> null", scoreUnitPrice(Number.NaN, baseline) === null);
   check("Infinity price -> null", scoreUnitPrice(Number.POSITIVE_INFINITY, baseline) === null);
   check("NaN n -> null", scoreUnitPrice(100_000, { ...baseline, n: Number.NaN }) === null);
+}
+
+// --- degenerate madLn -----------------------------------------------------
+// Regression cover for the production failure: a baseline whose count mass sits on one
+// price has a true MAD of 0, but percentile interpolation leaves float residue near 1e-8.
+// That passed the old `madLn > 0` check and divided into it, yielding z-scores of ~1.9e7.
+console.log("\n📊 degenerate madLn falls back to the IQR fence");
+{
+  const residue: BaselineInput = { n: 45, medianLn: Math.log(2_000_000), madLn: 1.7e-8, p25: 1_532_486, p75: 2_100_000 };
+
+  check("float-residue madLn -> z is NaN, not astronomical", Number.isNaN(modifiedZScore(2_618_370, residue.medianLn, residue.madLn)));
+
+  // p95-ish price inside the IQR fence must not be flagged at all.
+  const insideFence = scoreUnitPrice(2_618_370, residue);
+  check("price within IQR fence -> not flagged", insideFence === null);
+
+  // A genuine outlier still gets caught via the fence.
+  const fence = 2_100_000 + 3 * (2_100_000 - 1_532_486); // p75 + 3*IQR = 3_802_542
+  const outlier = scoreUnitPrice(fence * 2, residue);
+  check("gross outlier still flagged via fence", outlier !== null);
+  check("fence-scored z stays sane (|z| < 100)", outlier === null || Math.abs(outlier.zScore) < 100);
+
+  // Exactly at the epsilon boundary the z path is allowed again.
+  const atEpsilon: BaselineInput = { n: 45, medianLn: Math.log(100), madLn: MAD_LN_EPSILON, p25: 90, p75: 110 };
+  check("madLn exactly at epsilon -> z path usable", Number.isFinite(modifiedZScore(150, atEpsilon.medianLn, atEpsilon.madLn)));
 }
 
 console.log("\n=====================");

@@ -676,10 +676,32 @@ class AnomalyDetector {
       console.log(`ℹ️  --baselines-only: skipping scoring stage.`);
     } else {
       await this.scoreReleases(options);
+      if (!options.dryRun) {
+        await this.purgeLegacyAnomalies();
+      }
     }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`🎉 Anomaly detection completed in ${duration}s`);
+  }
+
+  /**
+   * Drops anomalies left by the pre-rewrite detector.
+   *
+   * Those were produced by a mean/stdDev estimator with a hardcoded "UYU" currency, a constant
+   * confidence of 0.8, and a $limit of 1000 that made the count a cap rather than a measurement.
+   * The scoped self-heal in scoreReleases() only revisits releases this run actually rescanned, so
+   * anything outside the trailing window would otherwise sit next to the new findings forever,
+   * indistinguishable in the UI but built on numbers that no longer mean the same thing.
+   *
+   * `severityRank` is the marker: it did not exist before the rewrite, and every finding the current
+   * detector writes carries one.
+   */
+  private async purgeLegacyAnomalies(): Promise<void> {
+    const result = await AnomalyModel.deleteMany({ severityRank: { $exists: false } });
+    if (result.deletedCount) {
+      console.log(`   🧹 legacy anomalies purged: ${result.deletedCount} (pre-rewrite estimator)`);
+    }
   }
 
   private async buildBaselinesDryRunNotice(): Promise<void> {
