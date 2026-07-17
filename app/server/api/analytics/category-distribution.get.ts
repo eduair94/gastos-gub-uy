@@ -11,11 +11,14 @@ export default defineEventHandler(async (event) => {
 
     console.log('Fetching pre-calculated category distribution')
 
-    // Build query filter
-    const filter: Record<string, unknown> = {}
-
-    if (year) {
-      filter.year = Number(year)
+    // Build query filter.
+    //
+    // category_distribution holds an all-time ranking (no `year` field) and a per-year ranking for
+    // every year in the data. Both rank from 1 and both carry a `percentage` computed against their
+    // own scope's total, so mixing them produces a list whose percentages do not add up against any
+    // single denominator. A year-less request means the all-time rows, and only those.
+    const filter: Record<string, unknown> = {
+      year: year ? Number(year) : { $exists: false },
     }
 
     // Get category distribution from pre-calculated data

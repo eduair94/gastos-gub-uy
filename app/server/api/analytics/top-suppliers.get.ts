@@ -11,13 +11,17 @@ export default defineEventHandler(async (event) => {
 
     console.log('Fetching pre-calculated top suppliers')
 
-    // Build query filter for suppliers
+    // Build query filter for suppliers.
+    //
+    // top_entities holds two families of rows: the all-time ranking (no `year` field) and a
+    // per-year ranking for every year in the data (`year` set). Both rank from 1, so they are
+    // separate scales and must never be mixed. Without the `$exists: false` branch a year-less
+    // request matched BOTH, and the de-dupe below — which keeps the lowest rank number — would
+    // let a supplier that placed #1 in some quiet year outrank one that is #2 of all time.
+    // Live symptom before this fix: rank 2 at 4.95B UYU sitting above rank 3 at 19.0B.
     const filter: Record<string, unknown> = {
       entityType: 'supplier',
-    }
-
-    if (year) {
-      filter.year = Number(year)
+      year: year ? Number(year) : { $exists: false },
     }
 
     // Get top suppliers from pre-calculated data
