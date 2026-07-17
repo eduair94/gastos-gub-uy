@@ -330,6 +330,90 @@ const hasTenderFacts = computed(() => {
   )
 })
 
+// ---- Price reference -------------------------------------------------
+interface PriceRef {
+  description: string
+  paid: number
+  currency: string
+  n: number
+  median: number
+  p25: number
+  p95: number
+  min: number
+  max: number
+  position: 'below' | 'typical' | 'high' | 'veryHigh'
+  tone: string
+}
+
+/**
+ * Each priced item joined to its reference distribution (from
+ * `itemBaselines` on the API response). Only items with a real baseline
+ * of a few comparable purchases are shown — a distribution of one tells
+ * the reader nothing.
+ */
+const priceReferences = computed<PriceRef[]>(() => {
+  const baselines = (contract.value as any)?.itemBaselines as Record<string, any> | undefined
+  if (!baselines) return []
+
+  const out: PriceRef[] = []
+  const seen = new Set<string>()
+
+  for (const award of contract.value?.awards ?? []) {
+    for (const item of award.items ?? []) {
+      const classificationId = item.classification?.id?.trim()
+      const paid = item.unit?.value?.amount
+      if (!classificationId || !paid || paid <= 0) continue
+
+      const currency = item.unit?.value?.currency?.trim() || 'UYU'
+      const unitName = item.unit?.name?.trim() || ''
+      const key = `${classificationId}|${currency}|${unitName}`
+      if (seen.has(key)) continue
+
+      const b = baselines[key]
+      // Below 5 comparables the percentiles are noise, not a reference.
+      if (!b || !b.n || b.n < 5) continue
+      seen.add(key)
+
+      const position = paid > b.p95
+        ? 'veryHigh'
+        : paid > b.p75
+          ? 'high'
+          : paid < b.p25
+            ? 'below'
+            : 'typical'
+
+      out.push({
+        description: item.description?.trim() || item.classification?.description?.trim() || '—',
+        paid,
+        currency,
+        n: b.n,
+        median: b.p50,
+        p25: b.p25,
+        p95: b.p95,
+        min: b.min,
+        max: b.max,
+        position,
+        tone: position === 'veryHigh'
+          ? 'tag--alerta'
+          : position === 'high'
+            ? 'tag--neutral'
+            : position === 'below'
+              ? 'tag--activo'
+              : 'tag--celeste',
+      })
+    }
+  }
+  return out
+})
+
+function rangeText(r: PriceRef): string {
+  const lo = formatMoney(r.p25, r.currency, { compact: true })
+  const hi = formatMoney(r.p95, r.currency, { compact: true })
+  const sym = lo.split(' ')[0]
+  const hiShort = hi.startsWith(`${sym} `) ? hi.slice(sym.length + 1) : hi
+  return `${lo} – ${hiShort}`
+}
+
 const amendments = computed(() => tender.value?.amendments ?? [])
 
 /**
@@ -922,6 +1006,113 @@ useSeo(() => ({
             </div>
           </section>
 
+          <!-- ===== Price reference =====
+               What the alert compares each item against: the price
+               distribution of the same catalogue item across the last
+               three years. Answers "similar to what?" with the exact
+               data the flag is scored on. -->
+          <section
+            v-if="priceReferences.length"
+            class="panel block"
+          >
+            <div class="panel__head">
+              <h2>{{ t('contract.sections.reference') }}</h2>
+              <p class="panel__help">
+                {{ t('contract.referenceHelp') }}
+              </p>
+            </div>
+            <div class="u-scroll-x">
+              <table class="itable dtable reftable">
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      {{ t('common.item') }}
+                    </th>
+                    <th
+                      scope="col"
+                      class="itable__num"
+                    >
+                      {{ t('contract.reference.paid') }}
+                    </th>
+                    <th
+                      scope="col"
+                      class="itable__num"
+                    >
+                      {{ t('contract.reference.typical') }}
+                    </th>
+                    <th
+                      scope="col"
+                      class="itable__num"
+                    >
+                      {{ t('contract.reference.range') }}
+                    </th>
+                    <th
+                      scope="col"
+                      class="itable__num"
+                    >
+                      {{ t('contract.reference.comparables') }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(r, i) in priceReferences"
+                    :key="i"
+                  >
+                    <td data-primary>
+                      <span class="itable__d">{{ r.description }}</span>
+                      <span
+                        class="tag reftable__pos"
+                        :class="r.tone"
+                      >{{ t(`contract.reference.pos.${r.position}`) }}</span>
+                    </td>
+                    <td
+                      class="itable__num"
+                      :data-label="t('contract.reference.paid')"
+                    >
+                      <MoneyAmount
+                        :amount="r.paid"
+                        :currency="r.currency"
+                        :rule="false"
+                        size="sm"
+                        decimals
+                      />
+                    </td>
+                    <td
+                      class="itable__num"
+                      :data-label="t('contract.reference.typical')"
+                    >
+                      <MoneyAmount
+                        :amount="r.median"
+                        :currency="r.currency"
+                        :rule="false"
+                        size="sm"
+                      />
+                    </td>
+                    <td
+                      class="itable__num u-mono reftable__range"
+                      :data-label="t('contract.reference.range')"
+                    >
+                      {{ rangeText(r) }}
+                    </td>
+                    <td
+                      class="itable__num u-mono"
+                      :data-label="t('contract.reference.comparables')"
+                    >
+                      {{ formatNumber(r.n) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <NuxtLink
+              :to="localePath('/analytics/anomalies')"
+              class="reftable__link"
+            >
+              {{ t('contract.reference.method') }}
+            </NuxtLink>
+          </section>
+
           <!-- ===== Amendments ===== -->
           <section
             v-if="amendments.length"
@@ -1280,6 +1471,10 @@ useSeo(() => ({
 <style scoped>
 .page { padding-block: var(--s-6) var(--s-8); }
 
+@media (max-width: 620px) {
+  .page { padding-block: var(--s-5) var(--s-5); }
+}
+
 /* ---- Header ---- */
 .head {
   display: grid;
@@ -1507,6 +1702,38 @@ a.party__name:hover { text-decoration: underline; }
 }
 
 .contact__link:hover { text-decoration: underline; }
+
+/* ---- Price reference ---- */
+.reftable__pos {
+  margin-left: var(--s-2);
+  vertical-align: middle;
+}
+
+.reftable__range {
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+}
+
+.reftable__link {
+  display: inline-block;
+  margin: var(--s-3) var(--s-4) 0;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
+
+.reftable__link:hover { text-decoration: underline; }
+
+@media (max-width: 760px) {
+  /* On the stacked card the badge belongs under the item name, not
+     trailing it. */
+  .reftable__pos {
+    margin-left: 0;
+    margin-top: var(--s-2);
+    display: inline-block;
+  }
+}
 
 /* ---- Fact lists ---- */
 .facts {

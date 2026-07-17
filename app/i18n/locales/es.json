@@ -200,7 +200,8 @@
       "amendments": "Modificaciones",
       "provenance": "Origen del registro",
       "amount": "Detalle del monto",
-      "itemsTender": "Qué se pide"
+      "itemsTender": "Qué se pide",
+      "reference": "Precios de referencia"
     },
     "itemsHelp": "Artículos adjudicados con su cantidad y precio unitario.",
     "noItems": "El registro oficial no detalla artículos para este contrato.",
@@ -303,6 +304,20 @@
       "aclar_llamado": "Aclaración al llamado",
       "ajuste_llamado": "Ajuste del llamado",
       "items_compra": "Ajuste de ítems"
+    },
+    "referenceHelp": "Cada artículo comparado con las compras del mismo ítem en los últimos 36 meses — la misma referencia que usan las alertas.",
+    "reference": {
+      "paid": "Se pagó",
+      "typical": "Habitual (mediana)",
+      "range": "Rango usual",
+      "comparables": "Comparables",
+      "method": "Cómo se calculan las alertas de precio",
+      "pos": {
+        "below": "Bajo lo habitual",
+        "typical": "En rango",
+        "high": "Por encima",
+        "veryHigh": "Muy por encima"
+      }
     }
   },
   "suppliers": {

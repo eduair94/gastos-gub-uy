@@ -324,28 +324,28 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 
   .dtable tr:hover { border-color: var(--rule-strong); }
 
-  // A fixed, narrow label column. `auto` sized the label to its own text,
-  // so "ORGANISMO" or "PRECIO UNITARIO" ate half the card and forced the
-  // value to wrap into a ragged right-aligned column.
+  // Label ABOVE value, each on its own line.
   //
-  // `max-width` and `width` MUST be reset: the desktop column widths
-  // (e.g. `.ctable__c-buyer { max-width: 190px }`) still cascade here,
-  // and a 190px cell minus the 92px label left the value 54px — which is
-  // what made "Jefatura de Policía de Rivera" wrap onto four lines.
-  // `align-items: start`, not `baseline`: <MoneyAmount> is a column flex
-  // (figure above its magnitude rule), so its baseline sits low and the
-  // MONTO row's label dropped out of line with every other label.
-  // Aligning both tracks to the top lines the labels up regardless of
-  // what the value renders as.
+  // A side-by-side "92px | value" layout looked tidy for short labels
+  // but broke on the long ones: "CÓDIGO DE CATÁLOGO" and "ESTADO DE LA
+  // ADJUDICACIÓN" are wider than 92px, and with `white-space: nowrap`
+  // they bled straight over the value ("CÓDIGO DE CATÁL26757"). Stacking
+  // is the canonical definition-card pattern: it gives the value the
+  // full card width (which also fixes the earlier squeezed-value
+  // complaint) and cannot overlap at any label length.
+  //
+  // `max-width`/`width` still need resetting — the desktop column widths
+  // (e.g. `.ctable__c-buyer { max-width: 190px }`) cascade in here.
   .dtable td {
-    display: grid;
-    grid-template-columns: 92px minmax(0, 1fr);
-    align-items: start;
-    gap: var(--s-3);
+    display: block;
     padding: var(--s-2) 0;
     border: 0 !important;
     max-width: none !important;
     width: 100% !important;
+    // Numeric columns carry `text-align: right` for the desktop table;
+    // in a stacked card that pushed the label to the right of its value.
+    // Everything reads top-to-bottom, left-aligned, in the card.
+    text-align: left !important;
   }
 
   // Hairlines between the label/value rows give the card structure
@@ -358,17 +358,15 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 
   .dtable td::before {
     content: attr(data-label);
+    display: block;
+    margin-bottom: 3px;
     font-family: var(--font-mono);
     font-size: var(--t-xs);
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-muted);
-    white-space: nowrap;
-    // Nudge the label onto the value's first text line: the label is
-    // 11px mono and the value 13px body, so top-aligning the boxes alone
-    // leaves them visibly off.
-    padding-top: 2px;
+    line-height: 1.3;
   }
 
   // The headline cell owns the full width and needs no label — it is
@@ -383,18 +381,12 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 
   .dtable td[data-primary]::before { content: none; }
 
-  // Values start where the label ends and read left-to-right. Right
-  // alignment belongs to a table column, where figures stack; inside a
-  // card there is no column to line up with, and a wrapped name pushed
-  // hard right just looks broken.
-  //
-  // (`> *` cannot match ::before — a pseudo-element is not a child — so
-  // no exclusion is needed. The earlier `:not(::before)` was an invalid
-  // selector, which made the browser drop this whole rule.)
+  // The value sits below its label, full width, left aligned.
   .dtable td > * {
-    justify-self: stretch;
+    display: block;
     text-align: left;
     min-width: 0;
+    font-size: var(--t-sm);
   }
 
   .dtable td .money { align-items: flex-start; }

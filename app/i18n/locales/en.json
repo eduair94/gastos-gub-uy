@@ -200,7 +200,8 @@
       "amendments": "Amendments",
       "provenance": "Record origin",
       "amount": "Amount detail",
-      "itemsTender": "What is requested"
+      "itemsTender": "What is requested",
+      "reference": "Price reference"
     },
     "itemsHelp": "Awarded items with quantity and unit price.",
     "noItems": "The official record lists no items for this contract.",
@@ -303,6 +304,20 @@
       "aclar_llamado": "Tender clarification",
       "ajuste_llamado": "Tender adjustment",
       "items_compra": "Items adjustment"
+    },
+    "referenceHelp": "Each item compared against purchases of the same item over the last 36 months — the same baseline the flags use.",
+    "reference": {
+      "paid": "Paid",
+      "typical": "Typical (median)",
+      "range": "Usual range",
+      "comparables": "Comparables",
+      "method": "How price flags are calculated",
+      "pos": {
+        "below": "Below usual",
+        "typical": "In range",
+        "high": "Above",
+        "veryHigh": "Well above"
+      }
     }
   },
   "suppliers": {

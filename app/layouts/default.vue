@@ -728,6 +728,11 @@ watch(() => route.fullPath, () => {
   .brand__name { font-size: 0.875rem; }
   .foot__links { margin-left: 0; }
 
+  /* 96px above the footer plus the page's own bottom padding left a
+     ~160px void on phones. Halve the footer's own contribution. */
+  .foot { margin-top: var(--s-6); }
+  .foot__inner { padding-block: var(--s-5); }
+
   /* The drawer carries the theme and language controls on a phone, so
      the bar keeps only the brand and the menu. This is also what was
      pushing 27px of horizontal overflow at 360px. */
