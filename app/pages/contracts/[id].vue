@@ -332,6 +332,19 @@ const hasTenderFacts = computed(() => {
 
 const amendments = computed(() => tender.value?.amendments ?? [])
 
+/**
+ * Amendment descriptions arrive as raw pipeline tokens ("aclar_llamado",
+ * "ajuste_llamado") — the same machine vocabulary the documentType
+ * labels already translate. Give them a Spanish label, falling back to
+ * the token if we don't have one.
+ */
+function amendmentLabel(desc?: string): string {
+  const raw = (desc ?? '').trim()
+  if (!raw) return ''
+  const key = `contract.amendmentKind.${raw}`
+  return te(key) ? t(key) : raw
+}
+
 // ---- Amount internals -----------------------------------------------
 const amt = computed(() => contract.value?.amount ?? null)
 
@@ -931,11 +944,15 @@ useSeo(() => ({
                   <span
                     v-if="a.description"
                     class="amds__desc"
-                  >{{ a.description }}</span>
-                  <span
+                  >{{ amendmentLabel(a.description) }}</span>
+                  <!-- The release this one amends exists at /contracts/{id}
+                       ~99% of the time; link it instead of printing a dead
+                       id the reader has to paste into the URL bar. -->
+                  <NuxtLink
                     v-if="a.amendsReleaseID"
+                    :to="localePath(`/contracts/${a.amendsReleaseID}`)"
                     class="amds__ref u-mono"
-                  >{{ t('contract.amendmentOf', { id: a.amendsReleaseID }) }}</span>
+                  >{{ t('contract.amendmentOf', { id: a.amendsReleaseID }) }}</NuxtLink>
                 </span>
               </li>
             </ol>

@@ -298,7 +298,12 @@
     },
     "amendmentOf": "Modifica a {id}",
     "itemsCount": "{n} artículo | {n} artículos",
-    "itemsTenderHelp": "Artículos incluidos en el llamado. Los precios aparecen recién con la adjudicación."
+    "itemsTenderHelp": "Artículos incluidos en el llamado. Los precios aparecen recién con la adjudicación.",
+    "amendmentKind": {
+      "aclar_llamado": "Aclaración al llamado",
+      "ajuste_llamado": "Ajuste del llamado",
+      "items_compra": "Ajuste de ítems"
+    }
   },
   "suppliers": {
     "title": "Proveedores del Estado",

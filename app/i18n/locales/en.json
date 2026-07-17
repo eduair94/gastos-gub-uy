@@ -298,7 +298,12 @@
     },
     "amendmentOf": "Amends {id}",
     "itemsCount": "{n} item | {n} items",
-    "itemsTenderHelp": "Items included in the tender. Prices appear only once it is awarded."
+    "itemsTenderHelp": "Items included in the tender. Prices appear only once it is awarded.",
+    "amendmentKind": {
+      "aclar_llamado": "Tender clarification",
+      "ajuste_llamado": "Tender adjustment",
+      "items_compra": "Items adjustment"
+    }
   },
   "suppliers": {
     "title": "State suppliers",
