@@ -203,12 +203,11 @@ console.log("\n📊 sample-size tiers");
   check("severity/severityRank stay in sync", robust!.severityRank === 4 && robust!.severity === "critical");
   check("small-n confidence is shrunk below large-n", scoreUnitPrice(100_000, { ...wide, n: 10 })!.confidence < scoreUnitPrice(100_000, { ...wide, n: 5000 })!.confidence);
 
-  // Two-sided detection on the z path.
+  // The z path used to be two-sided and emit below-median prices as "price_spike" with
+  // direction 'below'. It is upper-tail only now: the name has to mean what it says, and the IQR
+  // fence was already upper-only, so two-sided here made detection depend on which estimator ran.
   const low = scoreUnitPrice(0.0001, { ...wide, n: 100 });
-  check("absurdly low price flagged on the z path", low !== null);
-  check("...with direction below", low!.direction === "below");
-  check("...and a negative signed zScore", low!.zScore < 0);
-  check("...but absZ positive", low!.absZ > 0);
+  check("absurdly low price is NOT a price_spike", low === null);
 }
 
 // --- input hygiene --------------------------------------------------------
@@ -280,6 +279,48 @@ console.log("\n📊 reported z magnitude is bounded");
   check("extreme z clamped", huge !== null && Math.abs(huge.zScore) <= MAX_REPORTED_Z);
   check("clamped finding is still critical", huge !== null && huge.severity === "critical");
   check("clamped z keeps its sign", huge !== null && huge.zScore > 0);
+}
+
+// --- practical significance ----------------------------------------------
+// The epsilons floor the DENOMINATOR; nothing floored the numerator. On a baseline sitting at the
+// madLn epsilon, the z-score turned a 0.5% price difference into a flag and 1.5% into "critical".
+console.log("\n📊 effect-size floor: statistical significance is not enough");
+{
+  const tight: BaselineInput = { n: 200, medianLn: Math.log(1000), madLn: MAD_LN_EPSILON, p25: 999, p75: 1001 };
+
+  // 1.5% over the median scored |z| ~ 10 (critical) before the floor existed.
+  check("+1.5% over median -> not flagged", scoreUnitPrice(1015, tight) === null);
+  check("+10% over median -> not flagged", scoreUnitPrice(1100, tight) === null);
+  check("+24% over median -> not flagged (just under the floor)", scoreUnitPrice(1240, tight) === null);
+  check("+26% over median -> flagged (just over the floor)", scoreUnitPrice(1260, tight) !== null);
+  check("3x over median -> still flagged", scoreUnitPrice(3000, tight) !== null);
+
+  // The floor must not swallow real outliers on a normally-dispersed baseline.
+  const normal: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.2, p25: 90, p75: 110 };
+  check("wide baseline: genuine 10x outlier still flagged", scoreUnitPrice(1000, normal) !== null);
+  check("wide baseline: +10% still not flagged", scoreUnitPrice(110, normal) === null);
+}
+
+// --- price_spike is upper-tail only ---------------------------------------
+// The z path was two-sided while the IQR fence is upper-only, so whether a cheap contract got
+// flagged depended purely on its baseline's dispersion. 7,464 of 22,368 production findings (33%)
+// were priced BELOW their median and still labelled "price_spike".
+console.log("\n📊 price_spike never fires below the median");
+{
+  const normal: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.2, p25: 90, p75: 110 };
+
+  const cheap = scoreUnitPrice(0.01, normal); // |z| enormous, but far BELOW the median
+  check("absurdly cheap price -> not a price_spike", cheap === null);
+  check("half the median -> not flagged", scoreUnitPrice(50, normal) === null);
+
+  const expensive = scoreUnitPrice(10_000, normal);
+  check("expensive outlier -> still flagged", expensive !== null);
+  check("...direction is always 'above'", expensive === null || expensive.direction === "above");
+  check("...z is positive", expensive === null || expensive.zScore > 0);
+
+  // Consistency: the fence path agrees with the z path on direction.
+  const degenerate: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0, p25: 100, p75: 150 };
+  check("fence path: cheap price not flagged", scoreUnitPrice(1, degenerate) === null);
 }
 
 console.log("\n=====================");

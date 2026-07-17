@@ -69,6 +69,24 @@ export const MAX_REPORTED_Z = 1000;
 /** Flag when the modified z-score exceeds this. The Iglewicz-Hoaglin recommendation. */
 export const Z_FLAG_THRESHOLD = 3.5;
 
+/**
+ * Minimum practical effect size: how far above the baseline median a price must sit before it can
+ * be flagged at all, as a natural log ratio. ln(1.25) = a price 25% over the median.
+ *
+ * Statistical significance alone is not enough here. MAD_LN_EPSILON floors the DENOMINATOR, but
+ * nothing floored the numerator, so on a tight baseline the z-score converts a trivial price
+ * difference into a huge score. Measured at the epsilon floor (madLn = 1e-3): a price 0.5% over the
+ * median flags, and 1.5% over is "critical". That is noise being reported as corruption.
+ *
+ * With this floor, whichever of the two constraints is stricter wins: below madLn ~0.05 the effect
+ * size binds, above it statistical significance binds. Against production this suppresses 361 of
+ * 22,368 findings (1.6%) — all of them in the 0.5%-to-25%-over band.
+ *
+ * A price under 25% over the category median is not evidence of anything in public procurement:
+ * ordinary variation in timing, lot size, and supplier margin covers it.
+ */
+export const MIN_LOG_DEVIATION = Math.log(1.25);
+
 /** Multiplier on the IQR for the "extreme" (Tukey far-out) fence. */
 export const IQR_FENCE_K = 3;
 
@@ -332,6 +350,26 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
     if (!Number.isFinite(z)) {
       return null;
     }
+
+    // Upper tail only. This detector emits type "price_spike", and a contract cheaper than its
+    // category norm is not a price spike — it is a different signal entirely (and a weak one for
+    // finding overspending). Flagging it under this name mislabels it.
+    //
+    // It also removes an incoherence: the IQR fence below is upper-tail-only by construction, so
+    // while this branch was two-sided, whether an identically cheap contract got flagged depended
+    // on nothing but its baseline's dispersion — i.e. on which estimator happened to run.
+    // Production carried 7,464 of 22,368 findings (33%) priced BELOW their median, all labelled
+    // "price_spike".
+    if (z <= 0) {
+      return null;
+    }
+
+    // Practical significance, not just statistical. See MIN_LOG_DEVIATION.
+    const logDeviation = Math.log(price) - baseline.medianLn;
+    if (logDeviation < MIN_LOG_DEVIATION) {
+      return null;
+    }
+
     const absZ = Math.abs(z);
     const rank = severityRankFromAbsZ(absZ);
     if (rank === null) {
@@ -345,7 +383,7 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
       severityRank: rank,
       confidence: confidenceFromZ(absZ, n),
       method: "log_modified_zscore",
-      direction: z > 0 ? "above" : "below",
+      direction: "above",
     };
   }
 
@@ -360,6 +398,13 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
   }
   const excess = (price - baseline.p75) / iqr;
   if (!(excess > IQR_FENCE_K)) {
+    return null;
+  }
+
+  // Same practical-significance floor the z path applies, so a finding means the same thing
+  // regardless of which estimator produced it. A tight-but-not-degenerate baseline can otherwise
+  // clear a k=3 fence on a price only a few percent over the median.
+  if (Math.log(price) - baseline.medianLn < MIN_LOG_DEVIATION) {
     return null;
   }
 
