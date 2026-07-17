@@ -928,8 +928,8 @@ useSeo(() => ({
   padding-inline: 4px;
   border-radius: var(--r-full);
   background: var(--celeste-deep);
-  // --celeste-deep flips light on the dark theme; --surface flips dark, so the
-  // digit stays readable on both (and is #fff on light, same as before).
+  /* --celeste-deep flips light on the dark theme; --surface flips dark, so the
+     digit stays readable on both (and is #fff on light, same as before). */
   color: var(--surface);
   font-family: var(--font-mono);
   font-size: 10px;

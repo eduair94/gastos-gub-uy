@@ -1635,9 +1635,9 @@ useSeo(() => ({
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-md);
   background: var(--celeste-deep);
-  // --celeste-deep flips light in the dark theme while --ink never flips, so a
-  // fixed #fff washes out there; --surface is #fff on light and dark navy on
-  // dark — readable on the celeste fill in both.
+  /* --celeste-deep flips light in the dark theme while --ink never flips, so a
+     fixed #fff washes out there; --surface is #fff on light and dark navy on
+     dark — readable on the celeste fill in both. */
   color: var(--surface);
   font-size: var(--t-sm);
   font-weight: 600;
@@ -1648,7 +1648,7 @@ useSeo(() => ({
 
 .official__btn:hover {
   background: var(--ink);
-  color: #fff; // --ink stays dark in both themes; the base color would be dark-on-dark here
+  color: #fff; /* --ink stays dark in both themes; the base color would be dark-on-dark here */
 }
 
 .official__btn--ghost {
@@ -1658,9 +1658,9 @@ useSeo(() => ({
 }
 
 .official__btn--ghost:hover {
-  // Was background: var(--surface) + color: var(--ink) — on the dark theme both
-  // are dark navy, so the label vanished on hover. A celeste tint plus the
-  // theme's own text color reads in both themes.
+  /* Was background: var(--surface) + color: var(--ink) — on the dark theme both
+     are dark navy, so the label vanished on hover. A celeste tint plus the
+     theme's own text color reads in both themes. */
   background: color-mix(in srgb, var(--celeste) 20%, transparent);
   color: var(--text);
 }
