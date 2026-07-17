@@ -658,6 +658,12 @@ class AnomalyDetector {
     const startTime = Date.now();
     console.log(`🚀 Anomaly detection starting (dataVersion=${this.dataVersion})`);
 
+    // The shared default is a 45s idle-socket timeout, which the baseline histogram scan exceeds
+    // while the server is still legitimately working. Must be set before the first connect.
+    if (!process.env.MONGO_SOCKET_TIMEOUT_MS) {
+      process.env.MONGO_SOCKET_TIMEOUT_MS = String(30 * 60 * 1000);
+    }
+
     await connectToDatabase();
 
     if (options.dryRun) {

@@ -36,7 +36,13 @@ export async function connectToDatabase() {
       
       // Timeout settings
       serverSelectionTimeoutMS: 10000, // How long to try selecting a server
-      socketTimeoutMS: 45000, // How long a send or receive on a socket can take before timing out
+      // How long a send or receive on a socket can take before timing out.
+      //
+      // 45s suits the web app, where any query taking that long is already a bug. It is far too
+      // short for the batch jobs in src/jobs, whose aggregations legitimately run for minutes over
+      // ~2.2M releases — they set MONGO_SOCKET_TIMEOUT_MS to raise it. Note this is an idle-socket
+      // timeout, so a long-running aggregation trips it while the server is still working.
+      socketTimeoutMS: Number(process.env.MONGO_SOCKET_TIMEOUT_MS ?? 45000),
       connectTimeoutMS: 10000, // How long to wait for a connection to be established
       
       // Monitoring and retry settings

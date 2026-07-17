@@ -597,6 +597,13 @@ export class AnalyticsRefresher {
 
   async run(scope: { patterns: boolean, dashboard: boolean }): Promise<void> {
     const started = Date.now()
+
+    // The shared default is a 45s idle-socket timeout, which these aggregations exceed while the
+    // server is still legitimately working. Must be set before the first connect.
+    if (!process.env.MONGO_SOCKET_TIMEOUT_MS) {
+      process.env.MONGO_SOCKET_TIMEOUT_MS = String(30 * 60 * 1000)
+    }
+
     await connectToDatabase()
     this.logger.info(`Analytics refresh starting (dataVersion=${this.dataVersion})`)
     await this.reportExcluded()
