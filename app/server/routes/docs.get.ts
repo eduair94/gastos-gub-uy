@@ -51,7 +51,10 @@ const html = /* html */ `<!doctype html>
       var el = document.getElementById('api-reference')
       el.dataset.configuration = JSON.stringify(configuration)
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <!-- Pinned: an unversioned CDN URL resolves to whatever is latest at request
+         time, so an upstream breaking release would take these docs down with no
+         deploy on our side. Bump deliberately. -->
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.62.9/dist/browser/standalone.js"></script>
     <script>
       // Remove the boot placeholder once Scalar has taken over the page.
       window.addEventListener('load', function () {

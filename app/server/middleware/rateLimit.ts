@@ -78,10 +78,16 @@ function getClientId(event: any): string {
 }
 
 function getRateLimiter(path: string): RateLimiter {
-  if (path.includes('/search/')) {
+  // Match on the path only — a query string must not decide the limit,
+  // and the route is `/api/search?q=…` with no trailing slash, so the
+  // old `includes('/search/')` test never once matched and every search
+  // silently got the loose 60/min bucket instead of 30/min.
+  const route = path.split('?')[0].replace(/\/+$/, '')
+
+  if (route === '/api/search' || route.startsWith('/api/search/')) {
     return searchLimiter
   }
-  if (path.includes('/export/')) {
+  if (route === '/api/export' || route.startsWith('/api/export/')) {
     return exportLimiter
   }
   return apiLimiter

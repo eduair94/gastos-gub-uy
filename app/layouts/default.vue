@@ -1,540 +1,512 @@
-<template>
-  <v-app>
-    <!-- Navigation Drawer -->
-    <v-navigation-drawer
-      v-model="navigationDrawer"
-      app
-      class="app-navigation"
-      width="280"
-      :permanent="$vuetify.display.lgAndUp"
-    >
-      <!-- App Header -->
-      <v-list-item class="pa-4">
-        <template #prepend>
-          <v-avatar
-            color="primary"
-            size="40"
-          >
-            <v-icon color="white">
-              mdi-bank
-            </v-icon>
-          </v-avatar>
-        </template>
-        <v-list-item-title class="text-h6 font-weight-bold">
-          Con la tuya contribuyente
-        </v-list-item-title>
-        <v-list-item-subtitle>
-          Transparency Dashboard
-        </v-list-item-subtitle>
-      </v-list-item>
-
-      <v-divider />
-
-      <!-- Navigation Menu -->
-      <v-list
-        density="comfortable"
-        nav
-      >
-        <template
-          v-for="item in navigationItems"
-          :key="item.title"
-        >
-          <!-- External links -->
-          <v-list-item
-            v-if="item.external"
-            :href="item.to"
-            target="_blank"
-            rel="noopener noreferrer"
-            :prepend-icon="item.icon"
-            :title="item.title"
-            :disabled="item.disabled"
-            class="mb-1"
-          >
-            <template #append>
-              <v-icon
-                size="small"
-                color="medium-emphasis"
-              >
-                mdi-open-in-new
-              </v-icon>
-            </template>
-          </v-list-item>
-
-          <!-- Internal links -->
-          <v-list-item
-            v-else
-            :to="item.to"
-            :exact="item.exact"
-            :prepend-icon="item.icon"
-            :title="item.title"
-            :disabled="item.disabled"
-            class="mb-1"
-          />
-        </template>
-      </v-list>
-
-      <!-- Quick Stats -->
-      <template #append>
-        <div class="pa-4">
-          <v-divider class="mb-4" />
-
-          <!-- Quick Stats Header with Controls -->
-          <div class="d-flex align-center justify-space-between mb-2">
-            <div class="text-caption text-medium-emphasis">
-              Quick Stats
-              <v-progress-circular
-                v-if="dashboardMetrics.isLoading.value && !dashboardMetrics.quickStats.value.contracts"
-                indeterminate
-                size="12"
-                width="2"
-                class="ml-2"
-              />
-            </div>
-          </div>
-          <div class="text-body-2">
-            <div class="d-flex justify-space-between mb-1">
-              <span>Total Contracts:</span>
-              <span class="font-weight-medium">{{ formatNumber(dashboardMetrics.quickStats.value.contracts) }}</span>
-            </div>
-            <div class="d-flex justify-space-between mb-1">
-              <span>Suppliers:</span>
-              <span class="font-weight-medium">{{ formatNumber(dashboardMetrics.quickStats.value.suppliers) }}</span>
-            </div>
-            <div class="d-flex justify-space-between mb-1">
-              <span>Buyers:</span>
-              <span class="font-weight-medium">{{ formatNumber(dashboardMetrics.quickStats.value.buyers) }}</span>
-            </div>
-            <div class="d-flex justify-space-between">
-              <span>Total Spending:</span>
-              <span class="font-weight-medium">{{ formatCurrency(dashboardMetrics.quickStats.value.spending) }}</span>
-            </div>
-          </div>
-          <!-- Error state -->
-          <div
-            v-if="dashboardMetrics.error.value"
-            class="text-caption text-error mt-2"
-          >
-            <v-icon
-              size="small"
-              class="mr-1"
-            >
-              mdi-alert-circle
-            </v-icon>
-            Failed to load stats
-          </div>
-
-          <!-- Last updated indicator -->
-          <div
-            v-if="dashboardMetrics.metrics.value?.calculatedAt"
-            class="text-caption text-medium-emphasis mt-2"
-          >
-            Updated: {{ formatLastUpdated(dashboardMetrics.metrics.value.calculatedAt) }}
-          </div>
-        </div>
-      </template>
-    </v-navigation-drawer>
-
-    <!-- App Bar -->
-    <v-app-bar
-      app
-      elevation="1"
-      color="surface"
-    >
-      <!-- Menu Toggle for Mobile -->
-      <v-app-bar-nav-icon
-        v-if="!$vuetify.display.lgAndUp"
-        @click="toggleNavigationDrawer"
-      />
-
-      <!-- Page Title -->
-      <v-app-bar-title class="text-h6 font-weight-medium">
-        {{ pageTitle }}
-      </v-app-bar-title>
-
-      <v-spacer />
-
-      <!-- Search -->
-      <v-text-field
-        v-model="searchQuery"
-        placeholder="Search contracts, suppliers, buyers..."
-        prepend-inner-icon="mdi-magnify"
-        variant="outlined"
-        density="compact"
-        hide-details
-        clearable
-        class="mx-4"
-        style="max-width: 400px"
-        @keyup.enter="performSearch"
-      />
-
-      <!-- Theme Toggle -->
-      <v-btn
-        icon
-        variant="text"
-        @click="toggleTheme"
-      >
-        <v-icon>
-          {{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}
-        </v-icon>
-      </v-btn>
-
-      <!-- Notifications -->
-      <v-btn
-        icon
-        variant="text"
-      >
-        <v-badge
-          :content="notifications.length"
-          :model-value="notifications.length > 0"
-          color="error"
-        >
-          <v-icon>mdi-bell</v-icon>
-        </v-badge>
-      </v-btn>
-
-      <!-- User Menu -->
-      <v-menu>
-        <template #activator="{ props }">
-          <v-btn
-            icon
-            variant="text"
-            v-bind="props"
-          >
-            <v-avatar size="32">
-              <v-icon>mdi-account</v-icon>
-            </v-avatar>
-          </v-btn>
-        </template>
-        <v-list>
-          <v-list-item>
-            <v-list-item-title>Settings</v-list-item-title>
-          </v-list-item>
-          <v-list-item>
-            <v-list-item-title>Help</v-list-item-title>
-          </v-list-item>
-          <v-divider />
-          <v-list-item>
-            <v-list-item-title>About</v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-    </v-app-bar>
-
-    <!-- Main Content -->
-    <v-main>
-      <v-container
-        fluid
-        class="pa-6"
-      >
-        <!-- Breadcrumbs -->
-        <v-breadcrumbs
-          v-if="breadcrumbs.length > 1"
-          :items="breadcrumbs"
-          class="pa-0 mb-4"
-        />
-
-        <!-- Page Content -->
-        <slot />
-      </v-container>
-    </v-main>
-
-    <!-- Notifications Snackbar -->
-    <v-snackbar
-      v-for="notification in notifications"
-      :key="notification.id"
-      v-model="notification.show"
-      :color="notification.type"
-      :timeout="notification.timeout || 5000"
-      :persistent="notification.persistent"
-      location="top right"
-      class="mb-2"
-    >
-      <div class="d-flex align-center">
-        <v-icon
-          class="mr-2"
-          :icon="getNotificationIcon(notification.type)"
-        />
-        <div>
-          <div class="font-weight-medium">
-            {{ notification.title }}
-          </div>
-          <div class="text-body-2">
-            {{ notification.message }}
-          </div>
-        </div>
-      </div>
-      <template #actions>
-        <v-btn
-          variant="text"
-          @click="dismissNotification(notification.id)"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
-  </v-app>
-</template>
-
 <script setup lang="ts">
 import { useTheme } from 'vuetify'
-import type { NavigationItem, Notification } from '~/types'
 
-// Theme management
-const theme = useTheme()
-const isDark = computed(() => theme.global.name.value === 'dark')
-
-// Dashboard metrics
-const dashboardMetrics = useDashboardMetrics()
-
-// Navigation state
-const navigationDrawer = ref(false)
-const searchQuery = ref('')
-
-// Page metadata
+const { t, locale, locales, setLocale } = useI18n()
+const localePath = useLocalePath()
 const route = useRoute()
-const pageTitle = computed(() => {
-  const titles: Record<string, string> = {
-    '/': 'Dashboard',
-    '/contracts': 'Contract Explorer',
-    '/suppliers': 'Suppliers',
-    '/buyers': 'Government Buyers',
-    '/analytics': 'Analytics & Insights',
-    '/analytics/anomalies': 'Anomaly Detection',
-    '/reports': 'Reports',
-  }
-  return titles[route.path] || 'Dashboard'
-})
+const router = useRouter()
+const theme = useTheme()
 
-// Breadcrumbs
-const breadcrumbs = computed(() => {
-  const paths = route.path.split('/').filter(Boolean)
-  const items: { title: string, to: string, disabled?: boolean }[] = [{ title: 'Home', to: '/' }]
+const drawer = ref(false)
+const search = ref('')
 
-  let currentPath = ''
-  paths.forEach((path) => {
-    currentPath += `/${path}`
-    const title = path.charAt(0).toUpperCase() + path.slice(1)
-    items.push({
-      title,
-      to: currentPath,
-      disabled: currentPath === route.path,
-    })
-  })
+const nav = computed(() => [
+  { key: 'home', to: localePath('/'), icon: 'mdi-view-dashboard-outline' },
+  { key: 'contracts', to: localePath('/contracts'), icon: 'mdi-file-document-outline' },
+  { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
+  { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
+  { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
+  // The API reference is a Nitro server route (server/routes/docs.get.ts), not a Nuxt page, so it
+  // must be a real anchor: vue-router resolves /docs to zero matched routes and throws its own 404
+  // without ever issuing a request. It would still work when pasted into the address bar, which
+  // makes the broken in-app case easy to miss. Not localePath'd — the page is served in one form.
+  { key: 'docs', to: '/docs', icon: 'mdi-api', external: true },
+])
 
-  return items
-})
-
-// Navigation items
-const navigationItems: NavigationItem[] = [
-  {
-    title: 'Dashboard',
-    icon: 'mdi-view-dashboard',
-    to: '/',
-    exact: true,
-  },
-  {
-    title: 'Contract Explorer',
-    icon: 'mdi-file-document-multiple',
-    to: '/contracts',
-  },
-  {
-    title: 'Suppliers',
-    icon: 'mdi-domain',
-    to: '/suppliers',
-  },
-  {
-    title: 'Government Buyers',
-    icon: 'mdi-bank',
-    to: '/buyers',
-  },
-  {
-    title: 'Anomaly Detection',
-    icon: 'mdi-alert-circle',
-    to: '/analytics/anomalies',
-  },
-  {
-    title: 'Data Source',
-    icon: 'mdi-database',
-    to: 'https://catalogodatos.gub.uy/dataset/arce-datos-historicos-de-compras',
-    external: true,
-  },
-//   {
-//     title: 'Analytics & Insights',
-//     icon: 'mdi-chart-line',
-//     to: '/analytics',
-//   },
-//   {
-//     title: 'Reports',
-//     icon: 'mdi-file-chart',
-//     to: '/reports',
-//   },
-]
-
-// Notifications
-const notifications = ref<(Notification & { show: boolean })[]>([])
-
-// Methods
-const toggleNavigationDrawer = () => {
-  navigationDrawer.value = !navigationDrawer.value
+function isActive(to: string) {
+  if (to === localePath('/')) return route.path === to
+  return route.path.startsWith(to)
 }
 
-const toggleTheme = () => {
-  theme.global.name.value = theme.global.name.value === 'light' ? 'dark' : 'light'
-}
+// Theme is a preference, so it survives reloads. First visit follows the
+// OS rather than assuming light.
+const isDark = ref(false)
 
-const performSearch = () => {
-  if (searchQuery.value.trim()) {
-    // Navigate to search results
-    navigateTo(`/contracts?search=${encodeURIComponent(searchQuery.value)}`)
+function applyTheme(dark: boolean) {
+  isDark.value = dark
+  theme.global.name.value = dark ? 'contribuyenteDark' : 'contribuyente'
+  if (import.meta.client) {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    localStorage.setItem('cltc-theme', dark ? 'dark' : 'light')
   }
 }
 
-const formatNumber = (num: number): string => {
-  return new Intl.NumberFormat('es-UY').format(num)
-}
-
-const formatCurrency = (amount: number): string => {
-  if (amount >= 1_000_000_000) {
-    return `$${(amount / 1_000_000_000).toFixed(1)}B`
-  }
-  if (amount >= 1_000_000) {
-    return `$${(amount / 1_000_000).toFixed(1)}M`
-  }
-  if (amount >= 1_000) {
-    return `$${(amount / 1_000).toFixed(1)}K`
-  }
-  return `$${amount.toFixed(0)}`
-}
-
-const formatLastUpdated = (date: Date): string => {
-  const now = new Date()
-  const diffMs = now.getTime() - new Date(date).getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-
-  if (diffMins < 1) {
-    return 'Just now'
-  }
-  else if (diffMins < 60) {
-    return `${diffMins}m ago`
-  }
-  else if (diffHours < 24) {
-    return `${diffHours}h ago`
-  }
-  else {
-    return new Date(date).toLocaleDateString()
-  }
-}
-
-const getNotificationIcon = (type: string): string => {
-  const icons = {
-    success: 'mdi-check-circle',
-    error: 'mdi-alert-circle',
-    warning: 'mdi-alert',
-    info: 'mdi-information',
-  }
-  return icons[type as keyof typeof icons] || 'mdi-information'
-}
-
-const dismissNotification = (id: string) => {
-  const index = notifications.value.findIndex((n: Notification & { show: boolean }) => n.id === id)
-  if (index > -1) {
-    notifications.value[index].show = false
-    setTimeout(() => {
-      notifications.value.splice(index, 1)
-    }, 300)
-  }
-}
-
-// Dashboard refresh methods
-const refreshStats = async () => {
-  try {
-    await dashboardMetrics.refreshMetrics()
-
-    // Show success notification
-    const notification: Notification & { show: boolean } = {
-      id: Date.now().toString(),
-      title: 'Data Refreshed',
-      message: 'Dashboard metrics have been updated',
-      type: 'success',
-      timeout: 3000,
-      show: true,
-    }
-    notifications.value.push(notification)
-  }
-  catch {
-    // Show error notification
-    const notification: Notification & { show: boolean } = {
-      id: Date.now().toString(),
-      title: 'Refresh Failed',
-      message: 'Failed to update dashboard metrics',
-      type: 'error',
-      timeout: 5000,
-      show: true,
-    }
-    notifications.value.push(notification)
-  }
-}
-
-const toggleAutoRefresh = () => {
-  if (dashboardMetrics.isAutoRefreshEnabled.value) {
-    dashboardMetrics.stopAutoRefresh()
-  }
-  else {
-    dashboardMetrics.startAutoRefresh()
-  }
-}
-
-// Initialize navigation drawer state
 onMounted(() => {
-  // Auto-open on desktop
-  if (import.meta.client && window.innerWidth >= 1280) {
-    navigationDrawer.value = true
-  }
-
-  // Start auto-refresh for dashboard metrics (5 minute interval)
-  dashboardMetrics.autoRefreshInterval.value = 5 * 60 * 1000 // 5 minutes
-  dashboardMetrics.startAutoRefresh(() => {
-    // Show subtle notification on automatic refresh
-    const notification: Notification & { show: boolean } = {
-      id: Date.now().toString(),
-      title: 'Auto-refresh',
-      message: 'Dashboard data updated automatically',
-      type: 'info',
-      timeout: 2000,
-      show: true,
-    }
-    notifications.value.push(notification)
-  })
+  const saved = localStorage.getItem('cltc-theme')
+  applyTheme(saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches)
 })
 
-// Cleanup on unmount
-onUnmounted(() => {
-  dashboardMetrics.stopAutoRefresh()
+function toggleTheme() {
+  applyTheme(!isDark.value)
+}
+
+function submitSearch() {
+  const q = search.value.trim()
+  if (!q) return
+  router.push({ path: localePath('/contracts'), query: { search: q } })
+  drawer.value = false
+}
+
+const otherLocales = computed(() =>
+  (locales.value as { code: string, name: string }[]).filter(l => l.code !== locale.value),
+)
+
+// Close the mobile panel on navigation — leaving it open over the new
+// page is the classic drawer bug.
+watch(() => route.fullPath, () => {
+  drawer.value = false
 })
 </script>
 
+<template>
+  <v-app>
+    <a
+      class="u-skip"
+      href="#contenido"
+    >{{ t('nav.skip') }}</a>
+
+    <header class="topbar">
+      <div class="topbar__inner u-container">
+        <NuxtLink
+          :to="localePath('/')"
+          class="brand"
+        >
+          <BrandMark :size="30" />
+          <span class="brand__text">
+            <span class="brand__name">{{ t('brand.name') }}</span>
+            <span class="brand__tag">{{ t('brand.tagline') }}</span>
+          </span>
+        </NuxtLink>
+
+        <nav
+          class="topnav"
+          :aria-label="t('nav.sections')"
+        >
+          <component
+            :is="n.external ? 'a' : 'NuxtLink'"
+            v-for="n in nav"
+            :key="n.key"
+            :to="n.external ? undefined : n.to"
+            :href="n.external ? n.to : undefined"
+            :target="n.external ? '_blank' : undefined"
+            :rel="n.external ? 'noopener' : undefined"
+            class="topnav__link"
+            :class="{ 'topnav__link--active': !n.external && isActive(n.to) }"
+            :aria-current="!n.external && isActive(n.to) ? 'page' : undefined"
+          >
+            {{ t(`nav.${n.key}`) }}
+          </component>
+        </nav>
+
+        <div class="topbar__actions">
+          <form
+            class="topsearch"
+            role="search"
+            @submit.prevent="submitSearch"
+          >
+            <label
+              class="u-sr-only"
+              for="topsearch"
+            >{{ t('common.search') }}</label>
+            <v-icon
+              size="18"
+              class="topsearch__icon"
+            >
+              mdi-magnify
+            </v-icon>
+            <input
+              id="topsearch"
+              v-model="search"
+              class="topsearch__input"
+              type="search"
+              :placeholder="t('common.searchPlaceholder')"
+            >
+          </form>
+
+          <v-menu>
+            <template #activator="{ props }">
+              <button
+                v-bind="props"
+                class="iconbtn"
+                :aria-label="t('nav.language')"
+              >
+                <span class="iconbtn__label">{{ locale.toUpperCase() }}</span>
+              </button>
+            </template>
+            <v-list density="compact">
+              <v-list-item
+                v-for="l in otherLocales"
+                :key="l.code"
+                :title="l.name"
+                @click="setLocale(l.code)"
+              />
+            </v-list>
+          </v-menu>
+
+          <button
+            class="iconbtn"
+            :aria-label="isDark ? t('nav.themeLight') : t('nav.themeDark')"
+            @click="toggleTheme"
+          >
+            <v-icon size="19">
+              {{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}
+            </v-icon>
+          </button>
+
+          <button
+            class="iconbtn iconbtn--menu"
+            :aria-label="t('nav.menu')"
+            :aria-expanded="drawer"
+            @click="drawer = !drawer"
+          >
+            <v-icon size="21">
+              {{ drawer ? 'mdi-close' : 'mdi-menu' }}
+            </v-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile navigation: a plain disclosure panel rather than an
+           overlay drawer. Fewer moving parts, no scroll-lock bugs. -->
+      <Transition name="sheet">
+        <nav
+          v-if="drawer"
+          class="mobilenav"
+          :aria-label="t('nav.sections')"
+        >
+          <component
+            :is="n.external ? 'a' : 'NuxtLink'"
+            v-for="n in nav"
+            :key="n.key"
+            :to="n.external ? undefined : n.to"
+            :href="n.external ? n.to : undefined"
+            :target="n.external ? '_blank' : undefined"
+            :rel="n.external ? 'noopener' : undefined"
+            class="mobilenav__link"
+            :class="{ 'mobilenav__link--active': !n.external && isActive(n.to) }"
+          >
+            <v-icon size="20">
+              {{ n.icon }}
+            </v-icon>
+            {{ t(`nav.${n.key}`) }}
+          </component>
+        </nav>
+      </Transition>
+    </header>
+
+    <v-main>
+      <div id="contenido">
+        <slot />
+      </div>
+    </v-main>
+
+    <footer class="foot">
+      <div class="foot__inner u-container">
+        <div class="foot__block">
+          <BrandMark :size="22" />
+          <p class="foot__note">
+            {{ t('footer.source') }}
+          </p>
+        </div>
+        <p class="foot__disclaimer">
+          {{ t('footer.disclaimer') }}
+        </p>
+        <nav
+          class="foot__links"
+          :aria-label="t('nav.sections')"
+        >
+          <NuxtLink :to="localePath('/about')">
+            {{ t('nav.about') }}
+          </NuxtLink>
+          <a href="/docs">{{ t('footer.api') }}</a>
+          <a
+            href="https://www.comprasestatales.gub.uy"
+            rel="noopener external"
+            target="_blank"
+          >
+            Compras Estatales
+          </a>
+        </nav>
+      </div>
+    </footer>
+  </v-app>
+</template>
+
 <style scoped>
-.v-app-bar {
-    backdrop-filter: blur(10px);
+.u-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.app-navigation {
-    border-right: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+/* ---- Top bar ---- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
 }
 
-.v-navigation-drawer :deep(.v-list-item--active) {
-    background-color: rgba(var(--v-theme-primary), 0.1);
-    border-right: 3px solid rgb(var(--v-theme-primary));
+.topbar__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  min-height: 62px;
 }
 
-.v-breadcrumbs :deep(.v-breadcrumbs-item) {
-    font-size: 0.875rem;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  text-decoration: none;
+  color: var(--text);
+  flex: none;
 }
 
-@media (max-width: 959px) {
-    .v-container {
-        padding: 16px !important;
-    }
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.brand__name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: 0.9375rem;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+
+.brand__tag {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  margin-left: var(--s-3);
+}
+
+.topnav__link {
+  position: relative;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.topnav__link:hover {
+  color: var(--text);
+  background: var(--surface-sunken);
+}
+
+.topnav__link--active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* The active marker is a short gold rule — the same vocabulary as the
+   magnitude bar, reused for "you are here". */
+.topnav__link--active::after {
+  content: "";
+  position: absolute;
+  left: var(--s-3);
+  right: var(--s-3);
+  bottom: 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--sol);
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+
+.topsearch {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.topsearch__icon {
+  position: absolute;
+  left: 9px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.topsearch__input {
+  width: clamp(160px, 22vw, 280px);
+  padding: 7px var(--s-3) 7px 32px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-full);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-size: var(--t-sm);
+  font-family: var(--font-body);
+  transition: border-color var(--dur) var(--ease);
+}
+
+.topsearch__input::placeholder { color: var(--text-muted); }
+
+.topsearch__input:focus {
+  outline: none;
+  border-color: var(--celeste);
+  background: var(--surface);
+}
+
+.topsearch__input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.iconbtn {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 var(--s-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.iconbtn:hover {
+  color: var(--text);
+  border-color: var(--rule-strong);
+}
+
+.iconbtn__label {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.iconbtn--menu { display: none; }
+
+/* ---- Mobile nav ---- */
+.mobilenav {
+  display: none;
+  flex-direction: column;
+  padding: var(--s-2) clamp(var(--s-4), 3vw, var(--s-6)) var(--s-4);
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+.mobilenav__link {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.mobilenav__link--active {
+  color: var(--text);
+  background: var(--surface-sunken);
+  box-shadow: inset 3px 0 0 var(--sol);
+}
+
+.sheet-enter-active,
+.sheet-leave-active { transition: opacity var(--dur) var(--ease); }
+.sheet-enter-from,
+.sheet-leave-to { opacity: 0; }
+
+/* ---- Footer ---- */
+.foot {
+  margin-top: var(--s-9);
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+.foot__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4) var(--s-6);
+  padding-block: var(--s-6);
+}
+
+.foot__block {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.foot__note,
+.foot__disclaimer {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+.foot__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  margin-left: auto;
+}
+
+.foot__links a {
+  font-size: var(--t-sm);
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
+
+.foot__links a:hover { text-decoration: underline; }
+
+/* ---- Responsive ---- */
+@media (max-width: 1100px) {
+  .brand__tag { display: none; }
+  .topnav { gap: 0; }
+  .topnav__link { padding-inline: var(--s-2); }
+}
+
+@media (max-width: 900px) {
+  .topnav { display: none; }
+  .iconbtn--menu { display: grid; }
+  .mobilenav { display: flex; }
+}
+
+@media (max-width: 620px) {
+  .topsearch { display: none; }
+  .brand__name { font-size: 0.875rem; }
+  .foot__links { margin-left: 0; }
 }
 </style>
