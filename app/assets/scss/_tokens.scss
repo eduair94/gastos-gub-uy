@@ -89,6 +89,10 @@
   // Wide enough for two side-by-side year selects to show a full
   // four-digit value; at 264px Vuetify truncated "2024" to "2…".
   --rail: 296px;
+  // The sticky top bar's height (.topbar__inner min-height). Anything
+  // that sticks below it (the sticky pager) or that must clear it when
+  // scrolled into view (results anchors) offsets by this.
+  --header-h: 62px;
 
   --ease: cubic-bezier(0.2, 0, 0.1, 1);
   --dur: 180ms;

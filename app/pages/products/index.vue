@@ -105,6 +105,7 @@ useSeo(() => ({
     </div>
 
     <div
+      id="p-results-top"
       class="chips"
       role="group"
       :aria-label="t('products.sortLabel')"
@@ -120,6 +121,14 @@ useSeo(() => ({
         {{ t(`products.sort.${s}`) }}
       </button>
     </div>
+
+    <DataPager
+      v-if="products.length && pagination && pagination.totalPages > 1"
+      v-model:page="page"
+      :total-pages="pagination.totalPages"
+      sticky
+      scroll-target-id="p-results-top"
+    />
 
     <div
       v-if="error"
@@ -203,37 +212,13 @@ useSeo(() => ({
       </template>
     </DataTable>
 
-    <nav
-      v-if="pagination && pagination.totalPages > 1"
-      class="pager"
-      :aria-label="t('common.page')"
-    >
-      <button
-        class="pager__b"
-        type="button"
-        :disabled="page <= 1"
-        @click="page = Math.max(1, page - 1)"
-      >
-        <v-icon size="16">
-          mdi-chevron-left
-        </v-icon>
-        {{ t('common.previous') }}
-      </button>
-      <span class="pager__n">
-        {{ t('common.page') }} <strong>{{ page }}</strong> {{ t('common.of') }} {{ formatNumber(pagination.totalPages) }}
-      </span>
-      <button
-        class="pager__b"
-        type="button"
-        :disabled="page >= pagination.totalPages"
-        @click="page = page + 1"
-      >
-        {{ t('common.next') }}
-        <v-icon size="16">
-          mdi-chevron-right
-        </v-icon>
-      </button>
-    </nav>
+    <DataPager
+      v-if="products.length && pagination && pagination.totalPages > 1"
+      v-model:page="page"
+      :total-pages="pagination.totalPages"
+      class="pager--foot"
+      scroll-target-id="p-results-top"
+    />
   </div>
 </template>
 
@@ -399,37 +384,9 @@ useSeo(() => ({
   100% { background-position: 0% 50%; }
 }
 
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s-4);
-  margin-top: var(--s-5);
-}
-
-.pager__b {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-1);
-  padding: var(--s-2) var(--s-4);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.pager__b:disabled { opacity: 0.4; cursor: not-allowed; }
-.pager__b:not(:disabled):hover { background: var(--surface-sunken); }
-
-.pager__n {
-  font-family: var(--font-mono);
-  font-size: var(--t-sm);
-  color: var(--text-muted);
-}
+/* Pager markup + styles live in <DataPager>. */
+.pager--foot { margin-top: var(--s-5); }
+.chips { scroll-margin-top: calc(var(--header-h) + var(--s-3)); }
 
 @media (max-width: 560px) {
   .bar { flex-direction: column; align-items: stretch; }
