@@ -165,7 +165,8 @@
     "methodHelp": "El origen no informa el procedimiento en 7 de cada 10 registros.",
     "currency": "Moneda",
     "currencyPlaceholder": "Todas las monedas",
-    "category": "Categoría",
+    "category": "Artículo del catálogo",
+    "categoryHelp": "Solo compras de este artículo. Es la referencia que usan las comparaciones de precio.",
     "hasAmount": "Solo con monto informado",
     "hasAmountHelp": "Algunos registros oficiales no publican importe.",
     "presets": "Búsquedas frecuentes",
@@ -306,19 +307,28 @@
       "items_compra": "Ajuste de ítems"
     },
     "referenceHelp": "Cada artículo comparado con las compras del mismo ítem en los últimos 36 meses — la misma referencia que usan las alertas.",
+    "features": {
+      "variation": "Variación"
+    },
     "reference": {
       "paid": "Se pagó",
       "typical": "Habitual (mediana)",
       "range": "Rango usual",
       "comparables": "Comparables",
+      "viewComparables": "Ver los {n} comparables",
+      "presNote": "El precio unitario de los datos abiertos no incluye la presentación del artículo (p. ej. envase de 250 g vs. 1 g), y eso puede cambiar la lectura de la comparación. Cuando la conseguimos figura junto al artículo; siempre podés verificarla en",
+      "presNoteSource": "la página oficial de la compra.",
       "method": "Cómo se calculan las alertas de precio",
       "pos": {
         "below": "Bajo lo habitual",
         "typical": "En rango",
         "high": "Por encima",
-        "veryHigh": "Muy por encima"
+        "veryHigh": "Muy por encima",
+        "listPrice": "Tarifa conocida"
       }
-    }
+    },
+    "officialAward": "Ver adjudicación",
+    "officialTender": "Ver llamado"
   },
   "suppliers": {
     "title": "Proveedores del Estado",

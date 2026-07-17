@@ -173,6 +173,8 @@ export interface IItemPriceBaseline extends Document {
   max: number
   /** Number of distinct unit prices (histogram bins) behind this baseline. */
   distinctPrices: number
+  /** Tariff/list prices (count >= RECURRING_PRICE_MIN_COUNT, above p50). Never flagged. */
+  recurringPrices?: number[]
   windowStart: Date
   windowEnd: Date
   dataVersion: string

@@ -14,6 +14,10 @@ export interface FilterState {
   tag: string[]
   buyers: string[]
   suppliers: string[]
+  /** Exact catalogue article ("PIGMENTO"). Set by inbound links (the
+   *  detail page's "ver comparables"), not by a rail control — the rail
+   *  only shows active values so they can be seen and removed. */
+  category: string[]
   procurementMethodDetails: string[]
   status: string[]
   currency: string[]
@@ -113,6 +117,30 @@ function optLabel(o: Option) {
       </div>
       <p class="rail__help">
         {{ t('filters.tagHelp') }}
+      </p>
+    </section>
+
+    <!-- Catalogue article, when a link brought one. Without this the
+         filter would narrow the results invisibly — active but nowhere
+         on screen to see or remove. -->
+    <section
+      v-if="modelValue.category.length"
+      class="rail__sec"
+    >
+      <span class="rail__label">{{ t('filters.category') }}</span>
+      <div class="rail__stages">
+        <v-chip
+          v-for="c in modelValue.category"
+          :key="c"
+          closable
+          size="small"
+          @click:close="patch({ category: modelValue.category.filter(x => x !== c) })"
+        >
+          {{ c }}
+        </v-chip>
+      </div>
+      <p class="rail__help">
+        {{ t('filters.categoryHelp') }}
       </p>
     </section>
 

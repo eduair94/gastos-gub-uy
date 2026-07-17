@@ -89,6 +89,22 @@ export function compraIdFromOcid(ocid?: string | null): string | null {
 }
 
 /**
+ * The government's **award-detail** page, distinct from the tender/call
+ * page `sourceUrl` returns.
+ *
+ *   sourceUrl   -> /consultas/detalle/mostrar-llamado/1/id/{id}  (the llamado)
+ *   awardUrl    -> /consultas/detalle/id/{id}                    (the adjudicación)
+ *
+ * Both key on the same `id_compra` (ocid suffix). Verified live: id
+ * 1207973 resolves to "Compra Directa 21480/2024".
+ */
+export function awardUrl(ocid?: string | null): string | null {
+  const compraId = compraIdFromOcid(ocid)
+  if (!compraId) return null
+  return `https://www.comprasestatales.gub.uy/consultas/detalle/id/${encodeURIComponent(compraId)}`
+}
+
+/**
  * The raw OCDS JSON for a release, keyed by `id` (not ocid) because this
  * endpoint is per-release. Useful to link alongside the human page.
  */

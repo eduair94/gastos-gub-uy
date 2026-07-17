@@ -5,7 +5,7 @@
  *   npx tsx tests/unit/test-anomaly-stats.ts
  */
 
-import { BaselineInput, computeBaselineStats, confidenceFromZ, HistogramBin, MAD_LN_EPSILON, MAX_REPORTED_Z, modifiedZScore, scoreUnitPrice, severityRankFromAbsZ, weightedPercentile } from "../../src/jobs/anomaly-stats";
+import { BaselineInput, computeBaselineStats, confidenceFromZ, HistogramBin, MAD_LN_EPSILON, MAX_REPORTED_Z, modifiedZScore, RECURRING_PRICE_MIN_COUNT, scoreUnitPrice, severityRankFromAbsZ, weightedPercentile } from "../../src/jobs/anomaly-stats";
 
 let passed = 0;
 let failed = 0;
@@ -321,6 +321,78 @@ console.log("\n📊 price_spike never fires below the median");
   // Consistency: the fence path agrees with the z path on direction.
   const degenerate: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0, p25: 100, p75: 150 };
   check("fence path: cheap price not flagged", scoreUnitPrice(1, degenerate) === null);
+}
+
+// --- recurring (tariff/list) prices are never anomalies --------------------
+// Regression cover for the TIMBRE PROFESIONAL false positives (classification
+// 10233): the ARCE catalogue groups EVERY legal timbre denomination under one
+// id, so the baseline median sits on the dominant low denomination (certificado
+// médico, 140-170 UYU) and every legally higher denomination — parto 590/650,
+// cirugía 5400-6200 — scored z >= 14 and flagged "critical". Real corpus:
+// adjudicacion-1207973 paid the OFFICIAL 2024 parto stamp of 590 (DGI 2026
+// value: 650) and was reported as descabellado.
+//
+// The rule: a unit price observed RECURRING_PRICE_MIN_COUNT+ times at the exact
+// same value in the baseline window is a list/tariff price — dozens of
+// independent buyers do not coincidentally overpay to the peso. Genuine spikes
+// are one-off values (the same corpus's 24480/19380/8643.14 are all singletons).
+console.log("\n📊 recurring tariff prices are suppressed (timbre profesional)");
+{
+  // Miniature of the real 10233/UYU histogram: dominant low denomination,
+  // recurring higher denominations, one singleton data-entry error.
+  const stats = computeBaselineStats(
+    bins([
+      [140, 2098],
+      [150, 2588],
+      [160, 1474],
+      [170, 1502],
+      [590, 14],
+      [650, 14],
+      [24480, 1],
+    ])
+  )!;
+  check("recurringPrices computed", Array.isArray(stats.recurringPrices));
+  check("590 (parto 2024) is recurring", stats.recurringPrices.includes(590));
+  check("650 (parto 2026) is recurring", stats.recurringPrices.includes(650));
+  check("singleton 24480 is NOT recurring", !stats.recurringPrices.includes(24480));
+  check("prices at/below the median are not stored (cannot flag anyway)", !stats.recurringPrices.includes(140) && !stats.recurringPrices.includes(150));
+
+  const baseline: BaselineInput = {
+    n: stats.n,
+    medianLn: stats.medianLn,
+    madLn: stats.madLn,
+    p25: stats.p25,
+    p75: stats.p75,
+    recurringPrices: new Set(stats.recurringPrices),
+  };
+  check("official 590 stamp -> NOT flagged", scoreUnitPrice(590, baseline) === null);
+  check("official 650 stamp -> NOT flagged", scoreUnitPrice(650, baseline) === null);
+  const singleton = scoreUnitPrice(24480, baseline);
+  check("singleton 24480 -> still flagged", singleton !== null);
+  check("...as critical", singleton?.severity === "critical", `got ${singleton?.severity}`);
+  check("non-recurring 591 -> still scored on its own merits", scoreUnitPrice(591, baseline) !== null);
+}
+{
+  // The rule must also gate the IQR-fence path, and be a no-op when absent.
+  const degenerate: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0, p25: 100, p75: 150, recurringPrices: new Set([590]) };
+  check("fence path: recurring 590 -> not flagged", scoreUnitPrice(590, degenerate) === null);
+  check("fence path: non-recurring 600 -> still flagged", scoreUnitPrice(600, degenerate) !== null);
+
+  const withoutField: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.2, p25: 90, p75: 110 };
+  check("baselines without recurringPrices behave as before", scoreUnitPrice(1000, withoutField) !== null);
+  check("threshold constant exported and sane", RECURRING_PRICE_MIN_COUNT >= 2);
+}
+{
+  // Boundary: exactly at the threshold counts, one below does not.
+  const stats = computeBaselineStats(
+    bins([
+      [100, 50],
+      [500, RECURRING_PRICE_MIN_COUNT],
+      [700, RECURRING_PRICE_MIN_COUNT - 1],
+    ])
+  )!;
+  check("count == threshold -> recurring", stats.recurringPrices.includes(500));
+  check("count == threshold-1 -> not recurring", !stats.recurringPrices.includes(700));
 }
 
 console.log("\n=====================");

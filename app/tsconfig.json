@@ -16,7 +16,6 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "types": [
-      "@nuxt/types",
       "@vue/runtime-core",
       "@nuxt/schema"
     ],

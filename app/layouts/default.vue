@@ -16,6 +16,13 @@ const theme = useTheme()
 const drawer = ref(false)
 const search = ref('')
 
+// The box mirrors the explorer's current term — landing on
+// /contracts?search=…, using Back, or searching from the rail should
+// all leave the top bar showing what the results actually contain.
+watch(() => route.query.search, (q) => {
+  search.value = typeof q === 'string' ? q : ''
+}, { immediate: true })
+
 const nav = computed(() => [
   { key: 'home', to: localePath('/'), icon: 'mdi-view-dashboard-outline' },
   { key: 'contracts', to: localePath('/contracts'), icon: 'mdi-file-document-outline' },
@@ -40,7 +47,7 @@ const isDark = ref(false)
 
 function applyTheme(dark: boolean) {
   isDark.value = dark
-  theme.global.name.value = dark ? 'contribuyenteDark' : 'contribuyente'
+  theme.change(dark ? 'contribuyenteDark' : 'contribuyente')
   if (import.meta.client) {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light'
     localStorage.setItem('cltc-theme', dark ? 'dark' : 'light')
@@ -64,7 +71,7 @@ function submitSearch() {
 }
 
 const otherLocales = computed(() =>
-  (locales.value as { code: string, name: string }[]).filter(l => l.code !== locale.value),
+  locales.value.filter(l => l.code !== locale.value),
 )
 
 // Close the mobile panel on navigation — leaving it open over the new

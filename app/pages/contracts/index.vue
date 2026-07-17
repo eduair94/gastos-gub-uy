@@ -40,6 +40,11 @@ function fromRoute(): FilterState {
     tag: q.tag === undefined ? [...DEFAULT_TAGS] : parseList(q.tag),
     buyers: parseList(q.buyers),
     suppliers: parseList(q.suppliers),
+    // Catalogue article ("PIGMENTO"). No rail control of its own — it
+    // arrives via links like the detail page's "ver comparables" — but
+    // it must survive the round-trip through this state or the link
+    // would silently show ALL contracts as if they were comparables.
+    category: parseList(q.category),
     procurementMethodDetails: parseList(q.procurementMethodDetails),
     status: parseList(q.status),
     currency: parseList(q.currency),
@@ -66,7 +71,8 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
 const activeCount = computed(() => {
   const f = filters.value
   return [
-    f.search, f.tag.length, f.buyers.length, f.suppliers.length, f.procurementMethodDetails.length,
+    f.search, f.tag.length, f.buyers.length, f.suppliers.length, f.category.length,
+    f.procurementMethodDetails.length,
     f.status.length, f.currency.length, f.yearFrom, f.yearTo,
     f.amountFrom, f.amountTo, f.hasAmount || null,
   ].filter(Boolean).length
@@ -80,6 +86,7 @@ const apiQueryNow = computed(() => {
   if (f.tag.length) q.tag = f.tag.join(',')
   if (f.buyers.length) q.buyers = f.buyers.join(',')
   if (f.suppliers.length) q.suppliers = f.suppliers.join(',')
+  if (f.category.length) q.category = f.category.join(',')
   if (f.procurementMethodDetails.length) q.procurementMethodDetails = f.procurementMethodDetails.join(',')
   if (f.status.length) q.status = f.status.join(',')
   if (f.currency.length) q.currency = f.currency.join(',')
@@ -117,10 +124,8 @@ watch(filters, () => {
   page.value = 1
 }, { deep: true })
 
-// Push state to the URL once the query settles. Driven by the debounced
-// value so the address bar reflects what was actually fetched, rather
-// than lagging a keystroke behind it.
-watch([apiQuery, page, sort], () => {
+/** The query string this page would write for its current state. */
+function urlQueryNow(): Record<string, string> {
   const q: Record<string, string> = {}
   for (const [k, v] of Object.entries(apiQuery.value)) q[k] = String(v)
   // `tag` is always written, including as an empty string, so that
@@ -129,8 +134,49 @@ watch([apiQuery, page, sort], () => {
   q.tag = filters.value.tag.join(',')
   if (page.value > 1) q.page = String(page.value)
   if (sort.value !== 'dateDesc') q.sort = sort.value
-  router.replace({ query: q })
+  return q
+}
+
+// Push state to the URL once the query settles. Driven by the debounced
+// value so the address bar reflects what was actually fetched, rather
+// than lagging a keystroke behind it.
+watch([apiQuery, page, sort], () => {
+  router.replace({ query: urlQueryNow() })
 }, { deep: true })
+
+function sameQuery(a: Record<string, unknown>, b: Record<string, unknown>) {
+  const ka = Object.keys(a).sort()
+  const kb = Object.keys(b).sort()
+  return ka.length === kb.length && ka.every((k, i) => k === kb[i] && String(a[k]) === String(b[k]))
+}
+
+// The top bar's search (and the browser's back button) rewrites the
+// query while this page is already mounted, and setup() only runs once —
+// without this, an in-place navigation changes the address bar and
+// nothing else.
+//
+// The guard is NOT a simple state comparison: apiQuery lags filters by
+// 300ms, so our own router.replace above can legitimately write a URL
+// built from stale values (e.g. a sort change fires the writer while the
+// search debounce is still pending). Re-importing that echo would revert
+// what the user just typed. Anything identical to what we'd write right
+// now is ours; only a genuinely foreign query re-imports state.
+watch(() => route.query, () => {
+  if (sameQuery(route.query, urlQueryNow())) return
+  const next = fromRoute()
+  if (JSON.stringify(next) !== JSON.stringify(filters.value)) filters.value = next
+  const nextPage = Number(route.query.page ?? 1)
+  if (nextPage !== page.value) page.value = nextPage
+  const nextSort = (route.query.sort as string) ?? 'dateDesc'
+  if (nextSort !== sort.value) sort.value = nextSort
+})
+
+// Relevance ordering only exists while there is a search term. If the
+// term is cleared, the <option> disappears but the value would linger —
+// a blank select, sorting by a score the API no longer computes.
+watch(() => filters.value.search, (s) => {
+  if (!s && sort.value === 'relevance') sort.value = 'dateDesc'
+})
 
 const { data: optionsRes, pending: optionsPending } = await useFetch<any>('/api/contracts/filters')
 const options = computed(() => optionsRes.value?.data ?? null)
@@ -183,7 +229,8 @@ function clearAll() {
   filters.value = {
     // Back to the default view, not to an empty one: clearing should
     // land the reader on contracts again, not on a wall of $0 paperwork.
-    search: '', tag: [...DEFAULT_TAGS], buyers: [], suppliers: [], procurementMethodDetails: [],
+    search: '', tag: [...DEFAULT_TAGS], buyers: [], suppliers: [], category: [],
+    procurementMethodDetails: [],
     status: [], currency: [], yearFrom: null, yearTo: null,
     amountFrom: null, amountTo: null, hasAmount: false,
   }
@@ -279,6 +326,22 @@ const dialogTotal = computed(() => {
   if (currencies.size !== 1) return null
   return { amount: rows.reduce((s, r) => s + (r.total ?? 0), 0), currency: [...currencies][0] }
 })
+
+// ---- Table column configs (the one DataTable system) ---------------
+const explorerColumns = computed(() => [
+  { key: 'object', label: t('contracts.table.object'), primary: true },
+  { key: 'buyer', label: t('contracts.table.buyer') },
+  { key: 'supplier', label: t('contracts.table.supplier') },
+  { key: 'date', label: t('contracts.table.date'), mono: true },
+  { key: 'amount', label: t('contracts.table.amount'), align: 'end' as const },
+])
+
+const dialogColumns = computed(() => [
+  { key: 'description', label: t('common.description'), primary: true },
+  { key: 'quantity', label: t('common.quantity'), align: 'end' as const, mono: true },
+  { key: 'unitAmount', label: t('common.unitPrice'), align: 'end' as const },
+  { key: 'total', label: t('common.total'), align: 'end' as const },
+])
 
 useSeo(() => ({
   title: t('seo.contracts.title'),
@@ -865,7 +928,9 @@ useSeo(() => ({
   padding-inline: 4px;
   border-radius: var(--r-full);
   background: var(--celeste-deep);
-  color: #fff;
+  // --celeste-deep flips light on the dark theme; --surface flips dark, so the
+  // digit stays readable on both (and is #fff on light, same as before).
+  color: var(--surface);
   font-family: var(--font-mono);
   font-size: 10px;
 }

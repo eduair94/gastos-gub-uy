@@ -165,7 +165,8 @@
     "methodHelp": "The source reports no procedure on 7 of every 10 records.",
     "currency": "Currency",
     "currencyPlaceholder": "All currencies",
-    "category": "Category",
+    "category": "Catalogue article",
+    "categoryHelp": "Only purchases of this article. This is the population the price comparisons use.",
     "hasAmount": "Only with a reported amount",
     "hasAmountHelp": "Some official records publish no amount.",
     "presets": "Common searches",
@@ -306,19 +307,28 @@
       "items_compra": "Items adjustment"
     },
     "referenceHelp": "Each item compared against purchases of the same item over the last 36 months — the same baseline the flags use.",
+    "features": {
+      "variation": "Variation"
+    },
     "reference": {
       "paid": "Paid",
       "typical": "Typical (median)",
       "range": "Usual range",
       "comparables": "Comparables",
+      "viewComparables": "View the {n} comparables",
+      "presNote": "The open-data unit price does not carry the article's presentation (e.g. a 250 g container vs. 1 g), which can change how this comparison reads. When we can recover it, it appears next to the article; you can always check it on",
+      "presNoteSource": "the official purchase page.",
       "method": "How price flags are calculated",
       "pos": {
         "below": "Below usual",
         "typical": "In range",
         "high": "Above",
-        "veryHigh": "Well above"
+        "veryHigh": "Well above",
+        "listPrice": "Known tariff"
       }
-    }
+    },
+    "officialAward": "View award",
+    "officialTender": "View tender"
   },
   "suppliers": {
     "title": "State suppliers",

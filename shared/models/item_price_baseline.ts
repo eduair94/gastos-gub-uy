@@ -31,6 +31,10 @@ const ItemPriceBaselineSchema = new Schema<IItemPriceBaseline>(
     min: { type: Number, required: true },
     max: { type: Number, required: true },
     distinctPrices: { type: Number, required: true, default: 0 },
+    // Distinct prices seen >= RECURRING_PRICE_MIN_COUNT times and above p50: the tariff/list
+    // prices of this bucket (e.g. every legal timbre profesional denomination). The scorer
+    // never flags an exact match. Absent on pre-rule baselines, which simply skip the rule.
+    recurringPrices: { type: [Number], default: undefined },
     windowStart: { type: Date, required: true },
     windowEnd: { type: Date, required: true },
     dataVersion: { type: String, required: true },

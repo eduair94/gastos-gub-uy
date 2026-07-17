@@ -42,10 +42,12 @@ h1, h2, h3, h4,
   font-stretch: 112%; // Archivo's wide cut — the form title block
 
   // Source data contains 85-character single words and unbroken
-  // identifiers. A heading must wrap them rather than push the layout
-  // sideways — the copy is not under our control, the layout is.
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  // identifiers. A heading must break those rather than push the layout
+  // sideways — but `break-word` only breaks a word that genuinely can't
+  // fit, where `anywhere` also lets normal words break to reach
+  // min-content and mangled "Precio s de refere ncia" in tight flex
+  // items. Only the former is wanted.
+  overflow-wrap: break-word;
 }
 
 h1 { font-size: var(--t-2xl); }
@@ -167,10 +169,21 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 .panel__head {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--s-3);
+  gap: var(--s-1) var(--s-3);
   padding: var(--s-4) var(--s-5);
   border-bottom: 1px solid var(--rule);
+}
+
+/* The heading never competes with its help text for width — below the
+   heading gets the full row and the help wraps under it. */
+.panel__head h2 { flex: 1 1 100%; }
+.panel__head .panel__help { flex: 1 1 100%; }
+
+@media (min-width: 720px) {
+  .panel__head h2 { flex: 0 1 auto; }
+  .panel__head .panel__help { flex: 0 1 auto; }
 }
 
 .panel__body { padding: var(--s-5); }

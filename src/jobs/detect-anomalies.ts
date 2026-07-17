@@ -76,8 +76,9 @@ interface BaselineKey {
 }
 
 /**
- * BaselineInput is what the pure scorer needs; p95 is carried alongside purely to
- * report the expected range, so it stays out of the statistics module.
+ * BaselineInput is what the pure scorer needs (recurringPrices included); p95 is
+ * carried alongside purely to report the expected range, so it stays out of the
+ * statistics module.
  */
 interface LoadedBaseline extends BaselineInput {
   p95: number;
@@ -281,6 +282,7 @@ class AnomalyDetector {
               min: stats.min,
               max: stats.max,
               distinctPrices: stats.distinctPrices,
+              recurringPrices: stats.recurringPrices,
               windowStart,
               windowEnd,
               dataVersion: this.dataVersion,
@@ -343,14 +345,22 @@ class AnomalyDetector {
 
   private async loadBaselines(): Promise<Map<string, LoadedBaseline>> {
     const baselines = new Map<string, LoadedBaseline>();
-    const cursor = ItemPriceBaselineModel.find({}, { classificationId: 1, currency: 1, unitName: 1, n: 1, medianLn: 1, madLn: 1, p25: 1, p75: 1, p95: 1 })
+    const cursor = ItemPriceBaselineModel.find({}, { classificationId: 1, currency: 1, unitName: 1, n: 1, medianLn: 1, madLn: 1, p25: 1, p75: 1, p95: 1, recurringPrices: 1 })
       .lean()
       .cursor({ batchSize: CURSOR_BATCH_SIZE });
 
     for await (const doc of cursor) {
       baselines.set(
         baselineMapKey({ classificationId: doc.classificationId, currency: doc.currency, unitName: doc.unitName }),
-        { n: doc.n, medianLn: doc.medianLn, madLn: doc.madLn, p25: doc.p25, p75: doc.p75, p95: doc.p95 }
+        {
+          n: doc.n,
+          medianLn: doc.medianLn,
+          madLn: doc.madLn,
+          p25: doc.p25,
+          p75: doc.p75,
+          p95: doc.p95,
+          recurringPrices: doc.recurringPrices?.length ? new Set(doc.recurringPrices) : undefined,
+        }
       );
     }
     return baselines;
@@ -406,6 +416,7 @@ class AnomalyDetector {
 
     let itemsScored = 0;
     let itemsWithoutBaseline = 0;
+    let itemsAtRecurringPrice = 0;
     let truncated = false;
 
     // Keyed by {releaseId, awardId} - the anomaly upsert key. Holding only the
@@ -434,6 +445,12 @@ class AnomalyDetector {
       const baseline = baselines.get(baselineMapKey({ classificationId: row.classificationId, currency: row.currency, unitName: row.unitName }));
       if (!baseline) {
         itemsWithoutBaseline++;
+        continue;
+      }
+
+      // Counted here purely for the run report; scoreUnitPrice re-checks it as its own gate.
+      if (baseline.recurringPrices?.has(row.unitPrice)) {
+        itemsAtRecurringPrice++;
         continue;
       }
 
@@ -473,6 +490,7 @@ class AnomalyDetector {
 
     console.log(`   award items scored      : ${itemsScored}`);
     console.log(`   items without baseline  : ${itemsWithoutBaseline}`);
+    console.log(`   at recurring list price : ${itemsAtRecurringPrice} (tariff/list prices, never anomalous)`);
     console.log(`   anomalies found         : ${findings.length}${truncated ? " (capped)" : ""}`);
     this.logSeverityBreakdown(findings);
 

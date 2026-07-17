@@ -90,6 +90,27 @@ export const MIN_LOG_DEVIATION = Math.log(1.25);
 /** Multiplier on the IQR for the "extreme" (Tukey far-out) fence. */
 export const IQR_FENCE_K = 3;
 
+/**
+ * A distinct unit price observed at least this many times in the baseline window is a
+ * LIST/TARIFF price, and is never flagged — regardless of how far it sits from the median.
+ *
+ * Motivating failure: the ARCE catalogue groups every legal denomination of the timbre
+ * profesional under one classification (10233), so the baseline median lands on the dominant
+ * low denomination (certificado médico, 140-170 UYU) and every legally higher denomination
+ * flagged critical: the OFFICIAL 590 UYU parto stamp (DGI value for 2024; 650 in 2026) scored
+ * z = 14.3 on adjudicacion-1207973. The distribution is not log-normal at all — it is a menu
+ * of administratively fixed prices updated yearly (570/590/600/620/650 for the parto stamp).
+ *
+ * Recurrence is the evidence: dozens of independent buyers do not coincidentally overpay to
+ * the exact peso, while genuine spikes in the same corpus are one-off values (24480, 19380,
+ * 8643.14 — all singletons). At 3, the scored item's own in-window observation still needs two
+ * INDEPENDENT corroborating purchases. The known cost: a price repeated only twice is not
+ * suppressed, and a corrupt price repeated verbatim 3+ times would be — both are accepted,
+ * because a price point that recurs across the corpus is a negotiated/list price by any
+ * operational definition, and list prices are exactly what a price-SPIKE detector must not flag.
+ */
+export const RECURRING_PRICE_MIN_COUNT = 3;
+
 /** Below this many observations a baseline is not trustworthy at all - emit nothing. */
 export const MIN_BASELINE_N = 10;
 
@@ -133,6 +154,12 @@ export interface BaselineStats {
   min: number;
   max: number;
   distinctPrices: number;
+  /**
+   * Distinct prices observed >= RECURRING_PRICE_MIN_COUNT times AND strictly above p50.
+   * Only upper-tail prices can ever flag (the detector is upper-tail only and enforces
+   * MIN_LOG_DEVIATION over the median), so storing the lower ones would be dead weight.
+   */
+  recurringPrices: number[];
 }
 
 /** The subset of a baseline document the scorer actually needs. */
@@ -142,6 +169,14 @@ export interface BaselineInput {
   madLn: number;
   p25: number;
   p75: number;
+  /**
+   * Exact-match lookup of recurring (list/tariff) prices. EXACT equality is correct here:
+   * the scored price and the baseline bins both originate from the same JSON number in the
+   * same source files, so they are bit-identical doubles — no tolerance needed, and a
+   * tolerance would only invent matches. Optional: baselines written before this field
+   * existed simply skip the rule.
+   */
+  recurringPrices?: ReadonlySet<number> | undefined;
 }
 
 export type ScoringMethod = "log_modified_zscore" | "iqr_fence";
@@ -248,17 +283,21 @@ export function computeBaselineStats(rawBins: HistogramBin[]): BaselineStats | n
     .sort((a, b) => a.value - b.value);
   const madLn = weightedMedian(deviationBins);
 
+  const p50 = weightedPercentile(bins, 0.5);
+  const recurringPrices = bins.filter((bin) => bin.count >= RECURRING_PRICE_MIN_COUNT && bin.value > p50).map((bin) => bin.value);
+
   return {
     n,
     medianLn,
     madLn,
     p25: weightedPercentile(bins, 0.25),
-    p50: weightedPercentile(bins, 0.5),
+    p50,
     p75: weightedPercentile(bins, 0.75),
     p95: weightedPercentile(bins, 0.95),
     min: bins[0]!.value,
     max: bins[bins.length - 1]!.value,
     distinctPrices: bins.length,
+    recurringPrices,
   };
 }
 
@@ -336,6 +375,13 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
   if (!Number.isFinite(price) || price <= 0) {
     return null;
   }
+
+  // Gates BOTH estimator paths: a recurring list/tariff price is not an anomaly no matter
+  // which estimator would have scored it. See RECURRING_PRICE_MIN_COUNT.
+  if (baseline.recurringPrices?.has(price)) {
+    return null;
+  }
+
   const n = baseline.n;
   if (!Number.isFinite(n) || n < MIN_BASELINE_N) {
     return null;

@@ -351,6 +351,20 @@ export function govSourceUrl(ocid?: string | null): string | null {
   return `https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/${encodeURIComponent(compraId)}`
 }
 
+/**
+ * The government's **award-detail** page, distinct from the call page
+ * `govSourceUrl` returns. Mirrors `server/utils/query.ts#awardUrl`.
+ *   govSourceUrl -> /consultas/detalle/mostrar-llamado/1/id/{id}
+ *   govAwardUrl  -> /consultas/detalle/id/{id}
+ */
+export function govAwardUrl(ocid?: string | null): string | null {
+  if (!ocid) return null
+  const m = /^ocds-[a-z0-9]+-(.+)$/i.exec(ocid.trim())
+  const compraId = (m?.[1] ?? '').trim()
+  if (!compraId) return null
+  return `https://www.comprasestatales.gub.uy/consultas/detalle/id/${encodeURIComponent(compraId)}`
+}
+
 /** The raw OCDS JSON for one release. Keyed on `id`, unlike the page above. */
 export function ocdsJsonUrl(id?: string | null): string | null {
   if (!id) return null

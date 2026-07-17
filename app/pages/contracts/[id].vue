@@ -69,6 +69,14 @@ const officialUrl = computed(() =>
   (contract.value as any)?.sourceUrl ?? govSourceUrl(contract.value?.ocid),
 )
 
+// The government's award-detail page. Only meaningful once there's an
+// award to detail, so it's hidden on tender-stage releases.
+const awardLink = computed(() =>
+  showsMoney.value
+    ? ((contract.value as any)?.awardUrl ?? govAwardUrl(contract.value?.ocid))
+    : null,
+)
+
 // The raw OCDS document we actually parsed — keyed on the release `id`,
 // unlike the human page above which keys on the ocid.
 const ocdsUrl = computed(() =>
@@ -88,6 +96,7 @@ const documents = computed(() => {
 // is the one place that must not drop either, so it reads the awards
 // directly rather than through the flattening helper.
 interface RawItem {
+  id?: string
   description?: string
   quantity?: number
   classification?: { id?: string, description?: string }
@@ -104,6 +113,9 @@ interface RawAward {
 
 interface ItemRow {
   key: string
+  /** The gov "Ítem Nº" — the OCDS item id's leading integer ("2-1" -> 2).
+   *  Joins the row to its scraped características; null when unparseable. */
+  nro: number | null
   description: string
   code: string
   codeDescription: string
@@ -129,8 +141,10 @@ function toRow(i: RawItem, key: string): ItemRow {
   const codeDescription = i.classification?.description?.trim() || ''
   const unitAmount = i.unit?.value?.amount ?? null
   const quantity = i.quantity ?? null
+  const nroMatch = /^(\d+)/.exec(i.id ?? '')
   return {
     key,
+    nro: nroMatch ? Number(nroMatch[1]) : null,
     description,
     code: i.classification?.id?.trim() || '',
     // On most records the catalogue description repeats the item
@@ -172,6 +186,36 @@ const itemGroups = computed<ItemGroup[]>(() => {
   const rows = tenderItems.map((i, ii) => toRow(i, `t-${ii}`))
   return [{ key: 'tender', suppliers: [], rows, hasPrices: rows.some(r => r.unitAmount !== null) }]
 })
+
+// ---- Características (scraped) --------------------------------------
+// The OCDS feed drops the per-item "Características" table ("Tipo:
+// SOMBRILLA DE CALOR", "Presentación: ENVASE / 250 G") and the
+// "Variación" note that the government's own HTML shows. The API
+// scrapes them on first view and caches per compra; fetched lazily and
+// client-only so a slow gov site can never hold this page's render.
+interface ItemFeature { name: string, value: string }
+interface ItemFeatures { features: ItemFeature[], variation?: string }
+
+const { data: featRes } = useLazyFetch<any>(
+  () => `/api/contracts/${encodeURIComponent(id.value)}/features`,
+  { server: false },
+)
+
+const itemFeatures = computed<Map<number, ItemFeatures>>(() => {
+  const map = new Map<number, ItemFeatures>()
+  for (const it of featRes.value?.data?.items ?? []) {
+    if (typeof it?.nro !== 'number') continue
+    const features = (it.features ?? []).filter((f: any) => f?.name && f?.value)
+    const variation = typeof it.variation === 'string' && it.variation.trim() ? it.variation.trim() : undefined
+    if (features.length || variation) map.set(it.nro, { features, variation })
+  }
+  return map
+})
+
+function rowFeatures(row: ItemRow): ItemFeatures | null {
+  if (row.nro === null) return null
+  return itemFeatures.value.get(row.nro) ?? null
+}
 
 // ---- Who ------------------------------------------------------------
 interface ContactPoint {
@@ -333,6 +377,10 @@ const hasTenderFacts = computed(() => {
 // ---- Price reference -------------------------------------------------
 interface PriceRef {
   description: string
+  /** Catalogue description — the value the explorer's `category` filter matches. */
+  catDesc: string
+  /** Gov item Nº, to join the scraped presentación características. */
+  nro: number | null
   paid: number
   currency: string
   n: number
@@ -341,7 +389,7 @@ interface PriceRef {
   p95: number
   min: number
   max: number
-  position: 'below' | 'typical' | 'high' | 'veryHigh'
+  position: 'below' | 'typical' | 'high' | 'veryHigh' | 'listPrice'
   tone: string
 }
 
@@ -359,7 +407,7 @@ const priceReferences = computed<PriceRef[]>(() => {
   const seen = new Set<string>()
 
   for (const award of contract.value?.awards ?? []) {
-    for (const item of award.items ?? []) {
+    for (const item of (award.items ?? []) as RawItem[]) {
       const classificationId = item.classification?.id?.trim()
       const paid = item.unit?.value?.amount
       if (!classificationId || !paid || paid <= 0) continue
@@ -374,16 +422,29 @@ const priceReferences = computed<PriceRef[]>(() => {
       if (!b || !b.n || b.n < 5) continue
       seen.add(key)
 
-      const position = paid > b.p95
-        ? 'veryHigh'
-        : paid > b.p75
-          ? 'high'
-          : paid < b.p25
-            ? 'below'
-            : 'typical'
+      // An exact match against the item's recurring (tariff/list) prices wins over
+      // any percentile comparison: catalogue items like TIMBRE PROFESIONAL pool every
+      // legal denomination under one id, so the official 590 parto stamp sits far
+      // above a p95 dominated by the 170 certificado — yet is not an overpayment.
+      const isListPrice = Array.isArray(b.recurringPrices) && b.recurringPrices.includes(paid)
+
+      const position = isListPrice
+        ? 'listPrice'
+        : paid > b.p95
+          ? 'veryHigh'
+          : paid > b.p75
+            ? 'high'
+            : paid < b.p25
+              ? 'below'
+              : 'typical'
 
       out.push({
         description: item.description?.trim() || item.classification?.description?.trim() || '—',
+        catDesc: item.classification?.description?.trim() || '',
+        nro: (() => {
+          const m = /^(\d+)/.exec(item.id ?? '')
+          return m ? Number(m[1]) : null
+        })(),
         paid,
         currency,
         n: b.n,
@@ -399,7 +460,8 @@ const priceReferences = computed<PriceRef[]>(() => {
             ? 'tag--neutral'
             : position === 'below'
               ? 'tag--activo'
-              : 'tag--celeste',
+              : 'tag--celeste', // 'typical' and 'listPrice' share the informative tone
+
       })
     }
   }
@@ -412,6 +474,69 @@ function rangeText(r: PriceRef): string {
   const sym = lo.split(' ')[0]
   const hiShort = hi.startsWith(`${sym} `) ? hi.slice(sym.length + 1) : hi
   return `${lo} – ${hiShort}`
+}
+
+/**
+ * The scraped características that change what a reference row means:
+ * the presentación ("ENVASE · 250 G" — is the unit price per gram or
+ * per envase?) and the tipo ("SOMBRILLA DE CALOR" — catalogue id 70063
+ * pools estufa and sombrilla rentals into one price distribution).
+ * Other characteristics stay in the items table above.
+ */
+function refPresentation(r: PriceRef): string {
+  if (r.nro === null) return ''
+  const f = itemFeatures.value.get(r.nro)
+  if (!f) return ''
+  return f.features
+    .filter(x => /presentaci|^tipo$/i.test(x.name.trim()))
+    .map(x => x.value)
+    .join(' · ')
+}
+
+/**
+ * The explorer, pre-filtered to (approximately) this row's baseline
+ * population: same catalogue article, same currency, awards of the last
+ * three years with a real amount. The baseline buckets on catalogue *id*
+ * while the explorer's `category` param matches the catalogue
+ * *description* — a 1:1 pair in this catalogue — so the reader lands on
+ * the actual purchases the "muy por encima" flag was scored against.
+ */
+function comparablesLink(r: PriceRef): string | null {
+  if (!r.catDesc) return null
+  return localePath({
+    path: '/contracts',
+    query: {
+      category: r.catDesc,
+      currency: r.currency,
+      tag: 'award',
+      hasAmount: 'true',
+      yearFrom: String(new Date().getFullYear() - 3),
+    },
+  })
+}
+
+const referenceColumns = computed(() => [
+  { key: 'description', label: t('common.item'), primary: true },
+  { key: 'paid', label: t('contract.reference.paid'), align: 'end' as const },
+  { key: 'median', label: t('contract.reference.typical'), align: 'end' as const },
+  { key: 'range', label: t('contract.reference.range'), align: 'end' as const, mono: true },
+  { key: 'n', label: t('contract.reference.comparables'), align: 'end' as const, mono: true },
+])
+
+function itemColumns(hasPrices: boolean) {
+  const cols = [
+    { key: 'description', label: t('common.description'), primary: true },
+    { key: 'code', label: t('contract.fields.classification') },
+    { key: 'quantity', label: t('common.quantity'), align: 'end' as const, mono: true },
+    { key: 'unitName', label: t('contract.fields.unit') },
+  ]
+  if (hasPrices) {
+    cols.push(
+      { key: 'unitAmount', label: t('common.unitPrice'), align: 'end' as const } as any,
+      { key: 'total', label: t('common.total'), align: 'end' as const } as any,
+    )
+  }
+  return cols
 }
 
 const amendments = computed(() => tender.value?.amendments ?? [])
@@ -625,14 +750,13 @@ useSeo(() => ({
         </div>
       </header>
 
-      <!-- The link back to the source. The site's whole claim rests on
-           this being one click away, on every contract. -->
-      <a
-        v-if="officialUrl"
+      <!-- The links back to the source. The site's whole claim rests on
+           these being one click away, on every contract. Two government
+           views: the llamado (call) page, and — for awards — the
+           adjudicación detail page. -->
+      <div
+        v-if="officialUrl || awardLink"
         class="official"
-        :href="officialUrl"
-        target="_blank"
-        rel="noopener external"
       >
         <v-icon
           size="20"
@@ -644,13 +768,29 @@ useSeo(() => ({
           <strong>{{ t('contract.officialSource') }}</strong>
           <span>{{ t('contract.officialSourceHelp') }}</span>
         </span>
-        <v-icon
-          size="18"
-          class="official__go"
-        >
-          mdi-open-in-new
-        </v-icon>
-      </a>
+        <span class="official__actions">
+          <a
+            v-if="awardLink"
+            class="official__btn"
+            :href="awardLink"
+            target="_blank"
+            rel="noopener external"
+          >
+            {{ t('contract.officialAward') }}
+            <v-icon size="15">mdi-open-in-new</v-icon>
+          </a>
+          <a
+            v-if="officialUrl"
+            class="official__btn official__btn--ghost"
+            :href="officialUrl"
+            target="_blank"
+            rel="noopener external"
+          >
+            {{ t('contract.officialTender') }}
+            <v-icon size="15">mdi-open-in-new</v-icon>
+          </a>
+        </span>
+      </div>
 
       <div class="grid">
         <div class="grid__main">
@@ -901,108 +1041,49 @@ useSeo(() => ({
                 {{ t('contract.noItems') }}
               </p>
 
-              <table
+              <DataTable
                 v-else
-                class="itable dtable"
+                :columns="itemColumns(g.hasPrices)"
+                :rows="g.rows"
+                :row-key="it => it.key"
+                min-width="560px"
               >
-                <thead>
-                  <tr>
-                    <th scope="col">
-                      {{ t('common.description') }}
-                    </th>
-                    <th scope="col">
-                      {{ t('contract.fields.classification') }}
-                    </th>
-                    <th
-                      scope="col"
-                      class="itable__num"
-                    >
-                      {{ t('common.quantity') }}
-                    </th>
-                    <th scope="col">
-                      {{ t('contract.fields.unit') }}
-                    </th>
-                    <th
-                      v-if="g.hasPrices"
-                      scope="col"
-                      class="itable__num"
-                    >
-                      {{ t('common.unitPrice') }}
-                    </th>
-                    <th
-                      v-if="g.hasPrices"
-                      scope="col"
-                      class="itable__num"
-                    >
-                      {{ t('common.total') }}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="it in g.rows"
-                    :key="it.key"
-                  >
-                    <td data-primary>
-                      <span class="itable__d">{{ it.description || '—' }}</span>
-                    </td>
-                    <td :data-label="t('contract.fields.classification')">
-                      <span
-                        v-if="it.code"
-                        class="itable__code u-mono"
-                      >{{ it.code }}</span>
-                      <span
-                        v-else
-                        class="u-muted"
-                      >—</span>
-                      <span
-                        v-if="it.codeDescription"
-                        class="itable__u"
-                      >{{ it.codeDescription }}</span>
-                    </td>
-                    <td
-                      class="itable__num u-mono"
-                      :data-label="t('common.quantity')"
-                    >
-                      {{ formatNumber(it.quantity) }}
-                    </td>
-                    <td :data-label="t('contract.fields.unit')">
-                      <span
-                        v-if="it.unitName"
-                        class="itable__u"
-                      >{{ it.unitName }}</span>
-                      <span
-                        v-else
-                        class="u-muted"
-                      >—</span>
-                    </td>
-                    <td
-                      v-if="g.hasPrices"
-                      class="itable__num"
-                      :data-label="t('common.unitPrice')"
-                    >
-                      <MoneyAmount
-                        :amount="it.unitAmount"
-                        :currency="it.currency"
-                        :rule="false"
-                        size="sm"
-                        decimals
-                      />
-                    </td>
-                    <td
-                      v-if="g.hasPrices"
-                      class="itable__num"
-                      :data-label="t('common.total')"
-                    >
-                      <MoneyAmount
-                        :amount="it.total"
-                        :currency="it.currency"
-                        size="sm"
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                <template #cell:description="{ row }">
+                  {{ row.description || '—' }}
+                  <!-- Características scraped from the gov page — the
+                       open-data feed doesn't carry them. See
+                       /api/contracts/[id]/features. -->
+                  <template v-if="rowFeatures(row)">
+                    <span
+                      v-if="rowFeatures(row)?.variation"
+                      class="ifeat"
+                    >{{ t('contract.features.variation') }}: <strong class="ifeat__v">{{ rowFeatures(row)?.variation }}</strong></span>
+                    <span
+                      v-for="f in rowFeatures(row)?.features"
+                      :key="f.name + f.value"
+                      class="ifeat"
+                    >{{ f.name }}: <strong class="ifeat__v">{{ f.value }}</strong></span>
+                  </template>
+                </template>
+                <template #cell:code="{ row }">
+                  <span v-if="row.code" class="u-mono">{{ row.code }}</span>
+                  <span v-else class="u-muted">—</span>
+                  <span v-if="row.codeDescription" class="itable__u">{{ row.codeDescription }}</span>
+                </template>
+                <template #cell:quantity="{ row }">
+                  {{ formatNumber(row.quantity) }}
+                </template>
+                <template #cell:unitName="{ row }">
+                  <span v-if="row.unitName">{{ row.unitName }}</span>
+                  <span v-else class="u-muted">—</span>
+                </template>
+                <template #cell:unitAmount="{ row }">
+                  <MoneyAmount :amount="row.unitAmount" :currency="row.currency" :rule="false" size="sm" decimals />
+                </template>
+                <template #cell:total="{ row }">
+                  <MoneyAmount :amount="row.total" :currency="row.currency" size="sm" />
+                </template>
+              </DataTable>
             </div>
           </section>
 
@@ -1021,90 +1102,56 @@ useSeo(() => ({
                 {{ t('contract.referenceHelp') }}
               </p>
             </div>
-            <div class="u-scroll-x">
-              <table class="itable dtable reftable">
-                <thead>
-                  <tr>
-                    <th scope="col">
-                      {{ t('common.item') }}
-                    </th>
-                    <th
-                      scope="col"
-                      class="itable__num"
-                    >
-                      {{ t('contract.reference.paid') }}
-                    </th>
-                    <th
-                      scope="col"
-                      class="itable__num"
-                    >
-                      {{ t('contract.reference.typical') }}
-                    </th>
-                    <th
-                      scope="col"
-                      class="itable__num"
-                    >
-                      {{ t('contract.reference.range') }}
-                    </th>
-                    <th
-                      scope="col"
-                      class="itable__num"
-                    >
-                      {{ t('contract.reference.comparables') }}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(r, i) in priceReferences"
-                    :key="i"
-                  >
-                    <td data-primary>
-                      <span class="itable__d">{{ r.description }}</span>
-                      <span
-                        class="tag reftable__pos"
-                        :class="r.tone"
-                      >{{ t(`contract.reference.pos.${r.position}`) }}</span>
-                    </td>
-                    <td
-                      class="itable__num"
-                      :data-label="t('contract.reference.paid')"
-                    >
-                      <MoneyAmount
-                        :amount="r.paid"
-                        :currency="r.currency"
-                        :rule="false"
-                        size="sm"
-                        decimals
-                      />
-                    </td>
-                    <td
-                      class="itable__num"
-                      :data-label="t('contract.reference.typical')"
-                    >
-                      <MoneyAmount
-                        :amount="r.median"
-                        :currency="r.currency"
-                        :rule="false"
-                        size="sm"
-                      />
-                    </td>
-                    <td
-                      class="itable__num u-mono reftable__range"
-                      :data-label="t('contract.reference.range')"
-                    >
-                      {{ rangeText(r) }}
-                    </td>
-                    <td
-                      class="itable__num u-mono"
-                      :data-label="t('contract.reference.comparables')"
-                    >
-                      {{ formatNumber(r.n) }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              :columns="referenceColumns"
+              :rows="priceReferences"
+              :row-key="(_r, i) => i"
+              min-width="600px"
+            >
+              <template #cell:description="{ row }">
+                <span class="refcell__name">{{ row.description }}</span>
+                <span class="tag refcell__pos" :class="row.tone">
+                  {{ t(`contract.reference.pos.${row.position}`) }}
+                </span>
+                <!-- The scraped presentación ("ENVASE · 250 G"): the fact
+                     that decides whether the unit price is per gram or
+                     per envase — i.e. whether the flag above is real. -->
+                <span
+                  v-if="refPresentation(row)"
+                  class="refcell__pres u-mono"
+                >{{ refPresentation(row) }}</span>
+                <NuxtLink
+                  v-if="comparablesLink(row)"
+                  :to="comparablesLink(row)!"
+                  class="refcell__link"
+                >{{ t('contract.reference.viewComparables', { n: row.n }) }}</NuxtLink>
+              </template>
+              <template #cell:paid="{ row }">
+                <MoneyAmount :amount="row.paid" :currency="row.currency" :rule="false" size="sm" decimals />
+              </template>
+              <template #cell:median="{ row }">
+                <MoneyAmount :amount="row.median" :currency="row.currency" :rule="false" size="sm" />
+              </template>
+              <template #cell:range="{ row }">
+                {{ rangeText(row) }}
+              </template>
+              <template #cell:n="{ row }">
+                {{ formatNumber(row.n) }}
+              </template>
+            </DataTable>
+            <!-- The one caveat this table needs: the feed's unit price
+                 ignores the presentación, so "per G" can mean "per
+                 250 G envase". Without saying so, a correct row reads
+                 as a 250× scandal — or a real one reads as normal. -->
+            <p class="reftable__note">
+              {{ t('contract.reference.presNote') }}
+              <a
+                v-if="awardLink"
+                :href="awardLink"
+                target="_blank"
+                rel="noopener"
+              >{{ t('contract.reference.presNoteSource') }}</a>
+            </p>
             <NuxtLink
               :to="localePath('/analytics/anomalies')"
               class="reftable__link"
@@ -1539,6 +1586,7 @@ useSeo(() => ({
 .official {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--s-3);
   margin-top: var(--s-5);
   padding: var(--s-3) var(--s-4);
@@ -1546,8 +1594,11 @@ useSeo(() => ({
   border-radius: var(--r-lg);
   background: var(--celeste-wash);
   color: var(--text);
-  text-decoration: none;
-  transition: border-color var(--dur) var(--ease);
+}
+
+@media (max-width: 620px) {
+  .official__actions { margin-left: 0; width: 100%; }
+  .official__btn { flex: 1 1 auto; justify-content: center; }
 }
 
 .official:hover { border-color: var(--celeste); }
@@ -1570,10 +1621,48 @@ useSeo(() => ({
   color: var(--text-muted);
 }
 
-.official__go {
+.official__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
   margin-left: auto;
+}
+
+.official__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--celeste-deep);
+  // --celeste-deep flips light in the dark theme while --ink never flips, so a
+  // fixed #fff washes out there; --surface is #fff on light and dark navy on
+  // dark — readable on the celeste fill in both.
+  color: var(--surface);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--dur) var(--ease);
+}
+
+.official__btn:hover {
+  background: var(--ink);
+  color: #fff; // --ink stays dark in both themes; the base color would be dark-on-dark here
+}
+
+.official__btn--ghost {
+  background: transparent;
   color: var(--celeste-deep);
-  flex: none;
+  border: 1px solid color-mix(in srgb, var(--celeste) 45%, transparent);
+}
+
+.official__btn--ghost:hover {
+  // Was background: var(--surface) + color: var(--ink) — on the dark theme both
+  // are dark navy, so the label vanished on hover. A celeste tint plus the
+  // theme's own text color reads in both themes.
+  background: color-mix(in srgb, var(--celeste) 20%, transparent);
+  color: var(--text);
 }
 
 /* ---- Grid ---- */
@@ -1704,19 +1793,46 @@ a.party__name:hover { text-decoration: underline; }
 .contact__link:hover { text-decoration: underline; }
 
 /* ---- Price reference ---- */
-.reftable__pos {
-  margin-left: var(--s-2);
-  vertical-align: middle;
+.refcell__name { margin-right: var(--s-2); }
+
+.refcell__pos { vertical-align: middle; }
+
+/* The scraped presentación ("ENVASE · 250 G") on its own quiet line. */
+.refcell__pres {
+  display: block;
+  margin-top: var(--s-1);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
 }
 
-.reftable__range {
-  color: var(--text-muted);
+.refcell__link {
+  display: block;
+  margin-top: var(--s-1);
   font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--celeste-deep);
+  text-decoration: none;
 }
+
+.refcell__link:hover { text-decoration: underline; }
+
+.reftable__note {
+  margin: var(--s-3) 0 0;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  max-width: 70ch;
+}
+
+.reftable__note a {
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
+
+.reftable__note a:hover { text-decoration: underline; }
 
 .reftable__link {
   display: inline-block;
-  margin: var(--s-3) var(--s-4) 0;
+  margin: var(--s-3) 0 0;
   font-size: var(--t-xs);
   font-weight: 600;
   color: var(--celeste-deep);
@@ -1726,13 +1842,9 @@ a.party__name:hover { text-decoration: underline; }
 .reftable__link:hover { text-decoration: underline; }
 
 @media (max-width: 760px) {
-  /* On the stacked card the badge belongs under the item name, not
-     trailing it. */
-  .reftable__pos {
-    margin-left: 0;
-    margin-top: var(--s-2);
-    display: inline-block;
-  }
+  /* On the stacked card the badge sits under the item name. */
+  .refcell__name { display: block; margin-bottom: var(--s-2); }
+  .refcell__pos { display: inline-block; }
 }
 
 /* ---- Fact lists ---- */
@@ -1882,6 +1994,21 @@ a.party__name:hover { text-decoration: underline; }
   font-family: var(--font-mono);
   font-size: var(--t-xs);
   color: var(--text-muted);
+}
+
+/* Scraped características under an item's description: quiet label,
+   emphatic value — the value ("SOMBRILLA DE CALOR") is the fact. */
+.ifeat {
+  display: block;
+  margin-top: var(--s-1);
+  font-size: var(--t-xs);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.ifeat__v {
+  font-weight: 600;
+  color: var(--text);
 }
 
 .itable th.itable__num,
