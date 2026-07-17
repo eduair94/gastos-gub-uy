@@ -10,6 +10,14 @@ const BuyerPatternSchema = new Schema<IBuyerPattern>(
     totalContracts: { type: Number, required: true, default: 0 },
     years: [{ type: Number }],
     yearCount: { type: Number, required: true, default: 0 },
+    /**
+     * @deprecated No longer written, and actively $unset by the analytics refresh.
+     *
+     * Nothing ever read the ids — only supplierCount — but one buyer accumulated 1,833 of them,
+     * which put the average document at 13.2KB. The list endpoint does .find().lean() with no
+     * .select(), so the whole array was serialised to the browser on every page of the buyers list.
+     * Kept in the schema only so the field is documented rather than mysterious.
+     */
     suppliers: [{ type: String }],
     supplierCount: { type: Number, required: true, default: 0 },
     totalSpending: { type: Number, required: true, default: 0 },

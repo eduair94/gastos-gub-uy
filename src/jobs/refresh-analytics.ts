@@ -176,39 +176,45 @@ export class AnalyticsRefresher {
       AGG,
     )
 
-    // Distinct suppliers per buyer, collapsed pairwise first so the $addToSet stays bounded.
-    const supplierLinks: { _id: string, suppliers: string[] }[] = await ReleaseModel.aggregate(
+    // How many distinct suppliers each buyer has dealt with. The first $group collapses
+    // (buyer, supplier) pairs, so the second only has to count them.
+    //
+    // This deliberately does NOT keep the supplier ids. Only supplierCount is ever read
+    // (app/server/api/buyers/[id].get.ts, app/pages/buyers/index.vue); the array itself had no
+    // reader, yet one buyer carried 1,833 ids, inflating the average buyer_patterns document to
+    // 13.2KB — and the list endpoint does .find().lean() with no .select(), so every one of those
+    // ids was being serialised to the browser on every page of the buyers list.
+    const supplierLinks: { _id: string, supplierCount: number }[] = await ReleaseModel.aggregate(
       [
         { $match: { ...AWARD_MATCH, 'buyer.id': { $exists: true, $ne: null } } },
         { $unwind: { path: '$awards', preserveNullAndEmptyArrays: false } },
         { $group: { _id: { buyer: '$buyer.id', supplier: AWARD_SUPPLIER_ID } } },
         { $match: { '_id.supplier': { $ne: null } } },
-        { $group: { _id: '$_id.buyer', suppliers: { $addToSet: '$_id.supplier' } } },
+        { $group: { _id: '$_id.buyer', supplierCount: { $sum: 1 } } },
       ],
       AGG,
     )
-    const suppliersByBuyer = new Map(supplierLinks.map(l => [l._id, l.suppliers]))
+    const supplierCountByBuyer = new Map(supplierLinks.map(l => [l._id, l.supplierCount]))
 
     await this.bulkUpsert(
       BuyerPatternModel,
-      buyers.map(b => {
-        const linked = suppliersByBuyer.get(b._id) ?? []
-        return {
-          filter: { buyerId: b._id },
-          set: {
-            buyerId: b._id,
-            name: b.name ?? 'Unknown',
-            totalContracts: b.totalContracts,
-            totalSpending: b.totalSpending,
-            avgContractValue: b.totalContracts > 0 ? b.totalSpending / b.totalContracts : 0,
-            years: (b.years ?? []).filter(y => y != null).sort((a, b2) => a - b2),
-            yearCount: (b.years ?? []).filter(y => y != null).length,
-            suppliers: linked,
-            supplierCount: linked.length,
-            lastUpdated: new Date(),
-          },
-        }
-      }),
+      buyers.map(b => ({
+        filter: { buyerId: b._id },
+        set: {
+          buyerId: b._id,
+          name: b.name ?? 'Unknown',
+          totalContracts: b.totalContracts,
+          totalSpending: b.totalSpending,
+          avgContractValue: b.totalContracts > 0 ? b.totalSpending / b.totalContracts : 0,
+          years: (b.years ?? []).filter(y => y != null).sort((a, b2) => a - b2),
+          yearCount: (b.years ?? []).filter(y => y != null).length,
+          supplierCount: supplierCountByBuyer.get(b._id) ?? 0,
+          lastUpdated: new Date(),
+        },
+        // Drop the id list left by earlier runs. Without this the stale array survives forever,
+        // since nothing overwrites a field the job no longer sets.
+        unset: { suppliers: '' },
+      })),
       'buyers',
     )
 
@@ -565,12 +571,16 @@ export class AnalyticsRefresher {
 
   private async bulkUpsert(
     model: any,
-    ops: { filter: Record<string, unknown>, set: Record<string, unknown> }[],
+    ops: { filter: Record<string, unknown>, set: Record<string, unknown>, unset?: Record<string, string> }[],
     label: string,
   ): Promise<void> {
     for (let i = 0; i < ops.length; i += BULK_BATCH) {
       const batch = ops.slice(i, i + BULK_BATCH).map(o => ({
-        updateOne: { filter: o.filter, update: { $set: o.set }, upsert: true },
+        updateOne: {
+          filter: o.filter,
+          update: o.unset ? { $set: o.set, $unset: o.unset } : { $set: o.set },
+          upsert: true,
+        },
       }))
       if (batch.length === 0) continue
       await model.bulkWrite(batch, { ordered: false, bypassDocumentValidation: true })
