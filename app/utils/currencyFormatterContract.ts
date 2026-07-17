@@ -89,7 +89,14 @@ export const formatAwardAmount = (award: Record<string, unknown>): string => {
   return formatCurrencyWithMixed(total, award.items)
 }
 
-export const formatMoney = (amount: number, currency = 'USD', locale = 'en-US') => {
+/**
+ * Groups the digits of a bare number. Despite the old name this never
+ * rendered a currency (`style: 'decimal'` ignores the `currency` arg);
+ * it is a decimal formatter, so it is named for what it does. For a
+ * displayed peso figure use `formatMoney` from `utils/money.ts`, which
+ * is es-UY by default and carries the magnitude scale.
+ */
+export const formatDecimal = (amount: number, currency = 'USD', locale = 'en-US') => {
   const hasDecimal = amount % 1 !== 0
   return new Intl.NumberFormat(locale, {
     style: 'decimal',
@@ -106,7 +113,7 @@ export const formatCurrency = (amount: number, currency?: string): string => {
   const locale = currency === 'UYU' ? 'es-UY' : 'en-US'
   if (amount > 1500) amount = Math.round(amount)
 
-  return `${formatMoney(amount, currencyCode, locale)} ${currencyCode}`
+  return `${formatDecimal(amount, currencyCode, locale)} ${currencyCode}`
 }
 
 export const getContractName = (item: IRelease) => {

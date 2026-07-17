@@ -1,0 +1,433 @@
+{
+  "brand": {
+    "name": "Con la tuya, contribuyente",
+    "tagline": "Every peso the Uruguayan state spends, traceable."
+  },
+  "nav": {
+    "skip": "Skip to content",
+    "home": "Dashboard",
+    "contracts": "Contracts",
+    "suppliers": "Suppliers",
+    "buyers": "Agencies",
+    "anomalies": "Flags",
+    "about": "How it works",
+    "docs": "API",
+    "menu": "Menu",
+    "close": "Close",
+    "theme": "Switch theme",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme",
+    "language": "Language",
+    "sections": "Sections"
+  },
+  "money": {
+    "unavailable": "No amount",
+    "scaleTitle": "Magnitude scale",
+    "scaleHelp": "The gold bar under each amount is logarithmic and uses the same scale across the site: you can compare at a glance without reading the digits.",
+    "primaryNote": "Amounts are converted to Uruguayan pesos when the source reports a foreign currency. The original currency is shown.",
+    "mixedCurrency": "This contract has amounts in more than one currency.",
+    "convertedFrom": "Amount converted to pesos from {currency}, at the exchange rate on the award date."
+  },
+  "common": {
+    "search": "Search",
+    "searchPlaceholder": "Search by subject, supplier, or agency",
+    "clear": "Clear",
+    "clearAll": "Clear all",
+    "apply": "Apply",
+    "filters": "Filters",
+    "showFilters": "Show filters",
+    "hideFilters": "Hide filters",
+    "sortBy": "Sort by",
+    "results": "results",
+    "of": "of",
+    "page": "Page",
+    "next": "Next",
+    "previous": "Previous",
+    "viewAll": "View all",
+    "viewDetail": "View detail",
+    "copy": "Copy",
+    "copied": "Copied",
+    "download": "Download",
+    "share": "Share",
+    "loading": "Loading",
+    "retry": "Retry",
+    "date": "Date",
+    "year": "Year",
+    "amount": "Amount",
+    "total": "Total",
+    "count": "Count",
+    "name": "Name",
+    "status": "Status",
+    "method": "Procedure",
+    "currency": "Currency",
+    "category": "Category",
+    "supplier": "Supplier",
+    "buyer": "Agency",
+    "contract": "Contract",
+    "contracts": "Contracts",
+    "item": "Item",
+    "items": "Items",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price",
+    "description": "Description",
+    "updated": "Updated",
+    "since": "since"
+  },
+  "home": {
+    "eyebrow": "Uruguay's public procurement",
+    "title": "Follow the money.",
+    "titleAccent": "Peso by peso.",
+    "lead": "Every tender, award, and supplier of the Uruguayan state since {yearFrom}. Official open data, searchable.",
+    "searchLabel": "Search {count} contracts",
+    "searchCta": "Search",
+    "searchHint": "Try “tomógrafo”, “ASSE”, or a company name.",
+    "ledgerTitle": "Latest awards",
+    "ledgerHelp": "What the state awarded most recently, according to the published data.",
+    "statContracts": "Contracts on record",
+    "statSpending": "Total awarded",
+    "statTypical": "Typical contract (median)",
+    "statSuppliers": "Suppliers",
+    "statBuyers": "Buying agencies",
+    "trendsTitle": "Spending by year",
+    "trendsHelp": "Total awarded per year, in Uruguayan pesos.",
+    "categoriesTitle": "What it's spent on",
+    "categoriesHelp": "Top categories by amount awarded.",
+    "topSuppliersTitle": "Who gets paid most",
+    "topBuyersTitle": "Who spends most",
+    "anomaliesTitle": "What to look at closely",
+    "anomaliesHelp": "Contracts that depart from the usual pattern. A flag is not an accusation: it's a starting point for review.",
+    "exploreCta": "Open the explorer",
+    "sourceNote": "Source: Compras Estatales open data (OCDS), catalogodatos.gub.uy."
+  },
+  "contracts": {
+    "title": "Contract explorer",
+    "lead": "Filter {total} contracts by agency, supplier, amount, year, and procedure.",
+    "resultsSummary": "{count} contracts",
+    "resultsValue": "{value} awarded",
+    "resultsHelp": "Totals computed over the applied filters.",
+    "histogramTitle": "Distribution by year",
+    "histogramHelp": "Number of contracts per year within the applied filters.",
+    "table": {
+      "object": "Subject",
+      "buyer": "Agency",
+      "supplier": "Supplier",
+      "date": "Date",
+      "amount": "Amount",
+      "status": "Status",
+      "method": "Procedure"
+    },
+    "sort": {
+      "dateDesc": "Newest first",
+      "dateAsc": "Oldest first",
+      "amountDesc": "Highest amount",
+      "amountAsc": "Lowest amount",
+      "relevance": "Most relevant"
+    },
+    "empty": {
+      "title": "No contracts match these filters",
+      "body": "Remove a filter or widen the year range.",
+      "action": "Clear filters"
+    },
+    "emptyInitial": {
+      "title": "Search or filter to start",
+      "body": "Type what the state bought, or pick an agency in the filter panel."
+    },
+    "tooMany": "Showing the first {shown}. Narrow the filters to see fewer results."
+  },
+  "filters": {
+    "title": "Filters",
+    "active": "{n} filter active | {n} filters active",
+    "search": "Free text",
+    "searchHelp": "Searches the tender subject, the items, the agency, and the supplier.",
+    "year": "Year",
+    "yearRange": "Year range",
+    "yearFrom": "From",
+    "yearTo": "To",
+    "amount": "Amount awarded",
+    "amountFrom": "Minimum",
+    "amountTo": "Maximum",
+    "amountHelp": "In Uruguayan pesos.",
+    "buyer": "Buying agency",
+    "buyerPlaceholder": "Pick one or more agencies",
+    "supplier": "Supplier",
+    "supplierPlaceholder": "Search for a supplier",
+    "status": "Tender status",
+    "statusPlaceholder": "All statuses",
+    "statusHelp": "Only 1 in 12 records reports a status. Filtering by status leaves the rest out.",
+    "method": "Procedure type",
+    "methodPlaceholder": "All procedures",
+    "methodHelp": "The source reports no procedure on 7 of every 10 records.",
+    "currency": "Currency",
+    "currencyPlaceholder": "All currencies",
+    "category": "Category",
+    "hasAmount": "Only with a reported amount",
+    "hasAmountHelp": "Some official records publish no amount.",
+    "presets": "Common searches",
+    "presetBig": "Awards over $ 10M",
+    "presetRecent": "This year",
+    "presetSingleBidder": "Direct award",
+    "noOptions": "No options",
+    "loadingOptions": "Loading options"
+  },
+  "contract": {
+    "eyebrow": "Contract",
+    "notFound": {
+      "title": "No contract with that identifier",
+      "body": "The identifier may have changed at the source. Try searching for it in the explorer.",
+      "action": "Go to the explorer"
+    },
+    "awarded": "Awarded",
+    "awardedTo": "Awarded to",
+    "purchasedBy": "Bought by",
+    "publishedOn": "Published on",
+    "officialSource": "View on Compras Estatales",
+    "officialSourceHelp": "Opens the official record for this contract on comprasestatales.gub.uy.",
+    "ocid": "OCDS identifier",
+    "sections": {
+      "summary": "Summary",
+      "items": "What was bought",
+      "parties": "Who's involved",
+      "timeline": "Timeline",
+      "documents": "Official documents",
+      "raw": "Raw data"
+    },
+    "itemsHelp": "Awarded items with quantity and unit price.",
+    "noItems": "The official record lists no items for this contract.",
+    "noDocuments": "No documents are published for this contract.",
+    "timeline": {
+      "enquiry": "Enquiries",
+      "tender": "Bid submission",
+      "award": "Award",
+      "published": "Publication"
+    },
+    "relatedTitle": "Other contracts from this agency",
+    "supplierHistoryTitle": "This supplier's history",
+    "rawHelp": "The OCDS document as the state publishes it.",
+    "contextTitle": "How it compares",
+    "contextBiggerThan": "Larger than {pct}% of contracts in {year}.",
+    "contextRank": "Ranked {rank} among {buyer} contracts in {year}.",
+    "docTypes": {
+      "label": "Document type",
+      "awardNotice": "Award notice",
+      "tenderNotice": "Tender notice",
+      "biddingDocuments": "Bidding documents",
+      "contractSigned": "Signed contract",
+      "contractAnnexe": "Annexe",
+      "clarifications": "Clarifications",
+      "evaluationReports": "Evaluation report",
+      "technicalSpecifications": "Technical specifications"
+    }
+  },
+  "suppliers": {
+    "title": "State suppliers",
+    "lead": "{total} companies and individuals that sold to the Uruguayan state.",
+    "resultsSummary": "{count} suppliers",
+    "table": {
+      "name": "Supplier",
+      "contracts": "Contracts",
+      "buyers": "Agencies",
+      "total": "Total received",
+      "avg": "Average contract",
+      "years": "Years active"
+    },
+    "sort": {
+      "totalDesc": "Highest total received",
+      "totalAsc": "Lowest total received",
+      "contractsDesc": "Most contracts"
+    },
+    "empty": {
+      "title": "No supplier matches that search",
+      "body": "Try part of the name, without the legal form: “saceem” rather than “SACEEM S.A.”.",
+      "action": "Clear search"
+    },
+    "detail": {
+      "eyebrow": "Supplier",
+      "totalEarned": "Total received",
+      "contractCount": "Contracts",
+      "buyerCount": "Agencies that bought from them",
+      "avgContract": "Average contract",
+      "activeYears": "Years with activity",
+      "firstContract": "First contract",
+      "lastContract": "Last contract",
+      "byYearTitle": "Revenue by year",
+      "byBuyerTitle": "Who buys from them",
+      "byBuyerHelp": "Agencies ranked by amount awarded to this supplier.",
+      "categoriesTitle": "What they sell",
+      "concentrationTitle": "Client concentration",
+      "concentrationHelp": "How much of their revenue comes from their largest buyer.",
+      "contractsTitle": "Contracts",
+      "dataNote": "The source publishes no breakdown by year, agency or category for this supplier — only the total and its contracts.",
+      "notFound": {
+        "title": "No supplier with that identifier",
+        "body": "Try searching for it in the directory.",
+        "action": "Go to the directory"
+      }
+    }
+  },
+  "buyers": {
+    "title": "Buying agencies",
+    "lead": "{total} Uruguayan state agencies that run procurement.",
+    "resultsSummary": "{count} agencies",
+    "table": {
+      "name": "Agency",
+      "contracts": "Contracts",
+      "suppliers": "Suppliers",
+      "total": "Total spent",
+      "avg": "Average contract",
+      "years": "Years active"
+    },
+    "sort": {
+      "totalDesc": "Highest total spent",
+      "totalAsc": "Lowest total spent",
+      "contractsDesc": "Most contracts"
+    },
+    "empty": {
+      "title": "No agency matches that search",
+      "body": "Try part of the name: \"salud\" instead of \"Dirección General de la Salud\".",
+      "action": "Clear search"
+    },
+    "detail": {
+      "eyebrow": "Agency",
+      "totalSpent": "Total spent",
+      "contractCount": "Contracts",
+      "supplierCount": "Distinct suppliers",
+      "avgContract": "Average contract",
+      "activeYears": "Years with activity",
+      "byYearTitle": "Spending by year",
+      "yearsHelp": "Every year this agency recorded purchases. Tap a year to see those contracts.",
+      "recordHelp": "Amounts by year, supplier and category come from the public contract record, which only reports figures from {year} onwards. The total above comes from the agency summary and covers every year.",
+      "bySupplierTitle": "Who they buy from",
+      "bySupplierHelp": "Suppliers ranked by amount received from this agency.",
+      "bySupplierNote": "Each contract’s amount is credited in full to every awarded supplier: the source does not split it between them, so on multi-supplier contracts these figures are an upper bound.",
+      "categoriesTitle": "What they buy",
+      "categoriesHelp": "Categories with the most recorded spending, by the classification on each awarded item.",
+      "concentrationTitle": "Supplier concentration",
+      "concentrationHelp": "How much of their spending goes to their largest supplier.",
+      "concentrationOf": "of recorded spending",
+      "contractsTitle": "Contracts",
+      "contractsHelp": "This agency’s largest contracts in the public record.",
+      "noAmounts": "The public record reports no amounts for this agency.",
+      "notFound": {
+        "title": "No agency with that identifier",
+        "body": "Try searching for it in the list.",
+        "action": "Go to the list"
+      }
+    }
+  },
+  "anomalies": {
+    "title": "Price flags",
+    "lead": "Contracts where the unit price departs sharply from what the state usually pays for the same item. A flag is not an accusation: it marks something worth a look.",
+    "disclaimer": "There are legitimate explanations: urgent purchases, different specifications under the same catalogue code, or items misclassified at the source.",
+    "method": {
+      "title": "How it is calculated",
+      "body": "For each combination of item, currency and unit of measure, a price baseline is built from the last 36 months. Each award's unit price is then scored against that baseline using a robust measure in log space: it uses the median rather than the mean, so a huge contract cannot mask its own anomaly.",
+      "scope": "At least 10 comparable items are needed to score a price, and 30 to assign the highest severities.",
+      "rangeNote": "The \"usual range\" runs from the 25th to the 95th percentile of that baseline, in the contract's original currency."
+    },
+    "severity": {
+      "label": "Severity",
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "severityHelp": {
+      "critical": "More than 10 robust deviations above the baseline.",
+      "high": "Between 7 and 10 deviations.",
+      "medium": "Between 5 and 7 deviations.",
+      "low": "Between 3.5 and 5 deviations."
+    },
+    "type": {
+      "label": "Type",
+      "price_spike": "Price out of range"
+    },
+    "typeHelp": {
+      "price_spike": "The unit price departs from what is usually paid for that item."
+    },
+    "detected": "Paid",
+    "expected": "Usual range",
+    "baseline": "vs. {n} comparable",
+    "confidence": "Confidence",
+    "empty": {
+      "title": "No flags for these filters",
+      "body": "Try another severity or clear the year filter."
+    }
+  },
+  "errors": {
+    "generic": {
+      "title": "This data didn't load",
+      "body": "The query failed. Retry; if it keeps failing, it's on us.",
+      "action": "Retry"
+    },
+    "timeout": {
+      "title": "The query took too long",
+      "body": "Add a year or agency filter to narrow the search."
+    },
+    "notFound": {
+      "title": "This page doesn't exist",
+      "body": "The link may be broken, or the content moved.",
+      "action": "Back to the dashboard"
+    },
+    "rateLimit": {
+      "title": "Too many queries",
+      "body": "Wait a minute and try again."
+    }
+  },
+  "seo": {
+    "home": {
+      "title": "Con la tuya, contribuyente — Uruguay's public procurement",
+      "description": "Explore {count} Uruguayan state contracts: who buys, who sells, and how much is paid. Official open data, searchable and comparable."
+    },
+    "contracts": {
+      "title": "Uruguayan state contract explorer",
+      "description": "Search and filter Uruguay's public contracts by agency, supplier, amount, year, and procedure type."
+    },
+    "contractDetail": {
+      "title": "{title} — {buyer}",
+      "description": "{buyer} awarded {amount} to {supplier} on {date}. Full contract detail, items, and official documents."
+    },
+    "suppliers": {
+      "title": "Suppliers to the Uruguayan state",
+      "description": "Directory of {total} suppliers to the Uruguayan state, with amounts received, buying agencies, and contracts."
+    },
+    "supplierDetail": {
+      "title": "{name} — state supplier",
+      "description": "{name} received {amount} from the Uruguayan state across {contracts} contracts with {buyers} agencies."
+    },
+    "buyers": {
+      "title": "Buying agencies of the Uruguayan state",
+      "description": "Directory of Uruguay's public agencies, with total spending, suppliers, and contracts."
+    },
+    "buyerDetail": {
+      "title": "{name} — agency purchases",
+      "description": "{name} spent {amount} across {contracts} contracts with {suppliers} suppliers."
+    },
+    "anomalies": {
+      "title": "Flags in Uruguay's public procurement",
+      "description": "Uruguayan state contracts that depart from the usual pattern of price, supplier, or frequency."
+    }
+  },
+  "about": {
+    "title": "How it works",
+    "lead": "Where this data comes from and what you can do with it.",
+    "sourceTitle": "The source",
+    "sourceBody": "Everything you see here comes from the open data the Uruguayan state publishes in OCDS format (Open Contracting Data Standard), through catalogodatos.gub.uy and the Compras Estatales site. We don't add or edit records: we import them, normalize them, and make them searchable.",
+    "scaleTitle": "The gold bar",
+    "scaleBody": "Every amount carries a logarithmic bar beneath it. It uses the same scale across the site, so you can compare one contract to another without reading the digits. Gold is reserved for money: if it isn't public money, it isn't gold.",
+    "totalTitle": "Why we don't show a total",
+    "totalBody": "A handful of official records carry corrupt quantities, and that breaks any sum. The clearest case: a UTE award for generator equipment rental declares a quantity of 1,200,007 units at USD 519,788.85 each. That comes to USD 623 billion — about eight times the country's GDP — for a single contract.",
+    "totalBody2": "Three records like that hold 86% of all reported spending; thirteen hold 93%. A \"total awarded\" headline would, in practice, be the sum of those errors. So we show the median instead: half of the state's purchases are smaller than that figure. It doesn't break when one record does.",
+    "totalBody3": "We don't delete them. Filter to that agency and you'll see the record exactly as the state publishes it, with a link to the official file. The strange number is part of the story.",
+    "totalCta": "See those records",
+    "limitsTitle": "The limits",
+    "limitsBody": "Some official records report no amount, and amounts in foreign currency are shown with their original currency. A contract carrying a flag isn't necessarily irregular: it's a contract that departs from the pattern and is worth a look.",
+    "linkTitle": "You can always check",
+    "linkBody": "Every contract links to its official record on comprasestatales.gub.uy. If something here doesn't add up, the source wins."
+  },
+  "footer": {
+    "source": "Data: Compras Estatales (OCDS) via catalogodatos.gub.uy",
+    "disclaimer": "Independent site. Not an official site of the Uruguayan state.",
+    "api": "Public API",
+    "lastUpdate": "Data as of {date}"
+  }
+}

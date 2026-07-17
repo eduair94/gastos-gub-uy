@@ -1,154 +1,299 @@
-// Custom SCSS variables and styles
-// Government theme colors
-$primary-color: #1976d2;
-$secondary-color: #424242;
-$accent-color: #ff5722;
-$success-color: #4caf50;
-$warning-color: #ff9800;
-$error-color: #f44336;
-$info-color: #2196f3;
+@use "./tokens";
 
-// Typography
-$font-family-base: "Roboto", "Arial", sans-serif;
-$font-size-base: 16px;
-$line-height-base: 1.5;
+// ============================================================
+// Base
+// ============================================================
+html {
+  scroll-behavior: smooth;
+}
 
-// Spacing
-$spacing-xs: 4px;
-$spacing-sm: 8px;
-$spacing-md: 16px;
-$spacing-lg: 24px;
-$spacing-xl: 32px;
+body {
+  font-family: var(--font-body);
+  font-size: var(--t-base);
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
 
-// Border radius
-$border-radius-base: 4px;
-$border-radius-lg: 8px;
+// Vuetify paints its own surface colours; bind them to our tokens
+// so a single theme switch moves the whole page.
+.v-application {
+  font-family: var(--font-body) !important;
+  background: var(--bg) !important;
+  color: var(--text) !important;
+}
 
-// Shadows
-$box-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-$box-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.15);
-$box-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.18);
+.v-application__wrap {
+  min-height: 100dvh;
+}
 
-// Utility classes
-.text-truncate {
+// ============================================================
+// Type
+// ============================================================
+h1, h2, h3, h4,
+.u-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-stretch: 112%; // Archivo's wide cut — the form title block
+}
+
+h1 { font-size: var(--t-2xl); }
+h2 { font-size: var(--t-xl); }
+h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
+
+.u-hero {
+  font-family: var(--font-display);
+  font-size: var(--t-3xl);
+  font-weight: 800;
+  font-stretch: 125%;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+// Eyebrow: only used where it names a real category of thing,
+// never as decoration.
+.u-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.u-lead {
+  font-size: var(--t-md);
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 62ch;
+}
+
+.u-muted { color: var(--text-muted); }
+
+.u-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+// ============================================================
+// SIGNATURE — the peso magnitude rule
+//
+// Every amount on this site carries a hairline gold rule whose
+// length is log10(amount) normalised across a fixed, site-wide
+// domain (1e2 .. 1e10 UYU). The scale never changes between
+// pages, so a rule's length means the same thing on the
+// dashboard, in the table, and on a detail page. You learn to
+// read magnitude before you read digits.
+//
+// `--mag` (0..1) is set inline by <MoneyAmount>.
+// ============================================================
+.money {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 600;
+  color: var(--money);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.money--start { align-items: flex-start; }
+
+.money__figure { line-height: 1.1; }
+
+.money__rule {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 44px;
+  height: 2px;
+  background: var(--money-track);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.money__rule::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--mag, 0) * 100%);
+  background: var(--money-rule);
+  border-radius: 1px;
+}
+
+// Currency that is not the local peso is annotated, never
+// silently folded into a peso total.
+.money__fx {
+  font-size: var(--t-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.money--lg .money__figure { font-size: var(--t-xl); font-weight: 700; }
+.money--xl .money__figure { font-size: var(--t-2xl); font-weight: 700; }
+.money--lg .money__rule,
+.money--xl .money__rule { height: 3px; }
+
+// A missing amount is a fact about the data, not a blank.
+.money--none {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+// ============================================================
+// Surfaces
+// ============================================================
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.panel__body { padding: var(--s-5); }
+
+.u-container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: clamp(var(--s-4), 3vw, var(--s-6));
+}
+
+// ============================================================
+// Status + severity — colour carries meaning, not mood
+// ============================================================
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 2px var(--s-2);
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.tag--activo  { background: color-mix(in srgb, var(--verde) 12%, transparent); color: var(--verde); border-color: color-mix(in srgb, var(--verde) 30%, transparent); }
+.tag--neutral { background: var(--surface-sunken); color: var(--text-muted); border-color: var(--rule); }
+.tag--alerta  { background: var(--alerta-wash); color: var(--alerta); border-color: color-mix(in srgb, var(--alerta) 32%, transparent); }
+.tag--celeste { background: var(--celeste-wash); color: var(--celeste-deep); border-color: color-mix(in srgb, var(--celeste) 34%, transparent); }
+
+// ============================================================
+// Quality floor
+// ============================================================
+:where(a, button, [tabindex], input, select, textarea, .v-btn, .v-list-item):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.u-skip {
+  position: absolute;
+  left: var(--s-4);
+  top: -100px;
+  z-index: 3000;
+  padding: var(--s-2) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  transition: top var(--dur) var(--ease);
+
+  &:focus { top: var(--s-4); }
+}
+
+.u-truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cursor-pointer {
-  cursor: pointer;
+.u-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.full-height {
-  height: 100vh;
+// Wide content scrolls inside its own container; the page body
+// never scrolls sideways.
+.u-scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
-.sticky-top {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-// Custom component styles
-.dashboard-card {
-  transition: transform 0.2s ease-in-out;
-}
-
-.metric-card {
-  text-align: center;
-  padding: $spacing-lg;
-
-  .metric-value {
-    font-size: 2.5rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .metric-label {
-    font-size: 0.875rem;
-    opacity: 0.7;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-.chart-container {
-  position: relative;
-  width: 100%;
-  height: 400px;
+// ============================================================
+// Vuetify overrides — keep the framework from reasserting
+// Material defaults over the token system.
+// ============================================================
+.v-card {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--rule);
 }
 
-// Responsive helpers
-@media (max-width: 599px) {
-  .hide-on-mobile {
-    display: none !important;
-  }
+.v-field {
+  border-radius: var(--r-md) !important;
+  font-family: var(--font-body);
 }
 
-@media (min-width: 600px) {
-  .hide-on-desktop {
-    display: none !important;
-  }
+.v-btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-// Loading states
-.loading-skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, transparent 37%, #f0f0f0 63%);
-  background-size: 400% 100%;
-  animation: skeleton-loading 1.4s ease infinite;
+.v-chip {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.03em;
 }
 
-@keyframes skeleton-loading {
-  0% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+.v-table {
+  background: transparent !important;
+  color: var(--text) !important;
 }
 
-// Status indicators
-.status-active {
-  color: $success-color;
-}
-
-.status-pending {
-  color: $warning-color;
-}
-
-.status-cancelled {
-  color: $error-color;
-}
-
-.status-complete {
-  color: $info-color;
-}
-
-// Data table customizations
-.v-data-table {
-  .v-data-table__th {
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.5px;
-  }
-}
-
-// Navigation customizations
-.app-navigation {
-  .v-list-item--active {
-    border-right: 3px solid $primary-color;
-  }
-}
-
-// Form customizations
-.form-section {
-  margin-bottom: $spacing-xl;
-
-  .form-section-title {
-    margin-bottom: $spacing-md;
-    font-weight: 600;
-    color: $primary-color;
-  }
+.v-data-table__th {
+  font-family: var(--font-mono) !important;
+  font-size: var(--t-xs) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase;
+  color: var(--text-muted) !important;
+  white-space: nowrap;
 }

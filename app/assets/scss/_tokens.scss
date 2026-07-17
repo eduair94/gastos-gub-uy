@@ -1,0 +1,126 @@
+// ============================================================
+// Con la tuya contribuyente — design tokens
+//
+// Grounded in the world of Uruguayan public procurement: the
+// official expediente, the peso ledger, the sol de mayo.
+//
+// The one rule this system enforces everywhere: GOLD IS MONEY.
+// `--sol` is reserved for peso amounts and nothing else. If it
+// isn't public money, it isn't gold.
+// ============================================================
+
+:root {
+  // --- Core palette ---------------------------------------
+  --ink: #0f2233;          // document ink — text, dark surfaces
+  --ink-2: #1b3348;        // raised ink surface
+  --ink-3: #274156;        // ink hairline
+  --paper: #eef1f2;        // official form paper (cool, not cream)
+  --paper-2: #ffffff;      // card face
+  --paper-3: #e2e7e9;      // sunken / rule
+  --celeste: #5e93c4;      // structure, links, interactive
+  --celeste-deep: #3c6d9c; // pressed / hover
+  --celeste-wash: #dce8f3; // tint fill
+  --sol: #d9a441;          // MONEY ONLY — sol de mayo ochre
+  --sol-deep: #8a6318;     // money as text on paper — 4.77:1, AA
+  --sol-wash: #f6ecd7;     // magnitude rule track
+  --alerta: #b2423b;       // anomalies — the watchdog signal
+  --alerta-wash: #f6e3e1;
+  --grafito: #64757f;      // secondary text
+  --verde: #3f7d62;        // completed / active status
+
+  // --- Semantic ------------------------------------------
+  --bg: var(--paper);
+  --surface: var(--paper-2);
+  --surface-sunken: var(--paper-3);
+  --text: var(--ink);
+  --text-muted: var(--grafito);
+  --rule: #d3dade;
+  --rule-strong: #b6c1c7;
+  --focus: #1f6feb;
+
+  // Money is the one thing that is gold. `--money` is the text
+  // colour (contrast-safe per theme); `--money-rule` is the
+  // magnitude bar, which is decorative and stays bright ochre.
+  --money: var(--sol-deep);
+  --money-rule: var(--sol);
+  --money-track: var(--sol-wash);
+
+  // --- Type ----------------------------------------------
+  // Archivo   — display. The wide cut reads like the title block
+  //             of an official form.
+  // Public Sans — body. A face designed for public information.
+  // IBM Plex Mono — money, IDs. The ledger column.
+  --font-display: "Archivo", "Archivo Expanded", system-ui, sans-serif;
+  --font-body: "Public Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+
+  // Type scale — 1.25 minor third, clamped for fluid display sizes
+  --t-xs: 0.6875rem;   // 11px — eyebrows, table labels
+  --t-sm: 0.8125rem;   // 13px — captions, chips
+  --t-base: 0.9375rem; // 15px — body
+  --t-md: 1.0625rem;   // 17px — lead
+  --t-lg: 1.375rem;    // 22px — card titles
+  --t-xl: clamp(1.5rem, 1.1rem + 1.6vw, 2rem);
+  --t-2xl: clamp(1.875rem, 1.2rem + 2.8vw, 2.75rem);
+  --t-3xl: clamp(2.25rem, 1.1rem + 5vw, 4.25rem); // hero
+
+  // --- Space ---------------------------------------------
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+  --s-9: 6rem;
+
+  // --- Form ----------------------------------------------
+  --r-sm: 3px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-full: 999px;
+
+  --shadow-1: 0 1px 2px rgb(15 34 51 / 0.06), 0 1px 3px rgb(15 34 51 / 0.08);
+  --shadow-2: 0 2px 4px rgb(15 34 51 / 0.06), 0 6px 16px rgb(15 34 51 / 0.09);
+  --shadow-3: 0 8px 24px rgb(15 34 51 / 0.14);
+
+  --container: 1400px;
+  // Wide enough for two side-by-side year selects to show a full
+  // four-digit value; at 264px Vuetify truncated "2024" to "2…".
+  --rail: 296px;
+
+  --ease: cubic-bezier(0.2, 0, 0.1, 1);
+  --dur: 180ms;
+}
+
+// ============================================================
+// Dark — the expediente under a desk lamp.
+// Paper inverts to ink; sol stays gold (money is money).
+// ============================================================
+.v-theme--contribuyenteDark,
+[data-theme="dark"] {
+  --bg: #0b1a27;
+  --surface: #12283a;
+  --surface-sunken: #0e2131;
+  --text: #e6edf2;
+  --text-muted: #93a7b4;
+  --rule: #21415a;
+  --rule-strong: #33586f;
+  --celeste: #7fb3dd;
+  --celeste-deep: #a6cdec;
+  --celeste-wash: #14324a;
+  --sol: #e8bc63;
+  --sol-deep: #f0d193;
+  --sol-wash: #33280f;
+  --alerta: #e0736a;
+  --alerta-wash: #3a1e1c;
+  --verde: #5fa584;
+  --focus: #6ea8ff;
+
+  // On ink, the bright ochre already clears AA (9.9:1) — no need
+  // to darken it the way paper demands.
+  --money: var(--sol);
+  --money-rule: var(--sol);
+  --money-track: #33280f;
+}

@@ -1,0 +1,433 @@
+{
+  "brand": {
+    "name": "Con la tuya, contribuyente",
+    "tagline": "Cada peso que gasta el Estado uruguayo, rastreable."
+  },
+  "nav": {
+    "skip": "Ir al contenido",
+    "home": "Panel",
+    "contracts": "Contratos",
+    "suppliers": "Proveedores",
+    "buyers": "Organismos",
+    "anomalies": "Alertas",
+    "about": "Cómo funciona",
+    "docs": "API",
+    "menu": "Menú",
+    "close": "Cerrar",
+    "theme": "Cambiar tema",
+    "themeLight": "Tema claro",
+    "themeDark": "Tema oscuro",
+    "language": "Idioma",
+    "sections": "Secciones"
+  },
+  "money": {
+    "unavailable": "Sin monto",
+    "scaleTitle": "Escala de magnitud",
+    "scaleHelp": "La barra dorada bajo cada monto es logarítmica y usa la misma escala en todo el sitio: podés comparar de un vistazo sin leer los dígitos.",
+    "primaryNote": "Montos convertidos a pesos uruguayos cuando el origen informa moneda extranjera. Se indica la moneda original.",
+    "mixedCurrency": "Este contrato tiene montos en más de una moneda.",
+    "convertedFrom": "Monto convertido a pesos desde {currency}, al tipo de cambio del día de la adjudicación."
+  },
+  "common": {
+    "search": "Buscar",
+    "searchPlaceholder": "Buscar por objeto, proveedor u organismo",
+    "clear": "Limpiar",
+    "clearAll": "Limpiar todo",
+    "apply": "Aplicar",
+    "filters": "Filtros",
+    "showFilters": "Mostrar filtros",
+    "hideFilters": "Ocultar filtros",
+    "sortBy": "Ordenar por",
+    "results": "resultados",
+    "of": "de",
+    "page": "Página",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "viewAll": "Ver todo",
+    "viewDetail": "Ver detalle",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "download": "Descargar",
+    "share": "Compartir",
+    "loading": "Cargando",
+    "retry": "Reintentar",
+    "date": "Fecha",
+    "year": "Año",
+    "amount": "Monto",
+    "total": "Total",
+    "count": "Cantidad",
+    "name": "Nombre",
+    "status": "Estado",
+    "method": "Procedimiento",
+    "currency": "Moneda",
+    "category": "Categoría",
+    "supplier": "Proveedor",
+    "buyer": "Organismo",
+    "contract": "Contrato",
+    "contracts": "Contratos",
+    "item": "Artículo",
+    "items": "Artículos",
+    "quantity": "Cantidad",
+    "unitPrice": "Precio unitario",
+    "description": "Descripción",
+    "updated": "Actualizado",
+    "since": "desde"
+  },
+  "home": {
+    "eyebrow": "Compras públicas del Uruguay",
+    "title": "Seguí el dinero.",
+    "titleAccent": "Peso a peso.",
+    "lead": "Cada llamado, adjudicación y proveedor del Estado uruguayo, desde {yearFrom}. Datos abiertos oficiales, buscables.",
+    "searchLabel": "Buscar en {count} contratos",
+    "searchCta": "Buscar",
+    "searchHint": "Probá con «tomógrafo», «ASSE» o el nombre de una empresa.",
+    "ledgerTitle": "Últimas adjudicaciones",
+    "ledgerHelp": "Lo que el Estado adjudicó más recientemente, según los datos publicados.",
+    "statContracts": "Contratos registrados",
+    "statSpending": "Adjudicado en total",
+    "statTypical": "Contrato típico (mediana)",
+    "statSuppliers": "Proveedores",
+    "statBuyers": "Organismos compradores",
+    "trendsTitle": "Gasto por año",
+    "trendsHelp": "Total adjudicado por año, en pesos uruguayos.",
+    "categoriesTitle": "En qué se gasta",
+    "categoriesHelp": "Principales categorías por monto adjudicado.",
+    "topSuppliersTitle": "Quién cobra más",
+    "topBuyersTitle": "Quién gasta más",
+    "anomaliesTitle": "Qué mirar de cerca",
+    "anomaliesHelp": "Contratos que se apartan del patrón habitual. Una alerta no es una acusación: es un punto de partida para revisar.",
+    "exploreCta": "Abrir el explorador",
+    "sourceNote": "Fuente: datos abiertos de Compras Estatales (OCDS), catalogodatos.gub.uy."
+  },
+  "contracts": {
+    "title": "Explorador de contratos",
+    "lead": "Filtrá {total} contratos por organismo, proveedor, monto, año y procedimiento.",
+    "resultsSummary": "{count} contratos",
+    "resultsValue": "{value} adjudicados",
+    "resultsHelp": "Totales calculados sobre los filtros aplicados.",
+    "histogramTitle": "Distribución por año",
+    "histogramHelp": "Cantidad de contratos por año dentro de los filtros aplicados.",
+    "table": {
+      "object": "Objeto",
+      "buyer": "Organismo",
+      "supplier": "Proveedor",
+      "date": "Fecha",
+      "amount": "Monto",
+      "status": "Estado",
+      "method": "Procedimiento"
+    },
+    "sort": {
+      "dateDesc": "Más recientes primero",
+      "dateAsc": "Más antiguos primero",
+      "amountDesc": "Mayor monto",
+      "amountAsc": "Menor monto",
+      "relevance": "Más relevantes"
+    },
+    "empty": {
+      "title": "Ningún contrato coincide con estos filtros",
+      "body": "Probá quitar un filtro o ampliar el rango de años.",
+      "action": "Limpiar filtros"
+    },
+    "emptyInitial": {
+      "title": "Buscá o filtrá para empezar",
+      "body": "Escribí qué compró el Estado, o elegí un organismo en el panel de filtros."
+    },
+    "tooMany": "Mostrando los primeros {shown}. Afiná los filtros para ver menos resultados."
+  },
+  "filters": {
+    "title": "Filtros",
+    "active": "{n} filtro activo | {n} filtros activos",
+    "search": "Texto libre",
+    "searchHelp": "Busca en el objeto del llamado, los artículos, el organismo y el proveedor.",
+    "year": "Año",
+    "yearRange": "Rango de años",
+    "yearFrom": "Desde",
+    "yearTo": "Hasta",
+    "amount": "Monto adjudicado",
+    "amountFrom": "Mínimo",
+    "amountTo": "Máximo",
+    "amountHelp": "En pesos uruguayos.",
+    "buyer": "Organismo comprador",
+    "buyerPlaceholder": "Elegí uno o más organismos",
+    "supplier": "Proveedor",
+    "supplierPlaceholder": "Buscá un proveedor",
+    "status": "Estado del llamado",
+    "statusPlaceholder": "Todos los estados",
+    "statusHelp": "Solo 1 de cada 12 registros informa estado. Filtrar por estado deja fuera al resto.",
+    "method": "Tipo de procedimiento",
+    "methodPlaceholder": "Todos los procedimientos",
+    "methodHelp": "El origen no informa el procedimiento en 7 de cada 10 registros.",
+    "currency": "Moneda",
+    "currencyPlaceholder": "Todas las monedas",
+    "category": "Categoría",
+    "hasAmount": "Solo con monto informado",
+    "hasAmountHelp": "Algunos registros oficiales no publican importe.",
+    "presets": "Búsquedas frecuentes",
+    "presetBig": "Adjudicaciones sobre $ 10 M",
+    "presetRecent": "Este año",
+    "presetSingleBidder": "Compra directa",
+    "noOptions": "Sin opciones",
+    "loadingOptions": "Cargando opciones"
+  },
+  "contract": {
+    "eyebrow": "Contrato",
+    "notFound": {
+      "title": "No encontramos ese contrato",
+      "body": "El identificador puede haber cambiado en el origen. Probá buscarlo en el explorador.",
+      "action": "Ir al explorador"
+    },
+    "awarded": "Adjudicado",
+    "awardedTo": "Adjudicado a",
+    "purchasedBy": "Comprado por",
+    "publishedOn": "Publicado el",
+    "officialSource": "Ver en Compras Estatales",
+    "officialSourceHelp": "Abre la ficha oficial de este contrato en comprasestatales.gub.uy.",
+    "ocid": "Identificador OCDS",
+    "sections": {
+      "summary": "Resumen",
+      "items": "Qué se compró",
+      "parties": "Quiénes participan",
+      "timeline": "Cronología",
+      "documents": "Documentos oficiales",
+      "raw": "Datos crudos"
+    },
+    "itemsHelp": "Artículos adjudicados con su cantidad y precio unitario.",
+    "noItems": "El registro oficial no detalla artículos para este contrato.",
+    "noDocuments": "No hay documentos publicados para este contrato.",
+    "timeline": {
+      "enquiry": "Consultas",
+      "tender": "Recepción de ofertas",
+      "award": "Adjudicación",
+      "published": "Publicación"
+    },
+    "relatedTitle": "Otros contratos de este organismo",
+    "supplierHistoryTitle": "Historial de este proveedor",
+    "rawHelp": "El documento OCDS tal como lo publica el Estado.",
+    "contextTitle": "Cómo se compara",
+    "contextBiggerThan": "Mayor que el {pct} % de los contratos de {year}.",
+    "contextRank": "Puesto {rank} entre los contratos de {buyer} en {year}.",
+    "docTypes": {
+      "label": "Tipo de documento",
+      "awardNotice": "Acta de adjudicación",
+      "tenderNotice": "Llamado",
+      "biddingDocuments": "Pliego",
+      "contractSigned": "Contrato firmado",
+      "contractAnnexe": "Anexo",
+      "clarifications": "Aclaraciones",
+      "evaluationReports": "Informe de evaluación",
+      "technicalSpecifications": "Especificaciones técnicas"
+    }
+  },
+  "suppliers": {
+    "title": "Proveedores del Estado",
+    "lead": "{total} empresas y personas que vendieron al Estado uruguayo.",
+    "resultsSummary": "{count} proveedores",
+    "table": {
+      "name": "Proveedor",
+      "contracts": "Contratos",
+      "buyers": "Organismos",
+      "total": "Total cobrado",
+      "avg": "Contrato promedio",
+      "years": "Años activo"
+    },
+    "sort": {
+      "totalDesc": "Mayor total cobrado",
+      "totalAsc": "Menor total cobrado",
+      "contractsDesc": "Más contratos"
+    },
+    "empty": {
+      "title": "Ningún proveedor coincide con esa búsqueda",
+      "body": "Probá con parte del nombre, sin la forma jurídica: «saceem» en lugar de «SACEEM S.A.».",
+      "action": "Limpiar búsqueda"
+    },
+    "detail": {
+      "eyebrow": "Proveedor",
+      "totalEarned": "Total cobrado",
+      "contractCount": "Contratos",
+      "buyerCount": "Organismos que le compraron",
+      "avgContract": "Contrato promedio",
+      "activeYears": "Años con actividad",
+      "firstContract": "Primer contrato",
+      "lastContract": "Último contrato",
+      "byYearTitle": "Facturación por año",
+      "byBuyerTitle": "Quién le compra",
+      "byBuyerHelp": "Organismos ordenados por monto adjudicado a este proveedor.",
+      "categoriesTitle": "Qué vende",
+      "concentrationTitle": "Concentración de clientes",
+      "concentrationHelp": "Qué parte de sus ingresos viene de su principal comprador.",
+      "contractsTitle": "Contratos",
+      "dataNote": "El origen no publica el desglose por año, por organismo ni por rubro de este proveedor: solo el total y sus contratos.",
+      "notFound": {
+        "title": "No encontramos ese proveedor",
+        "body": "Probá buscarlo en el directorio.",
+        "action": "Ir al directorio"
+      }
+    }
+  },
+  "buyers": {
+    "title": "Organismos compradores",
+    "lead": "{total} organismos del Estado uruguayo que ejecutan compras.",
+    "resultsSummary": "{count} organismos",
+    "table": {
+      "name": "Organismo",
+      "contracts": "Contratos",
+      "suppliers": "Proveedores",
+      "total": "Total gastado",
+      "avg": "Contrato promedio",
+      "years": "Años activo"
+    },
+    "sort": {
+      "totalDesc": "Mayor total gastado",
+      "totalAsc": "Menor total gastado",
+      "contractsDesc": "Más contratos"
+    },
+    "empty": {
+      "title": "Ningún organismo coincide con esa búsqueda",
+      "body": "Probá con parte del nombre: «salud» en lugar de «Dirección General de la Salud».",
+      "action": "Limpiar búsqueda"
+    },
+    "detail": {
+      "eyebrow": "Organismo",
+      "totalSpent": "Total gastado",
+      "contractCount": "Contratos",
+      "supplierCount": "Proveedores distintos",
+      "avgContract": "Contrato promedio",
+      "activeYears": "Años con actividad",
+      "byYearTitle": "Gasto por año",
+      "yearsHelp": "Cada año en que el organismo registró compras. Tocá un año para ver esos contratos.",
+      "recordHelp": "Montos por año, proveedor y categoría salen del registro público de contratos, que informa importes recién desde {year}. El total de arriba viene del resumen del organismo y cubre todos los años.",
+      "bySupplierTitle": "A quién le compra",
+      "bySupplierHelp": "Proveedores ordenados por monto recibido de este organismo.",
+      "bySupplierNote": "El monto de cada contrato se asigna entero a cada proveedor adjudicatario: la fuente no lo reparte entre ellos, así que en contratos con varios proveedores estas cifras son un techo.",
+      "categoriesTitle": "Qué compra",
+      "categoriesHelp": "Rubros con más gasto registrado, según la clasificación de cada artículo adjudicado.",
+      "concentrationTitle": "Concentración de proveedores",
+      "concentrationHelp": "Qué parte del gasto se lleva su principal proveedor.",
+      "concentrationOf": "del gasto registrado",
+      "contractsTitle": "Contratos",
+      "contractsHelp": "Los contratos de mayor monto de este organismo en el registro público.",
+      "noAmounts": "El registro público no informa montos para este organismo.",
+      "notFound": {
+        "title": "No encontramos ese organismo",
+        "body": "Probá buscarlo en el listado.",
+        "action": "Ir al listado"
+      }
+    }
+  },
+  "anomalies": {
+    "title": "Alertas de precio",
+    "lead": "Contratos donde el precio unitario se aparta mucho del que suele pagarse por el mismo artículo. Una alerta no es una acusación: marca algo que vale la pena mirar.",
+    "disclaimer": "Hay explicaciones legítimas: compras urgentes, especificaciones distintas bajo el mismo código de catálogo, o artículos mal clasificados en el origen.",
+    "method": {
+      "title": "Cómo se calcula",
+      "body": "Para cada combinación de artículo, moneda y unidad de medida se arma una referencia de precios con los últimos 36 meses. Después se compara el precio de cada adjudicación contra esa referencia usando una medida robusta en escala logarítmica: usa la mediana en lugar del promedio, así un contrato gigante no puede tapar su propia anomalía.",
+      "scope": "Hacen falta al menos 10 artículos comparables para evaluar un precio, y 30 para asignar las severidades más altas.",
+      "rangeNote": "El «rango habitual» va del percentil 25 al 95 de esa referencia, en la moneda original del contrato."
+    },
+    "severity": {
+      "label": "Severidad",
+      "critical": "Crítica",
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja"
+    },
+    "severityHelp": {
+      "critical": "Más de 10 desvíos robustos por encima de la referencia.",
+      "high": "Entre 7 y 10 desvíos.",
+      "medium": "Entre 5 y 7 desvíos.",
+      "low": "Entre 3,5 y 5 desvíos."
+    },
+    "type": {
+      "label": "Tipo",
+      "price_spike": "Precio fuera de rango"
+    },
+    "typeHelp": {
+      "price_spike": "El precio unitario se aparta de lo que suele pagarse por ese artículo."
+    },
+    "detected": "Se pagó",
+    "expected": "Rango habitual",
+    "baseline": "vs. {n} comparables",
+    "confidence": "Confianza",
+    "empty": {
+      "title": "Sin alertas para estos filtros",
+      "body": "Probá con otra severidad o quitá el filtro de año."
+    }
+  },
+  "errors": {
+    "generic": {
+      "title": "No pudimos cargar estos datos",
+      "body": "La consulta falló. Reintentá; si sigue fallando, es un problema nuestro.",
+      "action": "Reintentar"
+    },
+    "timeout": {
+      "title": "La consulta tardó demasiado",
+      "body": "Agregá un filtro de año u organismo para acotar la búsqueda."
+    },
+    "notFound": {
+      "title": "Esta página no existe",
+      "body": "El enlace puede estar roto o el contenido se movió.",
+      "action": "Volver al panel"
+    },
+    "rateLimit": {
+      "title": "Demasiadas consultas",
+      "body": "Esperá un minuto y volvé a intentar."
+    }
+  },
+  "seo": {
+    "home": {
+      "title": "Con la tuya, contribuyente — Compras públicas del Uruguay",
+      "description": "Explorá {count} contratos del Estado uruguayo: quién compra, quién vende y cuánto se paga. Datos abiertos oficiales, buscables y comparables."
+    },
+    "contracts": {
+      "title": "Explorador de contratos del Estado uruguayo",
+      "description": "Buscá y filtrá contratos públicos del Uruguay por organismo, proveedor, monto, año y tipo de procedimiento."
+    },
+    "contractDetail": {
+      "title": "{title} — {buyer}",
+      "description": "{buyer} adjudicó {amount} a {supplier} el {date}. Detalle completo del contrato, artículos y documentos oficiales."
+    },
+    "suppliers": {
+      "title": "Proveedores del Estado uruguayo",
+      "description": "Directorio de {total} proveedores del Estado uruguayo, con montos cobrados, organismos compradores y contratos."
+    },
+    "supplierDetail": {
+      "title": "{name} — proveedor del Estado",
+      "description": "{name} cobró {amount} del Estado uruguayo en {contracts} contratos con {buyers} organismos."
+    },
+    "buyers": {
+      "title": "Organismos compradores del Estado uruguayo",
+      "description": "Directorio de organismos públicos del Uruguay, con gasto total, proveedores y contratos."
+    },
+    "buyerDetail": {
+      "title": "{name} — compras del organismo",
+      "description": "{name} gastó {amount} en {contracts} contratos con {suppliers} proveedores."
+    },
+    "anomalies": {
+      "title": "Alertas en compras públicas del Uruguay",
+      "description": "Contratos del Estado uruguayo que se apartan del patrón habitual de precio, proveedor o frecuencia."
+    }
+  },
+  "about": {
+    "title": "Cómo funciona",
+    "lead": "De dónde salen estos datos y qué podés hacer con ellos.",
+    "sourceTitle": "La fuente",
+    "sourceBody": "Todo lo que ves acá viene de los datos abiertos que publica el Estado uruguayo en formato OCDS (Open Contracting Data Standard), a través de catalogodatos.gub.uy y del sitio de Compras Estatales. No agregamos ni editamos registros: los importamos, los normalizamos y los hacemos buscables.",
+    "scaleTitle": "La barra dorada",
+    "scaleBody": "Cada monto lleva debajo una barra logarítmica. Usa la misma escala en todo el sitio, así que podés comparar un contrato con otro sin leer los dígitos. El oro se reserva para el dinero: si no es plata pública, no es dorado.",
+    "totalTitle": "Por qué no mostramos un total",
+    "totalBody": "Un puñado de registros oficiales trae cantidades corruptas, y eso rompe cualquier suma. El caso más claro: una adjudicación de UTE por arrendamiento de equipos de generación declara una cantidad de 1.200.007 unidades a USD 519.788,85 cada una. Eso da USD 623 mil millones —unas ocho veces el PBI del país— en un solo contrato.",
+    "totalBody2": "Tres registros como ese concentran el 86 % de todo el monto informado; trece concentran el 93 %. Un titular de «total adjudicado» sería, en los hechos, la suma de esos errores. Por eso mostramos la mediana: la mitad de las compras del Estado son menores a esa cifra. Es una cifra que no se rompe con un dato malo.",
+    "totalBody3": "No los borramos. Si filtrás por ese organismo vas a ver el registro tal como lo publica el Estado, con su enlace a la ficha oficial. El dato raro es parte de la historia.",
+    "totalCta": "Ver esos registros",
+    "limitsTitle": "Los límites",
+    "limitsBody": "Algunos registros oficiales no informan importe, y los montos en moneda extranjera se convierten a pesos indicando la moneda original. Un contrato marcado con una alerta no es necesariamente irregular: es un contrato que se aparta del patrón y que vale la pena mirar.",
+    "linkTitle": "Siempre podés verificar",
+    "linkBody": "Cada contrato enlaza a su ficha oficial en comprasestatales.gub.uy. Si algo acá no cuadra, la fuente manda."
+  },
+  "footer": {
+    "source": "Datos: Compras Estatales (OCDS) vía catalogodatos.gub.uy",
+    "disclaimer": "Sitio independiente. No es un sitio oficial del Estado uruguayo.",
+    "api": "API pública",
+    "lastUpdate": "Datos al {date}"
+  }
+}

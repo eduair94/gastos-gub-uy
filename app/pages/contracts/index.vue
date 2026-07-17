@@ -1,1131 +1,826 @@
+<script setup lang="ts">
+import type { FilterState } from '~/components/FilterRail.vue'
+
+const { t } = useI18n()
+const localePath = useLocalePath()
+const route = useRoute()
+const router = useRouter()
+
+// ---- Filter state lives in the URL --------------------------------
+// A filtered view is the thing people share with a journalist or paste
+// into a message. Keeping state in the query string makes every view
+// linkable, reloadable and back-button-able for free.
+function parseList(v: unknown): string[] {
+  if (!v) return []
+  return (Array.isArray(v) ? v : [v]).flatMap(x => String(x).split(',')).filter(Boolean)
+}
+function parseNum(v: unknown): number | null {
+  const n = Number(v)
+  return v !== undefined && v !== '' && Number.isFinite(n) ? n : null
+}
+
+function fromRoute(): FilterState {
+  const q = route.query
+  return {
+    search: (q.search as string) ?? '',
+    buyers: parseList(q.buyers),
+    suppliers: parseList(q.suppliers),
+    procurementMethodDetails: parseList(q.procurementMethodDetails),
+    status: parseList(q.status),
+    currency: parseList(q.currency),
+    yearFrom: parseNum(q.yearFrom) ?? parseNum(q.year),
+    yearTo: parseNum(q.yearTo) ?? parseNum(q.year),
+    amountFrom: parseNum(q.amountFrom),
+    amountTo: parseNum(q.amountTo),
+    hasAmount: q.hasAmount === 'true',
+  }
+}
+
+const filters = ref<FilterState>(fromRoute())
+const page = ref(Number(route.query.page ?? 1))
+const sort = ref((route.query.sort as string) ?? 'dateDesc')
+
+const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
+  dateDesc: { sortBy: 'date', sortOrder: 'desc' },
+  dateAsc: { sortBy: 'date', sortOrder: 'asc' },
+  amountDesc: { sortBy: 'amount', sortOrder: 'desc' },
+  amountAsc: { sortBy: 'amount', sortOrder: 'asc' },
+  relevance: { sortBy: 'relevance', sortOrder: 'desc' },
+}
+
+const activeCount = computed(() => {
+  const f = filters.value
+  return [
+    f.search, f.buyers.length, f.suppliers.length, f.procurementMethodDetails.length,
+    f.status.length, f.currency.length, f.yearFrom, f.yearTo,
+    f.amountFrom, f.amountTo, f.hasAmount || null,
+  ].filter(Boolean).length
+})
+
+/** The params both /contracts and /contracts/stats accept. */
+const apiQuery = computed(() => {
+  const f = filters.value
+  const q: Record<string, unknown> = {}
+  if (f.search) q.search = f.search
+  if (f.buyers.length) q.buyers = f.buyers.join(',')
+  if (f.suppliers.length) q.suppliers = f.suppliers.join(',')
+  if (f.procurementMethodDetails.length) q.procurementMethodDetails = f.procurementMethodDetails.join(',')
+  if (f.status.length) q.status = f.status.join(',')
+  if (f.currency.length) q.currency = f.currency.join(',')
+  if (f.yearFrom) q.yearFrom = f.yearFrom
+  if (f.yearTo) q.yearTo = f.yearTo
+  if (f.amountFrom !== null) q.amountFrom = f.amountFrom
+  if (f.amountTo !== null) q.amountTo = f.amountTo
+  if (f.hasAmount) q.hasAmount = 'true'
+  return q
+})
+
+const listQuery = computed(() => ({
+  ...apiQuery.value,
+  page: page.value,
+  limit: 25,
+  ...(SORTS[sort.value] ?? SORTS.dateDesc),
+}))
+
+// Reset to page 1 whenever the filter set changes — staying on page 7
+// of a different result set is meaningless.
+watch(filters, () => {
+  page.value = 1
+}, { deep: true })
+
+// Push state to the URL; the fetches below react to the same refs.
+watch([filters, page, sort], () => {
+  const q: Record<string, string> = {}
+  for (const [k, v] of Object.entries(apiQuery.value)) q[k] = String(v)
+  if (page.value > 1) q.page = String(page.value)
+  if (sort.value !== 'dateDesc') q.sort = sort.value
+  router.replace({ query: q })
+}, { deep: true })
+
+const { data: optionsRes, pending: optionsPending } = await useFetch<any>('/api/contracts/filters')
+const options = computed(() => optionsRes.value?.data ?? null)
+
+const { data: listRes, pending, error } = await useFetch<any>('/api/contracts', { query: listQuery })
+const { data: statsRes, pending: statsPending } = await useFetch<any>('/api/contracts/stats', { query: apiQuery })
+
+const contracts = computed<ContractLike[]>(() => listRes.value?.data?.contracts ?? [])
+const pagination = computed(() => listRes.value?.data?.pagination ?? null)
+const stats = computed(() => statsRes.value?.data ?? null)
+
+const byYear = computed(() =>
+  (stats.value?.byYear ?? [])
+    .filter((d: any) => d.year)
+    .sort((a: any, b: any) => a.year - b.year),
+)
+
+const totalPages = computed(() => {
+  const p = pagination.value
+  if (!p?.total) return 1
+  // The API caps deep pagination; don't advertise pages we refuse to serve.
+  return Math.max(1, Math.ceil(Math.min(p.total, 2500) / (p.limit ?? 25)))
+})
+
+function clearAll() {
+  filters.value = {
+    search: '', buyers: [], suppliers: [], procurementMethodDetails: [],
+    status: [], currency: [], yearFrom: null, yearTo: null,
+    amountFrom: null, amountTo: null, hasAmount: false,
+  }
+  page.value = 1
+}
+
+const railOpen = ref(false)
+
+useSeo(() => ({
+  title: t('seo.contracts.title'),
+  description: t('seo.contracts.description'),
+  path: '/contracts',
+  // A filtered permutation is not its own page — every combination
+  // canonicalises to the bare explorer so we don't ask a crawler to
+  // index an infinite query space.
+  noindex: activeCount.value > 0,
+}))
+</script>
+
 <template>
-  <div class="contracts-explorer">
-    <!-- Page Header -->
-    <div class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between mb-6 ga-4">
-      <div class="flex-grow-1">
-        <h1 class="text-h4 text-sm-h4 text-h5 font-weight-bold mb-2">
-          Contract Explorer
-        </h1>
-        <p class="text-subtitle-1 text-body-2 text-medium-emphasis">
-          Browse and analyze government contracts with advanced filtering and search capabilities
+  <div class="u-container page">
+    <header class="page__head">
+      <div>
+        <p class="u-eyebrow">
+          {{ t('home.eyebrow') }}
         </p>
+        <h1>{{ t('contracts.title') }}</h1>
       </div>
-      <div class="d-flex flex-wrap flex-sm-row ga-2 align-stretch align-sm-center">
-        <v-btn
-          color="primary"
-          prepend-icon="mdi-refresh"
-          :loading="isHydrated && loading"
-          size="default"
-          class="flex-grow-1 flex-sm-grow-0"
-          @click="refreshData"
-        >
-          <span class="d-none d-sm-inline">Refresh</span>
-          <span class="d-sm-none">Refresh</span>
-        </v-btn>
-        <v-btn
-          color="success"
-          prepend-icon="mdi-download"
-          :disabled="contracts.length === 0"
-          size="default"
-          class="flex-grow-1 flex-sm-grow-0"
-          @click="exportData"
-        >
-          <span class="d-none d-sm-inline">Export</span>
-          <span class="d-sm-none">Export</span>
-        </v-btn>
-      </div>
-    </div>
-
-    <!-- Filters Section -->
-    <v-card class="mb-6">
-      <v-card-title class="d-flex align-center justify-space-between">
-        <span class="text-h6 text-sm-h6 text-subtitle-1">Filters & Search</span>
-        <v-btn
-          variant="text"
-          size="small"
-          @click="clearAllFilters"
-        >
-          <span class="d-none d-sm-inline">Clear All</span>
-          <v-icon class="d-sm-none">
-            mdi-close
-          </v-icon>
-        </v-btn>
-      </v-card-title>
-      <v-card-text>
-        <v-row>
-          <!-- Search -->
-          <v-col
-            cols="12"
-            sm="12"
-            md="4"
-          >
-            <v-text-field
-              v-model="filters.search"
-              label="Search contract items..."
-              prepend-inner-icon="mdi-magnify"
-              clearable
-              variant="outlined"
-              density="compact"
-              @click:clear="clearSearch"
-            />
-          </v-col>
-
-          <!-- Year Range -->
-          <v-col
-            cols="6"
-            sm="6"
-            md="2"
-          >
-            <v-select
-              v-model="filters.yearFrom"
-              label="From Year"
-              item-title="label"
-              item-value="value"
-              :items="availableYears"
-              variant="outlined"
-              density="compact"
-              clearable
-            />
-          </v-col>
-          <v-col
-            cols="6"
-            sm="6"
-            md="2"
-          >
-            <v-select
-              v-model="filters.yearTo"
-              label="To Year"
-              item-title="label"
-              item-value="value"
-              :items="availableYears"
-              variant="outlined"
-              density="compact"
-              clearable
-            />
-          </v-col>
-
-          <!-- Amount Range -->
-          <v-col
-            cols="6"
-            sm="6"
-            md="2"
-          >
-            <v-text-field
-              v-model.number="filters.amountFrom"
-              label="Min Amount (UYU)"
-              type="number"
-              variant="outlined"
-              density="compact"
-              clearable
-            />
-          </v-col>
-          <v-col
-            cols="6"
-            sm="6"
-            md="2"
-          >
-            <v-text-field
-              v-model.number="filters.amountTo"
-              label="Max Amount (UYU)"
-              type="number"
-              variant="outlined"
-              density="compact"
-              clearable
-            />
-          </v-col>
-        </v-row>
-
-        <v-row>
-          <!-- Status Filter -->
-          <v-col
-            cols="12"
-            sm="6"
-            md="3"
-          >
-            <v-select
-              v-model="filters.status"
-              label="Contract Status"
-              :items="filterOptions.statuses as any[]"
-              item-title="label"
-              item-value="value"
-              variant="outlined"
-              density="compact"
-              multiple
-              clearable
-              chips
-            />
-          </v-col>
-
-          <!-- Procurement Method -->
-          <v-col
-            cols="12"
-            sm="6"
-            md="3"
-          >
-            <v-select
-              v-model="filters.procurementMethod"
-              label="Procurement Method"
-              :items="filterOptions.procurementMethods as any[]"
-              item-title="label"
-              item-value="value"
-              variant="outlined"
-              density="compact"
-              multiple
-              clearable
-              chips
-            />
-          </v-col>
-
-          <!-- Suppliers -->
-          <v-col
-            cols="12"
-            sm="6"
-            md="3"
-          >
-            <SupplierAutocomplete
-              v-model="filters.suppliers"
-            />
-          </v-col>
-
-          <!-- Buyers -->
-          <v-col
-            cols="12"
-            sm="6"
-            md="3"
-          >
-            <v-autocomplete
-              v-model="filters.buyers"
-              label="Buyers"
-              :items="filterOptions.buyers as any[]"
-              item-title="label"
-              item-value="value"
-              variant="outlined"
-              density="compact"
-              multiple
-              clearable
-              chips
-              :loading="isHydrated && loadingFilters"
-            />
-          </v-col>
-        </v-row>
-
-        <v-row>
-          <!-- Items per page -->
-          <v-col
-            cols="12"
-            sm="4"
-            md="3"
-          >
-            <v-select
-              v-model="itemsPerPage"
-              label="Items per page"
-              :items="[10, 25, 50]"
-              variant="outlined"
-              density="compact"
-            />
-          </v-col>
-
-          <!-- Amount Field Filter -->
-          <v-col
-            cols="12"
-            sm="4"
-            md="3"
-            class="d-flex align-center mb-5"
-          >
-            <v-checkbox
-              v-model="filters.hasAmount"
-              label="Only with calculated amounts"
-              color="primary"
-              density="compact"
-              hide-details
-            />
-          </v-col>
-
-          <!-- Apply Filters Button -->
-          <v-col
-            cols="6"
-            sm="4"
-            md="3"
-            class="d-flex align-top"
-          >
-            <v-btn
-              color="primary"
-              block
-              :loading="isHydrated && loading"
-              @click="applyFilters"
-            >
-              <span class="d-none d-sm-inline">Apply Filters</span>
-              <span class="d-sm-none">Apply</span>
-            </v-btn>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
-
-    <!-- Results Summary -->
-    <div class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between mb-4 ga-2">
-      <div class="text-subtitle-1 text-body-2">
-        <span v-if="pagination.currentCount > 0">
-          Showing {{ pagination.currentCount }} contracts
-          <span
-            v-if="pagination.hasMore"
-            class="d-none d-sm-inline"
-          >
-            (Page {{ pagination.page }} of {{ pagination.estimatedTotalPages }}+)
-          </span>
-          <div
-            v-if="pagination.hasMore"
-            class="d-sm-none text-caption text-medium-emphasis"
-          >
-            Page {{ pagination.page }} of {{ pagination.estimatedTotalPages }}+
-          </div>
-        </span>
-        <span v-else>
-          No contracts found
-        </span>
-      </div>
-
-      <v-chip
-        v-if="meta.filtersApplied"
-        color="primary"
-        variant="tonal"
-        size="small"
+      <button
+        class="railtoggle"
+        type="button"
+        @click="railOpen = true"
       >
-        Filters Active
-      </v-chip>
-    </div>
+        <v-icon size="18">
+          mdi-tune-variant
+        </v-icon>
+        {{ t('common.filters') }}
+        <span
+          v-if="activeCount"
+          class="railtoggle__n"
+        >{{ activeCount }}</span>
+      </button>
+    </header>
 
-    <!-- Data Table -->
-    <v-card>
-      <v-data-table-server
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="currentPage"
-        v-model:sort-by="sortBy"
-        :headers="isMobile ? mobileHeaders : headers"
-        :items="contracts"
-        :loading="isHydrated && loading"
-        :items-length="estimatedTotal"
-        :mobile="isMobile"
-        :mobile-breakpoint="960"
-        class="elevation-1"
-        density="compact"
-        @update:options="handleTableUpdate"
+    <div class="explorer">
+      <!-- Filter rail: a sidebar on desktop, a sheet on small screens. -->
+      <aside
+        class="explorer__rail"
+        :aria-label="t('filters.title')"
       >
-        <!-- Contract Title -->
-        <template #item.title="{ item }">
-          <div
-            v-if="!isMobile"
-            class="d-flex flex-column"
-          >
-            <router-link
-              :to="`/contracts/${item.id}`"
-              class="text-decoration-none font-weight-medium text-primary"
+        <FilterRail
+          v-model="filters"
+          :options="options"
+          :loading="optionsPending"
+          @clear="clearAll"
+        />
+      </aside>
+
+      <v-dialog
+        v-model="railOpen"
+        fullscreen
+        transition="dialog-bottom-transition"
+      >
+        <div class="railsheet">
+          <div class="railsheet__head">
+            <h2>{{ t('filters.title') }}</h2>
+            <button
+              class="railsheet__x"
+              type="button"
+              :aria-label="t('nav.close')"
+              @click="railOpen = false"
             >
-              {{ getContractName(item as any as IRelease) }}
-            </router-link>
-            <div class="text-caption text-medium-emphasis">
-              {{ item.ocid }}
-            </div>
+              <v-icon>mdi-close</v-icon>
+            </button>
           </div>
-          <!-- Mobile compact view -->
-          <div
-            v-else
-            class="d-flex flex-column py-2"
-          >
-            <!-- Title and OCID -->
-            <router-link
-              :to="`/contracts/${item.id}`"
-              class="text-decoration-none font-weight-medium text-primary text-body-2"
+          <div class="railsheet__body">
+            <FilterRail
+              v-model="filters"
+              :options="options"
+              :loading="optionsPending"
+              @clear="clearAll"
+            />
+          </div>
+          <div class="railsheet__foot">
+            <button
+              class="railsheet__apply"
+              type="button"
+              @click="railOpen = false"
             >
-              {{ getContractName(item as any as IRelease) }}
-            </router-link>
-            <div class="text-caption text-medium-emphasis mb-2">
-              {{ item.ocid }}
-            </div>
+              {{ stats ? t('contracts.resultsSummary', { count: formatNumber(stats.count) }) : t('common.apply') }}
+            </button>
+          </div>
+        </div>
+      </v-dialog>
 
-            <!-- Mobile Summary -->
-            <div class="d-flex align-center justify-space-between mb-1 flex-wrap">
-              <div class="text-caption ml-auto">
-                {{ formatDate(item.date) }} • {{ item.sourceYear }}
-              </div>
-              <v-chip
-                class="ml-auto"
-                :color="getStatusColor(item.tender?.status || '')"
-                size="x-small"
-                variant="tonal"
-              >
-                {{ item.tender?.status || 'Unknown' }}
-              </v-chip>
+      <div class="explorer__main">
+        <!-- ===== Insight strip =====
+             What this filter set actually contains, before you read a
+             single row: how many, worth how much, spread across which
+             years. -->
+        <div class="strip">
+          <div class="strip__figures">
+            <div class="strip__fig">
+              <span class="strip__n">{{ statsPending ? '·····' : formatNumber(stats?.count) }}</span>
+              <span class="strip__l">{{ t('common.contracts') }}</span>
             </div>
-
-            <div class="text-caption text-medium-emphasis">
-              {{ item.buyer?.name || item.tender?.procuringEntity?.name || 'Unknown Buyer' }}
+            <div class="strip__fig">
+              <MoneyAmount
+                :amount="statsPending ? null : stats?.totalValue"
+                compact
+                size="lg"
+                align="start"
+              />
+              <span class="strip__l">{{ t('home.statSpending') }}</span>
+            </div>
+            <div class="strip__fig strip__fig--avg">
+              <MoneyAmount
+                :amount="statsPending ? null : stats?.avgValue"
+                compact
+                size="sm"
+                align="start"
+              />
+              <span class="strip__l">{{ t('suppliers.detail.avgContract') }}</span>
             </div>
           </div>
-        </template>
 
-        <!-- Date -->
-        <template #item.date="{ item }">
-          <div class="d-flex flex-column">
-            <span>{{ formatDate(item.date) }}</span>
-            <div class="text-caption text-medium-emphasis">
-              {{ item.sourceYear }}
-            </div>
+          <div
+            v-if="byYear.length > 1"
+            class="strip__hist"
+          >
+            <p class="u-eyebrow strip__histl">
+              {{ t('contracts.histogramTitle') }}
+            </p>
+            <YearBars
+              :data="byYear"
+              :height="52"
+            />
           </div>
-        </template>
+        </div>
 
-        <!-- Buyer -->
-        <template #item.buyer="{ item }">
-          <div class="d-flex flex-column">
-            <span class="font-weight-medium">
-              {{ item.buyer?.name || item.tender?.procuringEntity?.name || 'Unknown' }}
+        <!-- ===== Toolbar ===== -->
+        <div class="toolbar">
+          <p class="toolbar__count">
+            <span
+              v-if="pagination?.totalIsCapped"
+              class="u-muted"
+            >
+              {{ t('contracts.tooMany', { shown: formatNumber(pagination.total) }) }}
             </span>
-            <div
-              v-if="item.tender?.procurementMethod"
-              class="text-caption text-medium-emphasis"
+          </p>
+          <label class="toolbar__sort">
+            <span class="u-sr-only">{{ t('common.sortBy') }}</span>
+            <select
+              v-model="sort"
+              class="toolbar__select"
             >
-              {{ item.tender.procurementMethod }}
-            </div>
-          </div>
-        </template>
+              <option
+                v-if="filters.search"
+                value="relevance"
+              >
+                {{ t('contracts.sort.relevance') }}
+              </option>
+              <option value="dateDesc">
+                {{ t('contracts.sort.dateDesc') }}
+              </option>
+              <option value="dateAsc">
+                {{ t('contracts.sort.dateAsc') }}
+              </option>
+              <option value="amountDesc">
+                {{ t('contracts.sort.amountDesc') }}
+              </option>
+              <option value="amountAsc">
+                {{ t('contracts.sort.amountAsc') }}
+              </option>
+            </select>
+          </label>
+        </div>
 
-        <!-- Suppliers -->
-        <template #item.suppliers="{ item }">
-          <div v-if="item.awards && item.awards.length > 0 && item.awards[0].suppliers">
-            <nuxt-link
-              target="blank_"
-              :to="`/suppliers/${encodeURIComponent(item.awards[0].suppliers[0]?.id || '')}`"
-            >
-              <v-chip
-                v-for="(supplier, index) in item.awards[0].suppliers.slice(0, 2)"
-                :key="index"
-                size="x-small"
-                color="success"
-                variant="tonal"
-                class="mr-1 mb-1 chip_suppliers"
-              >
-                {{ supplier.name }}
-              </v-chip>
-            </nuxt-link>
-            <div
-              v-if="item.awards[0].suppliers.length > 2"
-              class="text-caption text-medium-emphasis"
-            >
-              +{{ item.awards[0].suppliers.length - 2 }} more
-            </div>
-          </div>
-          <span
-            v-else
-            class="text-medium-emphasis"
-          >No suppliers</span>
-        </template>
-
-        <!-- Item Descriptions -->
-        <template #item.descriptions="{ item }">
-          <div v-if="item.awards && item.awards.length > 0 && item.awards[0].items && item.awards[0].items.length > 0">
-            <div class="d-flex flex-column ga-1">
-              <div
-                v-for="(awardItem, index) in item.awards[0].items.slice(0, 2)"
-                :key="index"
-                class="text-caption"
-              >
-                <v-chip
-                  size="x-small"
-                  color="primary"
-                  variant="outlined"
-                  class="mr-1"
-                >
-                  {{ index + 1 }}
-                </v-chip>
-                <span class="font-weight-medium">
-                  {{ getItemDescription(awardItem, index) }}
-                </span>
-              </div>
-              <div
-                v-if="item.awards[0].items.length > 2"
-                class="text-caption text-medium-emphasis mt-1"
-              >
-                +{{ item.awards[0].items.length - 2 }} more items
-              </div>
-            </div>
-          </div>
-          <div v-else-if="item.tender && item.tender.items && item.tender.items.length > 0">
-            <div class="d-flex flex-column ga-1">
-              <div
-                v-for="(tenderItem, index) in item.tender.items.slice(0, 2)"
-                :key="index"
-                class="text-caption"
-              >
-                <v-chip
-                  size="x-small"
-                  color="warning"
-                  variant="outlined"
-                  class="mr-1"
-                >
-                  {{ index + 1 }}
-                </v-chip>
-                <span class="font-weight-medium">
-                  {{ getItemDescription(tenderItem, index) }}
-                </span>
-              </div>
-              <div
-                v-if="item.tender.items.length > 2"
-                class="text-caption text-medium-emphasis mt-1"
-              >
-                +{{ item.tender.items.length - 2 }} more tender items
-              </div>
-            </div>
-          </div>
-          <div v-else-if="item.tender && item.tender.description">
-            <div
-              class="text-caption"
-            >
-              <v-chip
-                size="x-small"
-                color="warning"
-                variant="outlined"
-                class="mr-1"
-              >
-                1
-              </v-chip>
-              <span class="font-weight-medium">
-                {{ item.tender.description }}
-              </span>
-            </div>
-          </div>
-          <span
-            v-else
-            class="text-medium-emphasis text-caption"
-          >No item descriptions</span>
-        </template>
-
-        <!-- Amount -->
-        <template #item.amount="{ item }">
-          <div class="text-no-wrap">
-            <v-chip
-              size="small"
-              color="success"
-              variant="outlined"
-            >
-              {{ formatTotalAmount(item as IRelease) }}
-            </v-chip>
-          </div>
-        </template>        <!-- Status -->
-        <template #item.status="{ item }">
-          <v-chip
-            :color="getStatusColor(item.tender?.status || '')"
-            size="small"
-            variant="tonal"
+        <!-- ===== Results ===== -->
+        <div
+          v-if="error"
+          class="state"
+        >
+          <h2 class="state__t">
+            {{ t('errors.generic.title') }}
+          </h2>
+          <p class="state__b">
+            {{ t('errors.generic.body') }}
+          </p>
+          <button
+            class="state__a"
+            type="button"
+            @click="() => refreshNuxtData()"
           >
-            {{ item.tender?.status || 'Unknown' }}
-          </v-chip>
-        </template>
+            {{ t('errors.generic.action') }}
+          </button>
+        </div>
 
-        <!-- Actions -->
-        <!-- Actions -->
-        <template #item.actions="{ item }">
+        <div
+          v-else-if="pending && !contracts.length"
+          class="skeleton"
+        >
           <div
-            v-if="!isMobile"
-            class="d-flex ga-1 py-3"
+            v-for="i in 8"
+            :key="i"
+            class="skeleton__row"
+          />
+        </div>
+
+        <div
+          v-else-if="!contracts.length"
+          class="state"
+        >
+          <h2 class="state__t">
+            {{ activeCount ? t('contracts.empty.title') : t('contracts.emptyInitial.title') }}
+          </h2>
+          <p class="state__b">
+            {{ activeCount ? t('contracts.empty.body') : t('contracts.emptyInitial.body') }}
+          </p>
+          <button
+            v-if="activeCount"
+            class="state__a"
+            type="button"
+            @click="clearAll"
           >
-            <v-tooltip text="View Awards">
-              <template #activator="{ props }">
-                <v-btn
-                  icon="mdi-trophy"
-                  size="small"
-                  variant="text"
-                  color="success"
-                  v-bind="props"
-                  @click="viewAwards(item)"
-                />
-              </template>
-            </v-tooltip>
+            {{ t('contracts.empty.action') }}
+          </button>
+        </div>
 
-            <v-tooltip text="View Details">
-              <template #activator="{ props }">
-                <v-btn
-                  :to="`/contracts/${item.id}`"
-                  icon="mdi-eye"
-                  size="small"
-                  variant="text"
-                  v-bind="props"
-                />
-              </template>
-            </v-tooltip>
+        <div
+          v-else
+          class="u-scroll-x"
+        >
+          <table class="ctable">
+            <thead>
+              <tr>
+                <th scope="col">
+                  {{ t('contracts.table.object') }}
+                </th>
+                <th
+                  scope="col"
+                  class="ctable__c-buyer"
+                >
+                  {{ t('contracts.table.buyer') }}
+                </th>
+                <th
+                  scope="col"
+                  class="ctable__c-sup"
+                >
+                  {{ t('contracts.table.supplier') }}
+                </th>
+                <th
+                  scope="col"
+                  class="ctable__c-date"
+                >
+                  {{ t('contracts.table.date') }}
+                </th>
+                <th
+                  scope="col"
+                  class="ctable__c-amt"
+                >
+                  {{ t('contracts.table.amount') }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="c in contracts"
+                :key="c.id"
+                class="ctable__row"
+              >
+                <td class="ctable__obj">
+                  <NuxtLink
+                    :to="localePath(`/contracts/${c.id}`)"
+                    class="ctable__link"
+                  >
+                    {{ contractTitle(c) || t('common.contract') }}
+                  </NuxtLink>
+                  <span
+                    v-if="c.tender?.procurementMethodDetails"
+                    class="ctable__method"
+                  >
+                    {{ c.tender.procurementMethodDetails }}
+                  </span>
+                </td>
+                <td class="ctable__c-buyer">
+                  <span class="u-clamp-2">{{ c.buyer?.name || '—' }}</span>
+                </td>
+                <td class="ctable__c-sup">
+                  <span class="u-clamp-2">{{ contractSuppliers(c)[0]?.name || '—' }}</span>
+                </td>
+                <td class="ctable__c-date u-mono">
+                  {{ formatDate(contractDate(c)) }}
+                </td>
+                <td class="ctable__c-amt">
+                  <MoneyAmount
+                    :amount="contractAmount(c)"
+                    :currency="contractCurrency(c)"
+                    compact
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-            <v-tooltip text="View JSON">
-              <template #activator="{ props }">
-                <v-btn
-                  icon="mdi-code-json"
-                  size="small"
-                  variant="text"
-                  v-bind="props"
-                  @click="viewRawData(item)"
-                />
-              </template>
-            </v-tooltip>
-          </div>
-          <!-- Mobile actions menu -->
-          <div v-else>
-            <v-menu
-              location="bottom end"
-            >
-              <template #activator="{ props }">
-                <v-btn
-                  class="my-3"
-                  icon="mdi-dots-vertical"
-                  size="small"
-                  variant="text"
-                  v-bind="props"
-                />
-              </template>
-              <v-list density="compact">
-                <v-list-item
-                  :to="`/contracts/${item.id}`"
-                  prepend-icon="mdi-eye"
-                >
-                  <v-list-item-title>View Details</v-list-item-title>
-                </v-list-item>
-                <v-list-item
-                  prepend-icon="mdi-trophy"
-                  @click="viewAwards(item)"
-                >
-                  <v-list-item-title>View Awards</v-list-item-title>
-                </v-list-item>
-                <v-list-item
-                  prepend-icon="mdi-code-json"
-                  @click="viewRawData(item)"
-                >
-                  <v-list-item-title>View JSON</v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
-          </div>
-        </template>        <!-- Loading -->
-        <template #loading>
-          <v-skeleton-loader type="table-row@10" />
-        </template>
-
-        <!-- No data -->
-        <template #no-data>
-          <div class="text-center py-8">
-            <v-icon
-              size="64"
-              color="grey-lighten-2"
-              class="mb-4"
-            >
-              mdi-file-document-outline
+        <!-- ===== Pagination ===== -->
+        <nav
+          v-if="contracts.length && totalPages > 1"
+          class="pager"
+          :aria-label="t('common.page')"
+        >
+          <button
+            class="pager__b"
+            type="button"
+            :disabled="page <= 1"
+            @click="page = Math.max(1, page - 1)"
+          >
+            <v-icon size="16">
+              mdi-chevron-left
             </v-icon>
-            <div class="text-h6 mb-2">
-              No contracts found
-            </div>
-            <div class="text-body-2 text-medium-emphasis">
-              Try adjusting your search criteria or filters
-            </div>
-          </div>
-        </template>
-      </v-data-table-server>
-    </v-card>
-
-    <!-- Dialog Components -->
-    <ContractRawDataDialog
-      v-model="rawDataDialog"
-      :contract="selectedContract"
-    />
-
-    <ContractAwardsDialog
-      v-model="awardsDialog"
-      :contract="selectedContractForAwards"
-    />
+            {{ t('common.previous') }}
+          </button>
+          <span class="pager__n">
+            {{ t('common.page') }} <strong>{{ page }}</strong> {{ t('common.of') }} {{ formatNumber(totalPages) }}
+          </span>
+          <button
+            class="pager__b"
+            type="button"
+            :disabled="page >= totalPages"
+            @click="page = page + 1"
+          >
+            {{ t('common.next') }}
+            <v-icon size="16">
+              mdi-chevron-right
+            </v-icon>
+          </button>
+        </nav>
+      </div>
+    </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useDisplay } from 'vuetify'
-import { useOptimizedApi } from '~/composables/useOptimizedApi'
-import type { IRelease } from '~/types/database'
-import { formatTotalAmount, getContractName } from '~/utils'
-// Meta
-definePageMeta({
-  title: 'Contract Explorer',
-  description: 'Browse and analyze government contracts with advanced filtering capabilities',
-})
-
-// Composables
-const api = useOptimizedApi()
-const route = useRoute()
-const router = useRouter()
-const { mobile } = useDisplay()
-
-// Reactive state
-const loading = ref(false)
-const loadingFilters = ref(false)
-const contracts = ref<IRelease[]>([])
-const pagination = ref({
-  page: 1,
-  limit: 25,
-  hasMore: false,
-  estimatedTotalPages: 1,
-  currentCount: 0,
-})
-const meta = ref({
-  searchPerformed: false,
-  filtersApplied: false,
-  sortBy: 'date',
-  sortOrder: 'desc',
-  initialLoad: true, // Flag to prevent query param clearing during initial load
-})
-
-// Hydration-safe state management
-const isHydrated = ref(false)
-
-// Filter options
-const filterOptions = ref({
-  years: [],
-  statuses: [],
-  procurementMethods: [],
-  suppliers: [],
-  buyers: [],
-})
-
-// Filters
-interface SupplierAutocompleteItem {
-  value: string
-  label: string
-  meta?: {
-    totalValue: number
-    totalContracts: number
-  }
-}
-
-interface FilterState {
-  search: string
-  yearFrom: string | null
-  yearTo: string | null
-  amountFrom: number | null
-  amountTo: number | null
-  status: string[]
-  procurementMethod: string[]
-  suppliers: SupplierAutocompleteItem[]
-  buyers: string[]
-  hasAmount: boolean
-}
-
-const filters = ref<FilterState>({
-  search: '',
-  yearFrom: null,
-  yearTo: null,
-  amountFrom: null,
-  amountTo: null,
-  status: [],
-  procurementMethod: [],
-  suppliers: [],
-  buyers: [],
-  hasAmount: false,
-})
-
-// Table configuration
-const currentPage = ref(1)
-const itemsPerPage = ref(25)
-const sortBy = ref([{ key: 'date', order: 'desc' as 'asc' | 'desc' }])
-
-// Add request tracking to prevent rapid requests
-const lastRequestTime = ref(0)
-const minRequestInterval = 500 // Minimum 500ms between requests
-
-// Throttle function to prevent rapid requests
-const throttledLoadContracts = () => {
-  const now = Date.now()
-  if (now - lastRequestTime.value < minRequestInterval) {
-    // Skip this request if it's too soon
-    return
-  }
-  lastRequestTime.value = now
-  loadContracts()
-}// Raw data dialog
-const rawDataDialog = ref(false)
-const selectedContract = ref<any>(null)
-
-// Awards dialog
-const awardsDialog = ref(false)
-const selectedContractForAwards = ref<any>(null)
-
-// Computed
-const isMobile = computed(() => mobile.value)
-
-const availableYears = computed(() => {
-  return [...filterOptions.value.years].sort((a: any, b: any) => b.year - a.year).map((year: any) => ({
-    label: year.label || year.year?.toString() || year,
-    value: year.value || year.year?.toString() || year,
-  }))
-})
-
-const estimatedTotal = computed(() => {
-  // Return a high number to enable server-side pagination
-  // without counting total documents for performance
-  return pagination.value.hasMore ? pagination.value.page * itemsPerPage.value + 100 : pagination.value.currentCount
-})
-
-// Table headers
-const headers = [
-  {
-    title: 'Contract',
-    key: 'title',
-    sortable: true,
-    width: '20%',
-  },
-  {
-    title: 'Date',
-    key: 'date',
-    sortable: true,
-    width: '10%',
-  },
-  {
-    title: 'Buyer',
-    key: 'buyer',
-    sortable: true,
-    width: '15%',
-  },
-  {
-    title: 'Suppliers',
-    key: 'suppliers',
-    sortable: false,
-    width: '15%',
-    maxWidth: '200px',
-  },
-  {
-    title: 'Item Descriptions',
-    key: 'descriptions',
-    sortable: false,
-    width: '20%',
-  },
-  {
-    title: 'Amount',
-    key: 'amount',
-    sortable: true,
-    align: 'end' as const,
-    width: '10%',
-  },
-  {
-    title: 'Status',
-    key: 'status',
-    sortable: true,
-    width: '8%',
-  },
-  {
-    title: 'Actions',
-    key: 'actions',
-    sortable: false,
-    width: '7%',
-  },
-]
-
-// Mobile-optimized headers
-const mobileHeaders = [
-  {
-    title: 'Contract Details',
-    key: 'title',
-    sortable: true,
-  },
-  {
-    title: 'Amount',
-    key: 'amount',
-    sortable: true,
-    align: 'end' as const,
-  },
-  {
-    title: '',
-    key: 'actions',
-    sortable: false,
-    width: '60px',
-  },
-]
-
-// Methods
-const loadContracts = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: currentPage.value,
-      limit: itemsPerPage.value,
-      sortBy: sortBy.value[0]?.key || 'date',
-      sortOrder: sortBy.value[0]?.order || 'desc',
-      ...filters.value,
-      // Extract supplier IDs from supplier objects
-      suppliers: filters.value.suppliers.map(supplier => supplier.value),
-    }
-
-    // Clean empty filters
-    const cleanParams: any = {}
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== '' && value !== null && !(Array.isArray(value) && value.length === 0)) {
-        cleanParams[key] = value
-      }
-    })
-
-    const response = await api.searchContracts(cleanParams)
-
-    if (response.success) {
-      contracts.value = response.data.contracts
-      pagination.value = response.data.pagination
-      meta.value = response.data.meta
-    }
-  }
-  catch (error) {
-    console.error('Error loading contracts:', error)
-    contracts.value = []
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-const loadFilterOptions = async () => {
-  loadingFilters.value = true
-  try {
-    const response = await api.getContractFilters()
-
-    if (response.success) {
-      filterOptions.value = response.data
-    }
-  }
-  catch (error) {
-    console.error('Error loading filter options:', error)
-  }
-  finally {
-    loadingFilters.value = false
-  }
-}
-
-const handleTableUpdate = (options: any) => {
-  currentPage.value = options.page
-  itemsPerPage.value = options.itemsPerPage
-  sortBy.value = options.sortBy || [{ key: 'date', order: 'desc' }]
-
-  // Only update query params if this is not the initial load
-  if (!meta.value.initialLoad) {
-    updateQueryParams()
-  }
-  throttledLoadContracts()
-}
-
-const applyFilters = () => {
-  currentPage.value = 1
-  meta.value.searchPerformed = true
-  meta.value.initialLoad = false
-  updateQueryParams()
-  throttledLoadContracts()
-}
-
-const clearAllFilters = () => {
-  filters.value = {
-    search: '',
-    yearFrom: null,
-    yearTo: null,
-    amountFrom: null,
-    amountTo: null,
-    status: [],
-    procurementMethod: [],
-    suppliers: [],
-    buyers: [],
-    hasAmount: false,
-  }
-  currentPage.value = 1
-  meta.value.searchPerformed = true
-  meta.value.initialLoad = false
-  updateQueryParams()
-  loadContracts()
-}
-
-const clearSearch = () => {
-  filters.value.search = ''
-  meta.value.searchPerformed = true
-  meta.value.initialLoad = false
-  applyFilters()
-}
-
-const refreshData = () => {
-  throttledLoadContracts()
-  loadFilterOptions()
-}
-
-const exportData = async () => {
-  try {
-    // Prevent export of too much data to avoid MongoDB overload
-    if (pagination.value.currentCount === 0) {
-      console.log('No data to export')
-      return
-    }
-
-    // Show warning for large exports
-    if (pagination.value.hasMore) {
-      const confirmed = confirm('This will export only the currently visible contracts. Do you want to continue?')
-      if (!confirmed) {
-        return
-      }
-    }
-
-    // Use current filters but limit the export size
-    const exportFilters = {
-      ...filters.value,
-      limit: 1000, // Maximum 1000 records to prevent overload
-    }
-
-    // TODO: Implement actual export functionality
-    console.log('Export functionality to be implemented with filters:', exportFilters)
-
-    // For now, just show the data that would be exported
-    console.log('Current contracts to export:', contracts.value.length)
-  }
-  catch (error) {
-    console.error('Export failed:', error)
-  }
-}
-
-const viewRawData = (contract: any) => {
-  selectedContract.value = contract
-  rawDataDialog.value = true
-}
-
-const viewAwards = (contract: any) => {
-  selectedContractForAwards.value = contract
-  awardsDialog.value = true
-}
-
-// Utility methods
-const formatDate = (dateString: string | Date): string => {
-  return new Intl.DateTimeFormat('es-UY', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(dateString))
-}
-
-const getStatusColor = (status?: string): string => {
-  const statusColors: Record<string, string> = {
-    active: 'success',
-    complete: 'info',
-    cancelled: 'error',
-    planning: 'warning',
-    tender: 'primary',
-  }
-  return statusColors[status?.toLowerCase() || ''] || 'grey'
-}
-
-const getItemDescription = (item: Record<string, unknown>, index: number): string => {
-  // Try multiple possible description fields, checking for non-empty values
-  const description = item.description?.toString()?.trim()
-    || item.title?.toString()?.trim()
-    || item.name?.toString()?.trim()
-    || (item.classification as Record<string, unknown>)?.description?.toString()?.trim()
-
-  return description || `Item ${index + 1}`
-}
-
-// Query parameter synchronization
-const updateQueryParams = () => {
-  const query: Record<string, any> = {}
-
-  // Add non-empty filter values to query
-  if (filters.value.search) query.search = filters.value.search
-  if (filters.value.yearFrom) query.yearFrom = filters.value.yearFrom
-  if (filters.value.yearTo) query.yearTo = filters.value.yearTo
-  if (filters.value.amountFrom) query.amountFrom = filters.value.amountFrom.toString()
-  if (filters.value.amountTo) query.amountTo = filters.value.amountTo.toString()
-  if (filters.value.status.length > 0) query.status = filters.value.status.join(',')
-  if (filters.value.procurementMethod.length > 0) query.procurementMethod = filters.value.procurementMethod.join(',')
-  if (filters.value.suppliers.length > 0) query.suppliers = JSON.stringify(filters.value.suppliers)
-  if (filters.value.buyers.length > 0) query.buyers = filters.value.buyers.join(',')
-  if (filters.value.hasAmount) query.hasAmount = 'true'
-
-  // Add pagination and sorting
-  if (currentPage.value > 1) query.page = currentPage.value.toString()
-  if (itemsPerPage.value !== 25) query.limit = itemsPerPage.value.toString()
-  if (sortBy.value[0]?.key !== 'date') query.sortBy = sortBy.value[0]?.key
-  if (sortBy.value[0]?.order !== 'desc') query.sortOrder = sortBy.value[0]?.order
-
-  // Update URL without navigation
-  router.replace({ query })
-}
-
-const loadFiltersFromQuery = () => {
-  const query = route.query
-
-  // Load filter values from query parameters
-  if (query.search) filters.value.search = query.search as string
-  if (query.yearFrom) filters.value.yearFrom = query.yearFrom as string
-  if (query.yearTo) filters.value.yearTo = query.yearTo as string
-  if (query.amountFrom) filters.value.amountFrom = Number(query.amountFrom)
-  if (query.amountTo) filters.value.amountTo = Number(query.amountTo)
-  if (query.status) filters.value.status = (query.status as string).split(',').filter(s => s)
-  if (query.procurementMethod) filters.value.procurementMethod = (query.procurementMethod as string).split(',').filter(s => s)
-  if (query.suppliers) {
-    filters.value.suppliers = JSON.parse(query.suppliers as string)
-  }
-  if (query.buyers) filters.value.buyers = (query.buyers as string).split(',').filter(s => s)
-  if (query.hasAmount) filters.value.hasAmount = query.hasAmount === 'true'
-
-  // Load pagination and sorting
-  if (query.page) currentPage.value = Number(query.page)
-  if (query.limit) itemsPerPage.value = Number(query.limit)
-  if (query.sortBy || query.sortOrder) {
-    sortBy.value = [{
-      key: (query.sortBy as string) || 'date',
-      order: (query.sortOrder as 'asc' | 'desc') || 'desc',
-    }]
-  }
-}
-
-// Lifecycle
-onMounted(() => {
-  // Set hydration flag
-  isHydrated.value = true
-
-  loadFilterOptions()
-  loadFiltersFromQuery()
-  loadContracts()
-
-  // Set initial load to false after first load and hydration
-  nextTick(() => {
-    meta.value.initialLoad = false
-  })
-})
-
-// Watch for filter changes
-watch(() => itemsPerPage.value, () => {
-  currentPage.value = 1
-  if (!meta.value.initialLoad && isHydrated.value) {
-    updateQueryParams()
-    loadContracts()
-  }
-})
-
-// Watch for navigation changes (back/forward buttons)
-watch(() => route.query, (newQuery, oldQuery) => {
-  // Only reload if query actually changed and it's not the initial load
-  if (!meta.value.initialLoad && isHydrated.value && JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
-    loadFiltersFromQuery()
-    loadContracts()
-  }
-}, { deep: true })
-</script>
-
 <style scoped>
-:deep(.v-data-table-server) {
-  .v-data-table__td {
-    padding: 8px 16px;
-  }
+.u-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
-:deep(.v-chip) {
-  font-size: 0.75rem;
+.page { padding-block: var(--s-6) var(--s-8); }
+
+.page__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
 }
 
-.chip_suppliers {
-  text-wrap: wrap;
-  height: fit-content;
-  padding: 5px;
-  border-radius: 5px;
+.railtoggle {
+  display: none;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--t-sm);
+  cursor: pointer;
+}
+
+.railtoggle__n {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 4px;
+  border-radius: var(--r-full);
+  background: var(--celeste-deep);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.explorer {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: var(--s-6);
+  align-items: start;
+}
+
+.explorer__rail {
+  position: sticky;
+  top: 78px;
+  max-height: calc(100dvh - 96px);
+  overflow-y: auto;
+  padding-right: var(--s-2);
+}
+
+.explorer__main { min-width: 0; }
+
+/* ---- Insight strip ---- */
+.strip {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: var(--s-6);
+  align-items: center;
+  padding: var(--s-4) var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.strip__figures {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-6);
+}
+
+.strip__fig {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.strip__n {
+  font-family: var(--font-display);
+  font-size: var(--t-xl);
+  font-weight: 700;
+  font-stretch: 112%;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.strip__l {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.strip__hist { min-width: 0; }
+
+.strip__histl { margin: 0 0 var(--s-2); }
+
+/* ---- Toolbar ---- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin: var(--s-5) 0 var(--s-3);
+}
+
+.toolbar__count {
+  margin: 0;
+  font-size: var(--t-sm);
+}
+
+.toolbar__sort { margin-left: auto; }
+
+.toolbar__select {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  cursor: pointer;
+}
+
+/* ---- Table ---- */
+.ctable {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.ctable th {
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+
+.ctable td {
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--t-sm);
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule);
+}
+
+.ctable__row:last-child td { border-bottom: 0; }
+.ctable__row:hover { background: var(--surface-sunken); }
+
+.ctable__obj { max-width: 340px; }
+
+.ctable__link {
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.ctable__link:hover {
+  color: var(--celeste-deep);
+  text-decoration: underline;
+}
+
+.ctable__method {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.ctable__c-buyer,
+.ctable__c-sup {
+  max-width: 190px;
+  color: var(--text-muted);
+}
+
+.ctable__c-date {
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+}
+
+.ctable td.ctable__c-amt,
+.ctable th.ctable__c-amt { text-align: right; }
+
+/* ---- States ---- */
+.state {
+  padding: var(--s-8) var(--s-5);
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.state__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
+
+.state__b {
+  margin: 0 auto var(--s-4);
+  max-width: 46ch;
+  color: var(--text-muted);
+  font-size: var(--t-sm);
+}
+
+.state__a {
+  padding: var(--s-2) var(--s-5);
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--t-sm);
+  cursor: pointer;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.skeleton__row {
+  height: 52px;
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-sunken) 37%, var(--surface) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ---- Pager ---- */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+}
+
+.pager__b {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pager__b:disabled { opacity: 0.4; cursor: not-allowed; }
+.pager__b:not(:disabled):hover { background: var(--surface-sunken); }
+
+.pager__n {
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+/* ---- Rail sheet (mobile) ---- */
+.railsheet {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--bg);
+}
+
+.railsheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+.railsheet__x {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.railsheet__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--s-5);
+}
+
+.railsheet__foot {
+  padding: var(--s-4) var(--s-5) calc(var(--s-4) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+.railsheet__apply {
+  width: 100%;
+  padding: var(--s-3);
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1080px) {
+  .explorer { grid-template-columns: 1fr; }
+  .explorer__rail { display: none; }
+  .railtoggle { display: inline-flex; }
+}
+
+@media (max-width: 820px) {
+  .strip { grid-template-columns: 1fr; gap: var(--s-4); }
+}
+
+@media (max-width: 560px) {
+  .strip__figures { gap: var(--s-4); flex-wrap: wrap; }
+  .strip__fig--avg { display: none; }
+  .page__head { align-items: center; }
 }
 </style>

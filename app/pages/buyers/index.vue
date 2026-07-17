@@ -1,795 +1,586 @@
-<template>
-  <div class="buyers-explorer">
-    <!-- Page Header -->
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div>
-        <h1 class="text-h4 font-weight-bold mb-2">
-          Government Buyers Directory
-        </h1>
-        <p class="text-subtitle-1 text-medium-emphasis">
-          Explore government agencies and entities, analyze their procurement activities and spending patterns
-        </p>
-      </div>
-      <div class="d-flex ga-2">
-        <v-btn
-          color="primary"
-          prepend-icon="mdi-refresh"
-          :loading="loading"
-          @click="refreshData"
-        >
-          Refresh
-        </v-btn>
-        <v-btn
-          color="success"
-          prepend-icon="mdi-download"
-          :disabled="buyers.length === 0"
-          @click="exportData"
-        >
-          Export
-        </v-btn>
-      </div>
-    </div>
-
-    <!-- Filters Section -->
-    <v-card class="mb-6">
-      <v-card-title class="d-flex align-center justify-space-between">
-        <span>Filters & Search</span>
-        <v-btn
-          variant="text"
-          size="small"
-          @click="clearAllFilters"
-        >
-          Clear All
-        </v-btn>
-      </v-card-title>
-      <v-card-text>
-        <v-row>
-          <!-- Search -->
-          <v-col
-            cols="12"
-            md="4"
-          >
-            <v-text-field
-              v-model="filters.search"
-              label="Search government buyers..."
-              prepend-inner-icon="mdi-magnify"
-              clearable
-              variant="outlined"
-              density="compact"
-              @keyup.enter="searchBuyers"
-              @click:clear="clearSearch"
-            />
-          </v-col>
-
-          <!-- Contract Count Range -->
-          <v-col
-            cols="12"
-            md="2"
-          >
-            <v-text-field
-              v-model.number="filters.minContracts"
-              label="Min Contracts"
-              type="number"
-              variant="outlined"
-              density="compact"
-              clearable
-            />
-          </v-col>
-          <v-col
-            cols="12"
-            md="2"
-          >
-            <v-text-field
-              v-model.number="filters.maxContracts"
-              label="Max Contracts"
-              type="number"
-              variant="outlined"
-              density="compact"
-              clearable
-            />
-          </v-col>
-
-          <!-- Total Spending Range -->
-          <v-col
-            cols="12"
-            md="2"
-          >
-            <v-text-field
-              v-model.number="filters.minSpending"
-              label="Min Spending (UYU)"
-              type="number"
-              variant="outlined"
-              density="compact"
-              clearable
-            />
-          </v-col>
-          <v-col
-            cols="12"
-            md="2"
-          >
-            <v-text-field
-              v-model.number="filters.maxSpending"
-              label="Max Spending (UYU)"
-              type="number"
-              variant="outlined"
-              density="compact"
-              clearable
-            />
-          </v-col>
-        </v-row>
-
-        <v-row>
-          <!-- Items per page -->
-          <v-col
-            cols="12"
-            md="3"
-          >
-            <v-select
-              v-model="itemsPerPage"
-              label="Items per page"
-              :items="[10, 25, 50, 100]"
-              variant="outlined"
-              density="compact"
-            />
-          </v-col>
-
-          <!-- Apply Filters Button -->
-          <v-col
-            cols="12"
-            md="3"
-            class="d-flex align-top"
-          >
-            <v-btn
-              color="primary"
-              block
-              :loading="loading"
-              @click="applyFilters"
-            >
-              Apply Filters
-            </v-btn>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
-
-    <!-- Results Summary -->
-    <div class="d-flex align-center justify-space-between mb-4">
-      <div class="text-subtitle-1">
-        <span v-if="pagination.total > 0">
-          Showing {{ buyers.length }} of {{ pagination.total }} buyers
-          <span v-if="pagination.totalPages > 1">
-            (Page {{ pagination.page }} of {{ pagination.totalPages }})
-          </span>
-        </span>
-        <span v-else>
-          No buyers found
-        </span>
-      </div>
-
-      <v-chip
-        v-if="meta.filtersApplied"
-        color="primary"
-        variant="tonal"
-        size="small"
-      >
-        Filters Active
-      </v-chip>
-    </div>
-
-    <!-- Data Table -->
-    <v-card>
-      <v-data-table-server
-        v-model:items-per-page="itemsPerPage"
-        v-model:page="currentPage"
-        v-model:sort-by="sortBy"
-        :headers="headers"
-        :items="buyers"
-        :loading="loading"
-        :items-length="pagination.total"
-        class="elevation-1"
-        @update:options="handleTableUpdate"
-      >
-        <!-- Buyer Name -->
-        <template #[`item.name`]="{ item }">
-          <div class="d-flex flex-column">
-            <router-link
-              :to="`/buyers/${encodeURIComponent(item.buyerId)}`"
-              class="text-decoration-none font-weight-medium text-primary"
-            >
-              {{ item.name }}
-            </router-link>
-            <div class="text-caption text-medium-emphasis">
-              ID: {{ item.buyerId }}
-            </div>
-          </div>
-        </template>
-
-        <!-- Total Contracts -->
-        <template #[`item.totalContracts`]="{ item }">
-          <div class="text-center">
-            <v-chip
-              color="primary"
-              size="small"
-              variant="tonal"
-            >
-              {{ item.totalContracts }}
-            </v-chip>
-          </div>
-        </template>
-
-        <!-- Total Spending -->
-        <template #[`item.totalSpending`]="{ item }">
-          <div class="text-right">
-            <div class="font-weight-bold text-success">
-              {{ formatCurrency(item.totalSpending) }}
-            </div>
-            <div class="text-caption text-medium-emphasis">
-              Avg: {{ formatCurrency(item.avgContractValue) }}
-            </div>
-          </div>
-        </template>
-
-        <!-- Years Active -->
-        <template #[`item.yearsActive`]="{ item }">
-          <div class="text-center">
-            <div class="font-weight-medium">
-              {{ item.yearCount }} years
-            </div>
-            <div class="text-caption text-medium-emphasis">
-              {{ Math.min(...item.years) }} - {{ Math.max(...item.years) }}
-            </div>
-          </div>
-        </template>
-
-        <!-- Suppliers Count -->
-        <template #[`item.supplierCount`]="{ item }">
-          <div class="text-center">
-            <v-chip
-              color="info"
-              size="small"
-              variant="tonal"
-            >
-              {{ item.supplierCount }}
-            </v-chip>
-          </div>
-        </template>
-
-        <!-- Top Categories -->
-        <template #[`item.topCategories`]="{ item }">
-          <div v-if="item.topCategories && item.topCategories.length > 0">
-            <v-chip
-              v-for="(category, index) in item.topCategories.slice(0, 2)"
-              :key="index"
-              size="x-small"
-              color="secondary"
-              variant="tonal"
-              class="mr-1 mb-1"
-            >
-              {{ category.category }}
-            </v-chip>
-            <div
-              v-if="item.topCategories.length > 2"
-              class="text-caption text-medium-emphasis"
-            >
-              +{{ item.topCategories.length - 2 }} more
-            </div>
-          </div>
-          <span
-            v-else
-            class="text-medium-emphasis"
-          >No categories</span>
-        </template>
-
-        <!-- Last Updated -->
-        <template #[`item.lastUpdated`]="{ item }">
-          <div class="text-caption">
-            {{ formatDate(item.lastUpdated) }}
-          </div>
-        </template>
-
-        <!-- Actions -->
-        <template #[`item.actions`]="{ item }">
-          <div class="d-flex ga-1">
-            <v-tooltip text="View Details">
-              <template #activator="{ props }">
-                <v-btn
-                  :to="`/buyers/${encodeURIComponent(item.buyerId)}`"
-                  icon="mdi-eye"
-                  size="small"
-                  variant="text"
-                  v-bind="props"
-                />
-              </template>
-            </v-tooltip>
-
-            <v-tooltip text="View Analytics">
-              <template #activator="{ props }">
-                <v-btn
-                  icon="mdi-chart-line"
-                  size="small"
-                  variant="text"
-                  color="info"
-                  v-bind="props"
-                  @click="viewAnalytics(item)"
-                />
-              </template>
-            </v-tooltip>
-
-            <v-tooltip text="View Raw Data">
-              <template #activator="{ props }">
-                <v-btn
-                  icon="mdi-code-json"
-                  size="small"
-                  variant="text"
-                  v-bind="props"
-                  @click="viewRawData(item)"
-                />
-              </template>
-            </v-tooltip>
-          </div>
-        </template>
-
-        <!-- Loading -->
-        <template #loading>
-          <v-skeleton-loader type="table-row@10" />
-        </template>
-
-        <!-- No data -->
-        <template #no-data>
-          <div class="text-center py-8">
-            <v-icon
-              size="64"
-              color="grey-lighten-2"
-              class="mb-4"
-            >
-              mdi-account-tie-outline
-            </v-icon>
-            <div class="text-h6 mb-2">
-              No buyers found
-            </div>
-            <div class="text-body-2 text-medium-emphasis">
-              Try adjusting your search criteria or filters
-            </div>
-          </div>
-        </template>
-      </v-data-table-server>
-    </v-card>
-
-    <!-- Raw Data Dialog -->
-    <v-dialog
-      v-model="rawDataDialog"
-      max-width="800px"
-      scrollable
-    >
-      <v-card>
-        <v-card-title class="d-flex align-center justify-space-between">
-          <span>Buyer Raw Data</span>
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="rawDataDialog = false"
-          />
-        </v-card-title>
-        <v-card-text>
-          <pre class="text-body-2">{{ JSON.stringify(selectedBuyer, null, 2) }}</pre>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
-
-    <!-- Analytics Dialog -->
-    <v-dialog
-      v-model="analyticsDialog"
-      max-width="1000px"
-      scrollable
-    >
-      <v-card>
-        <v-card-title class="d-flex align-center justify-space-between">
-          <div>
-            <span>Buyer Analytics</span>
-            <div class="text-subtitle-2 text-medium-emphasis">
-              {{ selectedBuyerForAnalytics?.name }}
-            </div>
-          </div>
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="analyticsDialog = false"
-          />
-        </v-card-title>
-        <v-card-text>
-          <div v-if="selectedBuyerForAnalytics">
-            <!-- Quick Stats -->
-            <v-row class="mb-4">
-              <v-col
-                v-for="stat in quickStats"
-                :key="stat.title"
-                cols="6"
-                md="3"
-              >
-                <v-card
-                  :color="stat.color"
-                  variant="tonal"
-                  class="text-center"
-                >
-                  <v-card-text>
-                    <div class="text-h6 font-weight-bold">
-                      {{ stat.value }}
-                    </div>
-                    <div class="text-caption">
-                      {{ stat.title }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-
-            <!-- Top Categories -->
-            <v-card
-              v-if="selectedBuyerForAnalytics.topCategories && selectedBuyerForAnalytics.topCategories.length > 0"
-              class="mb-4"
-            >
-              <v-card-title>Top Procurement Categories</v-card-title>
-              <v-card-text>
-                <v-row>
-                  <v-col
-                    v-for="category in selectedBuyerForAnalytics.topCategories"
-                    :key="category.category"
-                    cols="12"
-                    md="6"
-                  >
-                    <div class="d-flex justify-space-between align-center mb-2">
-                      <span class="font-weight-medium">{{ category.category }}</span>
-                      <span class="text-success">{{ formatCurrency(category.totalAmount) }}</span>
-                    </div>
-                    <v-progress-linear
-                      :model-value="(category.totalAmount / selectedBuyerForAnalytics.totalSpending) * 100"
-                      color="success"
-                      height="4"
-                    />
-                  </v-col>
-                </v-row>
-              </v-card-text>
-            </v-card>
-
-            <!-- Recent Items -->
-            <v-card v-if="selectedBuyerForAnalytics.items && selectedBuyerForAnalytics.items.length > 0">
-              <v-card-title>Recent Procurement Items</v-card-title>
-              <v-card-text>
-                <v-list>
-                  <v-list-item
-                    v-for="(item, index) in selectedBuyerForAnalytics.items.slice(0, 10)"
-                    :key="index"
-                  >
-                    <v-list-item-title>{{ item.description }}</v-list-item-title>
-                    <v-list-item-subtitle>
-                      {{ item.category }} • {{ formatCurrency(item.totalAmount) }} • {{ item.contractCount }} contracts
-                    </v-list-item-subtitle>
-                  </v-list-item>
-                </v-list>
-              </v-card-text>
-            </v-card>
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-
-// Types
-interface IBuyer {
+/**
+ * The agency directory.
+ *
+ * Every figure here comes from the `buyer_patterns` collection — the only
+ * source that holds a per-agency money total. It is a precomputed snapshot
+ * (see `lastUpdated`), not a live sum over `releases`: the releases carry no
+ * `amount` for the years these agencies bought in.
+ *
+ * ## Why the whole directory is fetched at once
+ *
+ * `buyers/index.get.ts` cannot serve this table correctly page by page:
+ *
+ *   1. Its sort direction is inverted — `sortOrder === 'asc' ? 1 : 1` always
+ *      resolves to 1, so `sortOrder=desc` returns the *smallest* spenders.
+ *      (The sibling `suppliers/index.get.ts:33` has the intended
+ *      `sortOrder === 'desc' ? -1 : 1`.) A directory whose headline promise is
+ *      "sorted by total spent" cannot be built on it.
+ *   2. It has no field projection, so every row drags its full `suppliers` id
+ *      array — 4.964 ids for one agency, 5,6 MB for the 393 rows.
+ *
+ * So the directory is read once and `transform` drops the three fields the
+ * table never reads. `transform` runs before the payload is serialised, so the
+ * client receives ~116 kB (~19 kB gzipped) instead of 5,6 MB, and sorting,
+ * search and paging are done here — correct regardless of what order the API
+ * returns, and instant, which for a fixed set of 393 rows is the right trade.
+ */
+interface BuyerRow {
   buyerId: string
   name: string
   totalContracts: number
-  years: number[]
-  yearCount: number
-  suppliers: string[]
-  supplierCount: number
   totalSpending: number
   avgContractValue: number
-  items?: Array<{
-    description: string
-    category: string
-    totalAmount: number
-    totalQuantity: number
-    contractCount: number
-    avgPrice: number
-    currency: string
-    unitName: string
-    date: string
-    sourceFile: string
-    year: number
-  }>
-  topCategories?: Array<{
-    category: string
-    totalAmount: number
-    contractCount: number
-  }>
-  lastUpdated: string
+  supplierCount: number
+  yearCount: number
 }
 
-// Meta
-definePageMeta({
-  title: 'Government Buyers Directory',
-  description: 'Explore government agencies and analyze their procurement activities',
+const { t } = useI18n()
+const localePath = useLocalePath()
+const route = useRoute()
+const router = useRouter()
+
+const PAGE_SIZE = 25
+
+// ---- State lives in the URL ---------------------------------------
+// A search or a page is the thing someone pastes into a message; keeping
+// it in the query string makes every view linkable and reloadable.
+const search = ref((route.query.search as string) ?? '')
+const sort = ref((route.query.sort as string) ?? 'totalDesc')
+const page = ref(Number(route.query.page ?? 1) || 1)
+
+const { data, pending, error } = await useFetch('/api/buyers', {
+  query: { limit: 400 },
+  transform: (res: { data?: { buyers?: Record<string, any>[] } }): BuyerRow[] =>
+    (res?.data?.buyers ?? []).map(b => ({
+      buyerId: String(b.buyerId),
+      name: String(b.name ?? ''),
+      totalContracts: b.totalContracts ?? 0,
+      totalSpending: b.totalSpending ?? 0,
+      avgContractValue: b.avgContractValue ?? 0,
+      supplierCount: b.supplierCount ?? 0,
+      yearCount: b.yearCount ?? 0,
+    })),
 })
 
-// Reactive state
-const loading = ref(false)
-const buyers = ref<IBuyer[]>([])
-const pagination = ref({
-  page: 1,
-  limit: 25,
-  total: 0,
-  totalPages: 1,
-})
-const meta = ref({
-  searchPerformed: false,
-  filtersApplied: false,
-  sortBy: 'totalSpending',
-  sortOrder: 'desc',
-})
+const all = computed<BuyerRow[]>(() => data.value ?? [])
 
-// Filters
-const filters = ref({
-  search: '',
-  minContracts: null as number | null,
-  maxContracts: null as number | null,
-  minSpending: null as number | null,
-  maxSpending: null as number | null,
+/** Fold accents so "administracion" finds "Administración". */
+function fold(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+const term = computed(() => search.value.trim())
+
+const filtered = computed(() => {
+  const q = fold(term.value)
+  if (!q) return all.value
+  return all.value.filter(b => fold(b.name).includes(q))
 })
 
-// Table configuration
-const currentPage = ref(1)
-const itemsPerPage = ref(25)
-const sortBy = ref([{ key: 'totalSpending', order: 'desc' }])
+const SORTS: Record<string, (a: BuyerRow, b: BuyerRow) => number> = {
+  totalDesc: (a, b) => b.totalSpending - a.totalSpending,
+  totalAsc: (a, b) => a.totalSpending - b.totalSpending,
+  contractsDesc: (a, b) => b.totalContracts - a.totalContracts,
+}
 
-// Dialogs
-const rawDataDialog = ref(false)
-const selectedBuyer = ref<IBuyer | null>(null)
-const analyticsDialog = ref(false)
-const selectedBuyerForAnalytics = ref<IBuyer | null>(null)
+const sorted = computed(() =>
+  [...filtered.value].sort(SORTS[sort.value] ?? SORTS.totalDesc!),
+)
 
-// Computed
-const quickStats = computed(() => {
-  if (!selectedBuyerForAnalytics.value) return []
+const totalPages = computed(() => Math.max(1, Math.ceil(sorted.value.length / PAGE_SIZE)))
 
-  const buyer = selectedBuyerForAnalytics.value
-  return [
-    {
-      title: 'Total Spending',
-      value: formatCurrency(buyer.totalSpending),
-      color: 'success',
-    },
-    {
-      title: 'Contracts',
-      value: buyer.totalContracts.toString(),
-      color: 'primary',
-    },
-    {
-      title: 'Years Active',
-      value: buyer.yearCount.toString(),
-      color: 'info',
-    },
-    {
-      title: 'Suppliers',
-      value: buyer.supplierCount.toString(),
-      color: 'warning',
-    },
-  ]
+// Clamped rather than watched: a search that shrinks the result set below the
+// current page should not need a round trip through a watcher to stop
+// rendering an empty table.
+const currentPage = computed(() => Math.min(Math.max(1, page.value), totalPages.value))
+
+const rows = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return sorted.value.slice(start, start + PAGE_SIZE)
 })
 
-// Table headers
-const headers = [
-  {
-    title: 'Government Buyer',
-    key: 'name',
-    sortable: true,
-    width: '25%',
-  },
-  {
-    title: 'Contracts',
-    key: 'totalContracts',
-    sortable: true,
-    align: 'center',
-    width: '10%',
-  },
-  {
-    title: 'Total Spending',
-    key: 'totalSpending',
-    sortable: true,
-    align: 'end',
-    width: '15%',
-  },
-  {
-    title: 'Years Active',
-    key: 'yearsActive',
-    sortable: false,
-    align: 'center',
-    width: '12%',
-  },
-  {
-    title: 'Suppliers',
-    key: 'supplierCount',
-    sortable: true,
-    align: 'center',
-    width: '8%',
-  },
-  {
-    title: 'Top Categories',
-    key: 'topCategories',
-    sortable: false,
-    width: '20%',
-  },
-  {
-    title: 'Last Updated',
-    key: 'lastUpdated',
-    sortable: true,
-    width: '10%',
-  },
-  {
-    title: 'Actions',
-    key: 'actions',
-    sortable: false,
-    width: '8%',
-  },
-]
-
-// Methods
-const loadBuyers = async () => {
-  loading.value = true
-  try {
-    const params = {
-      page: currentPage.value,
-      limit: itemsPerPage.value,
-      sortBy: sortBy.value[0]?.key || 'totalSpending',
-      sortOrder: sortBy.value[0]?.order || 'desc',
-      ...filters.value,
-    }
-
-    // Clean empty filters
-    const cleanParams: Record<string, string> = {}
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== '' && value !== null && !(Array.isArray(value) && value.length === 0)) {
-        cleanParams[key] = String(value)
-      }
-    })
-
-    const response = await fetch('/api/buyers?' + new URLSearchParams(cleanParams))
-    const result = await response.json()
-
-    if (result.success) {
-      buyers.value = result.data.buyers
-      pagination.value = result.data.pagination
-      meta.value = {
-        searchPerformed: !!filters.value.search,
-        filtersApplied: !!(filters.value.minContracts || filters.value.maxContracts || filters.value.minSpending || filters.value.maxSpending),
-        sortBy: String(cleanParams.sortBy || 'totalSpending'),
-        sortOrder: String(cleanParams.sortOrder || 'desc'),
-      }
-    }
-  }
-  catch (error) {
-    console.error('Error loading buyers:', error)
-    buyers.value = []
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-const handleTableUpdate = (options) => {
-  currentPage.value = options.page
-  itemsPerPage.value = options.itemsPerPage
-  sortBy.value = options.sortBy || [{ key: 'totalSpending', order: 'desc' }]
-  loadBuyers()
-}
-
-const applyFilters = () => {
-  currentPage.value = 1
-  loadBuyers()
-}
-
-const clearAllFilters = () => {
-  filters.value = {
-    search: '',
-    minContracts: null,
-    maxContracts: null,
-    minSpending: null,
-    maxSpending: null,
-  }
-  currentPage.value = 1
-  loadBuyers()
-}
-
-const clearSearch = () => {
-  filters.value.search = ''
-  applyFilters()
-}
-
-const searchBuyers = () => {
-  applyFilters()
-}
-
-const refreshData = () => {
-  loadBuyers()
-}
-
-const exportData = async () => {
-  try {
-    // TODO: Implement export functionality
-    console.log('Export functionality to be implemented')
-  }
-  catch (error) {
-    console.error('Export failed:', error)
-  }
-}
-
-const viewRawData = (buyer) => {
-  selectedBuyer.value = buyer
-  rawDataDialog.value = true
-}
-
-const viewAnalytics = (buyer) => {
-  selectedBuyerForAnalytics.value = buyer
-  analyticsDialog.value = true
-}
-
-// Utility methods
-const formatDate = (dateString: string): string => {
-  return new Intl.DateTimeFormat('es-UY', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(dateString))
-}
-
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('es-UY', {
-    style: 'currency',
-    currency: 'UYU',
-    minimumFractionDigits: 0,
-  }).format(amount)
-}
-
-// Lifecycle
-onMounted(() => {
-  loadBuyers()
+// Page 7 of a different result set is meaningless.
+watch([term, sort], () => {
+  page.value = 1
 })
 
-// Watch for filter changes
-watch(() => itemsPerPage.value, () => {
-  currentPage.value = 1
-  loadBuyers()
+watch([term, sort, currentPage], () => {
+  const q: Record<string, string> = {}
+  if (term.value) q.search = term.value
+  if (sort.value !== 'totalDesc') q.sort = sort.value
+  if (currentPage.value > 1) q.page = String(currentPage.value)
+  router.replace({ query: q })
 })
+
+function clearSearch() {
+  search.value = ''
+}
+
+useSeo(() => ({
+  title: t('seo.buyers.title'),
+  description: t('seo.buyers.description'),
+  path: '/buyers',
+}))
 </script>
 
+<template>
+  <div class="u-container page">
+    <header class="page__head">
+      <p class="u-eyebrow">
+        {{ t('home.eyebrow') }}
+      </p>
+      <h1>{{ t('buyers.title') }}</h1>
+      <p class="u-lead page__lead">
+        {{ t('buyers.lead', { total: formatNumber(all.length || undefined) }) }}
+      </p>
+    </header>
+
+    <!-- ===== Toolbar ===== -->
+    <div class="toolbar">
+      <form
+        class="finder"
+        role="search"
+        @submit.prevent
+      >
+        <label
+          class="u-sr-only"
+          for="buyer-q"
+        >{{ t('common.search') }}</label>
+        <v-icon
+          class="finder__icon"
+          size="18"
+        >
+          mdi-magnify
+        </v-icon>
+        <input
+          id="buyer-q"
+          v-model="search"
+          class="finder__input"
+          type="search"
+          :placeholder="t('buyers.table.name')"
+        >
+      </form>
+
+      <p class="toolbar__count u-mono">
+        {{ t('buyers.resultsSummary', { count: formatNumber(sorted.length) }) }}
+      </p>
+
+      <label class="toolbar__sort">
+        <span class="u-sr-only">{{ t('common.sortBy') }}</span>
+        <select
+          v-model="sort"
+          class="toolbar__select"
+        >
+          <option value="totalDesc">
+            {{ t('buyers.sort.totalDesc') }}
+          </option>
+          <option value="totalAsc">
+            {{ t('buyers.sort.totalAsc') }}
+          </option>
+          <option value="contractsDesc">
+            {{ t('buyers.sort.contractsDesc') }}
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <!-- ===== States ===== -->
+    <div
+      v-if="error"
+      class="state"
+    >
+      <h2 class="state__t">
+        {{ t('errors.generic.title') }}
+      </h2>
+      <p class="state__b">
+        {{ t('errors.generic.body') }}
+      </p>
+      <button
+        class="state__a"
+        type="button"
+        @click="() => refreshNuxtData()"
+      >
+        {{ t('errors.generic.action') }}
+      </button>
+    </div>
+
+    <div
+      v-else-if="pending && !all.length"
+      class="skeleton"
+    >
+      <div
+        v-for="i in 10"
+        :key="i"
+        class="skeleton__row"
+      />
+    </div>
+
+    <div
+      v-else-if="!rows.length"
+      class="state"
+    >
+      <h2 class="state__t">
+        {{ t('buyers.empty.title') }}
+      </h2>
+      <p class="state__b">
+        {{ t('buyers.empty.body') }}
+      </p>
+      <button
+        v-if="term"
+        class="state__a"
+        type="button"
+        @click="clearSearch"
+      >
+        {{ t('buyers.empty.action') }}
+      </button>
+    </div>
+
+    <!-- ===== Table ===== -->
+    <div
+      v-else
+      class="u-scroll-x"
+    >
+      <table class="ctable">
+        <thead>
+          <tr>
+            <th scope="col">
+              {{ t('buyers.table.name') }}
+            </th>
+            <th
+              scope="col"
+              class="ctable__c-num"
+            >
+              {{ t('buyers.table.contracts') }}
+            </th>
+            <th
+              scope="col"
+              class="ctable__c-num"
+            >
+              {{ t('buyers.table.suppliers') }}
+            </th>
+            <th
+              scope="col"
+              class="ctable__c-amt"
+            >
+              {{ t('buyers.table.total') }}
+            </th>
+            <th
+              scope="col"
+              class="ctable__c-amt"
+            >
+              {{ t('buyers.table.avg') }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="b in rows"
+            :key="b.buyerId"
+            class="ctable__row"
+          >
+            <td class="ctable__obj">
+              <NuxtLink
+                :to="localePath(`/buyers/${encodeURIComponent(b.buyerId)}`)"
+                class="ctable__link"
+              >
+                {{ b.name }}
+              </NuxtLink>
+              <span class="ctable__meta">
+                {{ b.yearCount }} {{ t('buyers.table.years').toLowerCase() }}
+              </span>
+            </td>
+            <td class="ctable__c-num u-mono">
+              {{ formatNumber(b.totalContracts) }}
+            </td>
+            <td class="ctable__c-num u-mono">
+              {{ formatNumber(b.supplierCount) }}
+            </td>
+            <td class="ctable__c-amt">
+              <MoneyAmount
+                :amount="b.totalSpending"
+                compact
+              />
+            </td>
+            <td class="ctable__c-amt">
+              <MoneyAmount
+                :amount="b.avgContractValue"
+                compact
+                size="sm"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ===== Pagination ===== -->
+    <nav
+      v-if="rows.length && totalPages > 1"
+      class="pager"
+      :aria-label="t('common.page')"
+    >
+      <button
+        class="pager__b"
+        type="button"
+        :disabled="currentPage <= 1"
+        @click="page = currentPage - 1"
+      >
+        <v-icon size="16">
+          mdi-chevron-left
+        </v-icon>
+        {{ t('common.previous') }}
+      </button>
+      <span class="pager__n">
+        {{ t('common.page') }} <strong>{{ currentPage }}</strong> {{ t('common.of') }} {{ formatNumber(totalPages) }}
+      </span>
+      <button
+        class="pager__b"
+        type="button"
+        :disabled="currentPage >= totalPages"
+        @click="page = currentPage + 1"
+      >
+        {{ t('common.next') }}
+        <v-icon size="16">
+          mdi-chevron-right
+        </v-icon>
+      </button>
+    </nav>
+  </div>
+</template>
+
 <style scoped>
-.buyers-explorer {
-  padding: 24px;
+.u-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
-.ga-2 {
-  gap: 8px;
+.page { padding-block: var(--s-6) var(--s-8); }
+
+.page__head { margin-bottom: var(--s-5); }
+
+.page__head h1 { margin: var(--s-2) 0 0; }
+
+.page__lead { margin: var(--s-3) 0 0; }
+
+/* ---- Toolbar ---- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
 }
 
-pre {
-  padding: 16px;
-  border-radius: 4px;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+.finder {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 0 1 340px;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  transition: border-color var(--dur) var(--ease);
 }
 
-:deep(.v-data-table-server) {
-  .v-data-table__td {
-    padding: 8px 16px;
+.finder:focus-within { border-color: var(--celeste); }
+
+.finder__icon { color: var(--text-muted); flex: none; }
+
+.finder__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+}
+
+.finder__input:focus { outline: none; }
+.finder__input::placeholder { color: var(--text-muted); }
+
+.toolbar__count {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+.toolbar__sort { margin-left: auto; }
+
+.toolbar__select {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  cursor: pointer;
+}
+
+/* ---- Table ---- */
+.ctable {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.ctable th {
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+
+.ctable td {
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--t-sm);
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule);
+}
+
+.ctable__row:last-child td { border-bottom: 0; }
+.ctable__row:hover { background: var(--surface-sunken); }
+
+.ctable__obj { max-width: 420px; }
+
+.ctable__link {
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.ctable__link:hover {
+  color: var(--celeste-deep);
+  text-decoration: underline;
+}
+
+.ctable__meta {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.ctable td.ctable__c-num,
+.ctable th.ctable__c-num {
+  text-align: right;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ctable td.ctable__c-amt,
+.ctable th.ctable__c-amt { text-align: right; }
+
+/* ---- States ---- */
+.state {
+  padding: var(--s-8) var(--s-5);
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.state__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
+
+.state__b {
+  margin: 0 auto var(--s-4);
+  max-width: 46ch;
+  color: var(--text-muted);
+  font-size: var(--t-sm);
+}
+
+.state__a {
+  padding: var(--s-2) var(--s-5);
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--t-sm);
+  cursor: pointer;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.skeleton__row {
+  height: 52px;
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-sunken) 37%, var(--surface) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ---- Pager ---- */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+}
+
+.pager__b {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pager__b:disabled { opacity: 0.4; cursor: not-allowed; }
+.pager__b:not(:disabled):hover { background: var(--surface-sunken); }
+
+.pager__n {
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 760px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: var(--s-3);
   }
-}
 
-:deep(.v-chip) {
-  font-size: 0.75rem;
+  .finder { flex: 1 1 100%; }
+  .toolbar__sort { margin-left: 0; }
+  .toolbar__count { order: 3; }
 }
 </style>
