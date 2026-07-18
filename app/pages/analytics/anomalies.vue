@@ -498,67 +498,73 @@ useSeo(() => ({
           <!-- Journalist/researcher detail: the full AI analysis, the checkable
                evidence, the source documents, and the provenance. Kept OUTSIDE the
                NuxtLink so expanding it never navigates away. -->
-          <details
+          <v-expansion-panels
             v-if="aiOf(a) && (aiOf(a)!.analysis || aiEvidence(a).length || aiDocs(a).length)"
             class="aidet"
+            variant="accordion"
+            flat
           >
-            <summary class="aidet__s">
-              {{ t('anomalies.ai.detailsToggle') }}
-            </summary>
-            <div class="aidet__b">
-              <p
-                v-if="aiOf(a)!.analysis"
-                class="aidet__analysis"
-              >
-                {{ aiOf(a)!.analysis }}
-              </p>
-
-              <div v-if="aiEvidence(a).length">
-                <p class="aidet__h">
-                  {{ t('anomalies.ai.evidence') }}
-                </p>
-                <ul class="aidet__list">
-                  <li
-                    v-for="(e, i) in aiEvidence(a)"
-                    :key="`e${i}`"
+            <v-expansion-panel :ripple="false">
+              <v-expansion-panel-title :ripple="false">
+                {{ t('anomalies.ai.detailsToggle') }}
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <div class="aidet__b">
+                  <p
+                    v-if="aiOf(a)!.analysis"
+                    class="aidet__analysis"
                   >
-                    {{ e }}
-                  </li>
-                </ul>
-              </div>
+                    {{ aiOf(a)!.analysis }}
+                  </p>
 
-              <div v-if="aiDocs(a).length">
-                <p class="aidet__h">
-                  {{ t('anomalies.ai.documents') }}
-                </p>
-                <ul class="aidet__list">
-                  <li
-                    v-for="(d, i) in aiDocs(a)"
-                    :key="`d${i}`"
-                  >
-                    <a
-                      :href="d.url"
-                      target="_blank"
-                      rel="noopener nofollow"
-                    >{{ d.type || t('anomalies.ai.document') }}</a>
-                    <span
-                      v-if="d.format"
-                      class="aidet__fmt u-mono"
-                    >{{ d.format }}</span>
-                  </li>
-                </ul>
-              </div>
+                  <div v-if="aiEvidence(a).length">
+                    <p class="aidet__h">
+                      {{ t('anomalies.ai.evidence') }}
+                    </p>
+                    <ul class="aidet__list">
+                      <li
+                        v-for="(e, i) in aiEvidence(a)"
+                        :key="`e${i}`"
+                      >
+                        {{ e }}
+                      </li>
+                    </ul>
+                  </div>
 
-              <p class="aidet__meta u-mono">
-                <span v-if="aiOf(a)!.usedFeatures">{{ t('anomalies.ai.usedFeatures', { n: aiOf(a)!.usedFeatures }) }} · </span>
-                <span>{{ aiOf(a)!.model }}</span>
-                <span v-if="aiScoredAt(a)"> · {{ aiScoredAt(a) }}</span>
-              </p>
-              <p class="aidet__note">
-                {{ t('anomalies.ai.note') }}
-              </p>
-            </div>
-          </details>
+                  <div v-if="aiDocs(a).length">
+                    <p class="aidet__h">
+                      {{ t('anomalies.ai.documents') }}
+                    </p>
+                    <ul class="aidet__list">
+                      <li
+                        v-for="(d, i) in aiDocs(a)"
+                        :key="`d${i}`"
+                      >
+                        <a
+                          :href="d.url"
+                          target="_blank"
+                          rel="noopener nofollow"
+                        >{{ d.type || t('anomalies.ai.document') }}</a>
+                        <span
+                          v-if="d.format"
+                          class="aidet__fmt u-mono"
+                        >{{ d.format }}</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <p class="aidet__meta u-mono">
+                    <span v-if="aiOf(a)!.usedFeatures">{{ t('anomalies.ai.usedFeatures', { n: aiOf(a)!.usedFeatures }) }} · </span>
+                    <span>{{ aiOf(a)!.model }}</span>
+                    <span v-if="aiScoredAt(a)"> · {{ aiScoredAt(a) }}</span>
+                  </p>
+                  <p class="aidet__note">
+                    {{ t('anomalies.ai.note') }}
+                  </p>
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
         </li>
       </ul>
     </PaginatedList>
@@ -858,33 +864,45 @@ useSeo(() => ({
   color: var(--text-muted);
 }
 
-/* ---- Journalist detail panel (outside the row link) ---- */
+/* ---- Journalist detail: a Vuetify expansion panel, stripped of its card
+   chrome so it reads as a continuation of the alert row, not a floating card
+   (outside the row link, so opening it never navigates). ---- */
 .aidet {
   border-top: 1px dashed var(--rule);
-  padding: 0 var(--s-5) var(--s-3);
   font-size: var(--t-sm);
 }
 
-.aidet__s {
-  cursor: pointer;
-  padding: var(--s-2) 0;
+.aidet :deep(.v-expansion-panel),
+.aidet :deep(.v-expansion-panels) {
+  background: transparent;
+  border-radius: 0;
+}
+
+.aidet :deep(.v-expansion-panel__shadow) { display: none; }
+.aidet :deep(.v-expansion-panel::after) { display: none; }
+.aidet :deep(.v-expansion-panel-title__overlay) { opacity: 0; }
+
+.aidet :deep(.v-expansion-panel-title) {
+  min-height: 0;
+  padding: var(--s-3) var(--s-5);
+  font-family: var(--font-mono);
   font-size: var(--t-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--text-muted);
-  list-style: none;
 }
 
-.aidet__s::-webkit-details-marker { display: none; }
-.aidet__s::before { content: '▸ '; }
-.aidet[open] .aidet__s::before { content: '▾ '; }
-.aidet__s:hover { color: var(--text); }
+.aidet :deep(.v-expansion-panel-title:hover),
+.aidet :deep(.v-expansion-panel-title--active) { color: var(--text); }
+
+.aidet :deep(.v-expansion-panel-text__wrapper) {
+  padding: 0 var(--s-5) var(--s-4);
+}
 
 .aidet__b {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
-  padding-top: var(--s-2);
 }
 
 .aidet__analysis {
