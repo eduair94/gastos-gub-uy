@@ -398,6 +398,11 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                 prepend-icon="mdi-key-variant"
                 :title="t('apiKeys.title')"
               />
+              <v-list-item
+                :to="localePath('/app/webhooks')"
+                prepend-icon="mdi-webhook"
+                :title="t('webhooks.title')"
+              />
               <v-divider />
               <v-list-item
                 prepend-icon="mdi-logout"
@@ -546,6 +551,13 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             @click="drawer = false"
           >
             {{ t('apiKeys.title') }}
+          </NuxtLink>
+          <NuxtLink
+            :to="localePath('/app/webhooks')"
+            class="drawer__sub"
+            @click="drawer = false"
+          >
+            {{ t('webhooks.title') }}
           </NuxtLink>
           <button
             type="button"

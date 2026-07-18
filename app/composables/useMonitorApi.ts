@@ -68,5 +68,12 @@ export function useMonitorApi() {
     revoke: (id: string) => $fetch<{ success: boolean }>(`/api/account/api-keys/${id}`, { method: 'DELETE' }),
   }
 
-  return { watches, openCalls, savedCalls, calendar, account, categories, apiKeys }
+  const webhooks = {
+    list: () => $fetch<{ data: Array<{ _id: string, url: string, events: string[], active: boolean, failureCount: number, lastDeliveryAt: string | null, createdAt: string }> }>('/api/v1/webhooks'),
+    create: (body: { url: string, events: string[], filters?: Record<string, unknown> }) => $fetch<{ data: { id: string, url: string, events: string[], active: boolean, secret: string } }>('/api/v1/webhooks', { method: 'POST', body }),
+    remove: (id: string) => $fetch<{ success: boolean }>(`/api/v1/webhooks/${id}`, { method: 'DELETE' }),
+    test: (id: string) => $fetch<{ success: boolean, data: { ok: boolean, status?: number, error?: string } }>(`/api/v1/webhooks/${id}/test`, { method: 'POST' }),
+  }
+
+  return { watches, openCalls, savedCalls, calendar, account, categories, apiKeys, webhooks }
 }
