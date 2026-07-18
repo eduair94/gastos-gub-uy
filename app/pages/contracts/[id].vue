@@ -50,6 +50,24 @@ const currency = computed(() => contractCurrency(contract.value))
 const suppliers = computed(() => contractSuppliers(contract.value))
 const date = computed(() => contractDate(contract.value))
 
+// The amount restated in today's pesos — foreign converted at its own month's
+// BCU rate, then deflated to today via the Unidad Indexada (server computes it).
+// Worth showing when it moves the figure: always for a foreign-currency contract
+// (it becomes pesos), and for a peso one only once inflation shifts it ≥3%.
+const realToday = computed<number | null>(() => {
+  const v = (contract.value as { realTodayAmount?: number } | null)?.realTodayAmount
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null
+})
+const realNativeCurrency = computed(() => (contract.value as { realNativeCurrency?: string } | null)?.realNativeCurrency ?? 'UYU')
+const showRealToday = computed(() => {
+  const r = realToday.value
+  if (r === null) return false
+  if (realNativeCurrency.value !== 'UYU') return true
+  const nominal = amount.value
+  if (!nominal || nominal <= 0) return false
+  return Math.abs(r - nominal) / nominal >= 0.03
+})
+
 // Every stage the release carries. Only award/awardUpdate ever report
 // money, so the stage is what explains an absent figure.
 const tags = computed(() => contractTags(contract.value))
@@ -772,6 +790,13 @@ useSeo(() => ({
               align="start"
               decimals
             />
+            <p
+              v-if="showRealToday"
+              class="head__real"
+              :title="t('money.todayHelp')"
+            >
+              ≈ {{ formatMoney(realToday, 'UYU') }} {{ t('money.today') }}
+            </p>
             <p
               v-if="isMixedCurrency(contract)"
               class="head__fx"
@@ -1731,6 +1756,15 @@ useSeo(() => ({
   font-size: var(--t-xs);
   color: var(--text-muted);
   max-width: 28ch;
+}
+
+.head__real {
+  margin: var(--s-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--money);
+  cursor: help;
 }
 
 .head__nomoney {

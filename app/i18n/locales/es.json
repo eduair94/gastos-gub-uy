@@ -27,7 +27,9 @@
     "scaleHelp": "La barra dorada bajo cada monto es logarítmica y usa la misma escala en todo el sitio: podés comparar de un vistazo sin leer los dígitos.",
     "primaryNote": "Montos convertidos a pesos uruguayos cuando el origen informa moneda extranjera. Se indica la moneda original.",
     "mixedCurrency": "Este contrato tiene montos en más de una moneda.",
-    "convertedFrom": "Monto convertido a pesos desde {currency}, al tipo de cambio del día de la adjudicación."
+    "convertedFrom": "Monto convertido a pesos desde {currency}, al tipo de cambio del día de la adjudicación.",
+    "today": "a valores de hoy",
+    "todayHelp": "El monto llevado a pesos de hoy: la moneda extranjera se convierte al tipo de cambio BCU del mes del contrato y luego se ajusta por inflación con la Unidad Indexada. Permite comparar precios de años distintos."
   },
   "common": {
     "search": "Buscar",

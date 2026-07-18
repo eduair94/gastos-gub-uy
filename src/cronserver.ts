@@ -603,6 +603,15 @@ class CronServer {
     this.analyticsStatus.lastError = null;
 
     try {
+      // BCU monthly rates (USD/EUR/UI) power the "en pesos de hoy" real-value
+      // figures. Cheap and first, non-fatal: a rate-API hiccup must never abort
+      // the analytics rebuild. Never deletes months, so it just refreshes the
+      // recent window and appends the new month each day.
+      this.logger.info("Refreshing BCU exchange rates...");
+      await this.runJobProcess("jobs/refresh-exchange-rates").catch((error) => {
+        this.logger.error("Exchange rate refresh failed (non-fatal):", error);
+      });
+
       this.logger.info("Starting analytics refresh...");
       await this.runJobProcess("jobs/refresh-analytics");
 

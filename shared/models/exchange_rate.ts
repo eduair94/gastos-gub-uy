@@ -34,7 +34,7 @@ export interface IExchangeRate {
 
 const ExchangeRateSchema = new Schema<IExchangeRate>(
   {
-    month: { type: String, required: true, unique: true },
+    month: { type: String, required: true },
     usd: { type: Number },
     eur: { type: Number },
     ui: { type: Number },

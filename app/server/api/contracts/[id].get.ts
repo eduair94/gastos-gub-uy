@@ -4,6 +4,8 @@ import type { IRelease } from '../../../types'
 import { connectToDatabase } from '../../utils/database'
 import { ContractItemFeaturesModel, ItemPriceBaselineModel, ReleaseModel } from '../../utils/models'
 import { awardUrl, compraIdFromOcid, ocdsJsonUrl, sourceUrl } from '../../utils/query'
+import { loadRateTable } from '../../utils/rates'
+import { toTodayUyu } from '../../../../shared/utils/real-value'
 
 /**
  * The reference price distribution for each item this contract bought.
@@ -141,12 +143,26 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // The object text and the item baselines are two independent lookups —
-    // run them together.
-    const [baselines, borrowedDescription] = await Promise.all([
+    // The object text, item baselines, and rate table are independent — run
+    // them together.
+    const [baselines, borrowedDescription, rateTable] = await Promise.all([
       itemBaselines(contract),
       siblingTenderDescription(contract),
+      loadRateTable(),
     ])
+
+    // The contract amount in TODAY's pesos: the native total converted to UYU at
+    // its OWN month's BCU rate, then deflated by the Unidad Indexada to today.
+    // Null when the contract's month or currency is outside the rate table (older
+    // than our window / EUR) — the page then shows only the nominal figure.
+    const amt = (contract as unknown as { amount?: { primaryCurrency?: string, totalAmounts?: Record<string, number>, primaryAmount?: number }, date?: string | Date }).amount ?? {}
+    const nativeCurrency = amt.primaryCurrency ?? 'UYU'
+    const nativeAmount = typeof amt.totalAmounts?.[nativeCurrency] === 'number'
+      ? amt.totalAmounts![nativeCurrency]!
+      : (typeof amt.primaryAmount === 'number' ? amt.primaryAmount : null)
+    const realTodayAmount = (nativeAmount && nativeAmount > 0)
+      ? toTodayUyu(nativeAmount, nativeCurrency, (contract as unknown as { date?: string | Date }).date, rateTable)
+      : null
 
     // Calculate additional fields for the detailed view
     const enhancedContract = {
@@ -184,6 +200,10 @@ export default defineEventHandler(async (event) => {
       // Keyed `classificationId|currency|unitName` — the page looks each
       // item up by the same key.
       itemBaselines: baselines,
+      // The amount restated in today's pesos (see above). `realNativeCurrency`
+      // lets the page note when a conversion from USD/EUR also happened.
+      realTodayAmount,
+      realNativeCurrency: nativeCurrency,
     }
 
     return {

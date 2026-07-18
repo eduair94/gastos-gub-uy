@@ -27,7 +27,9 @@
     "scaleHelp": "The gold bar under each amount is logarithmic and uses the same scale across the site: you can compare at a glance without reading the digits.",
     "primaryNote": "Amounts are converted to Uruguayan pesos when the source reports a foreign currency. The original currency is shown.",
     "mixedCurrency": "This contract has amounts in more than one currency.",
-    "convertedFrom": "Amount converted to pesos from {currency}, at the exchange rate on the award date."
+    "convertedFrom": "Amount converted to pesos from {currency}, at the exchange rate on the award date.",
+    "today": "in today's pesos",
+    "todayHelp": "The amount brought to today's pesos: foreign currency is converted at the BCU rate of the contract's month, then adjusted for inflation via the Unidad Indexada. Lets you compare prices from different years."
   },
   "common": {
     "search": "Search",
