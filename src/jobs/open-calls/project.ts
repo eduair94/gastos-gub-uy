@@ -158,7 +158,23 @@ export function projectOpenCall(releases: ReleaseLike[], now: Date = new Date())
   if (!tenderReleases.length) return null;
 
   const authoritative = tenderReleases[tenderReleases.length - 1]!;
-  const tender = authoritative.tender!;
+  // Latest-first, so field-level coalescing prefers the most recent value but
+  // falls back to an earlier release when the latest is a sparse aclaración/ajuste
+  // (which often omit tenderPeriod/items/title). This is what stops most calls
+  // showing "sin fecha de cierre": the deadline lives on the base `llamado`.
+  const latestFirst = [...tenderReleases].reverse();
+
+  function isEmpty(v: unknown): boolean {
+    return v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
+  }
+  function pick<T>(get: (t: NonNullable<ReleaseLike["tender"]>) => T | undefined): T | undefined {
+    for (const tr of latestFirst) {
+      if (!tr.tender) continue;
+      const v = get(tr.tender);
+      if (!isEmpty(v)) return v;
+    }
+    return undefined;
+  }
 
   // Union documents across every tender release, deduped by url.
   const docMap = new Map<string, IOpenCallDocument>();
@@ -175,7 +191,8 @@ export function projectOpenCall(releases: ReleaseLike[], now: Date = new Date())
     }
   }
 
-  const items: IOpenCallItem[] = (tender.items ?? []).map(it => ({
+  const rawItems = pick(t => (t.items && t.items.length ? t.items : undefined)) ?? [];
+  const items: IOpenCallItem[] = rawItems.map(it => ({
     description: it.description,
     classificationId: it.classification?.id,
     classificationLabel: it.classification?.description,
@@ -187,11 +204,11 @@ export function projectOpenCall(releases: ReleaseLike[], now: Date = new Date())
     new Set(items.map(it => it.classificationId).filter((x): x is string => Boolean(x))),
   );
 
-  const title = tender.title || items.find(it => it.description)?.description || `Llamado ${compraId}`;
-  const description = tender.description || undefined;
+  const title = pick(t => t.title) || items.find(it => it.description)?.description || `Llamado ${compraId}`;
+  const description = pick(t => t.description);
 
-  const buyer = authoritative.buyer || releases.find(r => r.buyer)?.buyer || {};
-  const procuringEntity = tender.procuringEntity || {};
+  const buyer = latestFirst.find(r => r.buyer)?.buyer || releases.find(r => r.buyer)?.buyer || {};
+  const procuringEntity = pick(t => t.procuringEntity) || {};
 
   const awardRelease = releases.find(r => AWARD_KINDS.includes(releaseKind(r.id)));
   const awardRef = awardRelease
@@ -202,17 +219,17 @@ export function projectOpenCall(releases: ReleaseLike[], now: Date = new Date())
       }
     : undefined;
 
-  const endDate = toDate(tender.tenderPeriod?.endDate);
-  const startDate = toDate(tender.tenderPeriod?.startDate);
-  const enquiryStart = toDate(tender.enquiryPeriod?.startDate);
-  const enquiryEnd = toDate(tender.enquiryPeriod?.endDate);
+  const endDate = toDate(pick(t => t.tenderPeriod?.endDate));
+  const startDate = toDate(pick(t => t.tenderPeriod?.startDate));
+  const enquiryStart = toDate(pick(t => t.enquiryPeriod?.startDate));
+  const enquiryEnd = toDate(pick(t => t.enquiryPeriod?.endDate));
 
   const hasCancellationTag = releases.some(r => (r.tag ?? []).includes("tenderCancellation"));
 
   const status = deriveStatus(
     {
       latestTenderKind: releaseKind(authoritative.id),
-      tenderStatus: tender.status,
+      tenderStatus: pick(t => t.status),
       endDate,
       hasAward: Boolean(awardRef),
       hasCancellationTag,
@@ -229,8 +246,8 @@ export function projectOpenCall(releases: ReleaseLike[], now: Date = new Date())
     description,
     buyer: { id: buyer.id, name: buyer.name },
     procuringEntity: { id: procuringEntity.id, name: procuringEntity.name },
-    procurementMethod: tender.procurementMethod,
-    procurementMethodDetails: tender.procurementMethodDetails,
+    procurementMethod: pick(t => t.procurementMethod),
+    procurementMethodDetails: pick(t => t.procurementMethodDetails),
     status,
     publishDate: toDate(tenderReleases[0]!.date),
     tenderPeriod: { startDate, endDate },

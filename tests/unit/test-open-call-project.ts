@@ -80,6 +80,23 @@ ok("status is clarification (latest is aclar)", proj?.status === "clarification"
 ok("searchText normalized + includes item text", (proj?.searchText ?? "").includes("aire acondicionado split"));
 ok("sourceReleaseIds carries both", (proj?.sourceReleaseIds.length ?? 0) === 2);
 
+// --- sparse aclaración must NOT wipe the base llamado's deadline/items ---
+const sparseAclar: ReleaseLike = {
+  id: "aclar_llamado-1357112-2",
+  ocid: "ocds-yfs5dr-1357112",
+  date: new Date("2026-07-18T12:00:00Z"),
+  tag: ["tenderUpdate"],
+  // Latest release, but its tender object is sparse (no period, no items, no title).
+  tender: { status: "active", documents: [{ url: "https://x/aclaracion2.pdf", format: "application/pdf" }] },
+};
+const projSparse = projectOpenCall([base, sparseAclar], NOW);
+ok("coalesce: deadline falls back to base when latest aclar is sparse", projSparse?.tenderPeriod?.endDate?.getTime() === FUTURE.getTime());
+ok("coalesce: items fall back to base", (projSparse?.items.length ?? 0) === 2);
+ok("coalesce: classificationSet still populated", JSON.stringify(projSparse?.classificationSet) === JSON.stringify(["4472"]));
+ok("coalesce: title falls back to base", projSparse?.title === "Equipos de aire acondicionado");
+ok("coalesce: still clarification (latest is aclar, deadline future)", projSparse?.status === "clarification");
+ok("coalesce: latest release id is the sparse aclar", projSparse?.latestReleaseId === "aclar_llamado-1357112-2");
+
 // --- awardRef when an adjudicacion is present ---
 const award: ReleaseLike = { id: "adjudicacion-1357112", ocid: "ocds-yfs5dr-1357112", date: new Date("2026-07-30T00:00:00Z"), tag: ["award"], awards: [{ id: "a1", date: new Date("2026-07-30T00:00:00Z") }] };
 const projAwarded = projectOpenCall([base, award], NOW);
