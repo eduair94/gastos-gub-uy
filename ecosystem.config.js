@@ -3,8 +3,11 @@ module.exports = {
     {
       name: 'gastos-gub-dashboard',
       port: 3600,
-      exec_mode: 'cluster',
-      instances: '1', // Use all available CPU cores
+      // Node's cluster module does not reliably bind the port on Windows (the
+      // process shows "online" but nothing listens). Use fork there; cluster
+      // elsewhere where it works and scales across cores.
+      exec_mode: process.platform === 'win32' ? 'fork' : 'cluster',
+      instances: 1,
       script: './.output/server/index.mjs',
       cwd: './app',
       env: {
