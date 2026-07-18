@@ -1,6 +1,6 @@
 # Auth + Monitor de Llamados — Design Spec
 
-**Status:** approved design, ready for implementation planning
+**Status:** IMPLEMENTED (branch `feat/auth-monitor-llamados`). Verified: Nuxt build exit 0, 44 unit assertions pass, live-DB integration (667 llamados projected into `open_calls`), runtime smoke test (public API serves 648 open calls; auth middleware returns guest with no session). Pending user-provided secrets: Firebase (auth), Resend (email). See §18.
 **Date:** 2026-07-18
 **Scope:** Add a full Firebase authentication system and a ProveedorUY-style tender-monitoring product ("alertas de licitaciones") on top of the existing gastos-gub codebase.
 **Author:** design session (brainstorming → spec)
@@ -646,3 +646,25 @@ Verification per phase uses the `verify`/`run` skills to drive the real flow (si
 - Exact watch cap and whether `emailVerified` gating is required at signup or only to activate alerts (default: required to activate).
 - Whether `/llamados` detail AI summary is fully public or teaser-for-guests (default: teaser for guests, full for authed — drives signups).
 - Digest send hour and instant-batch max-per-email (defaults: 08:00 America/Montevideo; no hard cap, but paginate the email if a user matches many at once).
+
+---
+
+## 17. What shipped (file map)
+
+- **Models** (`shared/models/`): `user`, `watch`, `open_call`, `notification`, `saved_call` (+ `shared/types/monitor.ts`, barrel, `scripts/ensure-indexes.ts`).
+- **Shared logic**: `shared/utils/text.ts` (normalize/phrase), `shared/utils/ocid.ts`, `shared/matching/match.ts` (pure matcher).
+- **Cron/jobs** (`src/`): `jobs/open-calls/{project,sync}.ts`, `jobs/matching/run.ts`, `jobs/alerts/dispatch.ts`, `jobs/pliego/summarize.ts`, entries `jobs/{sync-open-calls,backfill-open-calls,deadline-reminders,alert-digest,pliego-summary}.ts`, `services/{mailer,pliego-extractor}.ts`, `emails/templates.ts`; wired into `src/cronserver.ts` (hourly `:20` sync, daily `05:00` reminders, `08:00` digest, manual triggers).
+- **Nitro API** (`app/server/`): `utils/{firebase-admin,auth,watch-input}.ts`, `middleware/auth.ts`, and routes under `api/{auth,watches,open-calls,saved-calls,calendar,account,categories,unsubscribe}`.
+- **Frontend** (`app/`): `plugins/{firebase.client,auth.server}.ts`, `composables/{useAuth,useMonitorApi}.ts`, `middleware/{auth,guest}.ts`, pages `login/registro/recuperar/auth-callback/unsubscribe/llamados(+detail)/app(+alertas,calendario,cuenta)`, components `OpenCallCard/PliegoSummary/WatchForm`, i18n namespaces (es source + en mirror), nav + user menu in `layouts/default.vue`.
+- **Tests**: `tests/unit/test-{text-normalize,matcher,open-call-project}.ts` (44 assertions), `tests/integration/test-open-calls-sync.ts`.
+
+## 18. Go-live checklist
+
+1. **Secrets** — fill `.env` (root, for cron) and `app/.env` (for Nitro/dev — remember DESIGN.md: the dev server reads `app/.env`): `FIREBASE_PROJECT_ID/_CLIENT_EMAIL/_PRIVATE_KEY`, `NUXT_PUBLIC_FIREBASE_*`, `RESEND_API_KEY`, `ALERTS_FROM_EMAIL`, `APP_BASE_URL`. All documented in `.env.example`.
+2. **Firebase console** — enable Email/Password, Google, and Email-link sign-in providers; add the site domain to Authorized domains; set the email-link continue URL allowance for `${APP_BASE_URL}/auth/callback`.
+3. **Resend** — verify the sending domain (SPF/DKIM/DMARC) for `ALERTS_FROM_EMAIL` before real sends.
+4. **Indexes** — `npx tsx scripts/ensure-indexes.ts` (idempotent, background; builds the users/watches/open_calls/notifications/saved_calls indexes incl. the `open_calls` text index).
+5. **Backfill** — `npm run backfill-open-calls` (alerts suppressed; already run once during verification — 667 open calls loaded, re-runnable).
+6. **Cron** — restart the cron server (`npm run cronserver:restart`) to pick up the new hourly `:20` open-calls sync + daily reminder/digest jobs. Verify via `GET /cron/open-calls/status`.
+7. **Build + deploy the app** — `cd app && npm run build` then serve `.output/server/index.mjs` (PM2 `gastos-gub-dashboard`).
+8. **Smoke test** — sign up, create a watch, confirm the "coincide con N llamados" preview, and (with a matching new llamado) confirm one alert email; confirm no duplicate on the next sync tick.
