@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { connectToDatabase } from '../../../utils/database'
-import { ItemPriceBaselineModel, ProductAnalyticsModel } from '../../../utils/models'
+import { ItemPriceBaselineModel, ProductAnalyticsModel, ProductVariantsModel } from '../../../utils/models'
 
 /**
  * One catalogue code's analytics, plus its price reference.
@@ -35,9 +35,18 @@ export default defineEventHandler(async (event) => {
       .lean()
       .catch(() => [])
 
+    // Scraped-característica variant distribution — present only for the
+    // unexplained-anomaly codes the offline job precomputes (product_variants).
+    // Non-fatal: absent → the page falls back to a lazy client-side aggregate.
+    const variants = await ProductVariantsModel
+      .findOne({ code })
+      .select('attributes varies sampledContracts calculatedAt')
+      .lean()
+      .catch(() => null)
+
     return {
       success: true,
-      data: { ...product, priceUnits },
+      data: { ...product, priceUnits, variants },
     }
   }
   catch (error) {
