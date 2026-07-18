@@ -2,14 +2,13 @@ import { createError, defineEventHandler, readBody } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { WatchModel } from '../../../../shared/models/watch'
 import { UserModel } from '../../../../shared/models/user'
-import { assertSameOrigin, requireUser } from '../../utils/auth'
+import { requireWrite } from '../../utils/auth'
 import { parseWatchPayload, WATCH_CAP } from '../../utils/watch-input'
 
 // Create a watch. Enforces the free-tier cap and keeps the denormalized
 // users.watchCount in sync.
 export default defineEventHandler(async (event) => {
-  assertSameOrigin(event)
-  const user = requireUser(event)
+  const user = requireWrite(event)
   const body = await readBody<Record<string, unknown>>(event)
   const payload = parseWatchPayload(body)
 

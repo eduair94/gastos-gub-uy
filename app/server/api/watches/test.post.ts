@@ -1,7 +1,7 @@
 import { defineEventHandler, readBody } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { OpenCallModel } from '../../../../shared/models/open_call'
-import { assertSameOrigin, requireUser } from '../../utils/auth'
+import { requireWrite } from '../../utils/auth'
 import { parseWatchPayload } from '../../utils/watch-input'
 import { watchMatchesCall } from '../../../../shared/matching/match'
 import type { WatchInput } from '../../../../shared/matching/match'
@@ -12,8 +12,7 @@ const SCAN_LIMIT = 5000
 const SAMPLE_SIZE = 8
 
 export default defineEventHandler(async (event) => {
-  assertSameOrigin(event)
-  requireUser(event)
+  requireWrite(event)
   const body = await readBody<Record<string, unknown>>(event)
   const payload = parseWatchPayload(body)
 

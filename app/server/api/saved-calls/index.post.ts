@@ -2,12 +2,11 @@ import { createError, defineEventHandler, readBody } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { SavedCallModel } from '../../../../shared/models/saved_call'
 import { OpenCallModel } from '../../../../shared/models/open_call'
-import { assertSameOrigin, requireUser } from '../../utils/auth'
+import { requireWrite } from '../../utils/auth'
 
 // Save (bookmark) a call, optionally with a reminder N days before its deadline.
 export default defineEventHandler(async (event) => {
-  assertSameOrigin(event)
-  const user = requireUser(event)
+  const user = requireWrite(event)
   const body = await readBody<{ compraId?: string, note?: string, reminderDaysBefore?: number }>(event)
 
   const compraId = String(body?.compraId ?? '').trim()

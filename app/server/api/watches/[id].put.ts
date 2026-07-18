@@ -1,12 +1,11 @@
 import { createError, defineEventHandler, getRouterParam, readBody } from 'h3'
 import { connectToDatabase, mongoose } from '../../utils/database'
 import { WatchModel } from '../../../../shared/models/watch'
-import { assertSameOrigin, requireUser } from '../../utils/auth'
+import { requireWrite } from '../../utils/auth'
 import { parseWatchPayload } from '../../utils/watch-input'
 
 export default defineEventHandler(async (event) => {
-  assertSameOrigin(event)
-  const user = requireUser(event)
+  const user = requireWrite(event)
   const id = getRouterParam(event, 'id')
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
     throw createError({ statusCode: 404, statusMessage: 'Alerta no encontrada' })

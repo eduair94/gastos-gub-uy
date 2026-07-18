@@ -1,12 +1,11 @@
 import { defineEventHandler, readBody } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { UserModel } from '../../../../shared/models/user'
-import { assertSameOrigin, requireUser } from '../../utils/auth'
+import { requireWrite } from '../../utils/auth'
 
 // Update notification preferences (enabled / instant|daily) and UI locale.
 export default defineEventHandler(async (event) => {
-  assertSameOrigin(event)
-  const user = requireUser(event)
+  const user = requireWrite(event)
   const body = await readBody<{ enabled?: boolean, frequency?: string, locale?: string }>(event)
 
   const set: Record<string, unknown> = {}
