@@ -126,10 +126,16 @@ export interface IAnomaly extends Document {
       id?: string
       description?: string
       scheme?: string
+      canonicalName?: string
+      rubroPath?: string
+      rubro?: string
+      subrubro?: string
     }
     itemUnit?: {
       id?: string
       name?: string
+      officialUnit?: string
+      mismatch?: boolean
     }
     itemQuantity?: number
     /** Number of observations in the baseline this finding was scored against. */

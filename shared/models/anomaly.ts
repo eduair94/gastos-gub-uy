@@ -48,10 +48,21 @@ const AnomalySchema = new Schema<IAnomaly>(
         id: { type: String },
         description: { type: String },
         scheme: { type: String },
+        // SICE catalog enrichment (src/jobs/detect-anomalies loadCatalog). Declared
+        // explicitly or mongoose strict mode silently strips them on write — the same
+        // trap noted above for detectedAt/aiVerdict.
+        canonicalName: { type: String },
+        rubroPath: { type: String },
+        rubro: { type: String },
+        subrubro: { type: String },
       },
       itemUnit: {
         id: { type: String },
         name: { type: String },
+        // Official catalog unit + whether the line unit differs from it (a precision
+        // signal fed to the AI triage). Declared so strict mode keeps them.
+        officialUnit: { type: String },
+        mismatch: { type: Boolean },
       },
       itemQuantity: { type: Number },
       baselineN: { type: Number },
