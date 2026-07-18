@@ -168,6 +168,8 @@
     "currencyPlaceholder": "Todas las monedas",
     "category": "Artículo del catálogo",
     "categoryHelp": "Solo compras de este artículo. Es la referencia que usan las comparaciones de precio.",
+    "categoryCode": "Código de catálogo",
+    "categoryCodeHelp": "Solo compras con este código de artículo. Es exactamente la referencia contra la que se comparó el precio.",
     "hasAmount": "Solo con monto informado",
     "hasAmountHelp": "Algunos registros oficiales no publican importe.",
     "presets": "Búsquedas frecuentes",

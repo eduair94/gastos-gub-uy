@@ -168,6 +168,8 @@
     "currencyPlaceholder": "All currencies",
     "category": "Catalogue article",
     "categoryHelp": "Only purchases of this article. This is the population the price comparisons use.",
+    "categoryCode": "Catalogue code",
+    "categoryCodeHelp": "Only purchases with this catalogue code — exactly the reference the price was compared against.",
     "hasAmount": "Only with a reported amount",
     "hasAmountHelp": "Some official records publish no amount.",
     "presets": "Common searches",

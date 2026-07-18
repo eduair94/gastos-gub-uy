@@ -14,10 +14,15 @@ export interface FilterState {
   tag: string[]
   buyers: string[]
   suppliers: string[]
-  /** Exact catalogue article ("PIGMENTO"). Set by inbound links (the
-   *  detail page's "ver comparables"), not by a rail control — the rail
-   *  only shows active values so they can be seen and removed. */
+  /** Exact catalogue article description ("PIGMENTO"). Set by inbound links,
+   *  not by a rail control — the rail only shows active values so they can be
+   *  seen and removed. */
   category: string[]
+  /** Catalogue code (classification.id, e.g. "16656"). The canonical, index-backed
+   *  product key the "ver comparables" link uses — see comparablesLink in
+   *  contracts/[id].vue. Must be a first-class filter or the link's product
+   *  filter is silently dropped and the explorer lists every award. */
+  categoryId: string[]
   procurementMethodDetails: string[]
   status: string[]
   currency: string[]
@@ -141,6 +146,29 @@ function optLabel(o: Option) {
       </div>
       <p class="rail__help">
         {{ t('filters.categoryHelp') }}
+      </p>
+    </section>
+
+    <!-- Catalogue code, when a "ver comparables" link brought one. Same
+         reason as above: an invisible filter is a lie of omission. -->
+    <section
+      v-if="modelValue.categoryId.length"
+      class="rail__sec"
+    >
+      <span class="rail__label">{{ t('filters.categoryCode') }}</span>
+      <div class="rail__stages">
+        <v-chip
+          v-for="c in modelValue.categoryId"
+          :key="c"
+          closable
+          size="small"
+          @click:close="patch({ categoryId: modelValue.categoryId.filter(x => x !== c) })"
+        >
+          {{ c }}
+        </v-chip>
+      </div>
+      <p class="rail__help">
+        {{ t('filters.categoryCodeHelp') }}
       </p>
     </section>
 
