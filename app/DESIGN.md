@@ -62,8 +62,13 @@ Spacing `--s-1..--s-9`, radius `--r-sm/md/lg/full`, type `--t-xs..--t-3xl`.
   Always `font-variant-numeric: tabular-nums` for figures.
 
 Utility classes in `main.scss`: `.u-hero .u-eyebrow .u-lead .u-mono .u-muted
-.u-container .u-truncate .u-clamp-2 .u-scroll-x .panel .tag .tag--activo
-.tag--alerta .tag--celeste .tag--neutral`.
+.u-container .u-splitrow .u-truncate .u-clamp-2 .u-scroll-x .panel .tag
+.tag--activo .tag--alerta .tag--celeste .tag--neutral`.
+
+`.u-splitrow` is the canonical record-row layout: a growing identity block
+and a fixed figures block that **top-align**. Reach for it instead of
+re-rolling `flex; justify-content: space-between; align-items: center` — the
+centred variant lets the figure column drift down tall rows.
 
 ## Structure is information
 

@@ -207,6 +207,35 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
   padding-inline: clamp(var(--s-4), 3vw, var(--s-6));
 }
 
+// Split row — a growing identity block on the left, a fixed block of
+// figures or metadata on the right. The two ALWAYS align to the top:
+// a right column that centres itself drifts halfway down a tall row
+// (each time a page hand-rolls `align-items: center` for this) and then
+// reads as belonging to the middle line rather than to the record. The
+// left block owns the slack and may shrink to an ellipsis; the right
+// block keeps its intrinsic width. Below 760px the row becomes a stack.
+//
+//   <a class="u-splitrow">
+//     <div>…identity, description…</div>   <- grows, can truncate
+//     <div>…figures…</div>                 <- fixed width, top-aligned
+//   </a>
+.u-splitrow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-5);
+}
+
+.u-splitrow > :first-child { flex: 1 1 auto; min-width: 0; }
+.u-splitrow > :last-child { flex: 0 0 auto; }
+
+@media (max-width: 760px) {
+  .u-splitrow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-3);
+  }
+}
+
 // ============================================================
 // Status + severity — colour carries meaning, not mood
 // ============================================================
