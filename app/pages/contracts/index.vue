@@ -69,7 +69,23 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
   amountDesc: { sortBy: 'amount', sortOrder: 'desc' },
   amountAsc: { sortBy: 'amount', sortOrder: 'asc' },
   relevance: { sortBy: 'relevance', sortOrder: 'desc' },
+  // Only meaningful in single-product focus mode; the server projects
+  // `focusItem` and falls back to date when there is no single categoryId.
+  itemPriceDesc: { sortBy: 'itemUnitPrice', sortOrder: 'desc' },
+  itemPriceAsc: { sortBy: 'itemUnitPrice', sortOrder: 'asc' },
+  itemQtyDesc: { sortBy: 'itemQuantity', sortOrder: 'desc' },
+  itemQtyAsc: { sortBy: 'itemQuantity', sortOrder: 'asc' },
 }
+
+const PRODUCT_SORTS = ['itemPriceDesc', 'itemPriceAsc', 'itemQtyDesc', 'itemQtyAsc']
+
+/** Exactly one catalogue code filtered → the table shows that line's specifics. */
+const focusCode = computed(() => filters.value.categoryId.length === 1 ? filters.value.categoryId[0]! : null)
+
+// Leaving focus mode (or picking several products) invalidates a product sort.
+watch(focusCode, (v) => {
+  if (!v && PRODUCT_SORTS.includes(sort.value)) sort.value = 'dateDesc'
+})
 
 const activeCount = computed(() => {
   const f = filters.value
@@ -192,6 +208,50 @@ const contracts = computed<ContractLike[]>(() => listRes.value?.data?.contracts 
 const pagination = computed(() => listRes.value?.data?.pagination ?? null)
 const stats = computed(() => statsRes.value?.data ?? null)
 
+// --- Per-item características (focus mode) ---------------------------------
+// In single-product mode the table shows the matched line's scraped detail
+// (Marca, Presentación, Nombre comercial). Those live only in the scraped
+// cache, keyed by compraId, so we batch-fetch them for the visible page:
+// cached rows come back instantly, misses fill over repeat views.
+type FeatureRec = { items: Array<{ nro: number, features: Array<{ name: string, value: string }>, variation?: string }>, object: string | null }
+const featuresByCompra = ref<Map<string, FeatureRec>>(new Map())
+
+const stripAccents = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+
+/**
+ * Value of the first feature matching `names`, tried IN ORDER — so
+ * `['nombre comercial','presentacion']` prefers the commercial name and only
+ * falls back to presentación. Accent/case-insensitive.
+ */
+function featureValue(compraId: string | null | undefined, nro: number | null | undefined, names: string[]): string | null {
+  if (!compraId || nro == null) return null
+  const rec = featuresByCompra.value.get(compraId)
+  const item = rec?.items.find(i => i.nro === nro)
+  if (!item) return null
+  for (const w of names.map(stripAccents)) {
+    const hit = item.features.find(f => stripAccents(f.name).includes(w))
+    if (hit) return hit.value
+  }
+  return null
+}
+
+async function loadFeatures() {
+  if (!focusCode.value) return
+  const rows = (contracts.value as any[])
+    .filter(c => c.compraId && c.ocid && !featuresByCompra.value.has(c.compraId))
+    .map(c => ({ compraId: c.compraId as string, ocid: c.ocid as string }))
+  if (!rows.length) return
+  try {
+    const res = await $fetch<any>('/api/contracts/item-features/batch', { method: 'POST', body: { items: rows.slice(0, 25) } })
+    const next = new Map(featuresByCompra.value)
+    for (const [id, v] of Object.entries<any>(res?.data ?? {})) if (v && !('pending' in v)) next.set(id, v)
+    featuresByCompra.value = next
+  }
+  catch { /* leave cells blank; a later view retries */ }
+}
+
+watch(contracts, () => { loadFeatures() }, { immediate: true })
+
 /**
  * The histogram plots money when we could total it, and contract counts
  * when we couldn't.
@@ -290,6 +350,28 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
 }
 
 /**
+ * Reorders lines so the ones matching the active search lead.
+ *
+ * A search for "bicarbonatada molar" is a search for the LINE that says so,
+ * but that line can sit ninth in a ten-item contract — off the bottom of the
+ * three-row preview, so the row that matched shows none of why it matched.
+ * Ranking by how many of the search tokens a line contains (stable within a
+ * tie) floats the reason for the match to the top, here and in the dialog.
+ */
+function orderByMatch<T extends { description?: string, code?: string, codeDescription?: string }>(rows: T[], phrase: string): T[] {
+  const tokens = phrase.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (!tokens.length) return rows
+  const score = (r: T) => {
+    const hay = `${r.description ?? ''} ${r.code ?? ''} ${r.codeDescription ?? ''}`.toLowerCase()
+    return tokens.reduce((n, tk) => n + (hay.includes(tk) ? 1 : 0), 0)
+  }
+  return rows
+    .map((r, i) => ({ r, i, s: score(r) }))
+    .sort((a, b) => (b.s - a.s) || (a.i - b.i))
+    .map(x => x.r)
+}
+
+/**
  * The lines actually bought, previewed under each row.
  *
  * A title alone reduces a three-line contract to one phrase, which is
@@ -298,7 +380,7 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
  * a list of names and a record you can read.
  */
 function itemPreview(c: ContractLike) {
-  const rows = contractItems(c)
+  const rows = orderByMatch(contractItems(c), filters.value.search)
   return {
     rows: rows.slice(0, PREVIEW_ITEMS),
     more: Math.max(0, rows.length - PREVIEW_ITEMS),
@@ -308,44 +390,41 @@ function itemPreview(c: ContractLike) {
 // ---- Full item list, in place ---------------------------------------
 const itemsDialog = ref(false)
 const itemsFor = ref<ContractLike | null>(null)
+const dialogQuery = ref('')
 
 function openItems(c: ContractLike) {
   itemsFor.value = c
+  dialogQuery.value = ''
   itemsDialog.value = true
 }
 
-const dialogItems = computed(() => (itemsFor.value ? contractItems(itemsFor.value) : []))
+// Every line of the open contract, search-matched first. A big contract
+// (some carry hundreds of lines) then gets its own in-dialog filter.
+const dialogAllItems = computed(() => (itemsFor.value ? orderByMatch(contractItems(itemsFor.value), filters.value.search) : []))
+const dialogItems = computed(() => {
+  const tokens = dialogQuery.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (!tokens.length) return dialogAllItems.value
+  return dialogAllItems.value.filter((r) => {
+    const hay = `${r.description} ${r.code} ${r.codeDescription} ${r.unitName}`.toLowerCase()
+    return tokens.every(tk => hay.includes(tk))
+  })
+})
 const dialogTitle = computed(() => (itemsFor.value ? rowTitle(itemsFor.value) : ''))
 
 /**
- * The sum of the lines shown, so the dialog answers "does this add up?"
- * without the reader doing the arithmetic. Only meaningful when every
- * line shares one currency — the source mixes them, and adding pesos to
- * dollars would be worse than showing nothing.
+ * The sum of the lines, so the dialog answers "does this add up?" without
+ * the reader doing the arithmetic. Computed over ALL lines (not the filtered
+ * view) so it stays the contract's real total while the reader searches
+ * within it. Only meaningful when every line shares one currency — the
+ * source mixes them, and adding pesos to dollars would be worse than nothing.
  */
 const dialogTotal = computed(() => {
-  const rows = dialogItems.value.filter(r => typeof r.total === 'number' && r.total > 0)
+  const rows = dialogAllItems.value.filter(r => typeof r.total === 'number' && r.total > 0)
   if (!rows.length) return null
   const currencies = new Set(rows.map(r => r.currency))
   if (currencies.size !== 1) return null
   return { amount: rows.reduce((s, r) => s + (r.total ?? 0), 0), currency: [...currencies][0] }
 })
-
-// ---- Table column configs (the one DataTable system) ---------------
-const explorerColumns = computed(() => [
-  { key: 'object', label: t('contracts.table.object'), primary: true },
-  { key: 'buyer', label: t('contracts.table.buyer') },
-  { key: 'supplier', label: t('contracts.table.supplier') },
-  { key: 'date', label: t('contracts.table.date'), mono: true },
-  { key: 'amount', label: t('contracts.table.amount'), align: 'end' as const },
-])
-
-const dialogColumns = computed(() => [
-  { key: 'description', label: t('common.description'), primary: true },
-  { key: 'quantity', label: t('common.quantity'), align: 'end' as const, mono: true },
-  { key: 'unitAmount', label: t('common.unitPrice'), align: 'end' as const },
-  { key: 'total', label: t('common.total'), align: 'end' as const },
-])
 
 useSeo(() => ({
   title: t('seo.contracts.title'),
@@ -527,6 +606,20 @@ useSeo(() => ({
               <option value="amountAsc">
                 {{ t('contracts.sort.amountAsc') }}
               </option>
+              <template v-if="focusCode">
+                <option value="itemPriceDesc">
+                  {{ t('contracts.sort.itemPriceDesc') }}
+                </option>
+                <option value="itemPriceAsc">
+                  {{ t('contracts.sort.itemPriceAsc') }}
+                </option>
+                <option value="itemQtyDesc">
+                  {{ t('contracts.sort.itemQtyDesc') }}
+                </option>
+                <option value="itemQtyAsc">
+                  {{ t('contracts.sort.itemQtyAsc') }}
+                </option>
+              </template>
             </select>
           </label>
         </div>
@@ -593,6 +686,26 @@ useSeo(() => ({
                   <th scope="col">
                     {{ t('contracts.table.object') }}
                   </th>
+                  <template v-if="focusCode">
+                    <th
+                      scope="col"
+                      class="ctable__c-prod"
+                    >
+                      {{ t('contracts.table.product') }}
+                    </th>
+                    <th
+                      scope="col"
+                      class="ctable__c-qty"
+                    >
+                      {{ t('contracts.table.qty') }}
+                    </th>
+                    <th
+                      scope="col"
+                      class="ctable__c-uprice"
+                    >
+                      {{ t('contracts.table.unitPrice') }}
+                    </th>
+                  </template>
                   <th
                     scope="col"
                     class="ctable__c-buyer"
@@ -698,6 +811,44 @@ useSeo(() => ({
                       </li>
                     </ul>
                   </td>
+                  <template v-if="focusCode">
+                    <td
+                      class="ctable__c-prod"
+                      :data-label="t('contracts.table.product')"
+                    >
+                      <span class="u-clamp-2">{{ c.focusItem?.description || '—' }}</span>
+                      <span
+                        v-if="featureValue(c.compraId, c.focusItem?.nro, ['marca'])"
+                        class="ctable__feat"
+                      >{{ t('contracts.table.brand') }}: {{ featureValue(c.compraId, c.focusItem?.nro, ['marca']) }}</span>
+                      <span
+                        v-if="featureValue(c.compraId, c.focusItem?.nro, ['nombre comercial', 'modelo', 'presentacion'])"
+                        class="ctable__feat"
+                      >{{ featureValue(c.compraId, c.focusItem?.nro, ['nombre comercial', 'modelo', 'presentacion']) }}</span>
+                    </td>
+                    <td
+                      class="ctable__c-qty u-mono"
+                      :data-label="t('contracts.table.qty')"
+                    >
+                      {{ c.focusItem?.quantity != null ? formatNumber(c.focusItem.quantity) : '—' }}
+                      <span
+                        v-if="c.focusItem?.unitName"
+                        class="ctable__unit"
+                      >{{ c.focusItem.unitName }}</span>
+                    </td>
+                    <td
+                      class="ctable__c-uprice"
+                      :data-label="t('contracts.table.unitPrice')"
+                    >
+                      <MoneyAmount
+                        :amount="c.focusItem?.unitAmount ?? null"
+                        :currency="c.focusItem?.currency"
+                        :rule="false"
+                        size="sm"
+                        compact
+                      />
+                    </td>
+                  </template>
                   <td
                     class="ctable__c-buyer"
                     :data-label="t('contracts.table.buyer')"
@@ -761,6 +912,27 @@ useSeo(() => ({
           </button>
         </div>
 
+        <!-- In-dialog search: a big contract can list hundreds of lines,
+             so let the reader narrow to the one they came for. -->
+        <div
+          v-if="dialogAllItems.length > 6"
+          class="idlg__filter"
+        >
+          <v-icon
+            size="16"
+            class="idlg__filtericon"
+          >
+            mdi-magnify
+          </v-icon>
+          <input
+            v-model="dialogQuery"
+            type="search"
+            class="idlg__filterinput"
+            :placeholder="t('contracts.itemFilter')"
+          >
+          <span class="idlg__filtercount u-mono">{{ dialogItems.length }}/{{ dialogAllItems.length }}</span>
+        </div>
+
         <div class="idlg__body u-scroll-x">
           <table class="itable dtable">
             <thead>
@@ -789,12 +961,28 @@ useSeo(() => ({
               </tr>
             </thead>
             <tbody>
+              <tr v-if="!dialogItems.length">
+                <td
+                  :colspan="4"
+                  class="idlg__empty u-muted"
+                >
+                  {{ t('contracts.itemFilterNoMatch') }}
+                </td>
+              </tr>
               <tr
                 v-for="(it, i) in dialogItems"
                 :key="i"
               >
                 <td data-primary>
-                  {{ it.description || '—' }}
+                  <span class="idlg__desc">{{ it.description || '—' }}</span>
+                  <!-- The catalogue code links to the product's full profile:
+                       who else buys it, from whom, at what price. -->
+                  <NuxtLink
+                    v-if="it.code"
+                    :to="localePath(`/products/${encodeURIComponent(it.code)}`)"
+                    class="idlg__code u-mono"
+                    :title="t('contract.reference.viewProduct')"
+                  >{{ t('products.codeLabel', { code: it.code }) }}</NuxtLink>
                 </td>
                 <td
                   class="itable__num"
@@ -1174,6 +1362,55 @@ useSeo(() => ({
 
 .idlg__x:hover { color: var(--text); background: var(--surface-sunken); }
 
+.idlg__filter {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: var(--s-3) var(--s-5) 0;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+}
+
+.idlg__filter:focus-within { border-color: var(--celeste-deep); }
+.idlg__filtericon { flex: none; color: var(--text-muted); }
+
+.idlg__filterinput {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  outline: none;
+}
+
+.idlg__filtercount {
+  flex: none;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.idlg__desc { display: block; }
+
+.idlg__code {
+  display: inline-block;
+  margin-top: 3px;
+  color: var(--celeste-deep);
+  font-size: var(--t-xs);
+  text-decoration: none;
+}
+
+.idlg__code:hover { text-decoration: underline; }
+
+.idlg__empty {
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+  font-size: var(--t-sm);
+}
+
 .idlg__body {
   flex: 1 1 auto;
   overflow-y: auto;
@@ -1286,6 +1523,22 @@ useSeo(() => ({
 
 .ctable td.ctable__c-amt,
 .ctable th.ctable__c-amt { text-align: right; }
+
+/* ---- Product-focus columns (single catalogue code filtered) ---- */
+.ctable__c-prod { max-width: 260px; }
+.ctable__feat {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 2px;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+.ctable__c-qty { white-space: nowrap; color: var(--text-muted); font-size: var(--t-xs); }
+.ctable__unit { margin-left: 0.4ch; color: var(--text-muted); }
+.ctable td.ctable__c-uprice,
+.ctable th.ctable__c-uprice { text-align: right; white-space: nowrap; }
 
 /* ---- States ---- */
 .state {

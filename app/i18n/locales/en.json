@@ -572,6 +572,7 @@
     "seeUnexplained": "See the worst unexplained ones",
     "seeProviders": "See flagged providers",
     "supplierFilter": "Provider",
+    "buyerFilter": "Buyer",
     "confidence": "Confidence",
     "empty": {
       "title": "No flags for these filters",
@@ -680,6 +681,8 @@
       "label": "Category"
     },
     "rubroUnknown": "No category",
+    "showMore": "show more (+{n})",
+    "showLess": "show less",
     "zCapped": "×1000+",
     "captiveOnly": "Captive only",
     "captiveHelp": "Captive: all of the provider's flags come from a single buyer.",
@@ -696,7 +699,7 @@
     },
     "patterns": {
       "title": "Patterns",
-      "note": "What repeats behind the flags."
+      "note": "What repeats behind the flags. Click any bar or pair to see those flags."
     },
     "panel": {
       "concentration": "Concentration by provider",

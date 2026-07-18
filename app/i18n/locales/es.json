@@ -572,6 +572,7 @@
     "seeUnexplained": "Ver las peores sin explicación",
     "seeProviders": "Ver proveedores señalados",
     "supplierFilter": "Proveedor",
+    "buyerFilter": "Comprador",
     "confidence": "Confianza",
     "empty": {
       "title": "Sin alertas para estos filtros",
@@ -680,6 +681,8 @@
       "label": "Rubro"
     },
     "rubroUnknown": "Sin rubro",
+    "showMore": "ver más (+{n})",
+    "showLess": "ver menos",
     "zCapped": "×1000+",
     "captiveOnly": "Solo cautivos",
     "captiveHelp": "Cautivo: todas las alertas del proveedor provienen de un único comprador.",
@@ -696,7 +699,7 @@
     },
     "patterns": {
       "title": "Patrones",
-      "note": "Lo que se repite detrás de las alertas."
+      "note": "Lo que se repite detrás de las alertas. Tocá cualquier barra o par para ver esas alertas."
     },
     "panel": {
       "concentration": "Concentración por proveedor",
