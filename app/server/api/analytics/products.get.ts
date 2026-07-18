@@ -40,6 +40,28 @@ export default defineEventHandler(async (event) => {
       filter.$or = [{ description: rx }, { canonicalName: rx }, { code: search }]
     }
 
+    // Resolve mode: turn a set of bare codes back into product docs so a UI that
+    // received codes via the URL (the contracts product filter) can label its
+    // chips. Bounded, exact, index-backed; short-circuits the list query.
+    const codesParam = typeof query.codes === 'string' ? query.codes.trim() : ''
+    if (codesParam) {
+      const codes = codesParam.split(',').map(c => c.trim()).filter(Boolean).slice(0, 100)
+      const docs = codes.length
+        ? await ProductAnalyticsModel.find({ code: { $in: codes } })
+            .select('code description canonicalName contractCount lineCount buyerCount supplierCount totalUYU currencies')
+            .maxTimeMS(8000)
+            .lean()
+        : []
+      return {
+        success: true,
+        data: {
+          products: docs,
+          pagination: { page: 1, limit: docs.length, total: docs.length, totalPages: 1 },
+          meta: { sort: 'codes', totalProducts: docs.length },
+        },
+      }
+    }
+
     // Rubro filter: a SICE node token (F/SF/C/SC) narrows to product docs whose
     // rubroPath sits under that node (prefix match on the numeric dotted path).
     const rubro = typeof query.rubro === 'string' ? query.rubro.trim() : ''
