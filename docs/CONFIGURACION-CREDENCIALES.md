@@ -26,7 +26,22 @@ Necesitás dos conjuntos de credenciales del mismo proyecto:
 - **Admin SDK** (secreto, lado servidor): verifica el token y crea la cookie de sesión.
 - **Web SDK** (público, lado navegador): maneja el login en el frontend.
 
-### 1.1 Crear el proyecto y la app web
+> ✅ **Método por archivos (el que ya está configurado).** En vez de variables de
+> entorno, el sistema también lee credenciales de dos archivos JSON (ambos ignorados
+> por git):
+> - **`firebase.json`** en la **raíz** del repo = el JSON del *service account*
+>   (Admin SDK, con la `private_key`). Lo lee `app/server/utils/firebase-admin.ts`,
+>   buscándolo desde el cwd hacia arriba.
+> - **`app/firebase.json`** = el objeto `firebaseConfig` de la app web (`apiKey`,
+>   `authDomain`, `projectId`, `appId`, …). Lo lee `nuxt.config.ts` al buildear.
+>
+> Con esos dos archivos presentes **no necesitás** las variables `FIREBASE_*` ni
+> `NUXT_PUBLIC_FIREBASE_*`. Si además definís las env, las env tienen prioridad.
+> ⚠️ Para producción, esos dos archivos tienen que estar presentes en el servidor
+> (no se commitean): el built server busca `firebase.json` desde su directorio de
+> trabajo, y `app/firebase.json` queda horneado en el build.
+
+### 1.1 Crear el proyecto y la app web (si arrancás de cero)
 
 1. Entrá a **https://console.firebase.google.com** → **Agregar proyecto** (o "Add project").
    Ponele un nombre (ej. `proveedor-uy`). Podés desactivar Google Analytics.

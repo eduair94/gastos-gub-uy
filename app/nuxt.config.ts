@@ -1,8 +1,33 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 // The public origin. Needed by sitemap/robots and to emit absolute
 // canonical + og:url tags, which must never be relative.
 const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://gastos.gub.uy'
+
+// Firebase Web SDK config (public, safe to expose). Prefers NUXT_PUBLIC_FIREBASE_*
+// env vars; otherwise reads app/firebase.json (present at build time, gitignored).
+const firebaseWeb = (() => {
+  const env = {
+    apiKey: process.env.NUXT_PUBLIC_FIREBASE_API_KEY || '',
+    authDomain: process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+    projectId: process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+    appId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID || '',
+  }
+  if (env.apiKey) return env
+  try {
+    const p = resolve(process.cwd(), 'firebase.json')
+    if (existsSync(p)) {
+      const j = JSON.parse(readFileSync(p, 'utf8'))
+      if (j.apiKey) return { apiKey: j.apiKey, authDomain: j.authDomain || '', projectId: j.projectId || '', appId: j.appId || '' }
+    }
+  }
+  catch {
+    // fall through to env (possibly empty → auth surface stays hidden)
+  }
+  return env
+})()
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
@@ -114,12 +139,8 @@ export default defineNuxtConfig({
       // source ever moves, this is the only place to change.
       sourceBase: 'https://www.comprasestatales.gub.uy/ocds/release',
       // Firebase Web SDK config — safe to expose (client auth needs it).
-      firebase: {
-        apiKey: process.env.NUXT_PUBLIC_FIREBASE_API_KEY || '',
-        authDomain: process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-        projectId: process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-        appId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID || '',
-      },
+      // Loaded from env or app/firebase.json (see firebaseWeb above).
+      firebase: firebaseWeb,
     },
   },
 

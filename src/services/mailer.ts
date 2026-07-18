@@ -68,7 +68,9 @@ let cached: Mailer | null = null;
 export function createMailer(): Mailer {
   if (cached) return cached;
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.ALERTS_FROM_EMAIL || "alertas@comprasabiertas.uy";
+  // Resend's shared onboarding sender works without domain verification (delivers
+  // only to the account owner). Set ALERTS_FROM_EMAIL to a verified domain for prod.
+  const from = process.env.ALERTS_FROM_EMAIL || "onboarding@resend.dev";
   const replyTo = process.env.ALERTS_REPLY_TO || undefined;
   cached = apiKey ? new ResendMailer(apiKey, from, replyTo) : new NoopMailer();
   return cached;
