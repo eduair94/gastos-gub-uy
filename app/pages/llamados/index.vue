@@ -52,7 +52,11 @@ const createAlertTo = computed(() => (user.value ? localePath('/app/alertas') : 
     </header>
 
     <div class="llamados__toolbar">
-      <form class="llamados__search" role="search" @submit.prevent="submitSearch">
+      <form
+        class="llamados__search"
+        role="search"
+        @submit.prevent="submitSearch"
+      >
         <v-text-field
           v-model="q"
           :placeholder="t('llamados.searchPlaceholder')"
@@ -71,32 +75,68 @@ const createAlertTo = computed(() => (user.value ? localePath('/app/alertas') : 
         density="comfortable"
         class="llamados__sort"
       />
-      <NuxtLink :to="createAlertTo" class="llamados__cta">
-        <v-icon size="18">mdi-bell-plus-outline</v-icon>
+      <NuxtLink
+        :to="createAlertTo"
+        class="llamados__cta"
+      >
+        <v-icon size="18">
+          mdi-bell-plus-outline
+        </v-icon>
         {{ t('llamados.createAlertCta') }}
       </NuxtLink>
     </div>
 
-    <p v-if="pagination?.total != null" class="llamados__count u-mono u-muted">
+    <p
+      v-if="pagination?.total != null"
+      class="llamados__count u-mono u-muted"
+    >
       {{ t('llamados.resultsCount', { n: pagination.total }) }}
     </p>
 
-    <div v-if="pending" class="llamados__grid">
-      <div v-for="i in 6" :key="i" class="occard panel llamados__skel" />
+    <div
+      v-if="pending"
+      class="llamados__grid"
+    >
+      <div
+        v-for="i in 6"
+        :key="i"
+        class="occard panel llamados__skel"
+      />
     </div>
-    <div v-else-if="calls.length" class="llamados__grid">
-      <OpenCallCard v-for="c in calls" :key="(c.compraId as string)" :call="(c as any)" />
+    <div
+      v-else-if="calls.length"
+      class="llamados__grid"
+    >
+      <OpenCallCard
+        v-for="c in calls"
+        :key="(c.compraId as string)"
+        :call="(c as any)"
+      />
     </div>
-    <div v-else class="llamados__empty panel">
+    <div
+      v-else
+      class="llamados__empty panel"
+    >
       {{ t('llamados.empty') }}
     </div>
 
-    <div v-if="pagination && (page > 1 || pagination.hasMore)" class="llamados__pager">
-      <v-btn variant="outlined" :disabled="page <= 1" @click="page = Math.max(1, page - 1)">
+    <div
+      v-if="pagination && (page > 1 || pagination.hasMore)"
+      class="llamados__pager"
+    >
+      <v-btn
+        variant="outlined"
+        :disabled="page <= 1"
+        @click="page = Math.max(1, page - 1)"
+      >
         <v-icon>mdi-chevron-left</v-icon>
       </v-btn>
       <span class="u-mono">{{ page }}</span>
-      <v-btn variant="outlined" :disabled="!pagination.hasMore" @click="page = page + 1">
+      <v-btn
+        variant="outlined"
+        :disabled="!pagination.hasMore"
+        @click="page = page + 1"
+      >
         <v-icon>mdi-chevron-right</v-icon>
       </v-btn>
     </div>

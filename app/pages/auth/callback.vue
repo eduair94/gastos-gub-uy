@@ -34,7 +34,10 @@ onMounted(async () => {
         <p class="authcard__err">
           {{ t('auth.callbackError') }}
         </p>
-        <NuxtLink :to="localePath('/login')" class="authcard__link">
+        <NuxtLink
+          :to="localePath('/login')"
+          class="authcard__link"
+        >
           {{ t('auth.signIn') }}
         </NuxtLink>
       </template>

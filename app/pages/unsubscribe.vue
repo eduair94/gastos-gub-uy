@@ -29,16 +29,28 @@ onMounted(async () => {
       <h1 class="authcard__h">
         {{ t('unsub.title') }}
       </h1>
-      <p v-if="state === 'processing'" class="u-muted">
+      <p
+        v-if="state === 'processing'"
+        class="u-muted"
+      >
         {{ t('unsub.processing') }}
       </p>
-      <p v-else-if="state === 'done'" class="authcard__ok">
+      <p
+        v-else-if="state === 'done'"
+        class="authcard__ok"
+      >
         {{ t('unsub.done') }}
       </p>
-      <p v-else class="authcard__err">
+      <p
+        v-else
+        class="authcard__err"
+      >
         {{ t('unsub.error') }}
       </p>
-      <NuxtLink :to="localePath('/')" class="authcard__link">
+      <NuxtLink
+        :to="localePath('/')"
+        class="authcard__link"
+      >
         {{ t('unsub.backHome') }}
       </NuxtLink>
     </div>

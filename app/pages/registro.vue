@@ -53,15 +53,36 @@ async function doGoogle() {
         {{ t('auth.subtitle') }}
       </p>
 
-      <form class="authcard__form" @submit.prevent="doRegister">
-        <v-text-field v-model="email" :label="t('auth.email')" type="email" autocomplete="email" />
-        <v-text-field v-model="password" :label="t('auth.password')" type="password" autocomplete="new-password" />
+      <form
+        class="authcard__form"
+        @submit.prevent="doRegister"
+      >
+        <v-text-field
+          v-model="email"
+          :label="t('auth.email')"
+          type="email"
+          autocomplete="email"
+        />
+        <v-text-field
+          v-model="password"
+          :label="t('auth.password')"
+          type="password"
+          autocomplete="new-password"
+        />
 
-        <p v-if="error" class="authcard__err">
+        <p
+          v-if="error"
+          class="authcard__err"
+        >
           {{ error }}
         </p>
 
-        <v-btn color="primary" type="submit" :loading="loading" block>
+        <v-btn
+          color="primary"
+          type="submit"
+          :loading="loading"
+          block
+        >
           {{ t('auth.signUp') }}
         </v-btn>
       </form>
@@ -70,7 +91,13 @@ async function doGoogle() {
         <span>{{ t('auth.or') }}</span>
       </div>
 
-      <v-btn variant="outlined" block prepend-icon="mdi-google" :disabled="loading" @click="doGoogle">
+      <v-btn
+        variant="outlined"
+        block
+        prepend-icon="mdi-google"
+        :disabled="loading"
+        @click="doGoogle"
+      >
         {{ t('auth.withGoogle') }}
       </v-btn>
 

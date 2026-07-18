@@ -24,7 +24,10 @@ const upcoming = computed(() => (calData.value?.data?.items ?? []).slice(0, 6))
       <h1 class="u-hero">
         {{ t('dashboard.welcome') }}{{ user?.displayName ? `, ${user.displayName}` : '' }}
       </h1>
-      <p v-if="user && !user.emailVerified" class="dash__verify">
+      <p
+        v-if="user && !user.emailVerified"
+        class="dash__verify"
+      >
         {{ t('auth.verifyNotice') }}
       </p>
     </header>
@@ -35,24 +38,46 @@ const upcoming = computed(() => (calData.value?.data?.items ?? []).slice(0, 6))
           <h2 class="u-eyebrow">
             {{ t('dashboard.myAlerts') }}
           </h2>
-          <NuxtLink :to="localePath('/app/alertas')" class="dash__link">
+          <NuxtLink
+            :to="localePath('/app/alertas')"
+            class="dash__link"
+          >
             {{ t('dashboard.manageAlerts') }}
           </NuxtLink>
         </div>
-        <p v-if="watches.length" class="dash__stat">
+        <p
+          v-if="watches.length"
+          class="dash__stat"
+        >
           {{ t('dashboard.activeAlerts', { n: activeCount }) }}
         </p>
-        <ul v-if="watches.length" class="dash__watches">
-          <li v-for="w in watches.slice(0, 5)" :key="w._id" class="dash__watch">
-            <v-icon size="16" :color="w.active ? 'success' : undefined">
+        <ul
+          v-if="watches.length"
+          class="dash__watches"
+        >
+          <li
+            v-for="w in watches.slice(0, 5)"
+            :key="w._id"
+            class="dash__watch"
+          >
+            <v-icon
+              size="16"
+              :color="w.active ? 'success' : undefined"
+            >
               {{ w.active ? 'mdi-bell' : 'mdi-bell-off-outline' }}
             </v-icon>
             <span class="u-truncate">{{ w.name }}</span>
           </li>
         </ul>
-        <div v-else class="dash__empty">
+        <div
+          v-else
+          class="dash__empty"
+        >
           <p>{{ t('dashboard.noAlerts') }}</p>
-          <NuxtLink :to="localePath('/app/alertas')" class="dash__cta">
+          <NuxtLink
+            :to="localePath('/app/alertas')"
+            class="dash__cta"
+          >
             {{ t('alerts.new') }}
           </NuxtLink>
         </div>
@@ -63,26 +88,50 @@ const upcoming = computed(() => (calData.value?.data?.items ?? []).slice(0, 6))
           <h2 class="u-eyebrow">
             {{ t('dashboard.upcoming') }}
           </h2>
-          <NuxtLink :to="localePath('/app/calendario')" class="dash__link">
+          <NuxtLink
+            :to="localePath('/app/calendario')"
+            class="dash__link"
+          >
             {{ t('dashboard.viewCalendar') }}
           </NuxtLink>
         </div>
-        <ul v-if="upcoming.length" class="dash__upcoming">
-          <li v-for="(c, i) in upcoming" :key="`u-${i}`" class="dash__up">
-            <NuxtLink :to="localePath(`/llamados/${(c as any).compraId}`)" class="dash__uplink">
+        <ul
+          v-if="upcoming.length"
+          class="dash__upcoming"
+        >
+          <li
+            v-for="(c, i) in upcoming"
+            :key="`u-${i}`"
+            class="dash__up"
+          >
+            <NuxtLink
+              :to="localePath(`/llamados/${(c as any).compraId}`)"
+              class="dash__uplink"
+            >
               <span class="u-truncate">{{ (c as any).title }}</span>
-              <span v-if="(c as any).endDate" class="u-mono u-muted dash__update">{{ formatDate((c as any).endDate) }}</span>
+              <span
+                v-if="(c as any).endDate"
+                class="u-mono u-muted dash__update"
+              >{{ formatDate((c as any).endDate) }}</span>
             </NuxtLink>
           </li>
         </ul>
-        <p v-else class="u-muted dash__nomuted">
+        <p
+          v-else
+          class="u-muted dash__nomuted"
+        >
           {{ t('dashboard.noUpcoming') }}
         </p>
       </section>
     </div>
 
-    <NuxtLink :to="localePath('/llamados')" class="dash__browse">
-      <v-icon size="18">mdi-bullhorn-outline</v-icon> {{ t('dashboard.browseLlamados') }}
+    <NuxtLink
+      :to="localePath('/llamados')"
+      class="dash__browse"
+    >
+      <v-icon size="18">
+        mdi-bullhorn-outline
+      </v-icon> {{ t('dashboard.browseLlamados') }}
     </NuxtLink>
   </div>
 </template>

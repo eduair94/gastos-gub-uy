@@ -93,39 +93,73 @@ async function setReminder(days: number) {
 
 <template>
   <div class="u-container calldetail">
-    <NuxtLink :to="localePath('/llamados')" class="calldetail__back">
-      <v-icon size="16">mdi-arrow-left</v-icon> {{ t('nav.llamados') }}
+    <NuxtLink
+      :to="localePath('/llamados')"
+      class="calldetail__back"
+    >
+      <v-icon size="16">
+        mdi-arrow-left
+      </v-icon> {{ t('nav.llamados') }}
     </NuxtLink>
 
     <header class="calldetail__head panel">
       <div class="calldetail__meta">
         <span class="tag tag--activo">{{ statusLabel }}</span>
-        <span v-if="call.procurementMethodDetails" class="u-mono calldetail__method">{{ call.procurementMethodDetails }}</span>
+        <span
+          v-if="call.procurementMethodDetails"
+          class="u-mono calldetail__method"
+        >{{ call.procurementMethodDetails }}</span>
       </div>
       <h1 class="calldetail__title">
         {{ call.title }}
       </h1>
-      <p v-if="call.buyer?.name" class="calldetail__buyer">
+      <p
+        v-if="call.buyer?.name"
+        class="calldetail__buyer"
+      >
         {{ call.buyer.name }}
       </p>
       <div class="calldetail__facts">
-        <span v-if="call.tenderPeriod?.endDate" class="calldetail__fact">
+        <span
+          v-if="call.tenderPeriod?.endDate"
+          class="calldetail__fact"
+        >
           <v-icon size="16">mdi-calendar-clock</v-icon>
           {{ t('llamados.closes') }} <strong>{{ formatDateTime(call.tenderPeriod.endDate) }}</strong>
         </span>
-        <span v-if="call.publishDate" class="calldetail__fact u-muted">
+        <span
+          v-if="call.publishDate"
+          class="calldetail__fact u-muted"
+        >
           {{ t('llamados.published') }} {{ formatDate(call.publishDate) }}
         </span>
       </div>
 
       <div class="calldetail__actions">
-        <a v-if="call.sourceUrl" :href="call.sourceUrl" target="_blank" rel="noopener" class="calldetail__source">
+        <a
+          v-if="call.sourceUrl"
+          :href="call.sourceUrl"
+          target="_blank"
+          rel="noopener"
+          class="calldetail__source"
+        >
           <v-icon size="16">mdi-open-in-new</v-icon> {{ t('llamados.source') }}
         </a>
 
         <template v-if="user">
-          <v-btn :variant="saved ? 'flat' : 'outlined'" :color="saved ? 'success' : undefined" :loading="savingState" size="small" @click="toggleSave">
-            <v-icon start size="16">{{ saved ? 'mdi-bookmark' : 'mdi-bookmark-outline' }}</v-icon>
+          <v-btn
+            :variant="saved ? 'flat' : 'outlined'"
+            :color="saved ? 'success' : undefined"
+            :loading="savingState"
+            size="small"
+            @click="toggleSave"
+          >
+            <v-icon
+              start
+              size="16"
+            >
+              {{ saved ? 'mdi-bookmark' : 'mdi-bookmark-outline' }}
+            </v-icon>
             {{ saved ? t('llamados.saved') : t('llamados.save') }}
           </v-btn>
           <v-select
@@ -139,7 +173,11 @@ async function setReminder(days: number) {
             @update:model-value="setReminder"
           />
         </template>
-        <NuxtLink v-else :to="localePath('/login')" class="calldetail__loginhint u-muted">
+        <NuxtLink
+          v-else
+          :to="localePath('/login')"
+          class="calldetail__loginhint u-muted"
+        >
           {{ t('llamados.loginToSave') }}
         </NuxtLink>
       </div>
@@ -147,7 +185,10 @@ async function setReminder(days: number) {
 
     <div class="calldetail__grid">
       <div class="calldetail__main">
-        <section v-if="call.description" class="panel calldetail__section">
+        <section
+          v-if="call.description"
+          class="panel calldetail__section"
+        >
           <h2 class="u-eyebrow">
             {{ t('llamados.object') }}
           </h2>
@@ -156,14 +197,24 @@ async function setReminder(days: number) {
           </p>
         </section>
 
-        <section v-if="call.items?.length" class="panel calldetail__section">
+        <section
+          v-if="call.items?.length"
+          class="panel calldetail__section"
+        >
           <h2 class="u-eyebrow">
             {{ t('llamados.items') }}
           </h2>
           <ul class="calldetail__items">
-            <li v-for="(it, i) in call.items" :key="`it-${i}`" class="calldetail__item">
+            <li
+              v-for="(it, i) in call.items"
+              :key="`it-${i}`"
+              class="calldetail__item"
+            >
               <span class="calldetail__itemdesc">{{ it.description }}</span>
-              <span v-if="it.quantity" class="u-mono u-muted">{{ formatNumber(it.quantity) }} {{ it.unit?.name }}</span>
+              <span
+                v-if="it.quantity"
+                class="u-mono u-muted"
+              >{{ formatNumber(it.quantity) }} {{ it.unit?.name }}</span>
             </li>
           </ul>
         </section>
@@ -172,24 +223,45 @@ async function setReminder(days: number) {
           <PliegoSummary :compra-id="compraId" />
         </ClientOnly>
 
-        <section v-if="benchmarks.length" class="panel calldetail__section">
+        <section
+          v-if="benchmarks.length"
+          class="panel calldetail__section"
+        >
           <h2 class="u-eyebrow">
             {{ t('llamados.benchmarksTitle') }}
           </h2>
           <p class="calldetail__benchlead u-muted">
             {{ t('llamados.benchmarksLead') }}
           </p>
-          <div v-for="(b, i) in benchmarks" :key="`b-${i}`" class="calldetail__bench">
+          <div
+            v-for="(b, i) in benchmarks"
+            :key="`b-${i}`"
+            class="calldetail__bench"
+          >
             <div class="calldetail__benchhead u-splitrow">
               <span class="u-truncate">{{ (b as any).label || (b as any).classificationId }}</span>
-              <span v-if="(b as any).product" class="u-mono u-muted">
+              <span
+                v-if="(b as any).product"
+                class="u-mono u-muted"
+              >
                 {{ formatNumber((b as any).product.contractCount) }} {{ t('llamados.benchContracts') }}
               </span>
             </div>
-            <div v-if="(b as any).priceBaselines?.length" class="calldetail__baselines">
-              <div v-for="(pb, j) in (b as any).priceBaselines" :key="`pb-${j}`" class="calldetail__baseline">
+            <div
+              v-if="(b as any).priceBaselines?.length"
+              class="calldetail__baselines"
+            >
+              <div
+                v-for="(pb, j) in (b as any).priceBaselines"
+                :key="`pb-${j}`"
+                class="calldetail__baseline"
+              >
                 <span class="u-mono u-muted">{{ t('llamados.benchMedian') }} ({{ pb.unitName }})</span>
-                <MoneyAmount :amount="pb.p50" :currency="pb.currency" :rule="false" />
+                <MoneyAmount
+                  :amount="pb.p50"
+                  :currency="pb.currency"
+                  :rule="false"
+                />
               </div>
             </div>
           </div>
@@ -197,13 +269,24 @@ async function setReminder(days: number) {
       </div>
 
       <aside class="calldetail__aside">
-        <section v-if="call.documents?.length" class="panel calldetail__section">
+        <section
+          v-if="call.documents?.length"
+          class="panel calldetail__section"
+        >
           <h2 class="u-eyebrow">
             {{ t('llamados.documents') }}
           </h2>
           <ul class="calldetail__docs">
-            <li v-for="(d, i) in call.documents" :key="`d-${i}`">
-              <a :href="d.url" target="_blank" rel="noopener" class="calldetail__doc">
+            <li
+              v-for="(d, i) in call.documents"
+              :key="`d-${i}`"
+            >
+              <a
+                :href="d.url"
+                target="_blank"
+                rel="noopener"
+                class="calldetail__doc"
+              >
                 <v-icon size="16">mdi-file-document-outline</v-icon>
                 <span class="u-truncate">{{ d.title || t('llamados.openDocument') }}</span>
               </a>

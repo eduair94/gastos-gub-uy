@@ -59,7 +59,10 @@ async function onLogout() {
       <div class="cuenta__row">
         <span class="cuenta__label">{{ t('accountPage.email') }}</span>
         <span class="u-mono">{{ user?.email }}</span>
-        <span class="tag" :class="user?.emailVerified ? 'tag--activo' : 'tag--alerta'">
+        <span
+          class="tag"
+          :class="user?.emailVerified ? 'tag--activo' : 'tag--alerta'"
+        >
           {{ user?.emailVerified ? t('accountPage.verified') : t('accountPage.notVerified') }}
         </span>
       </div>
@@ -69,7 +72,12 @@ async function onLogout() {
       <h2 class="u-eyebrow">
         {{ t('accountPage.notifications') }}
       </h2>
-      <v-switch v-model="form.enabled" :label="t('accountPage.enabled')" color="success" hide-details />
+      <v-switch
+        v-model="form.enabled"
+        :label="t('accountPage.enabled')"
+        color="success"
+        hide-details
+      />
       <v-select
         v-model="form.frequency"
         :items="[{ title: t('accountPage.instant'), value: 'instant' }, { title: t('accountPage.daily'), value: 'daily' }]"
@@ -87,15 +95,27 @@ async function onLogout() {
       />
 
       <div class="cuenta__actions">
-        <v-btn color="primary" :loading="saving" @click="save">
+        <v-btn
+          color="primary"
+          :loading="saving"
+          @click="save"
+        >
           {{ t('accountPage.save') }}
         </v-btn>
-        <span v-if="savedOk" class="cuenta__ok">{{ t('accountPage.saved') }}</span>
+        <span
+          v-if="savedOk"
+          class="cuenta__ok"
+        >{{ t('accountPage.saved') }}</span>
       </div>
     </section>
 
     <section class="panel cuenta__section">
-      <v-btn variant="outlined" color="error" prepend-icon="mdi-logout" @click="onLogout">
+      <v-btn
+        variant="outlined"
+        color="error"
+        prepend-icon="mdi-logout"
+        @click="onLogout"
+      >
         {{ t('accountPage.logout') }}
       </v-btn>
     </section>

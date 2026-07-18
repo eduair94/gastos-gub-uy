@@ -185,14 +185,20 @@ useSeo(() => ({
 <template>
   <div class="u-container page">
     <!-- ===== Not found ===== -->
-    <div v-if="notFound" class="state">
+    <div
+      v-if="notFound"
+      class="state"
+    >
       <h1 class="state__t">
         {{ t('suppliers.detail.notFound.title') }}
       </h1>
       <p class="state__b">
         {{ t('suppliers.detail.notFound.body') }}
       </p>
-      <NuxtLink :to="localePath('/suppliers')" class="state__a">
+      <NuxtLink
+        :to="localePath('/suppliers')"
+        class="state__a"
+      >
         {{ t('suppliers.detail.notFound.action') }}
       </NuxtLink>
     </div>
@@ -210,7 +216,11 @@ useSeo(() => ({
           </p>
         </div>
         <div class="head__money">
-          <MoneyAmount :amount="supplier.totalValue" size="xl" align="start" />
+          <MoneyAmount
+            :amount="supplier.totalValue"
+            size="xl"
+            align="start"
+          />
           <p class="head__moneyl">
             {{ t('suppliers.detail.totalEarned') }}
           </p>
@@ -240,7 +250,12 @@ useSeo(() => ({
             {{ t('suppliers.detail.avgContract') }}
           </dt>
           <dd class="stats__v">
-            <MoneyAmount :amount="supplier.avgContractValue" compact size="sm" align="start" />
+            <MoneyAmount
+              :amount="supplier.avgContractValue"
+              compact
+              size="sm"
+              align="start"
+            />
           </dd>
         </div>
         <div class="stats__i">
@@ -271,18 +286,27 @@ useSeo(() => ({
 
       <!-- ===== Revenue by year =====
            Guarded: the bars are gold, so they may only ever carry money. -->
-      <section v-if="byYear.length > 1" class="block">
+      <section
+        v-if="byYear.length > 1"
+        class="block"
+      >
         <div class="block__head">
           <h2>{{ t('suppliers.detail.byYearTitle') }}</h2>
         </div>
         <div class="panel panel--pad">
-          <YearBars :data="byYear" :height="150" />
+          <YearBars
+            :data="byYear"
+            :height="150"
+          />
         </div>
       </section>
 
       <div class="cols">
         <!-- ===== Who buys from them ===== -->
-        <section v-if="byBuyer.length" class="block">
+        <section
+          v-if="byBuyer.length"
+          class="block"
+        >
           <div class="block__head">
             <h2>{{ t('suppliers.detail.byBuyerTitle') }}</h2>
           </div>
@@ -290,11 +314,19 @@ useSeo(() => ({
             {{ t('suppliers.detail.byBuyerHelp') }}
           </p>
           <ol class="rank">
-            <li v-for="b in byBuyer" :key="b.name" class="rank__row">
+            <li
+              v-for="b in byBuyer"
+              :key="b.name"
+              class="rank__row"
+            >
               <div class="rank__link">
                 <span class="rank__name u-truncate">{{ b.name }}</span>
                 <span class="rank__meta">{{ formatNumber(b.count) }} {{ t('common.contracts').toLowerCase() }}</span>
-                <MoneyAmount :amount="b.value" compact size="sm" />
+                <MoneyAmount
+                  :amount="b.value"
+                  compact
+                  size="sm"
+                />
               </div>
             </li>
           </ol>
@@ -303,7 +335,10 @@ useSeo(() => ({
         <!-- ===== Client concentration =====
              A real transparency signal: a supplier living off one agency is
              a different kind of business than one selling across the state. -->
-        <section v-if="concentration" class="block">
+        <section
+          v-if="concentration"
+          class="block"
+        >
           <div class="block__head">
             <h2>{{ t('suppliers.detail.concentrationTitle') }}</h2>
           </div>
@@ -322,16 +357,27 @@ useSeo(() => ({
       </div>
 
       <!-- ===== What they sell ===== -->
-      <section v-if="categories.length" class="block">
+      <section
+        v-if="categories.length"
+        class="block"
+      >
         <div class="block__head">
           <h2>{{ t('suppliers.detail.categoriesTitle') }}</h2>
         </div>
         <ol class="rank">
-          <li v-for="c in categories" :key="c.category" class="rank__row">
+          <li
+            v-for="c in categories"
+            :key="c.category"
+            class="rank__row"
+          >
             <div class="rank__link">
               <span class="rank__name u-truncate">{{ c.category }}</span>
               <span class="rank__meta">{{ formatNumber(c.contractCount) }} {{ t('common.contracts').toLowerCase() }}</span>
-              <MoneyAmount :amount="c.totalAmount" compact size="sm" />
+              <MoneyAmount
+                :amount="c.totalAmount"
+                compact
+                size="sm"
+              />
             </div>
           </li>
         </ol>
@@ -350,7 +396,10 @@ useSeo(() => ({
           </NuxtLink>
         </div>
 
-        <div v-if="!contracts.length" class="state state--sm">
+        <div
+          v-if="!contracts.length"
+          class="state state--sm"
+        >
           <p class="state__b">
             {{ t('contracts.empty.body') }}
           </p>
@@ -363,28 +412,53 @@ useSeo(() => ({
                 <th scope="col">
                   {{ t('contracts.table.object') }}
                 </th>
-                <th scope="col" class="ctable__c-buyer">
+                <th
+                  scope="col"
+                  class="ctable__c-buyer"
+                >
                   {{ t('contracts.table.buyer') }}
                 </th>
-                <th scope="col" class="ctable__c-date">
+                <th
+                  scope="col"
+                  class="ctable__c-date"
+                >
                   {{ t('contracts.table.date') }}
                 </th>
-                <th scope="col" class="ctable__c-amt">
+                <th
+                  scope="col"
+                  class="ctable__c-amt"
+                >
                   {{ t('contracts.table.amount') }}
                 </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="c in contracts" :key="c.id" class="ctable__row">
-                <td class="ctable__obj" data-primary>
-                  <NuxtLink :to="localePath(`/contracts/${c.id}`)" class="ctable__link">
+              <tr
+                v-for="c in contracts"
+                :key="c.id"
+                class="ctable__row"
+              >
+                <td
+                  class="ctable__obj"
+                  data-primary
+                >
+                  <NuxtLink
+                    :to="localePath(`/contracts/${c.id}`)"
+                    class="ctable__link"
+                  >
                     {{ contractTitle(c) || t('common.contract') }}
                   </NuxtLink>
-                  <span v-if="c.tender?.procurementMethodDetails" class="ctable__method">
+                  <span
+                    v-if="c.tender?.procurementMethodDetails"
+                    class="ctable__method"
+                  >
                     {{ c.tender.procurementMethodDetails }}
                   </span>
                 </td>
-                <td class="ctable__c-buyer" :data-label="t('contracts.table.buyer')">
+                <td
+                  class="ctable__c-buyer"
+                  :data-label="t('contracts.table.buyer')"
+                >
                   <NuxtLink
                     v-if="c.buyer?.id"
                     :to="localePath(`/buyers/${encodeURIComponent(c.buyer.id)}`)"
@@ -392,27 +466,46 @@ useSeo(() => ({
                   >
                     {{ c.buyer.name }}
                   </NuxtLink>
-                  <span v-else class="u-clamp-2">{{ c.buyer?.name || '—' }}</span>
+                  <span
+                    v-else
+                    class="u-clamp-2"
+                  >{{ c.buyer?.name || '—' }}</span>
                 </td>
-                <td class="ctable__c-date u-mono" :data-label="t('contracts.table.date')">
+                <td
+                  class="ctable__c-date u-mono"
+                  :data-label="t('contracts.table.date')"
+                >
                   {{ formatDate(contractDate(c)) }}
                 </td>
-                <td class="ctable__c-amt" :data-label="t('contracts.table.amount')">
-                  <MoneyAmount :amount="contractAmount(c)" :currency="contractCurrency(c)" compact />
+                <td
+                  class="ctable__c-amt"
+                  :data-label="t('contracts.table.amount')"
+                >
+                  <MoneyAmount
+                    :amount="contractAmount(c)"
+                    :currency="contractCurrency(c)"
+                    compact
+                  />
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <p v-if="contractTotal && contractTotal > contracts.length" class="block__more">
+        <p
+          v-if="contractTotal && contractTotal > contracts.length"
+          class="block__more"
+        >
           {{ t('suppliers.resultsSummary', { count: formatNumber(contractTotal) }) }}
         </p>
       </section>
 
       <!-- ===== Source + honesty about the gaps ===== -->
       <footer class="source">
-        <p v-if="!hasBreakdown" class="source__gap">
+        <p
+          v-if="!hasBreakdown"
+          class="source__gap"
+        >
           {{ t('suppliers.detail.dataNote') }}
         </p>
         <p class="source__note">

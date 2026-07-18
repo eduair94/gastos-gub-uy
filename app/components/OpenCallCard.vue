@@ -43,13 +43,22 @@ const endDate = computed(() => props.call.tenderPeriod?.endDate ?? null)
     class="occard panel"
   >
     <div class="occard__top">
-      <span class="tag" :class="statusClass">{{ t(`llamados.${statusKey}`) }}</span>
-      <span v-if="call.procurementMethodDetails" class="occard__method u-mono">{{ call.procurementMethodDetails }}</span>
+      <span
+        class="tag"
+        :class="statusClass"
+      >{{ t(`llamados.${statusKey}`) }}</span>
+      <span
+        v-if="call.procurementMethodDetails"
+        class="occard__method u-mono"
+      >{{ call.procurementMethodDetails }}</span>
     </div>
     <h3 class="occard__title u-clamp-2">
       {{ call.title }}
     </h3>
-    <p v-if="call.buyer?.name" class="occard__buyer u-truncate">
+    <p
+      v-if="call.buyer?.name"
+      class="occard__buyer u-truncate"
+    >
       {{ call.buyer.name }}
     </p>
     <div class="occard__foot">

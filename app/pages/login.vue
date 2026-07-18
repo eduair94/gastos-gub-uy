@@ -75,19 +75,43 @@ async function doMagic() {
         {{ t('auth.subtitle') }}
       </p>
 
-      <p v-if="magicSent" class="authcard__ok">
+      <p
+        v-if="magicSent"
+        class="authcard__ok"
+      >
         {{ t('auth.magicSent', { email }) }}
       </p>
 
-      <form class="authcard__form" @submit.prevent="doLogin">
-        <v-text-field v-model="email" :label="t('auth.email')" type="email" autocomplete="email" />
-        <v-text-field v-model="password" :label="t('auth.password')" type="password" autocomplete="current-password" />
+      <form
+        class="authcard__form"
+        @submit.prevent="doLogin"
+      >
+        <v-text-field
+          v-model="email"
+          :label="t('auth.email')"
+          type="email"
+          autocomplete="email"
+        />
+        <v-text-field
+          v-model="password"
+          :label="t('auth.password')"
+          type="password"
+          autocomplete="current-password"
+        />
 
-        <p v-if="error" class="authcard__err">
+        <p
+          v-if="error"
+          class="authcard__err"
+        >
           {{ error }}
         </p>
 
-        <v-btn color="primary" type="submit" :loading="loading" block>
+        <v-btn
+          color="primary"
+          type="submit"
+          :loading="loading"
+          block
+        >
           {{ t('auth.signIn') }}
         </v-btn>
       </form>
@@ -96,10 +120,21 @@ async function doMagic() {
         <span>{{ t('auth.or') }}</span>
       </div>
 
-      <v-btn variant="outlined" block prepend-icon="mdi-google" :disabled="loading" @click="doGoogle">
+      <v-btn
+        variant="outlined"
+        block
+        prepend-icon="mdi-google"
+        :disabled="loading"
+        @click="doGoogle"
+      >
         {{ t('auth.withGoogle') }}
       </v-btn>
-      <v-btn variant="text" block prepend-icon="mdi-email-outline" @click="doMagic">
+      <v-btn
+        variant="text"
+        block
+        prepend-icon="mdi-email-outline"
+        @click="doMagic"
+      >
         {{ t('auth.magicLink') }}
       </v-btn>
 

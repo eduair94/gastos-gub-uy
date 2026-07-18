@@ -1240,21 +1240,40 @@ useSeo(() => ({
                     :to="localePath(`/products/${encodeURIComponent(row.code)}`)"
                     class="itable__code u-mono"
                   >{{ row.code }}</NuxtLink>
-                  <span v-else class="u-muted">—</span>
-                  <span v-if="row.codeDescription" class="itable__u">{{ row.codeDescription }}</span>
+                  <span
+                    v-else
+                    class="u-muted"
+                  >—</span>
+                  <span
+                    v-if="row.codeDescription"
+                    class="itable__u"
+                  >{{ row.codeDescription }}</span>
                 </template>
                 <template #cell:quantity="{ row }">
                   {{ formatNumber(row.quantity) }}
                 </template>
                 <template #cell:unitName="{ row }">
                   <span v-if="row.unitName">{{ row.unitName }}</span>
-                  <span v-else class="u-muted">—</span>
+                  <span
+                    v-else
+                    class="u-muted"
+                  >—</span>
                 </template>
                 <template #cell:unitAmount="{ row }">
-                  <MoneyAmount :amount="row.unitAmount" :currency="row.currency" :rule="false" size="sm" decimals />
+                  <MoneyAmount
+                    :amount="row.unitAmount"
+                    :currency="row.currency"
+                    :rule="false"
+                    size="sm"
+                    decimals
+                  />
                 </template>
                 <template #cell:total="{ row }">
-                  <MoneyAmount :amount="row.total" :currency="row.currency" size="sm" />
+                  <MoneyAmount
+                    :amount="row.total"
+                    :currency="row.currency"
+                    size="sm"
+                  />
                 </template>
               </DataTable>
             </div>
@@ -1284,7 +1303,10 @@ useSeo(() => ({
             >
               <template #cell:description="{ row }">
                 <span class="refcell__name">{{ row.description }}</span>
-                <span class="tag refcell__pos" :class="row.tone">
+                <span
+                  class="tag refcell__pos"
+                  :class="row.tone"
+                >
                   {{ t(`contract.reference.pos.${row.position}`) }}
                 </span>
                 <!-- The scraped presentación ("ENVASE · 250 G"): the fact
@@ -1308,10 +1330,21 @@ useSeo(() => ({
                 </span>
               </template>
               <template #cell:paid="{ row }">
-                <MoneyAmount :amount="row.paid" :currency="row.currency" :rule="false" size="sm" decimals />
+                <MoneyAmount
+                  :amount="row.paid"
+                  :currency="row.currency"
+                  :rule="false"
+                  size="sm"
+                  decimals
+                />
               </template>
               <template #cell:median="{ row }">
-                <MoneyAmount :amount="row.median" :currency="row.currency" :rule="false" size="sm" />
+                <MoneyAmount
+                  :amount="row.median"
+                  :currency="row.currency"
+                  :rule="false"
+                  size="sm"
+                />
               </template>
               <template #cell:range="{ row }">
                 {{ rangeText(row) }}

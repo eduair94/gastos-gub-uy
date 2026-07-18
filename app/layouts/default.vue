@@ -226,12 +226,32 @@ watch(() => route.fullPath, () => {
               density="compact"
               min-width="200"
             >
-              <v-list-item :to="localePath('/app')" prepend-icon="mdi-view-dashboard-outline" :title="t('dashboard.title')" />
-              <v-list-item :to="localePath('/app/alertas')" prepend-icon="mdi-bell-outline" :title="t('alerts.title')" />
-              <v-list-item :to="localePath('/app/calendario')" prepend-icon="mdi-calendar-outline" :title="t('calendar.title')" />
-              <v-list-item :to="localePath('/app/cuenta')" prepend-icon="mdi-cog-outline" :title="t('accountPage.title')" />
+              <v-list-item
+                :to="localePath('/app')"
+                prepend-icon="mdi-view-dashboard-outline"
+                :title="t('dashboard.title')"
+              />
+              <v-list-item
+                :to="localePath('/app/alertas')"
+                prepend-icon="mdi-bell-outline"
+                :title="t('alerts.title')"
+              />
+              <v-list-item
+                :to="localePath('/app/calendario')"
+                prepend-icon="mdi-calendar-outline"
+                :title="t('calendar.title')"
+              />
+              <v-list-item
+                :to="localePath('/app/cuenta')"
+                prepend-icon="mdi-cog-outline"
+                :title="t('accountPage.title')"
+              />
               <v-divider />
-              <v-list-item prepend-icon="mdi-logout" :title="t('auth.logout')" @click="onLogout" />
+              <v-list-item
+                prepend-icon="mdi-logout"
+                :title="t('auth.logout')"
+                @click="onLogout"
+              />
             </v-list>
           </v-menu>
           <NuxtLink
@@ -340,23 +360,48 @@ watch(() => route.fullPath, () => {
           {{ t('nav.about') }}
         </NuxtLink>
         <template v-if="user">
-          <NuxtLink :to="localePath('/app')" class="drawer__sub" @click="drawer = false">
+          <NuxtLink
+            :to="localePath('/app')"
+            class="drawer__sub"
+            @click="drawer = false"
+          >
             {{ t('dashboard.title') }}
           </NuxtLink>
-          <NuxtLink :to="localePath('/app/alertas')" class="drawer__sub" @click="drawer = false">
+          <NuxtLink
+            :to="localePath('/app/alertas')"
+            class="drawer__sub"
+            @click="drawer = false"
+          >
             {{ t('alerts.title') }}
           </NuxtLink>
-          <NuxtLink :to="localePath('/app/calendario')" class="drawer__sub" @click="drawer = false">
+          <NuxtLink
+            :to="localePath('/app/calendario')"
+            class="drawer__sub"
+            @click="drawer = false"
+          >
             {{ t('calendar.title') }}
           </NuxtLink>
-          <NuxtLink :to="localePath('/app/cuenta')" class="drawer__sub" @click="drawer = false">
+          <NuxtLink
+            :to="localePath('/app/cuenta')"
+            class="drawer__sub"
+            @click="drawer = false"
+          >
             {{ t('accountPage.title') }}
           </NuxtLink>
-          <button type="button" class="drawer__sub drawer__sub--btn" @click="onLogout">
+          <button
+            type="button"
+            class="drawer__sub drawer__sub--btn"
+            @click="onLogout"
+          >
             {{ t('auth.logout') }}
           </button>
         </template>
-        <NuxtLink v-else :to="localePath('/login')" class="drawer__sub" @click="drawer = false">
+        <NuxtLink
+          v-else
+          :to="localePath('/login')"
+          class="drawer__sub"
+          @click="drawer = false"
+        >
           {{ t('nav.login') }}
         </NuxtLink>
         <div class="drawer__prefs">

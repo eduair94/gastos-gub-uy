@@ -1,5 +1,5 @@
-import { ExchangeRateModel } from './models'
 import type { RateTable } from '../../../shared/utils/real-value'
+import { ExchangeRateModel } from './models'
 
 /**
  * The monthly BCU rate table (exchange_rates), loaded once and cached.

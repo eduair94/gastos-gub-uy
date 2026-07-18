@@ -19,7 +19,7 @@ async function doReset() {
     await sendReset(email.value)
     sent.value = true
   }
-  catch (e) {
+  catch {
     // Never reveal whether the email exists.
     sent.value = true
   }
@@ -36,15 +36,35 @@ async function doReset() {
         {{ t('auth.resetTitle') }}
       </h1>
 
-      <p v-if="sent" class="authcard__ok">
+      <p
+        v-if="sent"
+        class="authcard__ok"
+      >
         {{ t('auth.resetSent') }}
       </p>
-      <form v-else class="authcard__form" @submit.prevent="doReset">
-        <v-text-field v-model="email" :label="t('auth.email')" type="email" autocomplete="email" />
-        <p v-if="error" class="authcard__err">
+      <form
+        v-else
+        class="authcard__form"
+        @submit.prevent="doReset"
+      >
+        <v-text-field
+          v-model="email"
+          :label="t('auth.email')"
+          type="email"
+          autocomplete="email"
+        />
+        <p
+          v-if="error"
+          class="authcard__err"
+        >
           {{ error }}
         </p>
-        <v-btn color="primary" type="submit" :loading="loading" block>
+        <v-btn
+          color="primary"
+          type="submit"
+          :loading="loading"
+          block
+        >
           {{ t('auth.resetSend') }}
         </v-btn>
       </form>

@@ -28,43 +28,79 @@ const s = computed<Summary>(() => data.value?.data?.summary ?? {})
       {{ t('llamados.summaryTitle') }}
     </h2>
 
-    <div v-if="pending" class="pliego__muted u-muted">
+    <div
+      v-if="pending"
+      class="pliego__muted u-muted"
+    >
       …
     </div>
 
     <template v-else-if="available">
-      <p v-if="s.objeto" class="pliego__objeto">
+      <p
+        v-if="s.objeto"
+        class="pliego__objeto"
+      >
         {{ s.objeto }}
       </p>
 
-      <div v-if="s.requisitosClave?.length" class="pliego__block">
+      <div
+        v-if="s.requisitosClave?.length"
+        class="pliego__block"
+      >
         <h3>{{ t('llamados.summaryRequisitos') }}</h3>
         <ul>
-          <li v-for="(r, i) in s.requisitosClave" :key="`req-${i}`">{{ r }}</li>
+          <li
+            v-for="(r, i) in s.requisitosClave"
+            :key="`req-${i}`"
+          >
+            {{ r }}
+          </li>
         </ul>
       </div>
 
-      <div v-if="s.criteriosEvaluacion?.length" class="pliego__block">
+      <div
+        v-if="s.criteriosEvaluacion?.length"
+        class="pliego__block"
+      >
         <h3>{{ t('llamados.summaryCriterios') }}</h3>
         <ul>
-          <li v-for="(c, i) in s.criteriosEvaluacion" :key="`cri-${i}`">{{ c }}</li>
+          <li
+            v-for="(c, i) in s.criteriosEvaluacion"
+            :key="`cri-${i}`"
+          >
+            {{ c }}
+          </li>
         </ul>
       </div>
 
-      <div v-if="s.garantias" class="pliego__block">
+      <div
+        v-if="s.garantias"
+        class="pliego__block"
+      >
         <h3>{{ t('llamados.summaryGarantias') }}</h3>
         <p>{{ s.garantias }}</p>
       </div>
 
-      <div v-if="s.montoReferencia" class="pliego__block">
+      <div
+        v-if="s.montoReferencia"
+        class="pliego__block"
+      >
         <h3>{{ t('llamados.summaryMonto') }}</h3>
         <p>{{ s.montoReferencia }}</p>
       </div>
 
-      <div v-if="s.observaciones?.length" class="pliego__block">
+      <div
+        v-if="s.observaciones?.length"
+        class="pliego__block"
+      >
         <h3>{{ t('llamados.summaryObservaciones') }}</h3>
         <ul>
-          <li v-for="(o, i) in s.observaciones" :key="`obs-${i}`">{{ o }}</li>
+          <li
+            v-for="(o, i) in s.observaciones"
+            :key="`obs-${i}`"
+          >
+            {{ o }}
+          </li>
         </ul>
       </div>
 
@@ -73,7 +109,10 @@ const s = computed<Summary>(() => data.value?.data?.summary ?? {})
       </p>
     </template>
 
-    <p v-else class="pliego__muted u-muted">
+    <p
+      v-else
+      class="pliego__muted u-muted"
+    >
       {{ hasPliego ? t('llamados.summaryUnavailable') : t('llamados.summaryNoPliego') }}
     </p>
   </section>

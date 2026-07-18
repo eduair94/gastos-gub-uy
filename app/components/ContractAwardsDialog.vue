@@ -9,7 +9,7 @@
       <v-card-title class="d-flex align-center justify-space-between">
         <div>
           <span>Contract Awards</span>
-          <div class="text-subtitle-2 text-medium-emphasis">
+          <div class="text-title-small text-medium-emphasis">
             {{ contract?.tender?.title || 'Contract Details' }}
           </div>
         </div>
@@ -34,7 +34,7 @@
                 <div class="d-flex align-center justify-space-between w-100">
                   <div class="d-flex flex-column">
                     <span class="font-weight-medium">{{ award.title || `Award ${awardIndex + 1}` }}</span>
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       Status: {{ award.status || 'Unknown' }} • Date: {{ formatDate(award.date) }}
                     </div>
                   </div>
@@ -58,7 +58,7 @@
                       variant="outlined"
                       class="mb-4"
                     >
-                      <v-card-title class="text-h6">
+                      <v-card-title class="text-title-large">
                         <v-icon
                           class="mr-2"
                           color="success"
@@ -101,7 +101,7 @@
                       variant="outlined"
                       class="mb-4"
                     >
-                      <v-card-title class="text-h6">
+                      <v-card-title class="text-title-large">
                         <v-icon
                           class="mr-2"
                           color="primary"
@@ -174,7 +174,7 @@
                 <v-row>
                   <v-col cols="12">
                     <v-card variant="outlined">
-                      <v-card-title class="text-h6">
+                      <v-card-title class="text-title-large">
                         <v-icon
                           class="mr-2"
                           color="info"
@@ -190,10 +190,10 @@
                             md="3"
                           >
                             <div class="text-center">
-                              <div class="text-h6 font-weight-bold text-success">
+                              <div class="text-title-large font-weight-bold text-success">
                                 {{ formatAwardAmount(award) }}
                               </div>
-                              <div class="text-caption text-medium-emphasis">
+                              <div class="text-body-small text-medium-emphasis">
                                 Total Amount
                               </div>
                             </div>
@@ -203,10 +203,10 @@
                             md="3"
                           >
                             <div class="text-center">
-                              <div class="text-h6 font-weight-bold text-primary">
+                              <div class="text-title-large font-weight-bold text-primary">
                                 {{ award.items?.length || 0 }}
                               </div>
-                              <div class="text-caption text-medium-emphasis">
+                              <div class="text-body-small text-medium-emphasis">
                                 Items
                               </div>
                             </div>
@@ -216,10 +216,10 @@
                             md="3"
                           >
                             <div class="text-center">
-                              <div class="text-h6 font-weight-bold text-info">
+                              <div class="text-title-large font-weight-bold text-info">
                                 {{ award.suppliers?.length || 0 }}
                               </div>
-                              <div class="text-caption text-medium-emphasis">
+                              <div class="text-body-small text-medium-emphasis">
                                 Suppliers
                               </div>
                             </div>
@@ -229,10 +229,10 @@
                             md="3"
                           >
                             <div class="text-center">
-                              <div class="text-h6 font-weight-bold text-warning">
+                              <div class="text-title-large font-weight-bold text-warning">
                                 {{ award.documents?.length || 0 }}
                               </div>
-                              <div class="text-caption text-medium-emphasis">
+                              <div class="text-body-small text-medium-emphasis">
                                 Documents
                               </div>
                             </div>
@@ -247,7 +247,7 @@
                 <v-row v-if="award.documents && award.documents.length > 0">
                   <v-col cols="12">
                     <v-card variant="outlined">
-                      <v-card-title class="text-h6">
+                      <v-card-title class="text-title-large">
                         <v-icon
                           class="mr-2"
                           color="warning"
@@ -302,10 +302,10 @@
           >
             mdi-trophy-outline
           </v-icon>
-          <div class="text-h6 mb-2">
+          <div class="text-title-large mb-2">
             No Awards Found
           </div>
-          <div class="text-body-2 text-medium-emphasis">
+          <div class="text-body-medium text-medium-emphasis">
             This contract doesn't have any awards listed.
           </div>
         </div>

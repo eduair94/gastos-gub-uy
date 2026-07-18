@@ -33,7 +33,10 @@ const items = computed(() => data.value?.data?.items ?? [])
       </p>
     </header>
 
-    <div v-if="items.length" class="cal__list">
+    <div
+      v-if="items.length"
+      class="cal__list"
+    >
       <NuxtLink
         v-for="c in items"
         :key="c.compraId"
@@ -41,20 +44,34 @@ const items = computed(() => data.value?.data?.items ?? [])
         class="panel cal__item"
       >
         <div class="cal__date u-mono">
-          <v-icon size="16">mdi-calendar-clock</v-icon>
+          <v-icon size="16">
+            mdi-calendar-clock
+          </v-icon>
           {{ c.endDate ? formatDate(c.endDate) : '—' }}
         </div>
         <div class="cal__body">
           <span class="cal__title u-truncate">{{ c.title }}</span>
-          <span v-if="c.buyer?.name" class="cal__buyer u-truncate u-muted">{{ c.buyer.name }}</span>
+          <span
+            v-if="c.buyer?.name"
+            class="cal__buyer u-truncate u-muted"
+          >{{ c.buyer.name }}</span>
         </div>
         <div class="cal__tags">
-          <span v-if="c.saved" class="tag tag--celeste">{{ t('calendar.savedTag') }}</span>
-          <span v-if="c.matched" class="tag tag--activo">{{ t('calendar.matchedTag') }}</span>
+          <span
+            v-if="c.saved"
+            class="tag tag--celeste"
+          >{{ t('calendar.savedTag') }}</span>
+          <span
+            v-if="c.matched"
+            class="tag tag--activo"
+          >{{ t('calendar.matchedTag') }}</span>
         </div>
       </NuxtLink>
     </div>
-    <div v-else class="panel cal__empty">
+    <div
+      v-else
+      class="panel cal__empty"
+    >
       {{ t('calendar.empty') }}
     </div>
   </div>

@@ -20,10 +20,10 @@
             <div class="font-weight-medium">
               Contract Created
             </div>
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ formatDate(contract.date) }}
             </div>
-            <div class="text-caption">
+            <div class="text-body-small">
               Year: {{ contract.sourceYear }}
             </div>
           </div>
@@ -44,11 +44,11 @@
             <div class="font-weight-medium">
               Tender Period
             </div>
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ formatDate(contract.tender.tenderPeriod.startDate) }} -
               {{ formatDate(contract.tender.tenderPeriod.endDate) }}
             </div>
-            <div class="text-caption">
+            <div class="text-body-small">
               Duration: {{ getTenderDuration(contract.tender.tenderPeriod) }}
             </div>
           </div>
@@ -69,7 +69,7 @@
             <div class="font-weight-medium">
               Enquiry Period
             </div>
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ formatDate(contract.tender.enquiryPeriod.startDate) }} -
               {{ formatDate(contract.tender.enquiryPeriod.endDate) }}
             </div>
@@ -92,7 +92,7 @@
             <div class="font-weight-medium">
               Award {{ index + 1 }}
             </div>
-            <div class="text-caption text-medium-emphasis">
+            <div class="text-body-small text-medium-emphasis">
               {{ formatDate(award.date) }}
             </div>
             <v-chip
@@ -114,7 +114,7 @@
       class="mt-4"
     >
       <v-card-text class="py-3">
-        <div class="d-flex flex-wrap ga-4 text-body-2">
+        <div class="d-flex flex-wrap ga-4 text-body-medium">
           <div class="d-flex align-center ga-2">
             <v-icon
               size="16"
@@ -260,7 +260,7 @@ const getAwardStatusColor = (status?: string): string => {
   margin-bottom: 4px;
 }
 
-.timeline-content .text-caption {
+.timeline-content .text-body-small {
   line-height: 1.2;
 }
 

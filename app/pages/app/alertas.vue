@@ -56,7 +56,12 @@ async function remove(w: Watch) {
           {{ t('alerts.lead') }}
         </p>
       </div>
-      <v-btn v-if="!showForm" color="primary" prepend-icon="mdi-plus" @click="newWatch">
+      <v-btn
+        v-if="!showForm"
+        color="primary"
+        prepend-icon="mdi-plus"
+        @click="newWatch"
+      >
         {{ t('alerts.new') }}
       </v-btn>
     </header>
@@ -69,36 +74,69 @@ async function remove(w: Watch) {
       @cancel="showForm = false"
     />
 
-    <div v-if="watches.length" class="alertas__list">
-      <article v-for="w in watches" :key="w._id" class="panel alertas__item">
+    <div
+      v-if="watches.length"
+      class="alertas__list"
+    >
+      <article
+        v-for="w in watches"
+        :key="w._id"
+        class="panel alertas__item"
+      >
         <div class="alertas__itemhead">
           <h3 class="alertas__name">
             {{ w.name }}
           </h3>
-          <span class="tag" :class="w.active ? 'tag--activo' : 'tag--neutral'">
+          <span
+            class="tag"
+            :class="w.active ? 'tag--activo' : 'tag--neutral'"
+          >
             {{ w.active ? t('alerts.activeChip') : t('alerts.pausedChip') }}
           </span>
         </div>
-        <p v-if="w.keywords?.length" class="alertas__kw u-mono u-muted">
+        <p
+          v-if="w.keywords?.length"
+          class="alertas__kw u-mono u-muted"
+        >
           {{ w.keywords.join(' · ') }}
         </p>
-        <p v-if="w.categories?.length" class="alertas__cat u-muted">
+        <p
+          v-if="w.categories?.length"
+          class="alertas__cat u-muted"
+        >
           {{ w.categories.length }} {{ t('alerts.categories') }}
         </p>
-        <p v-if="w.lastMatchedAt" class="alertas__last u-muted">
+        <p
+          v-if="w.lastMatchedAt"
+          class="alertas__last u-muted"
+        >
           {{ t('alerts.lastMatched', { date: formatDate(w.lastMatchedAt) }) }}
         </p>
         <div class="alertas__actions">
-          <v-btn variant="text" size="small" prepend-icon="mdi-pencil" @click="editWatch(w)">
+          <v-btn
+            variant="text"
+            size="small"
+            prepend-icon="mdi-pencil"
+            @click="editWatch(w)"
+          >
             {{ t('alerts.edit') }}
           </v-btn>
-          <v-btn variant="text" size="small" color="error" prepend-icon="mdi-delete-outline" @click="remove(w)">
+          <v-btn
+            variant="text"
+            size="small"
+            color="error"
+            prepend-icon="mdi-delete-outline"
+            @click="remove(w)"
+          >
             {{ t('alerts.delete') }}
           </v-btn>
         </div>
       </article>
     </div>
-    <div v-else-if="!showForm" class="panel alertas__empty">
+    <div
+      v-else-if="!showForm"
+      class="panel alertas__empty"
+    >
       {{ t('alerts.empty') }}
     </div>
   </div>

@@ -49,7 +49,7 @@
 
       <v-card-text class="pa-0">
         <div class="d-flex justify-space-between align-center pa-3 bg-grey-lighten-5">
-          <div class="text-body-2 text-medium-emphasis">
+          <div class="text-body-medium text-medium-emphasis">
             {{ Object.keys(data || {}).length }} properties
             {{ dataSize ? `• ${dataSize}` : '' }}
           </div>

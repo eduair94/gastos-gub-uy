@@ -16,21 +16,21 @@
     @update:model-value="onModelValueUpdate"
   >
     <!-- Custom chip display with metadata -->
-    <template #chip="{ props: chipProps, item }">
+    <template #chip="{ props: chipProps, internalItem }">
       <v-chip
         v-bind="chipProps"
         closable
         size="small"
       >
-        {{ item.title }}
+        {{ internalItem.title }}
         <v-tooltip
-          v-if="item.title"
+          v-if="internalItem.title"
           activator="parent"
           location="top"
         >
           <div class="pa-2">
             <div class="font-weight-bold">
-              {{ item.title }}
+              {{ internalItem.title }}
             </div>
           </div>
         </v-tooltip>
@@ -38,11 +38,11 @@
     </template>
 
     <!-- Custom item display with metadata -->
-    <template #item="{ props: itemProps, item }">
+    <template #item="{ props: itemProps, internalItem }">
       <v-list-item
         v-bind="itemProps"
-        :title="item.raw.label"
-        :subtitle="item.raw.meta ? `${formatCurrency(item.raw.meta.totalValue, 'UYU')} • ${item.raw.meta.totalContracts} contracts` : undefined"
+        :title="internalItem.raw.label"
+        :subtitle="internalItem.raw.meta ? `${formatCurrency(internalItem.raw.meta.totalValue, 'UYU')} • ${internalItem.raw.meta.totalContracts} contracts` : undefined"
       >
         <template #prepend>
           <v-icon color="success">

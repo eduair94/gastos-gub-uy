@@ -55,10 +55,10 @@
         >
           mdi-chart-line
         </v-icon>
-        <div class="text-h6">
+        <div class="text-title-large">
           Loading Spending Trends...
         </div>
-        <div class="text-body-2 text-medium-emphasis">
+        <div class="text-body-medium text-medium-emphasis">
           Please wait while we fetch the data
         </div>
       </div>

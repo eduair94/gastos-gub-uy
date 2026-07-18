@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
   ])
   const savedIds = new Set(saved.map(s => s.compraId))
 
-  const liveCalls = await OpenCallModel.find({ status: { $in: LIVE }, 'tenderPeriod.endDate': { $gte: now } })
+  const liveCalls = await OpenCallModel.find({ 'status': { $in: LIVE }, 'tenderPeriod.endDate': { $gte: now } })
     .select(CAL_FIELDS)
     .sort({ 'tenderPeriod.endDate': 1 })
     .limit(SCAN_LIMIT)

@@ -1,7 +1,7 @@
 <template>
   <div v-if="hasDocuments">
     <div class="d-flex align-center justify-space-between mb-3">
-      <div class="text-subtitle-2 text-medium-emphasis">
+      <div class="text-title-small text-medium-emphasis">
         Contract Documents ({{ totalDocuments }})
       </div>
       <v-btn
@@ -20,7 +20,7 @@
       v-if="contract.tender?.documents && contract.tender.documents.length > 0"
       class="mb-4"
     >
-      <div class="text-body-2 font-weight-medium mb-2 d-flex align-center ga-2">
+      <div class="text-body-medium font-weight-medium mb-2 d-flex align-center ga-2">
         <v-icon
           size="16"
           color="primary"
@@ -77,7 +77,7 @@
     >
       <div
         v-if="award.documents && award.documents.length > 0"
-        class="text-body-2 font-weight-medium mb-2 d-flex align-center ga-2"
+        class="text-body-medium font-weight-medium mb-2 d-flex align-center ga-2"
       >
         <v-icon
           size="16"
@@ -142,10 +142,10 @@
       >
         mdi-file-document-outline
       </v-icon>
-      <div class="text-h6 mb-2">
+      <div class="text-title-large mb-2">
         No Documents Available
       </div>
-      <div class="text-body-2 text-medium-emphasis">
+      <div class="text-body-medium text-medium-emphasis">
         This contract doesn't have any associated documents.
       </div>
     </div>

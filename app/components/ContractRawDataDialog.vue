@@ -8,7 +8,7 @@
   >
     <v-card>
       <v-card-title class="d-flex align-center justify-space-between">
-        <span class="text-h6 text-sm-h6 text-subtitle-1">Contract Raw Data</span>
+        <span class="text-title-large text-sm-title-large text-body-large">Contract Raw Data</span>
         <v-btn
           icon="mdi-close"
           variant="text"
@@ -16,7 +16,7 @@
         />
       </v-card-title>
       <v-card-text>
-        <pre class="text-body-2 text-sm-body-2 text-caption">{{ JSON.stringify(contract, null, 2) }}</pre>
+        <pre class="text-body-medium text-sm-body-medium text-body-small">{{ JSON.stringify(contract, null, 2) }}</pre>
       </v-card-text>
     </v-card>
   </v-dialog>
