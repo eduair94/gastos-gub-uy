@@ -134,7 +134,19 @@ export default defineNuxtConfig({
     experimental: {
       wasm: true,
     },
-    compressPublicAssets: true,
+    // Pre-compression is intentionally OFF. Nitro only writes a `.br`/`.gz` for
+    // chunks above its size threshold (here 53 of 60 .js had a `.br`), yet its
+    // asset manifest lists every chunk — so a request for a small, uncompressed
+    // chunk sent with `Accept-Encoding: br` tries to open the missing `<chunk>.br`
+    // and throws ENOENT → an unhandled 500 (a genuinely absent chunk 404s fine).
+    // After every redeploy, browsers holding old HTML request now-gone chunks and
+    // hit that 500 instead of a clean 404, which also defeats Nuxt's
+    // reload-on-stale-chunk recovery. The reverse proxy compresses on the wire, so
+    // dropping build-time compression costs nothing and removes the 500 class.
+    compressPublicAssets: false,
+    // The deploy script builds to a staging dir (.output-next) via this env so a
+    // failed build never clobbers the live .output. Unset → default .output.
+    ...(process.env.NITRO_OUTPUT_DIR ? { output: { dir: process.env.NITRO_OUTPUT_DIR } } : {}),
   },
 
   compatibilityDate: '2025-08-06',
