@@ -43,6 +43,19 @@ function decodeEntities(s: string): string {
 }
 
 /**
+ * The compra's free-text object — `<p class="buy-object">` on the gov page
+ * ("Sistema Veeam", "…traslado para 46 pasajeros…"). OCDS drops it on award
+ * releases, and some compras have no tender release carrying `tender.description`
+ * either, so this scrape is the only record of what the purchase was for.
+ */
+export function parseBuyObject(rawHtml: string): string | null {
+  const m = /<p[^>]*class="[^"]*\bbuy-object\b[^"]*"[^>]*>([\s\S]*?)<\/p>/i.exec(rawHtml)
+  if (!m) return null
+  const text = decodeEntities(m[1]!)
+  return text || null
+}
+
+/**
  * Pulls every item's características + variación out of one page of the
  * gov detail HTML. Tolerant by construction: each item is located by two
  * independent anchors (the `features-table` caption for características,
@@ -123,11 +136,12 @@ async function fetchPage(url: string): Promise<string | null> {
  * Returns null when even page 1 could not be fetched — "gov site down"
  * must stay distinguishable from "page has no características".
  */
-async function scrape(url: string): Promise<ScrapedItem[] | null> {
+async function scrape(url: string): Promise<{ items: ScrapedItem[], object: string | null } | null> {
   const first = await fetchPage(url)
   if (first === null) return null
 
   const items = parseItemFeatures(first)
+  const object = parseBuyObject(first) // the object is on the first page only
 
   const pag = /<div id="pagination">([\s\S]*?)<\/div>/i.exec(first)?.[1] ?? ''
   const hrefs = [...pag.matchAll(/href="([^"]+)"/gi)]
@@ -143,7 +157,7 @@ async function scrape(url: string): Promise<ScrapedItem[] | null> {
 
   // Paginators repeat the current page; keep the first occurrence of each Nº.
   const seen = new Set<number>()
-  return items.filter(it => !seen.has(it.nro) && seen.add(it.nro))
+  return { items: items.filter(it => !seen.has(it.nro) && seen.add(it.nro)), object }
 }
 
 export default defineEventHandler(async (event) => {
@@ -177,7 +191,7 @@ export default defineEventHandler(async (event) => {
     if (cached) {
       return {
         success: true,
-        data: { compraId, source: cached.source, items: cached.items ?? [] },
+        data: { compraId, source: cached.source, items: cached.items ?? [], object: cached.object ?? null },
       }
     }
 
@@ -196,6 +210,7 @@ export default defineEventHandler(async (event) => {
         ]
 
     let items: ScrapedItem[] | null = null
+    let object: string | null = null
     let source: 'adjudicacion' | 'llamado' = urls[0]!.source
     // A page we tried to fetch but couldn't (network/5xx) — distinct from a page
     // that loaded fine and simply has no características.
@@ -207,9 +222,10 @@ export default defineEventHandler(async (event) => {
         anyTransient = true
         continue
       }
-      items = scraped
+      items = scraped.items
+      if (object === null && scraped.object) object = scraped.object
       source = u.source
-      if (scraped.length) break
+      if (scraped.items.length) break
     }
 
     // Don't cache a confirmed-empty result when a page we needed failed
@@ -217,17 +233,20 @@ export default defineEventHandler(async (event) => {
     // an empty 200, the real características may still be on the page we couldn't
     // reach. Report empty for this view but leave the cache unset so the next
     // view retries, instead of poisoning it with a false "no características".
+    // The object is still returned when we have it — it is useful on its own.
     if (items === null || (items.length === 0 && anyTransient)) {
-      return { success: true, data: { compraId, source, items: [], transient: true } }
+      return { success: true, data: { compraId, source, items: [], object, transient: true } }
     }
 
+    const set: Record<string, unknown> = { compraId, items, source, fetchedAt: new Date() }
+    if (object) set.object = object
     await ContractItemFeaturesModel.updateOne(
       { compraId },
-      { $set: { compraId, items, source, fetchedAt: new Date() } },
+      { $set: set },
       { upsert: true },
     ).catch(() => {})
 
-    return { success: true, data: { compraId, source, items } }
+    return { success: true, data: { compraId, source, items, object } }
   }
   catch (error) {
     if ((error as { statusCode?: number }).statusCode) throw error

@@ -2,8 +2,8 @@ import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { isValidObjectId } from 'mongoose'
 import type { IRelease } from '../../../types'
 import { connectToDatabase } from '../../utils/database'
-import { ItemPriceBaselineModel, ReleaseModel } from '../../utils/models'
-import { awardUrl, ocdsJsonUrl, sourceUrl } from '../../utils/query'
+import { ContractItemFeaturesModel, ItemPriceBaselineModel, ReleaseModel } from '../../utils/models'
+import { awardUrl, compraIdFromOcid, ocdsJsonUrl, sourceUrl } from '../../utils/query'
 
 /**
  * The reference price distribution for each item this contract bought.
@@ -67,6 +67,44 @@ async function itemBaselines(contract: IRelease) {
   return out
 }
 
+/**
+ * The "objeto del llamado" — the free-text subject of the purchase.
+ *
+ * It is published on the TENDER-stage release (`tag: 'tender'`, id
+ * `llamado-<compra>`) and is EMPTY on the award/adjustment releases that
+ * share the ocid — so an award page (e.g. `adjudicacion-1354176`, which the
+ * card and the price-anomaly triage both key on) would otherwise show only
+ * the item name ("TRANSPORTE CON CHOFER") and never the actual object ("…
+ * traslado para 46 pasajeros … Paysandú … Rocha"). When the release in hand
+ * carries no description of its own, borrow the tender sibling's — a single
+ * point lookup on the ocid.
+ */
+async function siblingTenderDescription(contract: IRelease): Promise<string | null> {
+  if (contract.tender?.description?.trim()) return null // already has its own
+  if (!contract.ocid) return null
+
+  // 1) The tender-stage sibling's description (same ocid).
+  const sib = await ReleaseModel.findOne(
+    { ocid: contract.ocid, tag: 'tender' },
+    { 'tender.description': 1 },
+  ).maxTimeMS(3000).lean().catch(() => null) as { tender?: { description?: string } } | null
+  if (sib?.tender?.description?.trim()) return sib.tender.description.trim()
+
+  // 2) The object scraped from the gov page (cached), for compras OCDS
+  //    describes nowhere at all — e.g. "Sistema Veeam". Populated lazily by the
+  //    features endpoint and the AI triage job; null until first scraped.
+  const compraId = compraIdFromOcid(contract.ocid)
+  if (compraId) {
+    const feat = await ContractItemFeaturesModel.findOne(
+      { compraId },
+      { object: 1 },
+    ).maxTimeMS(3000).lean().catch(() => null) as { object?: string } | null
+    if (feat?.object?.trim()) return feat.object.trim()
+  }
+
+  return null
+}
+
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
@@ -103,9 +141,22 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // The object text and the item baselines are two independent lookups —
+    // run them together.
+    const [baselines, borrowedDescription] = await Promise.all([
+      itemBaselines(contract),
+      siblingTenderDescription(contract),
+    ])
+
     // Calculate additional fields for the detailed view
     const enhancedContract = {
       ...contract,
+      // Award releases carry no `tender.description`; borrow the tender
+      // sibling's so the page's subject line and the AI triage both see the
+      // real object of the purchase. Only set when the release lacked one.
+      tender: borrowedDescription
+        ? { ...contract.tender, description: borrowedDescription }
+        : contract.tender,
       // The human-facing government page, keyed on ocid — `id` resolves
       // to a DIFFERENT contract on adjustment/cancellation records.
       // See server/utils/query.ts#sourceUrl.
@@ -132,7 +183,7 @@ export default defineEventHandler(async (event) => {
         }, 0) || 0),
       // Keyed `classificationId|currency|unitName` — the page looks each
       // item up by the same key.
-      itemBaselines: await itemBaselines(contract),
+      itemBaselines: baselines,
     }
 
     return {

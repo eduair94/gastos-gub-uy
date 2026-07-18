@@ -270,13 +270,27 @@ function collectDocuments(release: ReleaseDoc, award: ReleaseAward | undefined):
 }
 
 /** Locate the anomaly's own award + item inside a release doc, and gather the full context. */
-function buildContext(anomaly: AnomalyDoc, release: ReleaseDoc | undefined, featuresByCompra: Map<string, ScrapedItem[]>): AnomalyContext {
+function buildContext(
+  anomaly: AnomalyDoc,
+  release: ReleaseDoc | undefined,
+  featuresByCompra: Map<string, ScrapedItem[]>,
+  tenderSubjectByOcid: Map<string, { description?: string; title?: string }>,
+  objectByCompra: Map<string, string>,
+): AnomalyContext {
   const empty: AnomalyContext = { subject: null, procedure: null, siblings: [], features: [], variation: null, documents: [], compraId: null, llamadoUrl: null, adjudicacionUrl: null };
   if (!release) return empty;
 
-  const subject = truncate(release.tender?.description) ?? truncate(release.tender?.title);
-  const procedure = truncate(release.tender?.procurementMethodDetails, 80);
   const compraId = compraIdFromOcid(release.ocid);
+  // The object of the purchase, in order of reliability: the release's own OCDS
+  // description; the tender-stage sibling's (award releases carry none); the
+  // object scraped from the gov page (the ONLY source when OCDS has neither —
+  // e.g. "Sistema Veeam"). A long-distance bus charter for 46 passengers, or a
+  // specific backup-software licence, reads very differently from a bare item
+  // name, and that is exactly what tells an explainable price from a real one.
+  const borrowed = release.ocid ? tenderSubjectByOcid.get(release.ocid) : undefined;
+  const scrapedObject = compraId ? objectByCompra.get(compraId) : undefined;
+  const subject = truncate(release.tender?.description) ?? truncate(borrowed?.description) ?? truncate(scrapedObject) ?? truncate(release.tender?.title) ?? truncate(borrowed?.title);
+  const procedure = truncate(release.tender?.procurementMethodDetails, 80);
 
   const awards = Array.isArray(release.awards) ? release.awards : [];
   const award = anomaly.awardId ? awards.find((a) => a?.id === anomaly.awardId) : awards[0];
@@ -531,6 +545,29 @@ async function main(): Promise<void> {
   }
   console.log(`   releases loaded         : ${releaseById.size}/${releaseIds.length}`);
 
+  // ---- Borrow the "objeto del llamado" from the tender-stage siblings ----
+  // Award releases carry no tender.description/title; the descriptive object of
+  // the purchase is on the tender release (same ocid). Batch-load it for every
+  // release that lacks one so buildContext can feed the model the real subject.
+  const subjectOcids = [
+    ...new Set(
+      [...releaseById.values()]
+        .filter((r) => !r.tender?.description?.trim() && !r.tender?.title?.trim())
+        .map((r) => r.ocid)
+        .filter((o): o is string => !!o)
+    ),
+  ];
+  const tenderSubjectByOcid = new Map<string, { description?: string; title?: string }>();
+  for (let i = 0; i < subjectOcids.length; i += RELEASE_BATCH) {
+    const batch = subjectOcids.slice(i, i + RELEASE_BATCH);
+    const docs = (await ReleaseModel.find(
+      { ocid: { $in: batch }, tag: "tender" },
+      { ocid: 1, "tender.description": 1, "tender.title": 1 }
+    ).lean()) as unknown as Array<{ ocid?: string; tender?: { description?: string; title?: string } }>;
+    for (const d of docs) if (d.ocid) tenderSubjectByOcid.set(d.ocid, { description: d.tender?.description, title: d.tender?.title });
+  }
+  console.log(`   tender subjects borrowed: ${tenderSubjectByOcid.size}/${subjectOcids.length}`);
+
   // ---- Item características (Tipo/Presentación/Medida + Variación) scraped from the gov pages ----
   // These are the highest-value context for judging a price: cache-first, and only scrape (then
   // cache, benefitting the contract page too) the compras that are missing when --scrape-features.
@@ -545,8 +582,15 @@ async function main(): Promise<void> {
   }
 
   const featuresByCompra = new Map<string, ScrapedItem[]>();
-  const cached = (await ContractItemFeaturesModel.find({ compraId: { $in: [...compraIds] } }, { compraId: 1, items: 1 }).lean()) as unknown as Array<{ compraId: string; items: ScrapedItem[] }>;
-  for (const c of cached) featuresByCompra.set(c.compraId, c.items ?? []);
+  // The compra's free-text object ("Sistema Veeam"), scraped alongside the
+  // características — for compras OCDS has no description for at all, it is the
+  // only subject the model gets.
+  const objectByCompra = new Map<string, string>();
+  const cached = (await ContractItemFeaturesModel.find({ compraId: { $in: [...compraIds] } }, { compraId: 1, items: 1, object: 1 }).lean()) as unknown as Array<{ compraId: string; items: ScrapedItem[]; object?: string }>;
+  for (const c of cached) {
+    featuresByCompra.set(c.compraId, c.items ?? []);
+    if (c.object) objectByCompra.set(c.compraId, c.object);
+  }
   console.log(`   características cached    : ${featuresByCompra.size}/${compraIds.size}`);
 
   if (options.scrapeFeatures) {
@@ -569,14 +613,13 @@ async function main(): Promise<void> {
           return null;
         }
         featuresByCompra.set(compraId, result.items);
+        if (result.object) objectByCompra.set(compraId, result.object);
         // Cache exactly like the contract page does — but never poison the cache with an empty result
         // that was only empty because a page failed transiently.
         if (!(result.items.length === 0 && result.transient)) {
-          await ContractItemFeaturesModel.updateOne(
-            { compraId },
-            { $set: { compraId, items: result.items, source: result.source, fetchedAt: new Date() } },
-            { upsert: true }
-          ).catch(() => {});
+          const set: Record<string, unknown> = { compraId, items: result.items, source: result.source, fetchedAt: new Date() };
+          if (result.object) set.object = result.object;
+          await ContractItemFeaturesModel.updateOne({ compraId }, { $set: set }, { upsert: true }).catch(() => {});
         }
         scraped++;
         if (scraped % 50 === 0) console.log(`   … scraped ${scraped}/${missing.length} características`);
@@ -605,7 +648,7 @@ async function main(): Promise<void> {
   if (spacingMs) console.log(`   throttle                : ${options.rpm} req/min (${spacingMs}ms spacing) for free-tier quota`);
 
   const outcomes = await runPool(anomalies, options.concurrency, async (anomaly): Promise<ScoredResult | null> => {
-    const ctx = buildContext(anomaly, releaseById.get(anomaly.releaseId), featuresByCompra);
+    const ctx = buildContext(anomaly, releaseById.get(anomaly.releaseId), featuresByCompra, tenderSubjectByOcid, objectByCompra);
     const prompt = buildPrompt(anomaly, ctx);
     try {
       await acquireSlot();

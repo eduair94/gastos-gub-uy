@@ -28,6 +28,15 @@ export interface IContractItemFeatures {
   /** The gov `id_compra` (ocid without its `ocds-yfs5dr-` prefix). */
   compraId: string;
   items: IContractItemFeature[];
+  /**
+   * The compra's "objeto" — the free-text subject (`<p class="buy-object">`
+   * on the gov page). OCDS drops it on award releases and, for some compras,
+   * has no tender release carrying `tender.description` either — so this scrape
+   * is the only place the object ("Sistema Veeam", "traslado para 46
+   * pasajeros…") is recorded. It reframes what a price is for, so the anomaly
+   * triage and the contract page both read it.
+   */
+  object?: string;
   /** Which page yielded the data: the adjudicación or the llamado. */
   source: "adjudicacion" | "llamado";
   fetchedAt: Date;
@@ -60,6 +69,7 @@ const ContractItemFeaturesSchema = new Schema<IContractItemFeatures>(
       ],
       default: [],
     },
+    object: { type: String },
     source: { type: String, required: true, enum: ["adjudicacion", "llamado"] },
     fetchedAt: { type: Date, required: true, default: Date.now },
   },

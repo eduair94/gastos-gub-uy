@@ -64,6 +64,20 @@ function decodeEntities(s: string): string {
     .trim();
 }
 
+/**
+ * The compra's free-text object — `<p class="buy-object">` on the gov page
+ * ("Sistema Veeam", "Se requiere de traslado para 46 pasajeros…"). OCDS omits
+ * it on award releases and some compras have no tender release carrying it, so
+ * this scrape is often the only place the object exists. It reframes what a
+ * price is for, which is exactly what the anomaly triage needs.
+ */
+export function parseBuyObject(rawHtml: string): string | null {
+  const m = /<p[^>]*class="[^"]*\bbuy-object\b[^"]*"[^>]*>([\s\S]*?)<\/p>/i.exec(rawHtml);
+  if (!m) return null;
+  const text = decodeEntities(m[1]!);
+  return text || null;
+}
+
 /** Pulls every item's características + variación out of one page of the gov detail HTML. */
 export function parseItemFeatures(rawHtml: string): ScrapedItem[] {
   const html = rawHtml.replace(/&nbsp;|&#0*160;|&#x0*a0;/gi, " ");
@@ -114,11 +128,12 @@ async function fetchPage(url: string): Promise<string | null> {
 }
 
 /** Scrapes one gov page, following its item paginator (10 items/page). Null = page unreachable. */
-async function scrapePage(url: string): Promise<ScrapedItem[] | null> {
+async function scrapePage(url: string): Promise<{ items: ScrapedItem[]; object: string | null } | null> {
   const first = await fetchPage(url);
   if (first === null) return null;
 
   const items = parseItemFeatures(first);
+  const object = parseBuyObject(first); // the object lives on the first page only
 
   const pag = /<div id="pagination">([\s\S]*?)<\/div>/i.exec(first)?.[1] ?? "";
   const hrefs = [...pag.matchAll(/href="([^"]+)"/gi)]
@@ -132,11 +147,13 @@ async function scrapePage(url: string): Promise<ScrapedItem[] | null> {
   }
 
   const seen = new Set<number>();
-  return items.filter((it) => !seen.has(it.nro) && seen.add(it.nro));
+  return { items: items.filter((it) => !seen.has(it.nro) && seen.add(it.nro)), object };
 }
 
 export interface ScrapeResult {
   items: ScrapedItem[];
+  /** The compra's free-text object, when the page carried one. */
+  object: string | null;
   source: "adjudicacion" | "llamado";
   /** True when a page we needed could not be fetched (network/5xx) — result may be incomplete. */
   transient: boolean;
@@ -159,6 +176,7 @@ export async function scrapeCompraFeatures(ocid: string | null | undefined, hasA
       ];
 
   let items: ScrapedItem[] | null = null;
+  let object: string | null = null;
   let source: "adjudicacion" | "llamado" = urls[0]!.source;
   let anyTransient = false;
   for (const u of urls) {
@@ -168,11 +186,14 @@ export async function scrapeCompraFeatures(ocid: string | null | undefined, hasA
       anyTransient = true;
       continue;
     }
-    items = scraped;
+    items = scraped.items;
+    // Keep the first object we find — an award page and its llamado carry the
+    // same object, and we stop at the first that yields characteristics anyway.
+    if (object === null && scraped.object) object = scraped.object;
     source = u.source;
-    if (scraped.length) break;
+    if (scraped.items.length) break;
   }
 
   if (items === null) return null;
-  return { items, source, transient: items.length === 0 && anyTransient };
+  return { items, object, source, transient: items.length === 0 && anyTransient };
 }

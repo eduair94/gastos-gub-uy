@@ -33,7 +33,12 @@ const title = computed(() => {
  * Shown only when it adds something the heading doesn't already carry.
  */
 const subject = computed(() => {
-  const d = contract.value?.tender?.description?.trim()
+  // The object of the purchase: OCDS description first (the detail API already
+  // borrows the tender-stage sibling's when an award release has none), then
+  // the object scraped from the gov page — the only source for compras OCDS
+  // describes nowhere (e.g. "Sistema Veeam"). `featRes` is declared below; the
+  // getter only runs at render, by when it exists.
+  const d = contract.value?.tender?.description?.trim() || featRes.value?.data?.object?.trim()
   if (!d) return ''
   const heading = title.value.trim()
   if (!heading || d === heading || heading.startsWith(d)) return ''
