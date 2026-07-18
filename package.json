@@ -21,6 +21,7 @@
     "backfill-open-calls": "tsx src/jobs/backfill-open-calls.ts",
     "deadline-reminders": "tsx src/jobs/deadline-reminders.ts",
     "alert-digest": "tsx src/jobs/alert-digest.ts",
+    "webhooks": "tsx src/jobs/webhooks/run.ts",
     "pliego-summary": "tsx src/jobs/pliego-summary.ts",
     "ensure-indexes": "tsx scripts/ensure-indexes.ts",
     "create-text-index": "tsx scripts/create-text-index.ts",

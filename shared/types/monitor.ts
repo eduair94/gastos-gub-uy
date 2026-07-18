@@ -149,6 +149,53 @@ export interface ISavedCall extends Document {
   updatedAt: Date
 }
 
+export type WebhookEvent = 'tender.matched' | 'anomaly.detected' | 'award.created'
+export type WebhookDeliveryStatus = 'pending' | 'sent' | 'failed'
+
+// Optional narrowing per subscription. For `tender.matched` these are fed to the
+// same watchMatchesCall matcher used by email alerts; for the others they apply
+// as simple thresholds.
+export interface IWebhookFilters {
+  categories?: string[] | undefined
+  keywords?: string[] | undefined
+  buyers?: string[] | undefined
+  minAmount?: number | undefined
+  minZ?: number | undefined
+  severity?: string | undefined
+  supplierId?: string | undefined
+}
+
+export interface IWebhookSubscription extends Document {
+  userId: string
+  apiKeyId?: string | undefined
+  url: string
+  events: WebhookEvent[]
+  filters?: IWebhookFilters | undefined
+  // HMAC signing secret. Returned once at creation, then only used server-side.
+  secret: string
+  active: boolean
+  // Consecutive delivery failures; auto-disabled past a cap.
+  failureCount: number
+  lastDeliveryAt?: Date | undefined
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface IWebhookDelivery extends Document {
+  subscriptionId: string
+  event: WebhookEvent
+  // `${event}:${subscriptionId}:${resourceId}` — unique, makes enqueue idempotent.
+  dedupeKey: string
+  payload: Record<string, unknown>
+  status: WebhookDeliveryStatus
+  attempts: number
+  lastError?: string | undefined
+  nextAttemptAt?: Date | undefined
+  sentAt?: Date | undefined
+  createdAt: Date
+  updatedAt: Date
+}
+
 export type ApiKeyScope = 'read' | 'write'
 
 // A user-issued API credential. Only the sha256 `hash` + public `prefix` are

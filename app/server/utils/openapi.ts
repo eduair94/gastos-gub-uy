@@ -953,6 +953,47 @@ export const openApiDocument = {
         responses: { 200: { description: 'A page of changes.', content: { 'application/json': { schema: { $ref: '#/components/schemas/ChangesPage' } } } } },
       },
     },
+
+    // ---- Webhooks (REST Hooks) ----
+    '/api/v1/webhooks': {
+      get: {
+        tags: ['Webhooks'],
+        summary: 'List my webhook subscriptions',
+        description: 'Never returns the signing `secret`.',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Your subscriptions.', content: { 'application/json': { schema: okWrapper({ type: 'array', items: { $ref: '#/components/schemas/WebhookSubscription' } }) } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 403: { $ref: '#/components/responses/Forbidden' } },
+      },
+      post: {
+        tags: ['Webhooks'],
+        summary: 'Subscribe a webhook',
+        description: 'Register an HTTPS endpoint to receive push events. Returns the signing `secret` ONCE. Deliveries '
+          + 'carry `X-GastosGub-Signature: sha256=<hmac(secret, rawBody)>`, plus `X-GastosGub-Event` and '
+          + '`X-GastosGub-Delivery` headers — verify the HMAC to trust the payload. The URL must be public HTTPS '
+          + '(private/loopback ranges are rejected). Failing endpoints back off and auto-disable after repeated failures.',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/WebhookInput' } } } },
+        responses: { 200: { description: 'The subscription incl. the one-time `secret`.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/WebhookCreated' }) } } }, 400: { $ref: '#/components/responses/BadRequest' }, 401: { $ref: '#/components/responses/Unauthorized' }, 403: { $ref: '#/components/responses/Forbidden' }, 409: { description: 'Subscription cap reached.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } } },
+      },
+    },
+    '/api/v1/webhooks/{id}': {
+      delete: {
+        tags: ['Webhooks'],
+        summary: 'Unsubscribe a webhook',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Unsubscribed.', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' } } } } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 404: { $ref: '#/components/responses/NotFound' } },
+      },
+    },
+    '/api/v1/webhooks/{id}/test': {
+      post: {
+        tags: ['Webhooks'],
+        summary: 'Send a test event',
+        description: 'Delivers a signed sample `ping` event to the subscription URL so you can confirm your receiver. Does not persist a delivery.',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Delivery result.', content: { 'application/json': { schema: okWrapper({ type: 'object', properties: { ok: { type: 'boolean' }, status: { type: 'integer' } } }) } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 404: { $ref: '#/components/responses/NotFound' } },
+      },
+    },
   },
 
   components: {
@@ -1621,6 +1662,52 @@ export const openApiDocument = {
           prefix: { type: 'string' },
           scopes: { type: 'array', items: { type: 'string' } },
           token: { type: 'string', description: 'The full secret. Shown once — store it now.', example: 'gk_live_ab12cd34_Xy...' },
+        },
+      },
+      WebhookInput: {
+        type: 'object',
+        required: ['url', 'events'],
+        properties: {
+          url: { type: 'string', format: 'uri', description: 'Public HTTPS endpoint to receive events.', example: 'https://hooks.zapier.com/hooks/catch/1/abc' },
+          events: { type: 'array', items: { type: 'string', enum: ['tender.matched', 'anomaly.detected', 'award.created'] }, example: ['tender.matched'] },
+          filters: {
+            type: 'object',
+            description: 'Optional narrowing. For `tender.matched` these feed the same matcher as email alerts.',
+            properties: {
+              categories: { type: 'array', items: { type: 'string' } },
+              keywords: { type: 'array', items: { type: 'string' } },
+              buyers: { type: 'array', items: { type: 'string' } },
+              minAmount: { type: 'number' },
+              minZ: { type: 'number' },
+              severity: { type: 'string' },
+              supplierId: { type: 'string' },
+            },
+          },
+        },
+      },
+      WebhookSubscription: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          url: { type: 'string', format: 'uri' },
+          events: { type: 'array', items: { type: 'string' } },
+          filters: { type: ['object', 'null'] },
+          active: { type: 'boolean' },
+          failureCount: { type: 'integer', description: 'Consecutive delivery failures; auto-disabled past 15.' },
+          lastDeliveryAt: { type: ['string', 'null'], format: 'date-time' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      WebhookCreated: {
+        type: 'object',
+        description: 'Create response — the only place the signing `secret` appears.',
+        properties: {
+          id: { type: 'string' },
+          url: { type: 'string' },
+          events: { type: 'array', items: { type: 'string' } },
+          filters: { type: ['object', 'null'] },
+          active: { type: 'boolean' },
+          secret: { type: 'string', description: 'HMAC signing secret. Shown once — store it to verify signatures.', example: 'whsec_...' },
         },
       },
       ChangesPage: {

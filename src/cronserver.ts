@@ -388,6 +388,23 @@ class CronServer {
     this.app.post("/cron/product-variants", triggerProductVariants);
     this.app.get("/cron/product-variants", triggerProductVariants);
 
+    // Webhook delivery: status + manual trigger. Independent guard (writes its own
+    // webhook_deliveries), so it never consults busyWith().
+    this.app.get("/cron/webhooks/status", (_req, res) => {
+      res.json({ ...this.webhooksStatus, isRunning: this.isWebhooksRunning });
+    });
+    const triggerWebhooks = (_req: express.Request, res: express.Response): void => {
+      if (this.isWebhooksRunning) {
+        res.status(409).json({ error: "Webhook delivery already running", status: this.webhooksStatus });
+        return;
+      }
+      this.logger.info("Manual webhook delivery trigger initiated");
+      this.runWebhooksJob().catch((error) => this.logger.error("Manual webhook trigger failed:", error));
+      res.json({ message: "Webhook delivery triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/webhooks", triggerWebhooks);
+    this.app.get("/cron/webhooks", triggerWebhooks);
+
     // Monitor de Llamados: open-calls sync, reminders, digest — status + triggers
     this.app.get("/cron/open-calls/status", (_req, res) => {
       res.json({ ...this.openCallsStatus, isRunning: this.isOpenCallsRunning });
@@ -731,6 +748,19 @@ class CronServer {
       { scheduled: true, timezone: "America/Montevideo" }
     );
     this.logger.info(`Product-variant refresh scheduled with expression: ${productVariantsExpression} (Uruguay timezone)`);
+
+    // Webhook delivery every 2 minutes: enqueue deliveries for events seen since the
+    // last run and drain the outbox. Cheap and idempotent (dedupeKey), independent of
+    // busyWith. A short cadence keeps push latency low for integrations.
+    const webhooksExpression = "*/2 * * * *";
+    cron.schedule(
+      webhooksExpression,
+      async () => {
+        await this.runWebhooksJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Webhook delivery scheduled with expression: ${webhooksExpression} (Uruguay timezone)`);
   }
 
   /**
@@ -1021,6 +1051,38 @@ class CronServer {
       this.logger.error("Product-variant refresh failed:", errorMessage);
     } finally {
       this.isProductVariantsRunning = false;
+    }
+  }
+
+  /**
+   * Webhook delivery tick: enqueue deliveries for newly-seen tender/anomaly/award
+   * events matching active subscriptions, then drain the webhook_deliveries outbox
+   * with HMAC-signed POSTs (exponential backoff, auto-disable on repeated failure).
+   * Spawned as a child so a slow receiver never blocks the scheduler. Independent
+   * (writes its own collection), so it does not consult busyWith().
+   */
+  private async runWebhooksJob(): Promise<void> {
+    if (this.isWebhooksRunning) {
+      this.logger.warn("Skipping webhook delivery - already running");
+      return;
+    }
+    this.isWebhooksRunning = true;
+    this.webhooksStatus.status = "running";
+    this.webhooksStatus.lastRun = new Date();
+    this.webhooksStatus.lastError = null;
+
+    try {
+      await this.runJobProcess("jobs/webhooks/run");
+      this.webhooksStatus.status = "idle";
+      this.webhooksStatus.successfulRuns++;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.webhooksStatus.status = "error";
+      this.webhooksStatus.lastError = errorMessage;
+      this.webhooksStatus.failedRuns++;
+      this.logger.error("Webhook delivery failed:", errorMessage);
+    } finally {
+      this.isWebhooksRunning = false;
     }
   }
 
