@@ -52,14 +52,14 @@ export interface IProductAnalytics {
   dataVersion: string;
   // SICE catalog enrichment (left-joined by code in refresh-product-analytics).
   // Absent when the code is not in the catalog; the page falls back to `description`.
-  canonicalName?: string;
-  rubroPath?: string;
-  famiName?: string;
-  subfName?: string;
-  clasName?: string;
-  subcName?: string;
-  unitName?: string;
-  isService?: boolean;
+  canonicalName?: string | undefined;
+  rubroPath?: string | undefined;
+  famiName?: string | undefined;
+  subfName?: string | undefined;
+  clasName?: string | undefined;
+  subcName?: string | undefined;
+  unitName?: string | undefined;
+  isService?: boolean | undefined;
 }
 
 const RankEntrySchema = new Schema<IProductRankEntry>(

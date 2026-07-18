@@ -45,11 +45,11 @@ import { BaselineInput, computeBaselineStats, HistogramBin, ScoredFinding, score
 
 /** SICE catalog fields the detector attaches to each anomaly for like-for-like context + AI triage. */
 interface CatalogInfo {
-  canonicalName?: string;
-  rubroPath?: string;
-  famiName?: string;
-  subcName?: string;
-  unitName?: string;
+  canonicalName?: string | undefined;
+  rubroPath?: string | undefined;
+  famiName?: string | undefined;
+  subcName?: string | undefined;
+  unitName?: string | undefined;
 }
 
 /** The only anomaly type this job produces. */

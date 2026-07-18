@@ -329,7 +329,7 @@ function buildContext(
   anomaly: AnomalyDoc,
   release: ReleaseDoc | undefined,
   featuresByCompra: Map<string, ScrapedItem[]>,
-  tenderSubjectByOcid: Map<string, { description?: string; title?: string }>,
+  tenderSubjectByOcid: Map<string, { description?: string | undefined; title?: string | undefined }>,
   objectByCompra: Map<string, string>,
 ): AnomalyContext {
   const empty: AnomalyContext = { subject: null, procedure: null, siblings: [], features: [], variation: null, documents: [], compraId: null, llamadoUrl: null, adjudicacionUrl: null };
@@ -711,7 +711,7 @@ async function main(): Promise<void> {
         .filter((o): o is string => !!o)
     ),
   ];
-  const tenderSubjectByOcid = new Map<string, { description?: string; title?: string }>();
+  const tenderSubjectByOcid = new Map<string, { description?: string | undefined; title?: string | undefined }>();
   for (let i = 0; i < subjectOcids.length; i += RELEASE_BATCH) {
     const batch = subjectOcids.slice(i, i + RELEASE_BATCH);
     const docs = (await ReleaseModel.find(

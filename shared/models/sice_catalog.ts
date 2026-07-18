@@ -32,18 +32,18 @@ export interface ISiceCatalog {
   /** the four ancestor tokens: ["F2","SF2.6","C2.6.5","SC2.6.5.3"] (shared/utils/rubro-tokens) */
   rubroTokens: string[];
   /** UNME_COD */
-  unitCode?: string;
+  unitCode?: string | undefined;
   /** UNIDADES_MED.DESCRIPCION — the article's default unit of measure */
-  unitName?: string;
+  unitName?: string | undefined;
   /** objeto del gasto code (ODG) */
-  odg?: string;
+  odg?: string | undefined;
   /** SINONIMOS.DESCRIPCION for this article — a keyword-search aid */
   synonyms: string[];
   /** FECHA_BAJA present — kept but flagged and excluded from pickers */
   retired: boolean;
   /** compute-then-swap tag */
   dataVersion: string;
-  updatedAt?: Date;
+  updatedAt?: Date | undefined;
 }
 
 const SiceCatalogSchema = new Schema<ISiceCatalog>(

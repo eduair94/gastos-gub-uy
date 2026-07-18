@@ -19,7 +19,7 @@ export interface ISiceRubro {
   /** numeric dotted, e.g. "2.6.5" */
   path: string;
   /** parent node token; absent for a familia */
-  parentToken?: string;
+  parentToken?: string | undefined;
   /** # non-retired articles at/under this node — a picker hint */
   articleCount: number;
   /** FAMILIAS.COMPRABLE propagated; default true below familia */

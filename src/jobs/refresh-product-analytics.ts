@@ -282,8 +282,8 @@ export class ProductAnalyticsRefresher {
   async enrich(docs: IProductAnalytics[]): Promise<void> {
     const CHUNK = 5000
     const cat = new Map<string, {
-      canonicalName?: string; rubroPath?: string; famiName?: string; subfName?: string;
-      clasName?: string; subcName?: string; unitName?: string; isService?: boolean
+      canonicalName?: string | undefined; rubroPath?: string | undefined; famiName?: string | undefined; subfName?: string | undefined;
+      clasName?: string | undefined; subcName?: string | undefined; unitName?: string | undefined; isService?: boolean | undefined
     }>()
     const codes = docs.map(d => d.code)
     for (let i = 0; i < codes.length; i += CHUNK) {
