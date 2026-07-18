@@ -21,6 +21,11 @@ export function unsubscribeUrl(token: string): string {
   return `${appBaseUrl()}/unsubscribe?token=${encodeURIComponent(token)}`;
 }
 
+/** The API opt-out endpoint — target of the machine List-Unsubscribe one-click. */
+export function unsubscribeApiUrl(token: string): string {
+  return `${appBaseUrl()}/api/unsubscribe?token=${encodeURIComponent(token)}`;
+}
+
 export function callUrl(compraId: string): string {
   return `${appBaseUrl()}/llamados/${encodeURIComponent(compraId)}`;
 }
@@ -36,9 +41,9 @@ export function toEmailCall(call: Pick<IOpenCall, "compraId" | "title" | "buyer"
   };
 }
 
-function listUnsubHeaders(token: string): Record<string, string> {
+export function listUnsubHeaders(token: string): Record<string, string> {
   return {
-    "List-Unsubscribe": `<${unsubscribeUrl(token)}>`,
+    "List-Unsubscribe": `<${unsubscribeApiUrl(token)}>`,
     "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
   };
 }

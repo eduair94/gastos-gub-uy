@@ -14,7 +14,7 @@ import type { IOpenCall, IUser, OpenCallStatus } from "../../shared/types/monito
 import { createMailer } from "../services/mailer";
 import { renderReminderEmail } from "../emails/templates";
 import type { Locale } from "../emails/templates";
-import { appBaseUrl, toEmailCall, unsubscribeUrl } from "./alerts/dispatch";
+import { appBaseUrl, listUnsubHeaders, toEmailCall, unsubscribeUrl } from "./alerts/dispatch";
 
 const DAY_MS = 86_400_000;
 const LIVE: OpenCallStatus[] = ["open", "clarification", "amended"];
@@ -98,10 +98,7 @@ async function main(): Promise<void> {
       subject: email.subject,
       html: email.html,
       text: email.text,
-      headers: {
-        "List-Unsubscribe": `<${unsubscribeUrl(user.unsubscribeToken)}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-      },
+      headers: listUnsubHeaders(user.unsubscribeToken),
     });
 
     if (result.ok || result.skipped) {

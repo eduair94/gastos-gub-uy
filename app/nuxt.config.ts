@@ -102,12 +102,24 @@ export default defineNuxtConfig({
     mongoUri: process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017',
     mongoDatabase: process.env.MONGODB_DB || process.env.MONGO_DATABASE || 'gastos_gub',
 
+    // Firebase Admin credentials are read directly from process.env by
+    // server/utils/firebase-admin.ts (FIREBASE_PROJECT_ID / _CLIENT_EMAIL /
+    // _PRIVATE_KEY) — kept out of runtimeConfig so the private key never risks
+    // leaking into the public bundle.
+
     public: {
       apiBase: '/api',
       siteUrl,
       // Every contract links back to its official record here. If the
       // source ever moves, this is the only place to change.
       sourceBase: 'https://www.comprasestatales.gub.uy/ocds/release',
+      // Firebase Web SDK config — safe to expose (client auth needs it).
+      firebase: {
+        apiKey: process.env.NUXT_PUBLIC_FIREBASE_API_KEY || '',
+        authDomain: process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+        projectId: process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+        appId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID || '',
+      },
     },
   },
 

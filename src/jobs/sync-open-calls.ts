@@ -10,6 +10,30 @@ import { connectToDatabase, disconnectFromDatabase } from "../../shared/connecti
 import { syncOpenCalls } from "./open-calls/sync";
 import { runMatching } from "./matching/run";
 import { dispatchAlerts } from "./alerts/dispatch";
+import { summarizeOpenCall } from "./pliego/summarize";
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/** Eager pliego summaries for freshly-opened calls — bounded, throttled, non-fatal. */
+async function eagerSummaries(compraIds: string[], log: (m: string) => void): Promise<void> {
+  if (!compraIds.length || !(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)) return;
+  const cap = Number(process.env.SYNC_EAGER_SUMMARY_LIMIT ?? 10);
+  const rpm = Number(process.env.AI_TRIAGE_RPM ?? 18);
+  const delayMs = Math.ceil(60_000 / Math.max(1, rpm));
+  const targets = compraIds.slice(0, cap);
+  let done = 0;
+  for (const compraId of targets) {
+    try {
+      if (await summarizeOpenCall(compraId)) done++;
+    } catch (err) {
+      log(`summary ${compraId} failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    await sleep(delayMs);
+  }
+  log(`eager summaries: ${done}/${targets.length}`);
+}
 
 async function main(): Promise<void> {
   const log = (m: string) => console.log(`[sync-open-calls] ${m}`);
@@ -20,6 +44,7 @@ async function main(): Promise<void> {
     await runMatching(sync.newlyOpenedCompraIds, log);
   }
   const disp = await dispatchAlerts({ frequency: "instant", log });
+  await eagerSummaries(sync.newlyOpenedCompraIds, log);
 
   log(`done: ${sync.inserted} new calls, ${disp.notificationsSent} alert notifications sent`);
 }
