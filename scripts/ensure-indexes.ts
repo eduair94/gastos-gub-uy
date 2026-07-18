@@ -473,6 +473,20 @@ async function main(): Promise<void> {
       await apiKeys.createIndex({ userId: 1, createdAt: -1 }, { background: true })
       console.log('✅ api_keys indexes ensured (prefix unique, userId+createdAt)')
 
+      // webhook_subscriptions: REST-Hook targets. active+events drives the producer
+      // fan-out; userId+createdAt backs the management list.
+      const webhookSubs = db.collection('webhook_subscriptions')
+      await webhookSubs.createIndex({ userId: 1, createdAt: -1 }, { background: true })
+      await webhookSubs.createIndex({ active: 1, events: 1 }, { background: true })
+      console.log('✅ webhook_subscriptions indexes ensured (userId+createdAt, active+events)')
+
+      // webhook_deliveries: idempotent outbox. dedupeKey unique makes enqueue safe
+      // to re-run; status+nextAttemptAt is the dispatcher's drain query.
+      const webhookDeliveries = db.collection('webhook_deliveries')
+      await webhookDeliveries.createIndex({ dedupeKey: 1 }, { unique: true, background: true })
+      await webhookDeliveries.createIndex({ status: 1, nextAttemptAt: 1 }, { background: true })
+      console.log('✅ webhook_deliveries indexes ensured (dedupeKey unique, status+nextAttemptAt)')
+
       // ---- SICE / CUBS article catalog ----
       // sice_catalog: per-article, keyed by `code` (== classification.id). The text
       // index backs the alerts picker search over canonical name + synonyms.
@@ -511,6 +525,8 @@ async function main(): Promise<void> {
       console.log('   plan: notifications.{dedupeKey unique, status+type, userId+createdAt, status+scheduledFor}')
       console.log('   plan: saved_calls.{userId+compraId unique, userId+createdAt}')
       console.log('   plan: api_keys.{prefix unique, userId+createdAt}')
+      console.log('   plan: webhook_subscriptions.{userId+createdAt, active+events}')
+      console.log('   plan: webhook_deliveries.{dedupeKey unique, status+nextAttemptAt}')
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
     }

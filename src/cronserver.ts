@@ -61,6 +61,20 @@ class CronServer {
   // writes its own provider_anomaly_stats/summary). Runs after the anomaly detector + AI triage.
   private crossProviderStatus: CronJobStatus;
   private isCrossProviderRunning: boolean = false;
+  // Organism-group spending rollups — independent (reads releases, writes its own
+  // organism_group_stats). Monthly; feeds /analytics/organismos + /analytics/intendencias.
+  private organismGroupStatus: CronJobStatus;
+  private isOrganismGroupRunning: boolean = false;
+  // Product-variant distributions — independent (reads anomalies + releases + scrapes the
+  // gov características, writes its own product_variants). Weekly; feeds the product page's
+  // "¿varía el producto?" panel for the unexplained-anomaly codes.
+  private productVariantsStatus: CronJobStatus;
+  private isProductVariantsRunning: boolean = false;
+  // Webhook delivery — independent (reads open_calls/anomalies/releases + webhook_*,
+  // writes its own webhook_deliveries), so it never consults busyWith(). Runs every
+  // few minutes: enqueue deliveries for newly-seen events, then drain the outbox.
+  private webhooksStatus: CronJobStatus;
+  private isWebhooksRunning: boolean = false;
 
   constructor() {
     this.app = express();
@@ -77,6 +91,9 @@ class CronServer {
     this.digestStatus = freshStatus();
     this.catalogStatus = freshStatus();
     this.crossProviderStatus = freshStatus();
+    this.organismGroupStatus = freshStatus();
+    this.productVariantsStatus = freshStatus();
+    this.webhooksStatus = freshStatus();
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -337,6 +354,39 @@ class CronServer {
     };
     this.app.post("/cron/cross-provider", triggerCrossProvider);
     this.app.get("/cron/cross-provider", triggerCrossProvider);
+
+    // Organism-group rollups: status + manual trigger. Independent guard (does not touch releases).
+    this.app.get("/cron/organism-groups/status", (_req, res) => {
+      res.json({ ...this.organismGroupStatus, isRunning: this.isOrganismGroupRunning });
+    });
+    const triggerOrganismGroups = (_req: express.Request, res: express.Response): void => {
+      if (this.isOrganismGroupRunning) {
+        res.status(409).json({ error: "Organism-group refresh already running", status: this.organismGroupStatus });
+        return;
+      }
+      this.logger.info("Manual organism-group refresh trigger initiated");
+      this.runOrganismGroupJob().catch((error) => this.logger.error("Manual organism-group trigger failed:", error));
+      res.json({ message: "Organism-group refresh triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/organism-groups", triggerOrganismGroups);
+    this.app.get("/cron/organism-groups", triggerOrganismGroups);
+
+    // Product-variant distributions: status + manual trigger. Independent guard (scrapes the
+    // gov características; writes its own product_variants), so it never consults busyWith().
+    this.app.get("/cron/product-variants/status", (_req, res) => {
+      res.json({ ...this.productVariantsStatus, isRunning: this.isProductVariantsRunning });
+    });
+    const triggerProductVariants = (_req: express.Request, res: express.Response): void => {
+      if (this.isProductVariantsRunning) {
+        res.status(409).json({ error: "Product-variant refresh already running", status: this.productVariantsStatus });
+        return;
+      }
+      this.logger.info("Manual product-variant refresh trigger initiated");
+      this.runProductVariantsJob().catch((error) => this.logger.error("Manual product-variant trigger failed:", error));
+      res.json({ message: "Product-variant refresh triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/product-variants", triggerProductVariants);
+    this.app.get("/cron/product-variants", triggerProductVariants);
 
     // Monitor de Llamados: open-calls sync, reminders, digest — status + triggers
     this.app.get("/cron/open-calls/status", (_req, res) => {
@@ -655,6 +705,32 @@ class CronServer {
       { scheduled: true, timezone: "America/Montevideo" }
     );
     this.logger.info(`Provider anomaly cross-reference scheduled with expression: ${crossProviderExpression} (Uruguay timezone)`);
+
+    // Organism-group spending rollups, monthly at 03:00 on the 1st. Heavy-ish (~85s full-collection
+    // aggregation) but rarely changing month-to-month, and independent (writes its own collection).
+    const organismGroupExpression = "0 3 1 * *";
+    cron.schedule(
+      organismGroupExpression,
+      async () => {
+        await this.runOrganismGroupJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Organism-group refresh scheduled with expression: ${organismGroupExpression} (Uruguay timezone)`);
+
+    // Product-variant distributions, weekly on Sunday at 07:00 — after the daily detector +
+    // AI triage, so it scopes the current unexplained set. Heavier than the others (it scrapes
+    // gov característica pages for uncached compras), hence weekly; independent of busyWith
+    // (writes its own product_variants).
+    const productVariantsExpression = "0 7 * * 0";
+    cron.schedule(
+      productVariantsExpression,
+      async () => {
+        await this.runProductVariantsJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Product-variant refresh scheduled with expression: ${productVariantsExpression} (Uruguay timezone)`);
   }
 
   /**
@@ -878,6 +954,73 @@ class CronServer {
       this.logger.error("Provider anomaly cross-reference failed:", errorMessage);
     } finally {
       this.isCrossProviderRunning = false;
+    }
+  }
+
+  /**
+   * Organism-group rollups: aggregate capped spend per buyer.id, fold into the
+   * ORGANISM_GROUPS taxonomy, and compute-then-swap into organism_group_stats, which
+   * /analytics/organismos + /analytics/intendencias read. Reads releases, writes its own
+   * collection, so it is independent of busyWith(); its own boolean serialises repeat runs.
+   */
+  private async runOrganismGroupJob(): Promise<void> {
+    if (this.isOrganismGroupRunning) {
+      this.logger.warn("Skipping organism-group refresh - already running");
+      return;
+    }
+    this.isOrganismGroupRunning = true;
+    this.organismGroupStatus.status = "running";
+    this.organismGroupStatus.lastRun = new Date();
+    this.organismGroupStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting organism-group refresh...");
+      await this.runJobProcess("jobs/refresh-organism-groups");
+      this.organismGroupStatus.status = "idle";
+      this.organismGroupStatus.successfulRuns++;
+      this.logger.info("Organism-group refresh completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.organismGroupStatus.status = "error";
+      this.organismGroupStatus.lastError = errorMessage;
+      this.organismGroupStatus.failedRuns++;
+      this.logger.error("Organism-group refresh failed:", errorMessage);
+    } finally {
+      this.isOrganismGroupRunning = false;
+    }
+  }
+
+  /**
+   * Product-variant distributions: for each unexplained-anomaly code, sample its award
+   * releases, ensure their scraped características are cached, and roll up the matched line's
+   * Marca/Presentación/Nombre comercial/etc. into product_variants (compute-then-swap). Reads
+   * anomalies + releases + scrapes the gov site, writes its own collection, so it is independent
+   * of busyWith(); its own boolean serialises repeat runs.
+   */
+  private async runProductVariantsJob(): Promise<void> {
+    if (this.isProductVariantsRunning) {
+      this.logger.warn("Skipping product-variant refresh - already running");
+      return;
+    }
+    this.isProductVariantsRunning = true;
+    this.productVariantsStatus.status = "running";
+    this.productVariantsStatus.lastRun = new Date();
+    this.productVariantsStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting product-variant refresh...");
+      await this.runJobProcess("jobs/refresh-product-variants");
+      this.productVariantsStatus.status = "idle";
+      this.productVariantsStatus.successfulRuns++;
+      this.logger.info("Product-variant refresh completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.productVariantsStatus.status = "error";
+      this.productVariantsStatus.lastError = errorMessage;
+      this.productVariantsStatus.failedRuns++;
+      this.logger.error("Product-variant refresh failed:", errorMessage);
+    } finally {
+      this.isProductVariantsRunning = false;
     }
   }
 
