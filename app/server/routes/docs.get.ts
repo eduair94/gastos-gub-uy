@@ -9,7 +9,7 @@ const html = /* html */ `<!doctype html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>API Docs · Con la tuya contribuyente — Uruguay Procurement API</title>
-    <meta name="description" content="Free, public API for Uruguay government procurement data: contracts, suppliers, buyers and spending analytics. Try every endpoint live." />
+    <meta name="description" content="Public API for Uruguay government procurement: contracts, licitaciones (tenders), analytics, alerts, webhooks and an MCP server. Get an API key and try every endpoint live." />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <style>
       body { margin: 0; }
@@ -25,8 +25,8 @@ const html = /* html */ `<!doctype html>
   </head>
   <body>
     <div class="boot" id="boot">
-      <h1>Loading API reference…</h1>
-      <p>If this takes a while, the raw spec is at <a href="/openapi.json">/openapi.json</a>.</p>
+      <h1>Cargando referencia de la API… · Loading API reference…</h1>
+      <p>Si demora, el spec crudo está en <a href="/openapi.json">/openapi.json</a>. ¿Necesitás una API key? <a href="/app/api-keys">/app/api-keys</a>.</p>
     </div>
 
     <!-- Scalar API Reference -->
@@ -42,6 +42,12 @@ const html = /* html */ `<!doctype html>
         defaultOpenAllTags: false,
         hideDownloadButton: false,
         searchHotKey: 'k',
+        // Lead the "try it" snippets with the three clients integrators actually use.
+        defaultHttpClient: { targetKey: 'shell', clientKey: 'curl' },
+        hiddenClients: {
+          node: true, ruby: true, php: true, go: true, java: true, csharp: true,
+          objc: true, swift: true, kotlin: true, r: true, ocaml: true, powershell: true, clojure: true, http: true,
+        },
         metaData: {
           title: 'Uruguay Procurement API — Con la tuya contribuyente',
         },

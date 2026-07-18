@@ -126,14 +126,22 @@
       "date": "Fecha",
       "amount": "Monto",
       "status": "Estado",
-      "method": "Procedimiento"
+      "method": "Procedimiento",
+      "product": "Producto (este ítem)",
+      "qty": "Cantidad",
+      "unitPrice": "Precio unit.",
+      "brand": "Marca"
     },
     "sort": {
       "dateDesc": "Más recientes primero",
       "dateAsc": "Más antiguos primero",
       "amountDesc": "Mayor monto",
       "amountAsc": "Menor monto",
-      "relevance": "Más relevantes"
+      "relevance": "Más relevantes",
+      "itemPriceDesc": "Precio unitario ↓",
+      "itemPriceAsc": "Precio unitario ↑",
+      "itemQtyDesc": "Cantidad ↓",
+      "itemQtyAsc": "Cantidad ↑"
     },
     "empty": {
       "title": "Ningún contrato coincide con estos filtros",
@@ -880,6 +888,7 @@
     "source": "Datos: Compras Estatales (OCDS) vía catalogodatos.gub.uy",
     "disclaimer": "Sitio independiente. No es un sitio oficial del Estado uruguayo.",
     "api": "API pública",
+    "developers": "Desarrolladores",
     "lastUpdate": "Datos al {date}"
   },
   "auth": {
@@ -1058,6 +1067,26 @@
     "revokeConfirm": "¿Revocar esta API key? Las integraciones que la usen dejarán de funcionar.",
     "empty": "Todavía no tenés ninguna API key.",
     "createError": "No pudimos crear la clave. Intentá de nuevo."
+  },
+  "developers": {
+    "eyebrow": "Para desarrolladores",
+    "title": "API pública de compras del Estado",
+    "lead": "Integrá licitaciones, contratos, analítica y alertas en tus propias herramientas, en Zapier o en un cliente MCP.",
+    "step1Title": "1. Obtené una API key",
+    "step1Body": "Creá una clave en tu cuenta. Las de lectura son opcionales y suben tu límite de uso; las de escritura gestionan alertas.",
+    "step1Cta": "Crear API key",
+    "step2Title": "2. Hacé tu primera consulta",
+    "step2Body": "Enviá la clave en el header x-api-key o como Authorization: Bearer.",
+    "step3Title": "3. Integrá",
+    "step3Body": "Conectá triggers de polling, webhooks o el servidor MCP oficial.",
+    "docsCta": "Ver la documentación completa",
+    "sectionIntegrations": "Formas de integrar",
+    "zapierTitle": "Zapier y no-code",
+    "zapierBody": "Apuntá cualquier herramienta compatible con OpenAPI a /openapi.json. Para triggers de \"algo nuevo\" usá los endpoints /api/v1/*/changes.",
+    "webhooksTitle": "Webhooks",
+    "webhooksBody": "Suscribí una URL HTTPS para recibir eventos push: nueva licitación que coincide, nueva anomalía, nueva adjudicación. Firmados con HMAC.",
+    "mcpTitle": "Servidor MCP",
+    "mcpBody": "Conectá la API a Claude u otros clientes MCP con el paquete oficial, autenticado con tu API key."
   },
   "dashboard": {
     "title": "Panel",

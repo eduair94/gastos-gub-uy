@@ -10,9 +10,10 @@
 const APP_NAME = 'Con la tuya contribuyente'
 
 const DESCRIPTION = `
-Public, **no-authentication-required** API for exploring **Uruguay government procurement data**
-(contracts, suppliers, buyers and spending analytics), sourced from
-[comprasestatales.gub.uy](https://www.comprasestatales.gub.uy) OCDS releases.
+Open API for **Uruguay government procurement data** (contracts, licitaciones, suppliers, buyers and
+spending analytics), sourced from [comprasestatales.gub.uy](https://www.comprasestatales.gub.uy) OCDS
+releases. **Read endpoints need no authentication**; a free API key raises your rate limit and unlocks
+your account features (alerts, saved calls) for Zapier / MCP integrations — see **Authentication** below.
 
 Use it freely to build dashboards, run research, or check public spending. 💛
 
@@ -77,6 +78,31 @@ processes serving traffic.
 \`/api/contracts/filters\` answers from an in-process cache: \`filter_data\`-backed facets for 15 min,
 the derived \`procurementMethodDetails\` and \`currencies\` facets refreshed by a background scan every
 6h, and \`amountBounds\` for 15 min. Every other endpoint queries the database on each request.
+
+### Authentication (API keys)
+
+Public read endpoints need **no** authentication. An **API key is optional on reads** but raises your
+rate limit from 60 req/min (per IP) to **600 req/min** (per key) — worth it for pollers and dashboards.
+
+Account endpoints (your alerts/*watches*, saved calls, preferences, calendar) **require** a key with the
+\`write\` scope, or the web session. Create keys at [/app/api-keys](/app/api-keys). Send the key either way:
+
+\`\`\`bash
+# As a bearer token
+curl -H "Authorization: Bearer gk_live_xxx" "https://gastos.gub.uy/api/watches"
+# …or the x-api-key header
+curl -H "x-api-key: gk_live_xxx" "https://gastos.gub.uy/api/watches"
+\`\`\`
+
+Keys look like \`gk_live_<8>_<32>\`. The full secret is shown **once** at creation — store it safely.
+A revoked or malformed key returns **401**; a read key used on a write endpoint returns **403**.
+
+### Integrations (Zapier & MCP)
+
+This spec is the contract for third-party integrations. Point any OpenAPI-aware tool (Zapier, a custom
+GPT, an MCP-from-OpenAPI generator) at \`/openapi.json\`. For polling triggers ("new tender", "new
+anomaly") use the cursor endpoints under \`/api/v1/*/changes\`. For push, subscribe a webhook at
+\`/api/v1/webhooks\`. An official **MCP server** wraps these endpoints as tools — see the developer page.
 `
 
 const okWrapper = (dataRef: object) => ({
@@ -107,12 +133,17 @@ export const openApiDocument = {
   ],
   tags: [
     { name: 'System', description: 'Service health.' },
-    { name: 'Contracts', description: 'Procurement contracts / OCDS releases: list, detail and filter options.' },
+    { name: 'Licitaciones', description: 'Open calls (llamados / tenders currently receiving offers): live list, detail, AI pliego summary and price benchmarks.' },
+    { name: 'Contracts', description: 'Awarded procurement contracts / OCDS releases: list, detail and filter options.' },
     { name: 'Search', description: 'Cross-entity full-text search.' },
     { name: 'Suppliers', description: 'Companies awarded government contracts.' },
     { name: 'Buyers', description: 'Government entities that award contracts.' },
-    { name: 'Analytics', description: 'Pre-computed rankings, anomalies and distributions.' },
+    { name: 'Analytics', description: 'Pre-computed rankings, anomalies, products and organism-group distributions.' },
     { name: 'Dashboard', description: 'Headline metrics and spending trends.' },
+    { name: 'Catalog', description: 'SICE/CUBS article catalog used to categorise tenders and build alerts.' },
+    { name: 'Account', description: 'Your alerts (watches), saved calls, preferences and API keys. Requires a write-scoped key or the web session.' },
+    { name: 'Integration', description: 'Cursor "changes since" endpoints designed for Zapier-style polling triggers.' },
+    { name: 'Webhooks', description: 'Subscribe HTTPS endpoints to receive push events (REST Hooks): tender.matched, anomaly.detected, award.created.' },
   ],
   paths: {
     '/api/health': {
@@ -610,11 +641,285 @@ export const openApiDocument = {
         responses: { 200: { description: 'Time series of spending.', content: { 'application/json': { schema: okWrapper({ type: 'array', items: { $ref: '#/components/schemas/SpendingTrendPoint' } }) } } } },
       },
     },
+
+    // ---- Licitaciones (open calls / llamados) ----
+    '/api/open-calls': {
+      get: {
+        tags: ['Licitaciones'],
+        summary: 'List open calls (live tenders)',
+        description: 'Paginated list of tenders currently receiving offers (`status` open/clarification/amended by '
+          + 'default). Filter by category (SICE/OCDS classification id), buyer id, procedure and keyword; sort by '
+          + 'deadline or newest. Keyed on `compraId`. For a machine poller that wants only what is new since last '
+          + 'run, prefer `/api/v1/tenders/changes`.',
+        parameters: [
+          { name: 'status', in: 'query', description: 'Repeatable. Defaults to the live set (open, clarification, amended). Pass `all` for every status.', schema: { type: 'array', items: { type: 'string', enum: ['open', 'clarification', 'amended', 'closed', 'awarded', 'cancelled', 'all'] } }, style: 'form', explode: true },
+          { name: 'category', in: 'query', description: 'SICE/OCDS classification id(s) — matches `classificationSet`. Repeatable.', schema: { type: 'array', items: { type: 'string' } }, style: 'form', explode: true },
+          { name: 'buyer', in: 'query', description: 'Buyer id(s) — matches `buyer.id`. Repeatable.', schema: { type: 'array', items: { type: 'string' } }, style: 'form', explode: true },
+          { name: 'method', in: 'query', description: 'procurementMethodDetails value(s). Repeatable.', schema: { type: 'array', items: { type: 'string' } }, style: 'form', explode: true, example: ['Licitación Abreviada'] },
+          { name: 'q', in: 'query', description: 'Keyword over the call text (normalized, ≤120 chars).', schema: { type: 'string', maxLength: 120 } },
+          { name: 'endsBefore', in: 'query', description: 'Only calls whose reception deadline (`tenderPeriod.endDate`) is on/before this ISO date.', schema: { type: 'string', format: 'date' } },
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 200, default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 24 } },
+          { name: 'sort', in: 'query', schema: { type: 'string', enum: ['deadline', 'newest'], default: 'deadline' } },
+        ],
+        responses: {
+          200: {
+            description: 'A page of open calls.',
+            content: { 'application/json': { schema: okWrapper({ type: 'object', properties: { calls: { type: 'array', items: { $ref: '#/components/schemas/OpenCall' } }, pagination: { $ref: '#/components/schemas/HasMorePagination' } } }) } },
+          },
+          429: { $ref: '#/components/responses/RateLimited' },
+        },
+      },
+    },
+    '/api/open-calls/{compraId}': {
+      get: {
+        tags: ['Licitaciones'],
+        summary: 'Get an open call',
+        parameters: [{ name: 'compraId', in: 'path', required: true, schema: { type: 'string' }, example: '1352393' }],
+        responses: {
+          200: { description: 'The open call, enriched with `sourceUrl` (derived from ocid) and `savedByMe`.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/OpenCall' }) } } },
+          404: { $ref: '#/components/responses/NotFound' },
+        },
+      },
+    },
+    '/api/open-calls/{compraId}/summary': {
+      get: {
+        tags: ['Licitaciones'],
+        summary: 'AI pliego summary',
+        description: 'A cached, advisory AI summary of the tender documents (objeto, key requirements, deadlines, '
+          + 'guarantees, evaluation criteria). **Advisory only** — always defer to the official pliego and the OCDS '
+          + '`tenderPeriod` for real deadlines. Returns `{available:false, hasPliego}` when no summary exists yet.',
+        parameters: [{ name: 'compraId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Summary (or availability flag).', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/OpenCallSummary' }) } } } },
+      },
+    },
+    '/api/open-calls/{compraId}/benchmarks': {
+      get: {
+        tags: ['Licitaciones'],
+        summary: 'Price benchmarks for a call',
+        description: 'Historical award-price context per rubro for the items in this call — percentiles (p25/p50/p75/p95) '
+          + 'by currency and unit, from past awards of the same catalogue code.',
+        parameters: [{ name: 'compraId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Per-classification benchmarks.', content: { 'application/json': { schema: okWrapper({ type: 'object', properties: { benchmarks: { type: 'array', items: { $ref: '#/components/schemas/PriceBenchmark' } } } }) } } } },
+      },
+    },
+
+    // ---- Catalog ----
+    '/api/categories': {
+      get: {
+        tags: ['Catalog'],
+        summary: 'Browse / search the SICE article catalog',
+        description: 'Four modes: no params → top-level familias; `?parent=<token>` → children of a rubro node; '
+          + '`?q=<text>` → search rubros + articles; `?resolve=<tokens csv>` → resolve tokens to labels. '
+          + 'The `token` of a node is what alerts store in `categories` and what `/api/open-calls?category=` expects.',
+        parameters: [
+          { name: 'parent', in: 'query', schema: { type: 'string' } },
+          { name: 'q', in: 'query', schema: { type: 'string' } },
+          { name: 'resolve', in: 'query', description: 'Comma-separated tokens to resolve to labels.', schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 30 } },
+        ],
+        responses: { 200: { description: 'Catalog nodes.', content: { 'application/json': { schema: okWrapper({ type: 'array', items: { $ref: '#/components/schemas/Category' } }) } } } },
+      },
+    },
+
+    // ---- Analytics (previously undocumented) ----
+    '/api/analytics/products': {
+      get: {
+        tags: ['Analytics'],
+        summary: 'Product analytics by catalogue code',
+        description: 'Per catalogue-code (classification id) spend rollups — top buyers/suppliers, by-year, SICE-enriched name.',
+        parameters: [
+          ...paginationParams,
+          { name: 'q', in: 'query', schema: { type: 'string' } },
+          { name: 'sortBy', in: 'query', schema: { type: 'string', enum: ['spend', 'lines'], default: 'spend' } },
+        ],
+        responses: { 200: { description: 'A page of product analytics.', content: { 'application/json': { schema: okWrapper({ type: 'object', properties: { products: { type: 'array', items: { $ref: '#/components/schemas/ProductAnalytics' } }, pagination: { $ref: '#/components/schemas/Pagination' } } }) } } } },
+      },
+    },
+    '/api/analytics/products/{code}': {
+      get: {
+        tags: ['Analytics'],
+        summary: 'One catalogue code with price baselines',
+        parameters: [{ name: 'code', in: 'path', required: true, schema: { type: 'string' }, example: '39121500' }],
+        responses: { 200: { description: 'Product analytics + price baselines.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/ProductAnalytics' }) } } }, 404: { $ref: '#/components/responses/NotFound' } },
+      },
+    },
+    '/api/analytics/provider-anomalies': {
+      get: {
+        tags: ['Analytics'],
+        summary: 'Providers by unexplained-anomaly concentration',
+        description: 'Cross-reference of providers against unexplained anomaly flags — flag count, per-currency overprice, '
+          + 'worst z-score, captive-buyer signal. Precomputed daily.',
+        parameters: [
+          ...paginationParams,
+          { name: 'sortBy', in: 'query', schema: { type: 'string', enum: ['flagCount', 'overprice', 'worstZ'], default: 'flagCount' } },
+        ],
+        responses: { 200: { description: 'Ranked providers + summary.', content: { 'application/json': { schema: okWrapper({ type: 'object', properties: { providers: { type: 'array', items: { $ref: '#/components/schemas/ProviderAnomaly' } }, pagination: { $ref: '#/components/schemas/Pagination' } } }) } } } },
+      },
+    },
+    '/api/analytics/organism-groups': {
+      get: {
+        tags: ['Analytics'],
+        summary: 'Spending per organism group',
+        description: 'Precomputed spending rollups per organism group (Intendencias, Ministerios, Salud, Entes, Educación).',
+        responses: { 200: { description: 'Organism-group rollups.', content: { 'application/json': { schema: okWrapper({ type: 'array', items: { $ref: '#/components/schemas/OrganismGroup' } }) } } } },
+      },
+    },
+    '/api/analytics/intendencias': {
+      get: {
+        tags: ['Analytics'],
+        summary: 'Departmental (Intendencias) spending',
+        description: 'Spending by departmental government (Intendencia). Corrupt-outlier caveats apply — see the data-quality note.',
+        responses: { 200: { description: 'Per-Intendencia spending.', content: { 'application/json': { schema: okWrapper({ type: 'array', items: { type: 'object' } }) } } } },
+      },
+    },
+
+    // ---- Account (require a write-scoped key or the web session) ----
+    '/api/watches': {
+      get: {
+        tags: ['Account'],
+        summary: 'List my alerts (watches)',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Your watches, newest first.', content: { 'application/json': { schema: okWrapper({ type: 'array', items: { $ref: '#/components/schemas/Watch' } }) } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 403: { $ref: '#/components/responses/Forbidden' } },
+      },
+      post: {
+        tags: ['Account'],
+        summary: 'Create an alert',
+        description: 'Creates a rubro subscription. `categories` (SICE tokens) and `keywords` are OR-triggers; `buyers`, '
+          + 'value range and `procurementMethods` are AND-refinements. Free-tier cap applies (409 when exceeded).',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/WatchInput' } } } },
+        responses: { 200: { description: 'The created watch.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/Watch' }) } } }, 400: { $ref: '#/components/responses/BadRequest' }, 401: { $ref: '#/components/responses/Unauthorized' }, 403: { $ref: '#/components/responses/Forbidden' }, 409: { description: 'Watch cap reached.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } } },
+      },
+    },
+    '/api/watches/{id}': {
+      get: {
+        tags: ['Account'],
+        summary: 'Get one of my alerts',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'The watch.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/Watch' }) } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 404: { $ref: '#/components/responses/NotFound' } },
+      },
+      put: {
+        tags: ['Account'],
+        summary: 'Update an alert',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/WatchInput' } } } },
+        responses: { 200: { description: 'The updated watch.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/Watch' }) } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 403: { $ref: '#/components/responses/Forbidden' }, 404: { $ref: '#/components/responses/NotFound' } },
+      },
+      delete: {
+        tags: ['Account'],
+        summary: 'Delete an alert',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Deleted.', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' } } } } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 404: { $ref: '#/components/responses/NotFound' } },
+      },
+    },
+    '/api/watches/test': {
+      post: {
+        tags: ['Account'],
+        summary: 'Dry-run an alert against live calls',
+        description: 'How many currently-open calls a draft watch would match right now (with a small sample). No watch is created.',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/WatchInput' } } } },
+        responses: { 200: { description: 'Match count + sample.', content: { 'application/json': { schema: okWrapper({ type: 'object', properties: { total: { type: 'integer' }, sample: { type: 'array', items: { type: 'object' } }, scanned: { type: 'integer' }, capped: { type: 'boolean' } } }) } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 403: { $ref: '#/components/responses/Forbidden' } },
+      },
+    },
+    '/api/saved-calls': {
+      get: {
+        tags: ['Account'],
+        summary: 'List my saved calls',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Bookmarked calls with a light summary.', content: { 'application/json': { schema: okWrapper({ type: 'array', items: { $ref: '#/components/schemas/SavedCall' } }) } } }, 401: { $ref: '#/components/responses/Unauthorized' } },
+      },
+      post: {
+        tags: ['Account'],
+        summary: 'Save (bookmark) a call',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['compraId'], properties: { compraId: { type: 'string' }, note: { type: 'string', maxLength: 500 }, reminderDaysBefore: { type: 'integer', minimum: 1, maximum: 30 } } } } } },
+        responses: { 200: { description: 'The saved-call record.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/SavedCall' }) } } }, 400: { $ref: '#/components/responses/BadRequest' }, 401: { $ref: '#/components/responses/Unauthorized' }, 403: { $ref: '#/components/responses/Forbidden' }, 404: { $ref: '#/components/responses/NotFound' } },
+      },
+    },
+    '/api/saved-calls/{compraId}': {
+      delete: {
+        tags: ['Account'],
+        summary: 'Remove a saved call',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        parameters: [{ name: 'compraId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Removed.', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' } } } } } }, 401: { $ref: '#/components/responses/Unauthorized' } },
+      },
+    },
+    '/api/calendar': {
+      get: {
+        tags: ['Account'],
+        summary: 'My upcoming deadlines',
+        description: 'Union of saved calls and live calls matching my active watches, with their reception deadlines — ideal for a calendar/ICS integration.',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Upcoming deadline items.', content: { 'application/json': { schema: okWrapper({ type: 'object', properties: { items: { type: 'array', items: { $ref: '#/components/schemas/CalendarItem' } } } }) } } }, 401: { $ref: '#/components/responses/Unauthorized' } },
+      },
+    },
+    '/api/account/preferences': {
+      get: {
+        tags: ['Account'],
+        summary: 'Get notification preferences',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Email, locale and notification prefs.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/Preferences' }) } } }, 401: { $ref: '#/components/responses/Unauthorized' } },
+      },
+      put: {
+        tags: ['Account'],
+        summary: 'Update notification preferences',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { enabled: { type: 'boolean' }, frequency: { type: 'string', enum: ['instant', 'daily'] }, locale: { type: 'string', enum: ['es', 'en'] } } } } } },
+        responses: { 200: { description: 'Updated prefs.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/Preferences' }) } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 403: { $ref: '#/components/responses/Forbidden' } },
+      },
+    },
+    '/api/account/api-keys': {
+      get: {
+        tags: ['Account'],
+        summary: 'List my API keys',
+        description: 'Never returns the secret — only the public prefix and metadata. Session-authed (managed from the web page).',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        responses: { 200: { description: 'Your active keys.', content: { 'application/json': { schema: okWrapper({ type: 'array', items: { $ref: '#/components/schemas/ApiKey' } }) } } }, 401: { $ref: '#/components/responses/Unauthorized' } },
+      },
+      post: {
+        tags: ['Account'],
+        summary: 'Create an API key',
+        description: 'Returns the full secret **once**. Store it immediately — only its hash is kept.',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['label'], properties: { label: { type: 'string', maxLength: 60 }, scopes: { type: 'array', items: { type: 'string', enum: ['read', 'write'] } } } } } } },
+        responses: { 200: { description: 'The new key incl. the one-time `token`.', content: { 'application/json': { schema: okWrapper({ $ref: '#/components/schemas/ApiKeyCreated' }) } } }, 400: { $ref: '#/components/responses/BadRequest' }, 401: { $ref: '#/components/responses/Unauthorized' }, 409: { description: 'Key cap reached.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } } },
+      },
+    },
+    '/api/account/api-keys/{id}': {
+      delete: {
+        tags: ['Account'],
+        summary: 'Revoke an API key',
+        security: [{ apiKeyHeader: [] }, { bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Revoked.', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' } } } } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 404: { $ref: '#/components/responses/NotFound' } },
+      },
+    },
   },
 
   components: {
+    securitySchemes: {
+      apiKeyHeader: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-api-key',
+        description: 'Your API key (gk_live_…). Create one at /app/api-keys. Optional on reads (raises the rate limit); required with the `write` scope on Account endpoints.',
+      },
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        description: 'Send the API key as `Authorization: Bearer gk_live_…`. Equivalent to x-api-key.',
+      },
+    },
     responses: {
       BadRequest: { description: 'Invalid or missing parameters.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+      Unauthorized: { description: 'Missing or invalid credentials (no session and no valid API key, or a revoked/malformed key).', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+      Forbidden: { description: 'Authenticated but not allowed — e.g. a read-only key used on a write endpoint (needs the `write` scope).', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
       NotFound: { description: 'Resource not found.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
       RateLimited: { description: 'Too many requests — slow down and retry after ~60s.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
     },
@@ -1071,6 +1376,198 @@ export const openApiDocument = {
           sortBy: { type: 'string', description: 'The sort actually applied, which may differ from what you asked for — `relevance` degrades to `date` without a `search`, as does any unknown value.' },
           sortOrder: { type: 'string', enum: ['asc', 'desc'] },
           executionTimeMs: { type: 'integer' },
+        },
+      },
+      HasMorePagination: {
+        type: 'object',
+        description: 'Cursor-free pagination used by list endpoints that expose a total.',
+        properties: {
+          page: { type: 'integer', example: 1 },
+          limit: { type: 'integer', example: 24 },
+          total: { type: 'integer', example: 312 },
+          hasMore: { type: 'boolean', example: true },
+        },
+      },
+      OpenCall: {
+        type: 'object',
+        description: 'A live tender ("llamado"), keyed by `compraId`. Projected/merged from OCDS releases.',
+        properties: {
+          compraId: { type: 'string', example: '1352393' },
+          ocid: { type: 'string', example: 'ocds-yfs5dr-1352393' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          buyer: { $ref: '#/components/schemas/Party' },
+          procuringEntity: { $ref: '#/components/schemas/Party' },
+          procurementMethod: { type: 'string' },
+          procurementMethodDetails: { type: 'string', example: 'Licitación Abreviada' },
+          status: { type: 'string', enum: ['open', 'clarification', 'amended', 'closed', 'awarded', 'cancelled'] },
+          publishDate: { type: 'string', format: 'date-time' },
+          tenderPeriod: { type: 'object', properties: { startDate: { type: 'string', format: 'date-time' }, endDate: { type: 'string', format: 'date-time', description: 'Reception deadline.' } } },
+          classificationSet: { type: 'array', items: { type: 'string' }, description: 'Deduped SICE/OCDS classification ids — the category match key.' },
+          estimatedValue: { type: 'number' },
+          currency: { type: 'string' },
+          sourceUrl: { type: ['string', 'null'], format: 'uri', description: 'Public gov page, derived from ocid.' },
+          firstSeenAt: { type: 'string', format: 'date-time', description: 'When this call was first ingested — the "is new?" signal.' },
+          savedByMe: { type: 'boolean', description: 'Present when authenticated: whether you bookmarked it.' },
+        },
+      },
+      OpenCallSummary: {
+        type: 'object',
+        properties: {
+          available: { type: 'boolean' },
+          hasPliego: { type: 'boolean', description: 'Present when `available` is false: whether tender documents exist to summarise.' },
+          summary: {
+            type: 'object',
+            description: 'Advisory AI summary. Present when `available` is true.',
+            properties: {
+              objeto: { type: 'string' },
+              requisitosClave: { type: 'array', items: { type: 'string' } },
+              plazos: { type: 'object' },
+              garantias: { type: 'string' },
+              criteriosEvaluacion: { type: 'array', items: { type: 'string' } },
+              disclaimer: { type: 'string' },
+            },
+          },
+        },
+      },
+      PriceBenchmark: {
+        type: 'object',
+        properties: {
+          classificationId: { type: 'string' },
+          label: { type: 'string' },
+          priceBaselines: {
+            type: 'array',
+            items: { type: 'object', properties: { currency: { type: 'string' }, unitName: { type: 'string' }, n: { type: 'integer' }, p25: { type: 'number' }, p50: { type: 'number' }, p75: { type: 'number' }, p95: { type: 'number' } } },
+          },
+        },
+      },
+      Category: {
+        type: 'object',
+        description: 'A SICE catalog node — a rubro (familia/subfamilia/clase/subclase) or an article. `token` is what alerts store.',
+        properties: {
+          token: { type: 'string' },
+          label: { type: 'string' },
+          level: { type: 'string', enum: ['familia', 'subfamilia', 'clase', 'subclase', 'articulo'] },
+          path: { type: 'string' },
+          articleCount: { type: 'integer' },
+        },
+      },
+      ProductAnalytics: {
+        type: 'object',
+        properties: {
+          code: { type: 'string', description: 'Catalogue code == OCDS classification id.' },
+          canonicalName: { type: 'string' },
+          topBuyers: { type: 'array', items: { type: 'object' } },
+          topSuppliers: { type: 'array', items: { type: 'object' } },
+          byYear: { type: 'array', items: { type: 'object' } },
+        },
+      },
+      ProviderAnomaly: {
+        type: 'object',
+        properties: {
+          supplierName: { type: 'string' },
+          flagCount: { type: 'integer' },
+          worstZ: { type: 'number' },
+          captive: { type: 'boolean', description: 'All flags concentrated with a single buyer.' },
+          topBuyer: { type: 'string' },
+          overprice: { type: 'array', items: { type: 'object', properties: { currency: { type: 'string' }, amount: { type: 'number' } } } },
+        },
+      },
+      OrganismGroup: {
+        type: 'object',
+        properties: {
+          groupKey: { type: 'string', example: 'intendencias' },
+          members: { type: 'array', items: { type: 'string' } },
+          total: { type: 'number' },
+          byYear: { type: 'array', items: { type: 'object' } },
+        },
+      },
+      Watch: {
+        type: 'object',
+        description: 'A saved alert. `categories`/`keywords` are OR-triggers; `buyers`, value range and `procurementMethods` are AND-refinements.',
+        properties: {
+          _id: { type: 'string' },
+          name: { type: 'string' },
+          active: { type: 'boolean' },
+          categories: { type: 'array', items: { type: 'string' }, description: 'SICE/OCDS classification ids (tokens).' },
+          keywords: { type: 'array', items: { type: 'string' } },
+          keywordMode: { type: 'string', enum: ['any', 'all'] },
+          buyers: { type: 'array', items: { type: 'string' } },
+          minValue: { type: 'number' },
+          maxValue: { type: 'number' },
+          procurementMethods: { type: 'array', items: { type: 'string' } },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      WatchInput: {
+        type: 'object',
+        required: ['name'],
+        description: 'At least one of `categories`, `keywords` or `buyers` must be provided.',
+        properties: {
+          name: { type: 'string' },
+          active: { type: 'boolean', default: true },
+          categories: { type: 'array', items: { type: 'string' } },
+          keywords: { type: 'array', items: { type: 'string' } },
+          keywordMode: { type: 'string', enum: ['any', 'all'], default: 'any' },
+          buyers: { type: 'array', items: { type: 'string' } },
+          minValue: { type: 'number' },
+          maxValue: { type: 'number' },
+          procurementMethods: { type: 'array', items: { type: 'string' } },
+        },
+      },
+      SavedCall: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          compraId: { type: 'string' },
+          note: { type: 'string' },
+          reminderDaysBefore: { type: 'integer' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      CalendarItem: {
+        type: 'object',
+        properties: {
+          compraId: { type: 'string' },
+          title: { type: 'string' },
+          buyer: { type: 'string' },
+          status: { type: 'string' },
+          endDate: { type: ['string', 'null'], format: 'date-time' },
+          sourceUrl: { type: ['string', 'null'], format: 'uri' },
+          saved: { type: 'boolean' },
+          matched: { type: 'boolean', description: 'Matched by one of your active watches.' },
+        },
+      },
+      Preferences: {
+        type: 'object',
+        properties: {
+          email: { type: 'string' },
+          emailVerified: { type: 'boolean' },
+          locale: { type: 'string', enum: ['es', 'en'] },
+          notificationPrefs: { type: 'object', properties: { enabled: { type: 'boolean' }, frequency: { type: 'string', enum: ['instant', 'daily'] } } },
+        },
+      },
+      ApiKey: {
+        type: 'object',
+        description: 'An API key (metadata only — the secret is never returned after creation).',
+        properties: {
+          _id: { type: 'string' },
+          label: { type: 'string' },
+          prefix: { type: 'string', example: 'gk_live_ab12cd34' },
+          scopes: { type: 'array', items: { type: 'string', enum: ['read', 'write'] } },
+          lastUsedAt: { type: ['string', 'null'], format: 'date-time' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      ApiKeyCreated: {
+        type: 'object',
+        description: 'The create response — the only place the full secret `token` appears.',
+        properties: {
+          id: { type: 'string' },
+          label: { type: 'string' },
+          prefix: { type: 'string' },
+          scopes: { type: 'array', items: { type: 'string' } },
+          token: { type: 'string', description: 'The full secret. Shown once — store it now.', example: 'gk_live_ab12cd34_Xy...' },
         },
       },
     },

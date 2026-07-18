@@ -614,6 +614,9 @@ watch([locale, user], () => nextTick(scheduleRecompute))
           <NuxtLink :to="localePath('/about')">
             {{ t('nav.about') }}
           </NuxtLink>
+          <NuxtLink :to="localePath('/developers')">
+            {{ t('footer.developers') }}
+          </NuxtLink>
           <a href="/docs">{{ t('footer.api') }}</a>
           <a
             href="https://www.comprasestatales.gub.uy"
