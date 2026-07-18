@@ -1,4 +1,8 @@
 <script setup lang="ts">
+// `guest` middleware also redirects to home when Firebase isn't configured, so this
+// magic-link landing never runs its auth calls in the disabled state.
+definePageMeta({ middleware: 'guest' })
+
 const { t } = useI18n()
 const localePath = useLocalePath()
 const { completeMagicLink } = useAuth()

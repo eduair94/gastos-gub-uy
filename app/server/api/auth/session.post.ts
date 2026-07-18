@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { createError, defineEventHandler, readBody, setCookie } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { UserModel } from '../../../../shared/models/user'
-import { adminAuth, SESSION_COOKIE, SESSION_MAX_AGE_MS } from '../../utils/firebase-admin'
+import { adminAuth, isFirebaseAdminConfigured, SESSION_COOKIE, SESSION_MAX_AGE_MS } from '../../utils/firebase-admin'
 import { assertSameOrigin, toPublicUser } from '../../utils/auth'
 
 // Exchanges a freshly-obtained Firebase ID token for an httpOnly SSR session
@@ -10,6 +10,12 @@ import { assertSameOrigin, toPublicUser } from '../../utils/auth'
 // right after any sign-in (email/password, Google, magic link).
 export default defineEventHandler(async (event) => {
   assertSameOrigin(event)
+
+  // Defence in depth: the auth UI is hidden when Firebase isn't configured, but a
+  // direct POST should get a clean "unavailable" rather than a 500 from adminAuth().
+  if (!isFirebaseAdminConfigured()) {
+    throw createError({ statusCode: 503, statusMessage: 'La autenticación no está disponible.' })
+  }
 
   const body = await readBody<{ idToken?: string }>(event)
   const idToken = body?.idToken

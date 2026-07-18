@@ -76,8 +76,10 @@ const otherLocales = computed(() =>
   locales.value.filter(l => l.code !== locale.value),
 )
 
-// Auth — the user menu / login control in the top bar and drawer.
+// Auth — the user menu / login control in the top bar and drawer. When Firebase
+// isn't configured the auth area is disabled, so the login control is hidden entirely.
 const { user, logout } = useAuth()
+const authEnabled = useAuthEnabled()
 async function onLogout() {
   await logout()
   drawer.value = false
@@ -255,7 +257,7 @@ watch(() => route.fullPath, () => {
             </v-list>
           </v-menu>
           <NuxtLink
-            v-else
+            v-else-if="authEnabled"
             :to="localePath('/login')"
             class="loginbtn"
           >
@@ -397,7 +399,7 @@ watch(() => route.fullPath, () => {
           </button>
         </template>
         <NuxtLink
-          v-else
+          v-else-if="authEnabled"
           :to="localePath('/login')"
           class="drawer__sub"
           @click="drawer = false"

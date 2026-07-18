@@ -4,6 +4,9 @@ const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
 const { user } = useAuth()
+// Browsing open calls is public (backed by the DB); the "create alert" CTA needs
+// accounts, so it's hidden when Firebase isn't configured.
+const authEnabled = useAuthEnabled()
 
 useSeo({ title: t('llamados.title'), description: t('llamados.lead'), path: '/llamados' })
 
@@ -76,6 +79,7 @@ const createAlertTo = computed(() => (user.value ? localePath('/app/alertas') : 
         class="llamados__sort"
       />
       <NuxtLink
+        v-if="authEnabled"
         :to="createAlertTo"
         class="llamados__cta"
       >

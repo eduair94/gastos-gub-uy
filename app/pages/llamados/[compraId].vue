@@ -22,6 +22,9 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const { user } = useAuth()
+// Saving a call needs an account; hide the save control and its login hint when
+// Firebase isn't configured. Viewing the call detail stays public.
+const authEnabled = useAuthEnabled()
 const api = useMonitorApi()
 
 const compraId = computed(() => String(route.params.compraId))
@@ -174,7 +177,7 @@ async function setReminder(days: number) {
           />
         </template>
         <NuxtLink
-          v-else
+          v-else-if="authEnabled"
           :to="localePath('/login')"
           class="calldetail__loginhint u-muted"
         >
