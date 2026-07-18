@@ -1,7 +1,7 @@
 import { createError, defineEventHandler, readBody, setHeader } from 'h3'
 import { connectToDatabase } from '../../../utils/database'
 import { ContractItemFeaturesModel } from '../../../utils/models'
-import { scrapeItemFeatures } from '../../../utils/item-features'
+import { scrapeItemFeatures } from '../../../../../shared/utils/item-features'
 import { awardUrl, sourceUrl } from '../../../utils/query'
 
 /**

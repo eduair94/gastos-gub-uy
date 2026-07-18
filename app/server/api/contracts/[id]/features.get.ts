@@ -3,7 +3,7 @@ import { isValidObjectId } from 'mongoose'
 import { connectToDatabase } from '../../../utils/database'
 import { ContractItemFeaturesModel, ReleaseModel } from '../../../utils/models'
 import { awardUrl, compraIdFromOcid, sourceUrl } from '../../../utils/query'
-import { scrapeItemFeatures, type ScrapedItem } from '../../../utils/item-features'
+import { scrapeItemFeatures, type ScrapedItem } from '../../../../../shared/utils/item-features'
 
 /**
  * Per-item "Características" scraped from the government's HTML pages.
