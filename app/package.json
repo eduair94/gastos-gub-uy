@@ -28,6 +28,8 @@
     "chart.js": "^4.5.0",
     "chartjs-adapter-date-fns": "^3.0.0",
     "date-fns": "^4.1.0",
+    "firebase": "^11.3.0",
+    "firebase-admin": "^13.1.0",
     "h3": "^1.15.4",
     "lodash-es": "^4.17.21",
     "mongodb": "^6.18.0",
@@ -36,7 +38,7 @@
     "pinia": "^2.2.4",
     "vue": "latest",
     "vue-chartjs": "^5.3.2",
-    "vuetify": "^3.7.2"
+    "vuetify": "^4.1.5"
   },
   "devDependencies": {
     "@nuxt/typescript-build": "^3.0.2",

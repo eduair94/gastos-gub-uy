@@ -1,0 +1,150 @@
+// Monitor de Llamados + auth — shared model interfaces.
+// Kept separate from database.ts so the large OCDS types file stays focused.
+//
+// Optional properties are declared `?: T | undefined` (not just `?: T`) because
+// the repo compiles with `exactOptionalPropertyTypes`, and these docs are built
+// by projecting possibly-undefined OCDS fields — an explicitly-undefined value
+// must be assignable.
+import type { Document } from 'mongoose'
+
+export type NotificationFrequency = 'instant' | 'daily'
+
+export interface IUser extends Document {
+  uid: string
+  email: string
+  emailVerified: boolean
+  displayName?: string | undefined
+  photoURL?: string | undefined
+  providers: string[]
+  role: 'user' | 'admin'
+  locale: 'es' | 'en'
+  status: 'active' | 'disabled'
+  notificationPrefs: {
+    enabled: boolean
+    frequency: NotificationFrequency
+  }
+  unsubscribeToken: string
+  watchCount: number
+  lastLoginAt?: Date | undefined
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type KeywordMode = 'any' | 'all'
+
+export interface IWatch extends Document {
+  userId: string
+  name: string
+  active: boolean
+  categories: string[]
+  keywords: string[]
+  keywordMode: KeywordMode
+  buyers: string[]
+  minValue?: number | undefined
+  maxValue?: number | undefined
+  procurementMethods?: string[] | undefined
+  lastMatchedAt?: Date | undefined
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type OpenCallStatus = 'open' | 'clarification' | 'amended' | 'closed' | 'awarded' | 'cancelled'
+
+export interface IOpenCallItem {
+  description?: string | undefined
+  classificationId?: string | undefined
+  classificationLabel?: string | undefined
+  quantity?: number | undefined
+  unit?: { id?: string | undefined, name?: string | undefined } | undefined
+}
+
+export interface IOpenCallDocument {
+  title?: string | undefined
+  url: string
+  format?: string | undefined
+  datePublished?: Date | undefined
+  documentType?: string | undefined
+}
+
+// Cached AI pliego summary. Advisory only — the disclaimer is always shown and
+// the deadline shown to users comes from the OCDS tenderPeriod, never from here.
+export interface IPliegoSummary {
+  objeto: string
+  requisitosClave: string[]
+  plazos: {
+    recepcionOfertas?: string | undefined
+    aperturaOfertas?: string | undefined
+    consultas?: string | undefined
+  }
+  garantias?: string | undefined
+  criteriosEvaluacion: string[]
+  montoReferencia?: string | undefined
+  observaciones: string[]
+  model: string
+  generatedAt: Date
+  sourceDocs: string[]
+  disclaimer: string
+}
+
+export interface IOpenCall extends Document {
+  compraId: string
+  ocid: string
+  latestReleaseId?: string | undefined
+  sourceReleaseIds: string[]
+  title: string
+  description?: string | undefined
+  buyer: { id?: string | undefined, name?: string | undefined }
+  procuringEntity: { id?: string | undefined, name?: string | undefined }
+  procurementMethod?: string | undefined
+  procurementMethodDetails?: string | undefined
+  status: OpenCallStatus
+  publishDate?: Date | undefined
+  tenderPeriod?: { startDate?: Date | undefined, endDate?: Date | undefined } | undefined
+  enquiryPeriod?: { startDate?: Date | undefined, endDate?: Date | undefined } | undefined
+  items: IOpenCallItem[]
+  classificationSet: string[]
+  searchText: string
+  estimatedValue?: number | undefined
+  currency?: string | undefined
+  documents: IOpenCallDocument[]
+  aiSummary?: IPliegoSummary | undefined
+  awardRef?: { releaseId: string, ocid: string, awardedAt?: Date | undefined } | undefined
+  // $setOnInsert only — "is this NEW?" (drives alerts). Never updated on resync.
+  firstSeenAt: Date
+  // Restamped every sync — "still current?".
+  lastSyncedAt: Date
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type NotificationType = 'alert' | 'reminder' | 'award'
+export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'skipped'
+
+export interface INotification extends Document {
+  type: NotificationType
+  userId: string
+  compraId: string
+  watchIds: string[]
+  matchedOn?: { categories?: string[] | undefined, keywords?: string[] | undefined } | undefined
+  // Unique — makes enqueue idempotent so a resync never double-notifies.
+  dedupeKey: string
+  channel: 'email'
+  status: NotificationStatus
+  batchId?: string | undefined
+  attempts: number
+  lastError?: string | undefined
+  scheduledFor?: Date | undefined
+  sentAt?: Date | undefined
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ISavedCall extends Document {
+  userId: string
+  compraId: string
+  note?: string | undefined
+  reminderDaysBefore?: number | undefined
+  reminderSentAt?: Date | undefined
+  createdAt: Date
+  updatedAt: Date
+}

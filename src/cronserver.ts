@@ -45,6 +45,15 @@ class CronServer {
   private isAnalyticsRunning: boolean = false;
   private anomalyStatus: CronJobStatus;
   private isAnomalyRunning: boolean = false;
+  // Monitor de Llamados jobs. Independent of the release writers/aggregations
+  // above (they read `releases` and write open_calls/notifications), so they use
+  // their own guards rather than busyWith().
+  private openCallsStatus: CronJobStatus;
+  private isOpenCallsRunning: boolean = false;
+  private remindersStatus: CronJobStatus;
+  private isRemindersRunning: boolean = false;
+  private digestStatus: CronJobStatus;
+  private isDigestRunning: boolean = false;
 
   constructor() {
     this.app = express();
@@ -56,6 +65,9 @@ class CronServer {
     this.reconcileStatus = freshStatus();
     this.analyticsStatus = freshStatus();
     this.anomalyStatus = freshStatus();
+    this.openCallsStatus = freshStatus();
+    this.remindersStatus = freshStatus();
+    this.digestStatus = freshStatus();
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -300,6 +312,46 @@ class CronServer {
     this.app.post("/cron/anomalies", triggerAnomalies);
     this.app.get("/cron/anomalies", triggerAnomalies);
 
+    // Monitor de Llamados: open-calls sync, reminders, digest — status + triggers
+    this.app.get("/cron/open-calls/status", (_req, res) => {
+      res.json({ ...this.openCallsStatus, isRunning: this.isOpenCallsRunning });
+    });
+    const triggerOpenCalls = (_req: express.Request, res: express.Response): void => {
+      if (this.isOpenCallsRunning) {
+        res.status(409).json({ error: "Open-calls sync already running", status: this.openCallsStatus });
+        return;
+      }
+      this.logger.info("Manual open-calls sync trigger initiated");
+      this.runOpenCallsJob().catch((error) => this.logger.error("Manual open-calls trigger failed:", error));
+      res.json({ message: "Open-calls sync triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/open-calls", triggerOpenCalls);
+    this.app.get("/cron/open-calls", triggerOpenCalls);
+
+    const triggerReminders = (_req: express.Request, res: express.Response): void => {
+      if (this.isRemindersRunning) {
+        res.status(409).json({ error: "Reminders job already running", status: this.remindersStatus });
+        return;
+      }
+      this.logger.info("Manual reminders trigger initiated");
+      this.runRemindersJob().catch((error) => this.logger.error("Manual reminders trigger failed:", error));
+      res.json({ message: "Deadline reminders triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/reminders", triggerReminders);
+    this.app.get("/cron/reminders", triggerReminders);
+
+    const triggerDigest = (_req: express.Request, res: express.Response): void => {
+      if (this.isDigestRunning) {
+        res.status(409).json({ error: "Digest job already running", status: this.digestStatus });
+        return;
+      }
+      this.logger.info("Manual digest trigger initiated");
+      this.runDigestJob().catch((error) => this.logger.error("Manual digest trigger failed:", error));
+      res.json({ message: "Alert digest triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/digest", triggerDigest);
+    this.app.get("/cron/digest", triggerDigest);
+
     // MongoDB restart endpoint
     this.app.post("/admin/restart-mongodb", async (_req, res) => {
       try {
@@ -498,6 +550,42 @@ class CronServer {
     );
 
     this.logger.info(`Reconciliation job scheduled with expression: ${reconcileExpression} (Uruguay timezone)`);
+
+    // Open-calls sync hourly at :20 — after the :05 release ingest lands the new
+    // llamados, project them into open_calls, match against watches, and email
+    // instant-frequency users. Independent of busyWith (reads releases, writes
+    // its own collections).
+    const openCallsExpression = "20 * * * *";
+    cron.schedule(
+      openCallsExpression,
+      async () => {
+        await this.runOpenCallsJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Open-calls sync scheduled with expression: ${openCallsExpression} (Uruguay timezone)`);
+
+    // Deadline reminders daily at 05:00.
+    const remindersExpression = "0 5 * * *";
+    cron.schedule(
+      remindersExpression,
+      async () => {
+        await this.runRemindersJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Deadline reminders scheduled with expression: ${remindersExpression} (Uruguay timezone)`);
+
+    // Daily alert digest at 08:00 (for frequency:'daily' users).
+    const digestExpression = "0 8 * * *";
+    cron.schedule(
+      digestExpression,
+      async () => {
+        await this.runDigestJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Alert digest scheduled with expression: ${digestExpression} (Uruguay timezone)`);
   }
 
   /**
@@ -688,6 +776,94 @@ class CronServer {
       this.logger.error("Anomaly detection failed:", errorMessage);
     } finally {
       this.isAnomalyRunning = false;
+    }
+  }
+
+  /**
+   * Open-calls pipeline: project new/updated llamados from `releases` into
+   * `open_calls`, match newly-opened ones against active watches, and email
+   * instant-frequency users. The whole pipeline is one spawned child process.
+   */
+  private async runOpenCallsJob(): Promise<void> {
+    if (this.isOpenCallsRunning) {
+      this.logger.warn("Skipping open-calls sync - already running");
+      return;
+    }
+    this.isOpenCallsRunning = true;
+    this.openCallsStatus.status = "running";
+    this.openCallsStatus.lastRun = new Date();
+    this.openCallsStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting open-calls sync (project + match + dispatch)...");
+      await this.runJobProcess("jobs/sync-open-calls");
+      this.openCallsStatus.status = "idle";
+      this.openCallsStatus.successfulRuns++;
+      this.logger.info("Open-calls sync completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.openCallsStatus.status = "error";
+      this.openCallsStatus.lastError = errorMessage;
+      this.openCallsStatus.failedRuns++;
+      this.logger.error("Open-calls sync failed:", errorMessage);
+    } finally {
+      this.isOpenCallsRunning = false;
+    }
+  }
+
+  /** Daily deadline reminders for saved calls approaching their close date. */
+  private async runRemindersJob(): Promise<void> {
+    if (this.isRemindersRunning) {
+      this.logger.warn("Skipping reminders - already running");
+      return;
+    }
+    this.isRemindersRunning = true;
+    this.remindersStatus.status = "running";
+    this.remindersStatus.lastRun = new Date();
+    this.remindersStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting deadline reminders...");
+      await this.runJobProcess("jobs/deadline-reminders");
+      this.remindersStatus.status = "idle";
+      this.remindersStatus.successfulRuns++;
+      this.logger.info("Deadline reminders completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.remindersStatus.status = "error";
+      this.remindersStatus.lastError = errorMessage;
+      this.remindersStatus.failedRuns++;
+      this.logger.error("Deadline reminders failed:", errorMessage);
+    } finally {
+      this.isRemindersRunning = false;
+    }
+  }
+
+  /** Daily digest email for frequency:'daily' users. */
+  private async runDigestJob(): Promise<void> {
+    if (this.isDigestRunning) {
+      this.logger.warn("Skipping digest - already running");
+      return;
+    }
+    this.isDigestRunning = true;
+    this.digestStatus.status = "running";
+    this.digestStatus.lastRun = new Date();
+    this.digestStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting alert digest...");
+      await this.runJobProcess("jobs/alert-digest");
+      this.digestStatus.status = "idle";
+      this.digestStatus.successfulRuns++;
+      this.logger.info("Alert digest completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.digestStatus.status = "error";
+      this.digestStatus.lastError = errorMessage;
+      this.digestStatus.failedRuns++;
+      this.logger.error("Alert digest failed:", errorMessage);
+    } finally {
+      this.isDigestRunning = false;
     }
   }
 

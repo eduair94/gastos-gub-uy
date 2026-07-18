@@ -384,11 +384,62 @@ async function main(): Promise<void> {
         .collection('anomalies')
         .createIndex({ 'aiVerdict.explainable': 1, severityRank: -1 }, { background: true })
       console.log('✅ anomalies.aiVerdict.explainable_1_severityRank_-1 ensured')
+
+      // ---- Monitor de Llamados + auth collections ----
+      // These are small, hot collections whose schema-declared indexes must be
+      // ensured here (autoIndex off). Unique keys enforce idempotent upserts and
+      // one-notification-per-(type,user,call).
+      const db = client.db(DB_NAME)
+
+      const users = db.collection('users')
+      await users.createIndex({ uid: 1 }, { unique: true, background: true })
+      await users.createIndex({ email: 1 }, { unique: true, background: true })
+      await users.createIndex({ unsubscribeToken: 1 }, { unique: true, background: true })
+      console.log('✅ users indexes ensured (uid, email, unsubscribeToken — all unique)')
+
+      const watches = db.collection('watches')
+      await watches.createIndex({ userId: 1 }, { background: true })
+      await watches.createIndex({ active: 1, categories: 1 }, { background: true })
+      await watches.createIndex({ active: 1 }, { background: true })
+      console.log('✅ watches indexes ensured (userId, active+categories, active)')
+
+      const openCalls = db.collection('open_calls')
+      await openCalls.createIndex({ compraId: 1 }, { unique: true, background: true })
+      await openCalls.createIndex({ classificationSet: 1 }, { background: true })
+      await openCalls.createIndex({ 'tenderPeriod.endDate': 1 }, { background: true })
+      await openCalls.createIndex({ 'buyer.id': 1 }, { background: true })
+      await openCalls.createIndex({ status: 1, 'tenderPeriod.endDate': 1 }, { background: true })
+      await openCalls.createIndex({ firstSeenAt: -1 }, { background: true })
+      // Keyword search over the normalized concat. `default_language: 'none'`
+      // disables stemming for exact/substring phrase matching, mirroring the
+      // releases exact-search index. One text index per collection — this is it.
+      await openCalls.createIndex(
+        { searchText: 'text' },
+        { name: 'open_calls_text', default_language: 'none', background: true },
+      )
+      console.log('✅ open_calls indexes ensured (compraId unique, classificationSet, endDate, buyer.id, status+endDate, firstSeenAt, text)')
+
+      const notifications = db.collection('notifications')
+      await notifications.createIndex({ dedupeKey: 1 }, { unique: true, background: true })
+      await notifications.createIndex({ status: 1, type: 1 }, { background: true })
+      await notifications.createIndex({ userId: 1, createdAt: -1 }, { background: true })
+      await notifications.createIndex({ status: 1, scheduledFor: 1 }, { background: true })
+      console.log('✅ notifications indexes ensured (dedupeKey unique, status+type, userId+createdAt, status+scheduledFor)')
+
+      const savedCalls = db.collection('saved_calls')
+      await savedCalls.createIndex({ userId: 1, compraId: 1 }, { unique: true, background: true })
+      await savedCalls.createIndex({ userId: 1, createdAt: -1 }, { background: true })
+      console.log('✅ saved_calls indexes ensured (userId+compraId unique, userId+createdAt)')
     }
     else {
       console.log('   plan: contract_item_features.compraId_1 (unique)')
       console.log('   plan: product_analytics.code_1 (unique), rankBySpend_1, rankByLines_1')
       console.log('   plan: anomalies.aiVerdict.explainable_1_severityRank_-1')
+      console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')
+      console.log('   plan: watches.{userId, active+categories, active}')
+      console.log('   plan: open_calls.{compraId unique, classificationSet, tenderPeriod.endDate, buyer.id, status+endDate, firstSeenAt, text}')
+      console.log('   plan: notifications.{dedupeKey unique, status+type, userId+createdAt, status+scheduledFor}')
+      console.log('   plan: saved_calls.{userId+compraId unique, userId+createdAt}')
     }
 
     if (failed > 0) {

@@ -10,3 +10,10 @@ export * from './product_analytics';
 export * from './release';
 export * from './supplier_pattern';
 
+// Monitor de Llamados + auth
+export * from './user';
+export * from './watch';
+export * from './open_call';
+export * from './notification';
+export * from './saved_call';
+
