@@ -15,6 +15,10 @@ logs
 
 # Generated AI anomaly-triage dumps (verdicts-*.json, latest.json)
 data/
+# ...but app/data holds build-time source modules imported by pages
+# (~/data/investigaciones*), so it must be committed or the Nuxt build fails.
+!app/data/
+!app/data/**
 firebase.json
 
 # Playwright MCP browser artifacts
