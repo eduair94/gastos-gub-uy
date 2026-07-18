@@ -205,6 +205,9 @@
       "itemsTender": "What is requested",
       "reference": "Price reference"
     },
+    "ai": {
+      "title": "AI review of the price flag"
+    },
     "itemsHelp": "Awarded items with quantity and unit price.",
     "noItems": "The official record lists no items for this contract.",
     "noDocuments": "No documents are published for this contract.",

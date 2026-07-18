@@ -201,6 +201,38 @@ const { data: featRes } = useLazyFetch<any>(
   { server: false },
 )
 
+// The AI review of this contract's price flag, if any. Shown as a prominent panel so a
+// journalist/researcher lands on the analysis + evidence + source links, not just the numbers.
+// Client-only and keyed on the release id (how the alerts list links here).
+const { data: anomalyRes } = useLazyFetch<any>(
+  () => `/api/analytics/anomalies?releaseId=${encodeURIComponent(id.value)}&limit=1&sortBy=severity&sortOrder=desc`,
+  { server: false },
+)
+const aiFlag = computed<any | null>(() => anomalyRes.value?.data?.anomalies?.[0] ?? null)
+const aiVerdict = computed<any | null>(() => {
+  const v = aiFlag.value?.aiVerdict
+  return v && typeof v.explainable === 'string' ? v : null
+})
+const aiEvidence = computed<string[]>(() =>
+  Array.isArray(aiVerdict.value?.evidence) ? aiVerdict.value.evidence.filter((x: any) => typeof x === 'string' && x.trim()) : [],
+)
+const aiDocs = computed<any[]>(() =>
+  Array.isArray(aiVerdict.value?.documents) ? aiVerdict.value.documents.filter((d: any) => d?.url) : [],
+)
+const aiConfidencePct = computed<number | null>(() => {
+  const c = aiVerdict.value?.confidence
+  return typeof c === 'number' && Number.isFinite(c) ? Math.round(c * 100) : null
+})
+const aiScoredAt = computed<string | null>(() => {
+  const s = aiVerdict.value?.scoredAt
+  if (!s) return null
+  const d = new Date(s)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
+})
+function aiMoney(v: number | null | undefined): string {
+  return typeof v === 'number' && Number.isFinite(v) ? formatMoney(v, aiFlag.value?.currency ?? 'UYU', { compact: true }) : '—'
+}
+
 const itemFeatures = computed<Map<number, ItemFeatures>>(() => {
   const map = new Map<number, ItemFeatures>()
   for (const it of featRes.value?.data?.items ?? []) {
@@ -803,6 +835,99 @@ useSeo(() => ({
 
       <div class="grid">
         <div class="grid__main">
+          <!-- ===== AI review of the price flag (journalist/researcher panel) ===== -->
+          <section
+            v-if="aiVerdict"
+            class="panel block airev"
+            :class="`airev--${aiVerdict.explainable}`"
+          >
+            <div class="panel__head">
+              <h2>{{ t('contract.ai.title') }}</h2>
+              <span
+                class="airev__verdict"
+                :class="`airev__verdict--${aiVerdict.explainable}`"
+              >{{ t(`anomalies.ai.verdict.${aiVerdict.explainable}`) }}</span>
+            </div>
+            <div class="panel__body airev__body">
+              <div class="airev__tags">
+                <span class="airev__tag">{{ t(`anomalies.ai.category.${aiVerdict.category}`) }}</span>
+                <span
+                  v-if="aiConfidencePct !== null"
+                  class="airev__tag u-mono"
+                >{{ t('anomalies.confidence') }} {{ aiConfidencePct }}%</span>
+                <span class="airev__tag u-mono">{{ t(`anomalies.severity.${aiFlag.severity}`) }}</span>
+              </div>
+
+              <p
+                v-if="aiVerdict.analysis"
+                class="airev__analysis"
+              >
+                {{ aiVerdict.analysis }}
+              </p>
+              <p
+                v-else-if="aiVerdict.reason"
+                class="airev__analysis"
+              >
+                {{ aiVerdict.reason }}
+              </p>
+
+              <div class="airev__figs u-mono">
+                <span>{{ t('anomalies.detected') }}: <strong>{{ aiMoney(aiFlag.detectedValue) }}</strong></span>
+                <span v-if="aiFlag.expectedRange">{{ t('anomalies.expected') }}: {{ aiMoney(aiFlag.expectedRange.min) }} – {{ aiMoney(aiFlag.expectedRange.max) }}</span>
+              </div>
+
+              <div
+                v-if="aiEvidence.length"
+                class="airev__ev"
+              >
+                <p class="airev__h">
+                  {{ t('anomalies.ai.evidence') }}
+                </p>
+                <ul>
+                  <li
+                    v-for="(e, i) in aiEvidence"
+                    :key="`aie${i}`"
+                  >
+                    {{ e }}
+                  </li>
+                </ul>
+              </div>
+
+              <div
+                v-if="aiDocs.length"
+                class="airev__docs"
+              >
+                <p class="airev__h">
+                  {{ t('anomalies.ai.documents') }}
+                </p>
+                <ul>
+                  <li
+                    v-for="(d, i) in aiDocs"
+                    :key="`aid${i}`"
+                  >
+                    <a
+                      :href="d.url"
+                      target="_blank"
+                      rel="noopener nofollow"
+                    >{{ d.type || t('anomalies.ai.document') }}</a>
+                    <span
+                      v-if="d.format"
+                      class="airev__fmt"
+                    >{{ d.format }}</span>
+                  </li>
+                </ul>
+              </div>
+
+              <p class="airev__note">
+                {{ t('anomalies.ai.note') }}
+                <span
+                  v-if="aiVerdict.model"
+                  class="u-mono"
+                > · {{ aiVerdict.model }}<span v-if="aiScoredAt"> · {{ aiScoredAt }}</span></span>
+              </p>
+            </div>
+          </section>
+
           <!-- ===== Who ===== -->
           <section class="panel block">
             <div class="panel__head">
@@ -2291,5 +2416,97 @@ a.itable__code:hover { text-decoration: underline; }
 
   .rank__meta { grid-column: 1; grid-row: 2; }
   .rank__link :deep(.money) { grid-column: 2; grid-row: 1 / span 2; }
+}
+
+/* ===== AI review panel ===== */
+.airev { border-left: 3px solid var(--alerta); }
+.airev--no { border-left-color: var(--alerta); }
+
+.airev .panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.airev__verdict {
+  flex: none;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  padding: 2px var(--s-3);
+  border-radius: var(--r-full);
+  border: 1px solid var(--rule);
+  color: var(--text-muted);
+}
+
+.airev__verdict--no {
+  color: var(--alerta);
+  border-color: color-mix(in srgb, var(--alerta) 45%, transparent);
+  background: color-mix(in srgb, var(--alerta) 12%, transparent);
+}
+
+.airev__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.airev__tags { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+.airev__tag {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  padding: 1px var(--s-2);
+  border-radius: var(--r-full);
+  background: var(--surface-sunken);
+}
+
+.airev__analysis {
+  margin: 0;
+  line-height: 1.65;
+  font-size: var(--t-md);
+  color: var(--text);
+}
+
+.airev__figs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+.airev__h {
+  margin: 0 0 var(--s-1);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.airev__ev ul, .airev__docs ul {
+  margin: 0;
+  padding-left: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  line-height: 1.55;
+  font-size: var(--t-sm);
+}
+
+.airev__docs a {
+  color: var(--alerta);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.airev__fmt { margin-left: var(--s-2); font-size: var(--t-xs); color: var(--text-muted); }
+
+.airev__note {
+  margin: 0;
+  font-size: var(--t-xs);
+  font-style: italic;
+  color: var(--text-muted);
 }
 </style>

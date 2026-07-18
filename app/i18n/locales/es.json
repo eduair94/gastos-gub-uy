@@ -205,6 +205,9 @@
       "itemsTender": "Qué se pide",
       "reference": "Precios de referencia"
     },
+    "ai": {
+      "title": "Análisis IA de la alerta de precio"
+    },
     "itemsHelp": "Artículos adjudicados con su cantidad y precio unitario.",
     "noItems": "El registro oficial no detalla artículos para este contrato.",
     "noDocuments": "No hay documentos publicados para este contrato.",

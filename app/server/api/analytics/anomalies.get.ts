@@ -13,6 +13,7 @@ export default defineEventHandler(async (event) => {
       type,
       severity,
       ai,
+      releaseId,
       sortBy = 'createdAt',
       sortOrder = 'desc',
     } = query
@@ -26,6 +27,11 @@ export default defineEventHandler(async (event) => {
 
     if (severity) {
       filter.severity = severity
+    }
+
+    // Anomalies for one contract (release) — used by the contract detail page to show the AI review.
+    if (typeof releaseId === 'string' && releaseId) {
+      filter.releaseId = releaseId
     }
 
     // Second-stage AI triage filter (see src/jobs/score-anomalies-ai.ts). Lets the

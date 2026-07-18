@@ -658,8 +658,13 @@ class CronServer {
       // jobs: a Gemini/network hiccup (or a missing GEMINI_API_KEY) must not mark the statistical
       // detection — which is the source of truth — as failed. It is incremental by construction,
       // so it only spends on flags that changed since its last run.
+      // --rpm=18 keeps the run under the Gemini free tier's 20 req/min. It is harmless on the paid
+      // tier (just slower than necessary) and REQUIRED on the free tier, where an unthrottled burst
+      // 429-storms. Drop it (or raise it) once the project's paid quota is confirmed live.
+      // Configurable via AI_TRIAGE_RPM without a redeploy.
       this.logger.info("Starting AI anomaly triage...");
-      await this.runJobProcess("jobs/score-anomalies-ai").catch((error) => {
+      const aiRpm = process.env.AI_TRIAGE_RPM || "18";
+      await this.runJobProcess("jobs/score-anomalies-ai", [`--rpm=${aiRpm}`]).catch((error) => {
         this.logger.error("AI anomaly triage failed (non-fatal):", error);
       });
 
