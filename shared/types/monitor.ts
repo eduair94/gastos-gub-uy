@@ -148,3 +148,20 @@ export interface ISavedCall extends Document {
   createdAt: Date
   updatedAt: Date
 }
+
+export type ApiKeyScope = 'read' | 'write'
+
+// A user-issued API credential. Only the sha256 `hash` + public `prefix` are
+// stored; the full secret is shown once at creation. `revokedAt` soft-revokes.
+export interface IApiKey extends Document {
+  userId: string
+  label: string
+  prefix: string
+  hash: string
+  scopes: ApiKeyScope[]
+  lastUsedAt?: Date | undefined
+  requestCount: number
+  revokedAt?: Date | undefined
+  createdAt: Date
+  updatedAt: Date
+}

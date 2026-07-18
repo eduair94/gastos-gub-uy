@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { createError, getRequestHeader } from 'h3'
+import type { ApiKeyScope } from '../../../shared/types/monitor'
 
 // The request-scoped user is attached by server/middleware/auth.ts. It is a lean
 // Mongo `users` doc (or null). Kept as a loose shape here so route handlers do not
@@ -20,8 +21,16 @@ export interface SessionUser {
   createdAt?: Date
 }
 
+// The request-scoped API key, attached by server/middleware/apiAuth.ts when a
+// valid `Authorization: Bearer`/`x-api-key` header is present (else null).
+export interface ApiKeyContext { id: string, userId: string, scopes: ApiKeyScope[] }
+
 export function getUser(event: H3Event): SessionUser | null {
   return (event.context.user as SessionUser | null) ?? null
+}
+
+export function getApiKey(event: H3Event): ApiKeyContext | null {
+  return (event.context.apiKey as ApiKeyContext | null) ?? null
 }
 
 export function requireUser(event: H3Event): SessionUser {
@@ -33,6 +42,24 @@ export function requireUser(event: H3Event): SessionUser {
     throw createError({ statusCode: 403, statusMessage: 'Cuenta deshabilitada' })
   }
   return user
+}
+
+/**
+ * Authorize a mutating request. An API key IS the credential, so key-authed
+ * writes skip the same-origin (CSRF) check but must carry the `write` scope.
+ * Cookie-authed writes keep the existing same-origin defence. Always returns the
+ * active user (403 on a disabled account, 401 when unauthenticated).
+ */
+export function requireWrite(event: H3Event): SessionUser {
+  const apiKey = getApiKey(event)
+  if (apiKey) {
+    if (!apiKey.scopes.includes('write')) {
+      throw createError({ statusCode: 403, statusMessage: 'API key sin permiso de escritura (scope write requerido)' })
+    }
+    return requireUser(event)
+  }
+  assertSameOrigin(event)
+  return requireUser(event)
 }
 
 /**

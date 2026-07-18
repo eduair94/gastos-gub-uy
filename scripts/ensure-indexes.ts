@@ -401,6 +401,14 @@ async function main(): Promise<void> {
         .createIndex({ calculatedAt: -1 }, { background: true })
       console.log('✅ provider_anomaly_stats indexes ensured (supplierName unique, flagCount, primaryOverprice, worstZ) + summary.calculatedAt')
 
+      // organism_group_stats: precomputed spending rollups per organism group (Intendencias,
+      // Ministerios, Salud, Entes, Educación), rebuilt monthly (compute-then-swap by dataVersion)
+      // by src/jobs/refresh-organism-groups.ts. `groupKey` unique is the upsert/read key.
+      const organismStats = client.db(DB_NAME).collection('organism_group_stats')
+      await organismStats.createIndex({ groupKey: 1 }, { unique: true, background: true })
+      await organismStats.createIndex({ dataVersion: 1 }, { background: true })
+      console.log('✅ organism_group_stats indexes ensured (groupKey unique, dataVersion)')
+
       // ---- Monitor de Llamados + auth collections ----
       // These are small, hot collections whose schema-declared indexes must be
       // ensured here (autoIndex off). Unique keys enforce idempotent upserts and
@@ -447,6 +455,13 @@ async function main(): Promise<void> {
       await savedCalls.createIndex({ userId: 1, createdAt: -1 }, { background: true })
       console.log('✅ saved_calls indexes ensured (userId+compraId unique, userId+createdAt)')
 
+      // api_keys: user-issued API credentials. `prefix` unique is the O(1) lookup
+      // key the apiAuth middleware resolves the bearer/x-api-key header against.
+      const apiKeys = db.collection('api_keys')
+      await apiKeys.createIndex({ prefix: 1 }, { unique: true, background: true })
+      await apiKeys.createIndex({ userId: 1, createdAt: -1 }, { background: true })
+      console.log('✅ api_keys indexes ensured (prefix unique, userId+createdAt)')
+
       // ---- SICE / CUBS article catalog ----
       // sice_catalog: per-article, keyed by `code` (== classification.id). The text
       // index backs the alerts picker search over canonical name + synonyms.
@@ -478,11 +493,13 @@ async function main(): Promise<void> {
       console.log('   plan: product_analytics.code_1 (unique), rankBySpend_1, rankByLines_1')
       console.log('   plan: anomalies.aiVerdict.explainable_1_severityRank_-1')
       console.log('   plan: provider_anomaly_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
+      console.log('   plan: organism_group_stats.{groupKey unique, dataVersion}')
       console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')
       console.log('   plan: watches.{userId, active+categories, active}')
       console.log('   plan: open_calls.{compraId unique, classificationSet, tenderPeriod.endDate, buyer.id, status+endDate, firstSeenAt, text}')
       console.log('   plan: notifications.{dedupeKey unique, status+type, userId+createdAt, status+scheduledFor}')
       console.log('   plan: saved_calls.{userId+compraId unique, userId+createdAt}')
+      console.log('   plan: api_keys.{prefix unique, userId+createdAt}')
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
     }

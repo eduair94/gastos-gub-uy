@@ -15,6 +15,10 @@ export default defineEventHandler(async (event) => {
   const url = event.node.req.url || ''
   if (!url.startsWith('/api/')) return
 
+  // An API key already resolved the user in apiAuth.ts — don't let cookie auth
+  // clobber it (this handler runs second, alphabetically after apiAuth).
+  if (event.context.apiKey) return
+
   event.context.user = null
 
   const cookie = getCookie(event, SESSION_COOKIE)
