@@ -4,27 +4,6 @@ import { ReleaseModel } from '../../../../shared/models/release'
 import { connectToDatabase, mongoose } from '../../utils/database'
 import { escapeRegex, safeRegex, sanitizeSearch, sourceUrl, toArray, toInt, toNumberOrNull } from '../../utils/query'
 
-// Request tracking for monitoring and preventing abuse
-const requestTracker = new Map<string, { count: number, lastReset: number }>()
-
-function trackRequest(ip: string): boolean {
-  const now = Date.now()
-  const key = ip
-  const tracker = requestTracker.get(key) || { count: 0, lastReset: now }
-
-  // Reset counter every minute
-  if (now - tracker.lastReset > 60000) {
-    tracker.count = 0
-    tracker.lastReset = now
-  }
-
-  tracker.count++
-  requestTracker.set(key, tracker)
-
-  // Allow max 30 requests per minute per IP
-  return tracker.count <= 30
-}
-
 /** Fields that may be sorted on. All are indexed except `title`. */
 const SORT_FIELDS: Record<string, string> = {
   date: 'date',
@@ -36,6 +15,11 @@ const SORT_FIELDS: Record<string, string> = {
   supplier: 'awards.suppliers.name',
   amount: 'amount.primaryAmount',
   totalAmount: 'amount.primaryAmount', // Alias for amount
+  // Only valid in single-product focus mode, where the `focusItem` projection
+  // (below) surfaces the matched line's own unit price / quantity. Guarded so a
+  // request without a single categoryId falls back to date (see the handler).
+  itemUnitPrice: 'focusItem.unitAmount',
+  itemQuantity: 'focusItem.quantity',
 }
 
 function getSortField(sortBy: string): string {
@@ -317,14 +301,11 @@ async function countContracts(
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
 
-  // Basic rate limiting per IP
-  const clientIp = event.node.req.socket.remoteAddress || 'unknown'
-  if (!trackRequest(clientIp)) {
-    throw createError({
-      statusCode: 429,
-      statusMessage: 'Too many requests - please slow down',
-    })
-  }
+  // Rate limiting is handled once, correctly, by server/middleware/rateLimit.ts
+  // (real client IP, and never throttling internal SSR render traffic). The
+  // previous inline limiter here keyed on socket.remoteAddress — the shared
+  // proxy IP behind Cloudflare — so it throttled every visitor as one client
+  // and 429'd our own SSR fetches. Removed in favour of the single source.
 
   try {
     await connectToDatabase()
@@ -353,6 +334,16 @@ export default defineEventHandler(async (event) => {
     const filters = buildContractFilters(query)
     const match = toMatchDocument(filters)
 
+    // Single-product focus: when the user filtered to EXACTLY one catalogue
+    // code, surface that line's own specifics (its description, quantity, unit
+    // price) so the table can show and sort by them. With zero or several codes
+    // there is no single "matched item", so this is skipped entirely and the
+    // explorer behaves exactly as before.
+    const focusCode = (() => {
+      const ids = toArray(query.categoryId)
+      return ids.length === 1 ? ids[0]! : null
+    })()
+
     const pipeline: PipelineStage[] = []
 
     // MongoDB requires $text in the first stage; the rest of the match follows.
@@ -364,10 +355,77 @@ export default defineEventHandler(async (event) => {
       pipeline.push({ $match: { $and: filters.and } })
     }
 
+    if (focusCode) {
+      pipeline.push({
+        $addFields: {
+          // ocid without its `ocds-<prefix>-` head — the gov id_compra, used to
+          // batch-fetch the scraped características for this page of rows.
+          compraId: {
+            $let: {
+              vars: { parts: { $split: ['$ocid', '-'] } },
+              in: {
+                $reduce: {
+                  input: { $slice: ['$$parts', 2, { $size: '$$parts' }] },
+                  initialValue: '',
+                  in: { $cond: [{ $eq: ['$$value', ''] }, '$$this', { $concat: ['$$value', '-', '$$this'] }] },
+                },
+              },
+            },
+          },
+          focusItem: {
+            $let: {
+              vars: {
+                matched: {
+                  $first: {
+                    $filter: {
+                      input: {
+                        $reduce: {
+                          input: { $ifNull: ['$awards', []] },
+                          initialValue: [],
+                          in: { $concatArrays: ['$$value', { $ifNull: ['$$this.items', []] }] },
+                        },
+                      },
+                      cond: { $eq: ['$$this.classification.id', focusCode] },
+                    },
+                  },
+                },
+              },
+              in: {
+                $cond: [
+                  { $eq: ['$$matched', null] },
+                  null,
+                  {
+                    nro: { $convert: { input: { $arrayElemAt: [{ $split: [{ $ifNull: [{ $toString: '$$matched.id' }, ''] }, '-'] }, 0] }, to: 'int', onError: null, onNull: null } },
+                    description: { $ifNull: ['$$matched.classification.description', ''] },
+                    quantity: '$$matched.quantity',
+                    unitName: '$$matched.unit.name',
+                    unitAmount: '$$matched.unit.value.amount',
+                    currency: '$$matched.unit.value.currency',
+                    lineAmount: {
+                      $cond: [
+                        { $and: [{ $ne: ['$$matched.quantity', null] }, { $ne: ['$$matched.unit.value.amount', null] }] },
+                        { $multiply: ['$$matched.quantity', '$$matched.unit.value.amount'] },
+                        null,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      })
+    }
+
     // Sort. `relevance` is the only mode that uses textScore — previously the
     // score was computed on every search and then never sorted on.
     const sortByRelevance = sortBy === 'relevance' && filters.text !== null
-    const sortField = getSortField(sortBy)
+    // The item-price/qty sorts read the `focusItem` projection, which only
+    // exists in single-product focus mode. Without it, fall back to date so the
+    // request never sorts on a missing field.
+    const sortField = ((sortBy === 'itemUnitPrice' || sortBy === 'itemQuantity') && !focusCode)
+      ? 'date'
+      : getSortField(sortBy)
     const sortDirection = sortOrder === 'desc' ? -1 : 1
 
     if (sortByRelevance) {
