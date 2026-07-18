@@ -5,6 +5,7 @@
   "author": "Government Transparency Initiative",
   "private": true,
   "scripts": {
+    "prebuild": "node ../scripts/check-node.mjs",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
@@ -53,6 +54,6 @@
     "vue-tsc": "^3.3.7"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18 <23"
   }
 }

@@ -1,13 +1,15 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
+import { isValidObjectId } from 'mongoose'
 import { connectToDatabase } from '../../../utils/database'
 import { AnomalyModel, ReleaseModel } from '../../../utils/models'
+import { feedbackSummary } from '../../../utils/anomaly-feedback'
 
 export default defineEventHandler(async (event) => {
   try {
     await connectToDatabase()
 
     const anomalyId = getRouterParam(event, 'id')
-    if (!anomalyId) {
+    if (!anomalyId || !isValidObjectId(anomalyId)) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Anomaly ID is required',
@@ -40,10 +42,13 @@ export default defineEventHandler(async (event) => {
       .sort({ createdAt: -1 })
       .lean()
 
+    // Community feedback for this flag: public up/down counts + the caller's own vote.
+    const feedback = await feedbackSummary(event, String(anomaly._id))
+
     return {
       success: true,
       data: {
-        anomaly,
+        anomaly: { ...anomaly, feedback },
         contract: release,
         relatedAnomalies,
       },

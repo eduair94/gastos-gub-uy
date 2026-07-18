@@ -1,0 +1,38 @@
+name: Deploy dashboard (167)
+
+# Auto-deploy the Nuxt dashboard to the prod server (167) on every push to
+# master. Runs on a self-hosted runner installed ON 167 (dials out to GitHub —
+# works through the locked-down firewall). See docs/RUNNER-SETUP-167.md.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}   # allow manual re-deploy from the Actions tab
+
+# Serialize deploys: never two builds at once. cancel-in-progress:false queues
+# a newer push behind the running deploy rather than killing it mid-swap.
+concurrency:
+  group: deploy-dashboard-167
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, gastos-167]
+    steps:
+      - uses: actions/checkout@v4
+
+      # Materialize secrets (Mongo + Firebase) from a repo secret. Never commit .env.
+      - name: Write app/.env
+        shell: bash
+        run: printf '%s' "${{ secrets.DASHBOARD_ENV }}" > app/.env
+
+      # Reproducible install from the committed lockfile (no caret float).
+      - name: Install deps
+        shell: bash
+        run: npm --prefix app ci
+
+      # Atomic, self-rolling-back deploy. A failed/broken build leaves the live
+      # site untouched; the script's own lockfile also blocks manual/CI overlap.
+      - name: Deploy
+        shell: bash
+        run: node scripts/deploy-dashboard.mjs

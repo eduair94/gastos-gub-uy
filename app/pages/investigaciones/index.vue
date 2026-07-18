@@ -131,8 +131,60 @@ useSeo(() => ({
       </div>
     </section>
 
-    <!-- How -->
+    <!-- Serie: Intendencias -->
     <section class="inv-sec">
+      <div class="u-container">
+        <div class="inv-serie">
+          <span class="inv-serie__tag">{{ c.serieTag }}</span>
+          <h2>{{ c.serieImTitle }}</h2>
+        </div>
+        <p
+          class="inv-prose"
+          style="margin-bottom: var(--s-7); color: var(--text-muted);"
+        >
+          {{ c.serieImIntro }}
+        </p>
+
+        <div class="inv-cards">
+          <NuxtLink
+            :to="localePath('/investigaciones/intendencia-montevideo')"
+            class="inv-icard"
+          >
+            <div class="inv-icard__top">
+              <div>
+                <p class="inv-icard__eyebrow">
+                  {{ c.cardIm.eyebrow }}
+                </p>
+                <h3 class="inv-icard__title">
+                  {{ c.cardIm.title }}
+                </h3>
+              </div>
+              <div class="inv-icard__emoji">
+                🏙️
+              </div>
+            </div>
+            <div class="inv-icard__body">
+              <p class="inv-icard__dek">
+                {{ c.cardIm.dek }}
+              </p>
+              <div class="inv-icard__tags">
+                <span
+                  v-for="tg in c.cardIm.tags"
+                  :key="tg"
+                  class="inv-tagpill"
+                >{{ tg }}</span>
+              </div>
+            </div>
+            <div class="inv-icard__cta">
+              {{ c.readMore ?? t('common.viewDetail') }} →
+            </div>
+          </NuxtLink>
+        </div>
+      </div>
+    </section>
+
+    <!-- How -->
+    <section class="inv-sec inv-sec--alt">
       <div class="u-container">
         <div class="inv-serie">
           <span class="inv-serie__tag">{{ c.methodTag }}</span>
@@ -155,7 +207,7 @@ useSeo(() => ({
     </section>
 
     <!-- Soon -->
-    <section class="inv-sec inv-sec--alt">
+    <section class="inv-sec">
       <div class="u-container">
         <div class="inv-serie">
           <span class="inv-serie__tag">{{ c.soonTag }}</span>

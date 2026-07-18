@@ -1,0 +1,837 @@
+<!DOCTYPE html><html lang=es><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>preview</title><style>*{margin:0;padding:0}img{max-width:100%}</style></head><body><style>
+/* ============================================================
+   La consumición de cortesía — investigación DGC (artifact)
+   Design: auditor's expediente, native to "Con la tuya" system.
+   Gold = money (only). Alerta-red = flag. Celeste = structure.
+   ============================================================ */
+:root{
+  --ink:#0f1f2e; --paper:#eef1f2;
+  --bg:#e9eef1; --surface:#ffffff; --surface-2:#f4f6f7; --sunken:#e4eaee;
+  --text:#12212e; --text-muted:#576673; --text-faint:#8695a1;
+  --rule:#d6dde2; --rule-strong:#bcc7cf;
+  --celeste:#3f74a6; --celeste-ink:#2f5f8f;
+  --sol:#d9a441; --gold-fill:#c69528; --money:#8a6413;
+  --alerta:#b2423b; --alerta-fill:#b2423b; --alerta-soft:#f7ebe9;
+  --verde:#3f7d62;
+  --chart-surface:#ffffff; --chart-grid:#e6ebee; --chart-axis:#9aa7b1;
+  --neutral-mark:#9aa7b1;
+  --shadow:0 1px 2px rgba(16,31,46,.05), 0 8px 30px rgba(16,31,46,.06);
+  --font-display:'Archivo Expanded','Archivo',system-ui,'Segoe UI',Roboto,sans-serif;
+  --font-body:'Public Sans',system-ui,'Segoe UI',Roboto,-apple-system,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,'Cascadia Code','SF Mono',Menlo,Consolas,monospace;
+  --maxw:1140px;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;--s8:64px;--s9:96px;
+  --r-sm:5px;--r-md:9px;--r-lg:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#0a141d; --paper:#e7eef4;
+    --bg:#0c1620; --surface:#141f2b; --surface-2:#182633; --sunken:#0f1a24;
+    --text:#e6eef4; --text-muted:#9fb0bd; --text-faint:#6f8291;
+    --rule:#243545; --rule-strong:#33475a;
+    --celeste:#6ea6d6; --celeste-ink:#8fbde6;
+    --sol:#d9a441; --gold-fill:#d9a441; --money:#e7c05a;
+    --alerta:#d1685f; --alerta-fill:#d1685f; --alerta-soft:#2a1a1a;
+    --verde:#5aa588;
+    --chart-surface:#141f2b; --chart-grid:#22323f; --chart-axis:#4a5d6c;
+    --neutral-mark:#5f7180;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 34px rgba(0,0,0,.32);
+  }
+}
+:root[data-theme="light"]{
+  --ink:#0f1f2e; --paper:#eef1f2; --bg:#e9eef1; --surface:#ffffff; --surface-2:#f4f6f7; --sunken:#e4eaee;
+  --text:#12212e; --text-muted:#576673; --text-faint:#8695a1; --rule:#d6dde2; --rule-strong:#bcc7cf;
+  --celeste:#3f74a6; --celeste-ink:#2f5f8f; --sol:#d9a441; --gold-fill:#c69528; --money:#8a6413;
+  --alerta:#b2423b; --alerta-fill:#b2423b; --alerta-soft:#f7ebe9; --verde:#3f7d62;
+  --chart-surface:#ffffff; --chart-grid:#e6ebee; --chart-axis:#9aa7b1; --neutral-mark:#9aa7b1;
+  --shadow:0 1px 2px rgba(16,31,46,.05), 0 8px 30px rgba(16,31,46,.06);
+}
+:root[data-theme="dark"]{
+  --ink:#0a141d; --paper:#e7eef4; --bg:#0c1620; --surface:#141f2b; --surface-2:#182633; --sunken:#0f1a24;
+  --text:#e6eef4; --text-muted:#9fb0bd; --text-faint:#6f8291; --rule:#243545; --rule-strong:#33475a;
+  --celeste:#6ea6d6; --celeste-ink:#8fbde6; --sol:#d9a441; --gold-fill:#d9a441; --money:#e7c05a;
+  --alerta:#d1685f; --alerta-fill:#d1685f; --alerta-soft:#2a1a1a; --verde:#5aa588;
+  --chart-surface:#141f2b; --chart-grid:#22323f; --chart-axis:#4a5d6c; --neutral-mark:#5f7180;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 34px rgba(0,0,0,.32);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+::selection{background:var(--celeste);color:#fff}
+a{color:var(--celeste-ink);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:0;text-wrap:balance}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--s5)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--text-faint)}
+:focus-visible{outline:2px solid var(--celeste);outline-offset:2px;border-radius:3px}
+
+/* ---------- Cover ---------- */
+.cover{background:var(--ink);color:#e9f0f6;padding:var(--s8) 0;position:relative;overflow:hidden}
+.cover::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 40px,rgba(255,255,255,.022) 40px 41px);pointer-events:none}
+.cover .wrap{position:relative;z-index:1}
+.filetag{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);align-items:baseline;font-family:var(--font-mono);font-size:12.5px;letter-spacing:.03em;color:#89a0b5;border-bottom:1px solid rgba(255,255,255,.13);padding-bottom:var(--s4);margin-bottom:var(--s6)}
+.filetag b{color:#dbe7f0;font-weight:600}
+.kicker{font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--sol)}
+.cover h1{font-size:clamp(2.5rem,7vw,5rem);font-weight:800;color:#fff;margin:var(--s4) 0;max-width:15ch;letter-spacing:-.03em}
+.dek{font-size:clamp(1.05rem,2.1vw,1.38rem);line-height:1.45;color:#c4d2de;max-width:48ch;font-weight:400}
+.dek b{color:#fff;font-weight:600}
+.cover-meta{margin-top:var(--s7);display:flex;flex-wrap:wrap;gap:var(--s3)}
+.chip{font-family:var(--font-mono);font-size:12px;letter-spacing:.02em;padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;color:#c4d2de}
+
+/* ---------- Money magnitude (signature) ---------- */
+.money{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px;line-height:1}
+.money__fig{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--money);white-space:nowrap}
+.money__bar{height:2px;background:var(--sol);border-radius:2px;min-width:6px}
+.money--xl .money__fig{font-size:clamp(2.4rem,6vw,4rem);font-weight:600}
+.money--xl .money__bar{height:4px}
+.money--sm .money__fig{font-size:13px}
+
+/* ---------- Sections ---------- */
+section{padding:var(--s8) 0}
+section+section{border-top:1px solid var(--rule)}
+.alt{background:var(--surface)}
+.sec-head{max-width:66ch;margin-bottom:var(--s6)}
+.sec-head h2{font-size:clamp(1.65rem,3.5vw,2.4rem);margin-bottom:var(--s3)}
+.sec-head p{color:var(--text-muted);font-size:1.05rem;margin:0}
+.prose{max-width:66ch;font-size:1.05rem}
+.prose p{margin:0 0 var(--s4)}
+.prose strong{font-weight:600}
+.note{font-size:.92rem;color:var(--text-muted)}
+
+/* ---------- Hero band ---------- */
+.bignum{display:grid;grid-template-columns:1.05fr .95fr;gap:var(--s7);align-items:center}
+.bignum__usd{font-family:var(--font-mono);color:var(--text-faint);font-size:14px;margin-top:var(--s3)}
+.bignum__label{font-family:var(--font-body);font-size:1rem;color:var(--text-muted);margin-top:var(--s4);max-width:44ch}
+.bignum__label b{color:var(--text);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s4)}
+.tile{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s5);box-shadow:var(--shadow)}
+.tile__n{font-family:var(--font-display);font-size:2rem;font-weight:700;letter-spacing:-.03em;line-height:1}
+.tile__l{font-size:.9rem;color:var(--text-muted);margin-top:var(--s2)}
+.tile__s{font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint);margin-top:var(--s1)}
+
+/* ---------- Charts ---------- */
+.chart-card{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s2)}
+.chart-head h3{font-size:1.2rem}
+.chart-sub{color:var(--text-muted);font-size:.95rem;margin:0 0 var(--s5);max-width:70ch}
+.chart-scroll{overflow-x:auto}
+.legend{display:flex;flex-wrap:wrap;gap:var(--s4);margin-top:var(--s4);font-size:12.5px;font-family:var(--font-mono);color:var(--text-muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s5)}
+svg{display:block;width:100%;height:auto;font-family:var(--font-mono)}
+.ax{fill:var(--text-faint);font-size:11px}
+.axlab{fill:var(--text-muted);font-size:11px;font-weight:600}
+.gl{stroke:var(--chart-grid);stroke-width:1}
+.vlab{fill:var(--text);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+.refline{stroke:var(--celeste);stroke-width:1.3;stroke-dasharray:5 4}
+.reftext{fill:var(--celeste-ink);font-size:10.5px;font-weight:600}
+.dot{cursor:pointer;transition:opacity .12s}
+.dot:hover{opacity:.75}
+.barmark{cursor:pointer}
+/* tooltip */
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:#eaf1f6;font-family:var(--font-mono);font-size:12px;line-height:1.5;padding:9px 11px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);max-width:260px;opacity:0;transition:opacity .1s;border:1px solid rgba(255,255,255,.12)}
+#tip b{color:#fff}
+#tip .t-gold{color:var(--sol)}
+#tip .t-red{color:#e78a83}
+
+/* ---------- Finding ---------- */
+.finding{background:var(--ink);color:#e7eef4;border-radius:var(--r-lg);padding:var(--s7);box-shadow:var(--shadow)}
+.finding .kicker{color:var(--sol)}
+.finding h3{color:#fff;font-size:clamp(1.5rem,3.2vw,2.05rem);margin:var(--s3) 0 var(--s4);max-width:28ch}
+.finding p{color:#c4d2de;max-width:64ch;margin:0 0 var(--s4)}
+.law{font-family:var(--font-mono);font-size:.88rem;background:rgba(255,255,255,.055);border-left:2px solid var(--sol);padding:var(--s4) var(--s5);border-radius:0 var(--r-sm) var(--r-sm) 0;color:#d6e2ec;line-height:1.6;margin:var(--s5) 0}
+.contradiction{display:grid;grid-template-columns:1fr auto 1fr;gap:var(--s4);align-items:stretch;margin-top:var(--s6)}
+.contra-cell{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.11);border-radius:var(--r-md);padding:var(--s5)}
+.contra-cell .h{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#87a0b5;margin-bottom:var(--s2)}
+.contra-cell .b{font-size:1rem;color:#eaf1f6}
+.contra-cell .b b{color:#fff}
+.contra-vs{display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;color:var(--alerta);font-size:1.2rem}
+
+.balance{border:1px solid var(--rule-strong);border-left:4px solid var(--celeste);background:var(--surface);border-radius:0 var(--r-md) var(--r-md) 0;padding:var(--s5) var(--s6);margin-top:var(--s6);max-width:74ch;box-shadow:var(--shadow)}
+.balance .h{font-family:var(--font-mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--celeste-ink);margin-bottom:var(--s2);font-weight:600}
+.balance p{margin:0 0 var(--s3);font-size:1rem}
+.balance p:last-child{margin-bottom:0}
+
+/* ---------- Observations ---------- */
+.obs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s5)}
+.obs{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.obs__tag{display:inline-block;font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--alerta);border:1px solid var(--alerta);background:var(--alerta-soft);padding:3px 9px;border-radius:999px;margin-bottom:var(--s4)}
+.obs h3{font-size:1.15rem;margin-bottom:var(--s3);line-height:1.2}
+.obs p{margin:0;font-size:.96rem;color:var(--text-muted)}
+.obs__data{font-family:var(--font-mono);font-size:.82rem;color:var(--text);background:var(--sunken);border-radius:var(--r-sm);padding:var(--s3) var(--s4);margin-top:var(--s4)}
+.obs__data .hl{color:var(--alerta);font-weight:600}
+
+/* ---------- Tables ---------- */
+.scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+thead th{position:sticky;top:0;background:var(--surface-2);font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);font-weight:600;text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule-strong);white-space:nowrap;z-index:2}
+th.num,td.num{text-align:right}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+td.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.sup-name{font-weight:600}
+.row-flag{background:var(--alerta-soft)}
+.badge{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:2px 7px;border-radius:999px;white-space:nowrap;display:inline-block}
+.badge--exc{background:var(--alerta-soft);color:var(--alerta);border:1px solid var(--alerta)}
+.badge--nd{background:var(--sunken);color:var(--text-faint);border:1px solid var(--rule)}
+.badge--co{background:var(--sunken);color:var(--celeste-ink);border:1px solid var(--rule)}
+.warnpill{display:inline-block;font-family:var(--font-mono);font-size:10px;font-weight:600;color:#fff;background:var(--alerta);border-radius:3px;padding:1px 5px;margin-left:6px}
+.tbl-cap{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s4);margin-bottom:var(--s4);flex-wrap:wrap}
+.tbl-cap .h{font-family:var(--font-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted)}
+.src a{font-family:var(--font-mono);font-size:12px}
+
+/* ---------- Siblings ---------- */
+.sibs{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s5)}
+.sib{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.sib__code{font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint)}
+.sib h3{font-size:1.08rem;margin:var(--s2) 0 var(--s3)}
+.sib p{font-size:.93rem;color:var(--text-muted);margin:0 0 var(--s4)}
+.sib__row{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);padding:6px 0;border-top:1px dotted var(--rule);font-size:.88rem}
+.sib__row .k{color:var(--text-muted)}
+.sib__row .v{font-family:var(--font-mono);font-weight:500;text-align:right}
+.flagword{color:var(--alerta);font-weight:600}
+
+/* ---------- Method / sources ---------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s7)}
+.method-list{list-style:none;padding:0;margin:0}
+.method-list li{padding:var(--s4) 0;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:auto 1fr;gap:var(--s4)}
+.method-list li:last-child{border-bottom:none}
+.method-list .n{font-family:var(--font-mono);font-size:12px;color:var(--celeste-ink);font-weight:600;padding-top:3px}
+.method-list .t{font-size:.98rem}
+.method-list .t b{font-weight:600}
+.srcgroups{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s6) var(--s7)}
+.srcgroup h4{font-family:var(--font-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin:0 0 var(--s3);font-weight:600;border-bottom:1px solid var(--rule);padding-bottom:var(--s2)}
+.srclist{list-style:none;margin:0;padding:0}
+.srclist li{margin-bottom:var(--s3);font-size:.9rem;line-height:1.4}
+.srclist .u{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);word-break:break-all}
+.disclaimer{background:var(--ink);color:#c4d2de;border-radius:var(--r-lg);padding:var(--s7);box-shadow:var(--shadow)}
+.disclaimer h3{color:#fff;margin-bottom:var(--s4)}
+.disclaimer p{max-width:76ch;margin:0 0 var(--s3);font-size:.98rem}
+.disclaimer strong{color:#fff}
+.foot{background:var(--ink);color:#7f93a5;padding:var(--s7) 0;font-family:var(--font-mono);font-size:12.5px}
+.foot .wrap{display:flex;justify-content:space-between;gap:var(--s4);flex-wrap:wrap}
+.foot a{color:#a9bccc}
+
+@media (max-width:980px){
+  .bignum,.cols2{grid-template-columns:1fr;gap:var(--s6)}
+  .obs-grid,.sibs{grid-template-columns:1fr 1fr}
+  .grid2,.srcgroups{grid-template-columns:1fr}
+  .contradiction{grid-template-columns:1fr}
+  .contra-vs{transform:rotate(90deg);padding:var(--s2) 0}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  .tiles,.obs-grid,.sibs{grid-template-columns:1fr}
+  .wrap{padding:0 var(--s4)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<!-- ============ COVER ============ -->
+<header class="cover">
+  <div class="wrap">
+    <div class="filetag">
+      <span>EXPEDIENTE&nbsp; <b>ART. 79764</b></span>
+      <span>ORGANISMO&nbsp; <b>Dirección General de Casinos</b></span>
+      <span>INCISO&nbsp; <b>05 · UE 013</b></span>
+      <span>PERÍODO&nbsp; <b>2021–2026</b></span>
+      <span>FUENTE&nbsp; <b>Compras Estatales · OCDS</b></span>
+    </div>
+    <p class="kicker">Investigación de datos abiertos · Con la tuya, contribuyente</p>
+    <h1>La consumición de cortesía</h1>
+    <p class="dek">El Estado uruguayo gastó <b>casi 59 millones de pesos</b> en comida y bebida <b>regalada a los clientes de sus casinos</b>. Cada compra se resolvió invocando la excepción de <b>«proveedor exclusivo»</b>. Los proveedores exclusivos fueron <b>22 distintos</b>.</p>
+    <div class="cover-meta">
+      <span class="chip">61 contratos</span>
+      <span class="chip">22 proveedores</span>
+      <span class="chip">1 comprador</span>
+      <span class="chip">Método: Compra por Excepción · TOCAF Art. 33.3</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HERO NUMBER ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="bignum">
+      <div>
+        <p class="eyebrow">Gasto total del artículo 79764 · 2021–2026</p>
+        <div class="money money--xl" style="margin-top:var(--s3)">
+          <span class="money__fig">$ 58.849.923</span>
+          <span class="money__bar" style="width:88%"></span>
+        </div>
+        <p class="bignum__usd">≈ USD 1,47 millones · pesos uruguayos (UYU)</p>
+        <p class="bignum__label">Total ajustado por plausibilidad del rubro «consumición de cortesía para clientes» de la Dirección General de Casinos. Es el artículo <b>N.º 980</b> en gasto entre 46.406 del catálogo estatal.</p>
+      </div>
+      <div class="tiles">
+        <div class="tile"><div class="tile__n">61</div><div class="tile__l">contratos / líneas de adjudicación</div><div class="tile__s">2021 → 2026</div></div>
+        <div class="tile"><div class="tile__n">22</div><div class="tile__l">proveedores distintos</div><div class="tile__s">para un servicio «exclusivo»</div></div>
+        <div class="tile"><div class="tile__n">100%</div><div class="tile__l">del gasto, de un solo comprador</div><div class="tile__s">Dirección General de Casinos</div></div>
+        <div class="tile"><div class="tile__n">4,1×</div><div class="tile__l">precio máx. sobre la mediana</div><div class="tile__s">$ 211.749 vs $ 51.230 por unidad</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ QUÉ ES ============ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Contexto</p>
+      <h2>Qué es «consumición de cortesía»</h2>
+      <p>Un rubro real y declarado del catálogo estatal: comida y bebida que los casinos del Estado invitan gratis a sus jugadores.</p>
+    </div>
+    <div class="prose">
+      <p>La <strong>Dirección General de Casinos</strong> (DGC), marca comercial «Casinos del Estado», es una unidad del <strong>Ministerio de Economía y Finanzas</strong> que opera el monopolio estatal del juego tradicional: cuatro casinos (Nogaró, Piriápolis, Rivera, Victoria Plaza) y unas 28–30 salas en todo el país. <strong>No es una repartición deficitaria:</strong> declaró una ganancia neta cercana a <strong>USD 65 millones en 2024</strong>; solo perdió dinero en 2020, tras 250 días de cierre por la pandemia.</p>
+      <p>El artículo <strong>79764 «CONSUMICIÓN DE CORTESÍA PARA CLIENTES»</strong> es la partida con la que la DGC compra ese consumo para regalarlo —en la jerga del casino, un <em>comp</em>: un incentivo de fidelización calibrado a lo que el jugador pierde en promedio—. La DGC sostiene que la práctica se ampara en una norma de <strong>1998</strong> y en su <strong>Resolución N.º 140/2021</strong> («Invitaciones de Gestión»), y que existe «en los casinos de todo el mundo».</p>
+      <p>El rubro saltó a la prensa en <strong>marzo de 2021</strong>, cuando se viralizó una compra de $ 880.000 al año por «desayuno/merienda» en la sala de Minas. Economía lo explicó como una cortesía de rutina; <em>Caras y Caretas</em> lo enmarcó como «hipocresía» en plena austeridad. No se probó irregularidad. Lo que sigue no es esa polémica puntual, sino <strong>el agregado completo del rubro</strong> —todas las salas, todos los años— reconstruido desde el sistema oficial.</p>
+      <p class="note">Aclaración: la DGC nacional (MEF) <strong>no es</strong> lo mismo que los casinos municipales de Montevideo (Carrasco y Parque Hotel, de la Intendencia), sobre los que existen otros expedientes. Esta investigación trata solo de la DGC nacional.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHART: GASTO POR AÑO ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Evolución del gasto</p>
+      <h2>Después de la austeridad, la cortesía se disparó</h2>
+      <p>El gasto anual del rubro se multiplicó tras 2022. 2023 y 2024 marcan el pico; 2026, con el año a mitad de camino, ya casi lo iguala.</p>
+    </div>
+    <div class="chart-card">
+      <div class="chart-head"><h3>Gasto por año · art. 79764</h3></div>
+      <p class="chart-sub">Monto adjudicado por año, en millones de pesos (UYU). 2026 es parcial (datos hasta julio).</p>
+      <div class="chart-scroll"><div id="chart-year"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HALLAZGO CENTRAL ============ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">El hallazgo central</p>
+      <h2>Un servicio «exclusivo» que tiene 22 proveedores</h2>
+      <p>Abrimos diez de estas compras en el portal oficial. En las diez, el método es el mismo.</p>
+    </div>
+    <div class="finding">
+      <p class="kicker">Método de contratación · verificado en Compras Estatales</p>
+      <h3>Compra por Excepción — TOCAF, Art. 33, numeral 3</h3>
+      <p>Cada adjudicación de «consumición de cortesía» que revisamos se resolvió como <strong>Compra por Excepción</strong>, invocando la causal de <strong>proveedor exclusivo</strong>: la vía que permite contratar directo, sin licitación y sin tope de monto, cuando —y solo cuando— el bien o servicio lo provee un único oferente insustituible.</p>
+      <div class="law">TOCAF Art. 33, lit. D, num. 3 — habilita la contratación directa para «bienes o servicios cuya fabricación o suministro sea <strong>exclusivo</strong>… o que solo sean poseídos por personas o entidades que tengan exclusividad para su venta, siempre que <strong>no puedan ser sustituidos por elementos similares</strong>».</div>
+      <div class="contradiction">
+        <div class="contra-cell">
+          <div class="h">La causal invocada</div>
+          <div class="b">«Suministro exclusivo… que no puede ser sustituido por elementos similares.» Un único proveedor posible.</div>
+        </div>
+        <div class="contra-vs">vs</div>
+        <div class="contra-cell">
+          <div class="h">Lo que muestran los datos</div>
+          <div class="b"><b>22 proveedores</b> adjudicados para el mismo artículo; proveedores distintos rotando en el mismo rubro año a año.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="balance">
+      <div class="h">La otra campana · el descargo de la DGC, y hasta dónde alcanza</div>
+      <p>La DGC explica que compra por excepción porque <strong>el concesionario del bar de cada sala tiene la exclusividad de vender dentro de ese local</strong>. Y en parte se sostiene: varios de los proveedores <em>son</em> concesionarios gastronómicos verificables —<strong>NIFELAR S.A.</strong> explota el bar del estatal Argentino Hotel de Piriápolis; <strong>VIDEST S.A.</strong> es una firma de catering—. Bajo esa lectura, «lo exclusivo» no es el catering en general, sino quien opera cada casino puntual.</p>
+      <p>La defensa es razonable pero <strong>no cierra la pregunta, la traslada un nivel más arriba</strong>: si la exclusividad nace de la concesión del bar, <strong>¿cómo y con qué competencia se adjudicó cada concesión?</strong> Ese es el expediente que falta. Y aun aceptándola, no explica tres cosas que sí están en los datos: por qué aparecen <strong>varios proveedores en el mismo período</strong>, por qué un proveedor cobra <strong>4 veces</strong> lo que otros por la misma «unidad», ni por qué se llega a <strong>$ 5,1 millones en una sola compra</strong> sin licitación.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHART: DISPERSIÓN DE PRECIO (signature) ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">La evidencia · precio por unidad</p>
+      <h2>El precio de la misma «unidad» va de $ 8.333 a $ 211.749</h2>
+      <p>Cada punto es un contrato. La línea marca la mediana ($ 51.230). En rojo, <strong>Código de Barras SRL</strong>: cobra siempre exactamente <strong>$ 211.749</strong> —cuatro veces la mediana, sin moverse un peso entre 2021 y 2024—.</p>
+    </div>
+    <div class="chart-card">
+      <div class="chart-head"><h3>Precio unitario por contrato · art. 79764</h3></div>
+      <p class="chart-sub">Eje vertical: precio por «unidad» en pesos. La franja celeste es el rango habitual (p25–p75). Pasá el cursor por cada punto.</p>
+      <div class="chart-scroll"><div id="chart-scatter" style="min-width:640px"></div></div>
+      <div class="legend">
+        <span><i style="background:var(--gold-fill)"></i> Resto de proveedores</span>
+        <span><i style="background:var(--alerta-fill)"></i> Código de Barras SRL (precio fijo)</span>
+        <span><i style="background:var(--celeste);border-radius:0;height:3px;width:16px"></i> Mediana $ 51.230</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHART: PROVEEDORES ============ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Los proveedores</p>
+      <h2>Quién cobra la cortesía</h2>
+      <p>22 proveedores para un servicio declarado «exclusivo». La mayoría, personas físicas. Buscamos información pública de cada nombre: para las personas físicas no hallamos vínculo con negocios gastronómicos ni con funcionarios; se listan solo por su dato de contratación.</p>
+    </div>
+    <div class="chart-card">
+      <div class="chart-head"><h3>Ranking por monto adjudicado</h3></div>
+      <p class="chart-sub">Total por proveedor (UYU), art. 79764. En rojo, el proveedor de precio fijo 4×.</p>
+      <div class="chart-scroll"><div id="chart-suppliers"></div></div>
+    </div>
+
+    <div style="margin-top:var(--s6)">
+      <div class="tbl-cap"><span class="h">Detalle por proveedor</span><span class="h">montos en UYU</span></div>
+      <div class="scroll"><table id="supTable">
+        <thead><tr><th>Proveedor</th><th>Tipo</th><th class="num">Líneas</th><th class="num">Precio unit. (rango)</th><th class="num">Total</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="note" style="margin-top:var(--s4)">«Tipo» distingue empresa de persona física según la razón social; no implica nada sobre su actividad. En la base los IDs aparecen con y sin barra («R/…» y «R…»), por lo que el conteo por nombre (22) difiere del de la analítica por ID (27).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ OBSERVACIONES ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Observaciones sobre los datos</p>
+      <h2>Patrones que ameritan mirada</h2>
+      <p>Ninguno prueba por sí solo un ilícito. Son señales que, leídas juntas, marcan dónde conviene pedir el expediente completo.</p>
+    </div>
+    <div class="obs-grid">
+      <div class="obs">
+        <span class="obs__tag">Precio fijo premium</span>
+        <h3>4× la mediana, sin variar en años</h3>
+        <p>Código de Barras SRL facturó exactamente <strong>$ 211.749 por unidad</strong> en 2021, 2023 y dos veces en 2024. No se movió un peso pese a la inflación; es ~4 veces la mediana.</p>
+        <div class="obs__data">4 compras · <span class="hl">$ 211.749/u constante</span> · total $ 8,47 M</div>
+      </div>
+      <div class="obs">
+        <span class="obs__tag">Roster cerrado</span>
+        <h3>La misma bolsa rota entre dos rubros</h3>
+        <p>De los 22 proveedores de cortesía, <strong>12 también proveen el «desayuno/merienda»</strong> del mismo comprador. Un círculo estable que se reparte las dos partidas de hospitalidad, sumadas <strong>~141 millones</strong>.</p>
+        <div class="obs__data"><span class="hl">12 de 22</span> proveedores compartidos</div>
+      </div>
+      <div class="obs">
+        <span class="obs__tag">Sumas redondas</span>
+        <h3>Diez montos múltiplos exactos de 50.000</h3>
+        <p>10 de 63 líneas cierran en cifras redondas —$ 300.000, $ 700.000, $ 2.100.000, $ 5.100.000— más propias de una suma pactada que de un precio competido.</p>
+        <div class="obs__data"><span class="hl">10 / 63</span> líneas múltiplo de $ 50.000</div>
+      </div>
+      <div class="obs">
+        <span class="obs__tag">Línea fantasma</span>
+        <h3>Una adjudicación de $ 2,5 M con cantidad cero</h3>
+        <p>La compra <strong>1219789</strong> (2025) registra una línea a Naves Cramer con <strong>cantidad = 0</strong> que arrastra un total de $ 2.527.322. Un renglón nulo que carga millones es, al menos, un dato a depurar.</p>
+        <div class="obs__data">OCID 1219789 · <span class="hl">1 línea qty=0 / $ 2,53 M</span></div>
+      </div>
+      <div class="obs">
+        <span class="obs__tag">Escalada</span>
+        <h3>Un precio casi se triplica en la misma partida</h3>
+        <p><strong>Naves Cramer</strong> pasó de $ 47.814/u (2023) a <strong>$ 141.667</strong> (mayo 2026, compra de $ 5,1 M, la mayor del rubro). Misma partida, sin licitación que dispute el salto.</p>
+        <div class="obs__data">2023 <span class="hl">$ 47.814</span> → 2026 <span class="hl">$ 141.667</span> · +196 %</div>
+      </div>
+      <div class="obs">
+        <span class="obs__tag">Punto ciego</span>
+        <h3>El detector estadístico no marca nada</h3>
+        <p>De 6.255 alertas de precio en toda la base, <strong>cero</strong> caen en la cortesía. No por prolijas: la «UNIDAD» no significa nada físico y mezcla contratos dispares, así que la dispersión entierra hasta el premium 4×. El desvío es estructural, no un pico.</p>
+        <div class="obs__data">baseline n=47 · <span class="hl">0 alertas automáticas</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHART: MÉTODO DGC ============ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">El patrón, más allá de la cortesía</p>
+      <h2>Cómo compra la Dirección General de Casinos</h2>
+      <p>Entre las compras de la DGC con método registrado, la licitación pública —la regla general que manda el TOCAF— es la excepción: apenas <strong>216</strong> de más de 4.400. La contratación directa y sus variantes dominan.</p>
+    </div>
+    <div class="grid2">
+      <div class="chart-card">
+        <div class="chart-head"><h3>Métodos de contratación de la DGC</h3></div>
+        <p class="chart-sub">Cantidad de adjudicaciones por método, histórico (excluye 7.179 registros sin método en el dato OCDS).</p>
+        <div class="chart-scroll"><div id="chart-method"></div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head"><h3>Solapamiento de proveedores</h3></div>
+        <p class="chart-sub">Proveedores de «cortesía» que también proveen «desayuno/merienda» a la DGC.</p>
+        <div class="chart-scroll"><div id="chart-overlap"></div></div>
+        <p class="note" style="margin-top:var(--s4)">El mismo grupo de caterers se reparte las dos partidas de hospitalidad del organismo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LEDGER ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">La evidencia · libro mayor</p>
+      <h2>Las 63 líneas, una por una</h2>
+      <p>Cada fila enlaza a su ficha oficial en Compras Estatales, donde figuran el método, la sala y el expediente. Resaltadas: el precio fijo de Código de Barras y la línea de cantidad cero.</p>
+    </div>
+    <div class="tbl-cap"><span class="h">Adjudicaciones del art. 79764 · Dirección General de Casinos</span><span class="h">10 métodos verificados en el portal</span></div>
+    <div class="scroll"><table id="ledger">
+      <thead><tr><th>Fecha</th><th>Proveedor</th><th class="num">Cant.</th><th class="num">Precio unit.</th><th class="num">Total</th><th>Método (verificado)</th><th>Ficha</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="note" style="margin-top:var(--s4)">Montos normalizados a UYU (precio unitario × cantidad). «Método verificado» solo en las 10 compras abiertas manualmente; el resto no trae el campo en el dato OCDS y debe consultarse en su ficha. La barra dorada codifica la magnitud en escala logarítmica fija.</p>
+  </div>
+</section>
+
+<!-- ============ SIBLINGS ============ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Otros rubros y proveedores de la DGC</p>
+      <h2>Dónde seguir tirando del hilo</h2>
+      <p>La cortesía no es un caso aislado. El mismo comprador concentra otras partidas donde la competencia es escasa o nula. Cifras de la analítica de Con la tuya.</p>
+    </div>
+    <div class="sibs">
+      <div class="sib">
+        <div class="sib__code">ART. 14953 · gemelo de la cortesía</div>
+        <h3>Servicio de desayuno / merienda</h3>
+        <p>La otra partida de hospitalidad, con el mismo patrón de personas físicas y proveedores compartidos.</p>
+        <div class="sib__row"><span class="k">Gasto DGC</span><span class="v">$ 82,5 M · 142 líneas</span></div>
+        <div class="sib__row"><span class="k">Top proveedor</span><span class="v">Bueno Favale — $ 20,2 M en <span class="flagword">4 líneas</span></span></div>
+      </div>
+      <div class="sib">
+        <div class="sib__code">ART. 66364</div>
+        <h3>Ficha de casino</h3>
+        <p>Las fichas de juego. Un comprador, y casi todo el monto en una sola adjudicación.</p>
+        <div class="sib__row"><span class="k">Gasto total</span><span class="v">$ 20,3 M · 5 contratos</span></div>
+        <div class="sib__row"><span class="k">Concentración</span><span class="v">SAMALIR S.A. — <span class="flagword">$ 19,86 M en 1 contrato</span></span></div>
+      </div>
+      <div class="sib">
+        <div class="sib__code">ART. 73208 + 76541</div>
+        <h3>Cajeros ATM en salas</h3>
+        <p>Dependencia de un proveedor: quien vende las máquinas es el único que las mantiene.</p>
+        <div class="sib__row"><span class="k">Máquinas ATM</span><span class="v">$ 51,8 M · PERMAQUIM $ 27,5 M</span></div>
+        <div class="sib__row"><span class="k">Mantenimiento</span><span class="v">PERMAQUIM — <span class="flagword">único proveedor</span></span></div>
+      </div>
+      <div class="sib">
+        <div class="sib__code">ART. 42828 · 7102</div>
+        <h3>Tragamonedas y repuestos</h3>
+        <p>El corazón del negocio. Repuestos de slots por $ 118 M, exclusivo de la DGC.</p>
+        <div class="sib__row"><span class="k">Repuestos slot</span><span class="v">$ 118,2 M · 286 líneas</span></div>
+        <div class="sib__row"><span class="k">Transversal</span><span class="v">SAMALIR: fichas, ATM y slots</span></div>
+      </div>
+      <div class="sib">
+        <div class="sib__code">ART. 25350 · 64547</div>
+        <h3>Mantenimientos monopólicos</h3>
+        <p>Servicios donde la DGC opera con uno o dos proveedores por años.</p>
+        <div class="sib__row"><span class="k">Caja fuerte</span><span class="v">$ 10,9 M · <span class="flagword">2 proveedores</span></span></div>
+        <div class="sib__row"><span class="k">Cámaras vigilancia</span><span class="v">52 líneas · <span class="flagword">1 proveedor</span></span></div>
+      </div>
+      <div class="sib">
+        <div class="sib__code">Auditoría AIN 2022 · contexto</div>
+        <h3>El precedente del lock-in</h3>
+        <p>La Auditoría Interna de la Nación ya observó (14 hallazgos) que la base de control de tragamonedas la administra <strong>solo el proveedor privado</strong>, sin contraparte estatal ni custodia del código.</p>
+        <div class="sib__row"><span class="k">Hallazgos</span><span class="v">3 «extremo» · 6 «alto»</span></div>
+        <div class="sib__row"><span class="k">Además</span><span class="v">alquileres pagados por duplicado</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VERIFICAR ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="cols2">
+      <div>
+        <p class="eyebrow">Cómo verificar</p>
+        <h2 style="font-size:clamp(1.5rem,3.2vw,2.1rem);margin-bottom:var(--s5)">Reproducí este trabajo</h2>
+        <ul class="method-list">
+          <li><span class="n">01</span><span class="t"><b>Abrí cualquier ficha.</b> El OCID <span class="mono">ocds-yfs5dr-N</span> se abre en <span class="mono">comprasestatales.gub.uy/consultas/detalle/id/N</span>: ahí está el tipo de compra, la sala y el proveedor.</span></li>
+          <li><span class="n">02</span><span class="t"><b>Dato crudo (OCDS).</b> La API de ARCE devuelve el registro: <span class="mono">/ocds/record/{id}</span> y <span class="mono">/ocds/release/adjudicacion-{id}</span>.</span></li>
+          <li><span class="n">03</span><span class="t"><b>El catálogo.</b> El código 79764 se busca en el catálogo ACCE (SICE) y en <span class="mono">catalogodatos.gub.uy</span>.</span></li>
+          <li><span class="n">04</span><span class="t"><b>Todas las compras de la DGC.</b> Filtrá por Inciso 05 / UE 013 en la consulta de adjudicaciones del portal.</span></li>
+        </ul>
+      </div>
+      <div>
+        <p class="eyebrow">Metodología y límites</p>
+        <h2 style="font-size:clamp(1.5rem,3.2vw,2.1rem);margin-bottom:var(--s5)">Qué sabemos y qué no</h2>
+        <div class="prose" style="font-size:1rem">
+          <p><strong>Datos.</strong> Del sistema de Compras Estatales (OCDS), replicados en la base de Con la tuya. El total de $ 58,8 M es el ajustado por plausibilidad; los montos crudos del organismo están inflados por 3 registros con cantidades corruptas y no se usan como titular.</p>
+          <p><strong>Método.</strong> Confirmamos «Compra por Excepción / Art. 33.3» en 10 fichas oficiales de 2021 a 2026 y cinco salas. Las 62 adjudicaciones no traen el campo método en el dato OCDS: hay que abrir cada ficha.</p>
+          <p><strong>Lo que NO afirmamos.</strong> No sostenemos que ningún proveedor haya cometido un ilícito. Para las personas físicas nombradas, una búsqueda exhaustiva no arrojó vínculo público con negocios gastronómicos ni con funcionarios; se las nombra solo por ser proveedores de registro público. La única observación textual es que dos nombres son casi espejo (Rodríguez Cardozo / Cardoso Rodríguez), sin que fuente alguna establezca relación entre ellos.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FUENTES ============ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Fuentes</p>
+      <h2>De dónde sale cada dato</h2>
+      <p>Todas las URLs fueron consultadas para esta investigación. Los datos de contratación provienen del portal oficial; el contexto, de normativa y prensa uruguaya.</p>
+    </div>
+    <div class="srcgroups">
+      <div class="srcgroup">
+        <h4>Portal oficial y datos abiertos</h4>
+        <ul class="srclist">
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/buscar/tipo-pub/ADJ/inciso/5/ue/13/tipo-doc/C/filtro-cat/CAT/tipo-orden/DESC" target="_blank" rel="noopener">Adjudicaciones DGC (Inciso 05 / UE 013)</a><div class="u">comprasestatales.gub.uy/consultas/buscar/…/inciso/5/ue/13</div></li>
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/1307206" target="_blank" rel="noopener">Ficha ejemplo — Compra por Excepción 51/2025 (art. 79764)</a><div class="u">comprasestatales.gub.uy/consultas/detalle/id/1307206</div></li>
+          <li><a href="https://catalogodatos.gub.uy/dataset/arce-datos-historicos-de-compras" target="_blank" rel="noopener">Datos históricos de compras (OCDS bulk)</a><div class="u">catalogodatos.gub.uy/dataset/arce-datos-historicos-de-compras</div></li>
+          <li><a href="https://catalogodatos.gub.uy/dataset/acce-catalogo-acce" target="_blank" rel="noopener">Catálogo de Artículos, Servicios y Obras (ACCE)</a><div class="u">catalogodatos.gub.uy/dataset/acce-catalogo-acce</div></li>
+        </ul>
+      </div>
+      <div class="srcgroup">
+        <h4>Normativa (TOCAF)</h4>
+        <ul class="srclist">
+          <li><a href="https://impo.com.uy/bases/tocaf-tcr/150-2012/33" target="_blank" rel="noopener">TOCAF Art. 33 — causales de compra directa / excepción (IMPO)</a><div class="u">impo.com.uy/bases/tocaf-tcr/150-2012/33</div></li>
+          <li><a href="https://impo.com.uy/bases/tocaf-tcr/150-2012/43" target="_blank" rel="noopener">TOCAF Art. 43 — prohibición de fraccionamiento (IMPO)</a><div class="u">impo.com.uy/bases/tocaf-tcr/150-2012/43</div></li>
+          <li><a href="https://www.comprasestatales.gub.uy/ManualesDeUsuarios/manual-procedimiento-compras/Compraporexcepcion.html" target="_blank" rel="noopener">Manual ACCE — Compra por excepción</a><div class="u">comprasestatales.gub.uy/…/Compraporexcepcion.html</div></li>
+          <li><a href="https://www5.ine.gub.uy/documents/Estad%C3%ADsticasecon%C3%B3micas/PDF/TOCAF/TOCAF%20Enero%20-%20Diciembre%202026.pdf" target="_blank" rel="noopener">Montos límite de las adquisiciones 2026 (INE)</a><div class="u">ine.gub.uy/…/TOCAF Enero-Diciembre 2026.pdf</div></li>
+        </ul>
+      </div>
+      <div class="srcgroup">
+        <h4>La DGC y la controversia de 2021</h4>
+        <ul class="srclist">
+          <li><a href="https://www.gub.uy/ministerio-economia-finanzas/direccion-general-casinos" target="_blank" rel="noopener">Dirección General de Casinos — MEF</a><div class="u">gub.uy/ministerio-economia-finanzas/direccion-general-casinos</div></li>
+          <li><a href="https://www.elobservador.com.uy/nota/la-explicacion-que-dio-economia-sobre-los-880-000-del-desayuno-merienda-de-casinos-2021315194155" target="_blank" rel="noopener">La explicación de Economía sobre los $ 880.000 — El Observador</a><div class="u">elobservador.com.uy/nota/…-desayuno-merienda-de-casinos</div></li>
+          <li><a href="https://www.montevideo.com.uy/Noticias/Casinos-del-Estado-explico-gasto-anual-en-desayuno-merienda-por--880-000-en-sala-de-Minas-uc780855" target="_blank" rel="noopener">Casinos explicó el gasto en desayuno/merienda — Montevideo Portal</a><div class="u">montevideo.com.uy/Noticias/…sala-de-Minas</div></li>
+          <li><a href="https://www.carasycaretas.com.uy/nueva-perlita-para-el-ministerio-de-economia" target="_blank" rel="noopener">«Nueva perlita para el Ministerio de Economía» — Caras y Caretas</a><div class="u">carasycaretas.com.uy/nueva-perlita-para-el-ministerio-de-economia</div></li>
+        </ul>
+      </div>
+      <div class="srcgroup">
+        <h4>Control, auditoría y prensa</h4>
+        <ul class="srclist">
+          <li><a href="https://www.gub.uy/ministerio-economia-finanzas/sites/ministerio-economia-finanzas/files/documentos/publicaciones/2022_MinisteriodeEconomiayFinanzas-DireccionGeneraldeCasinos.pdf" target="_blank" rel="noopener">Informe de Auditoría Interna de la Nación — DGC (2022, PDF)</a><div class="u">gub.uy/…/2022_…-DireccionGeneraldeCasinos.pdf</div></li>
+          <li><a href="https://www.subrayado.com.uy/auditoria-casinos-revelo-controles-insuficientes-y-pago-alquileres-simultaneos-n863640" target="_blank" rel="noopener">Auditoría reveló controles insuficientes y alquileres duplicados — Subrayado</a><div class="u">subrayado.com.uy/auditoria-casinos-revelo-controles-insuficientes…</div></li>
+          <li><a href="https://www.busqueda.com.uy/economia/casinos-del-estado-juicios-empresas-tercerizadas-maniobras-punto-y-banca-y-el-nogaro-n5405345" target="_blank" rel="noopener">Casinos del Estado, en juicios por tercerizaciones — Búsqueda</a><div class="u">busqueda.com.uy/economia/casinos-del-estado-juicios…</div></li>
+          <li><a href="https://es.wikipedia.org/wiki/Direcci%C3%B3n_General_de_Casinos" target="_blank" rel="noopener">Dirección General de Casinos — Wikipedia (es)</a><div class="u">es.wikipedia.org/wiki/Dirección_General_de_Casinos</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DISCLAIMER ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="disclaimer">
+      <h3>Cómo leer esta investigación</h3>
+      <p>Es un análisis de <strong>datos de contratación pública, que son registro público</strong>. Documenta hechos verificables (montos, fechas, proveedores, método de compra) y señala <strong>patrones que ameritan escrutinio</strong>, distinguiendo en todo momento lo probado de lo que es una pregunta abierta.</p>
+      <p>La existencia de una compra por excepción, un precio alto o una concentración de proveedores <strong>no constituye, por sí sola, prueba de irregularidad o delito</strong>. Muchas de estas contrataciones pueden tener justificación administrativa válida. El objetivo es habilitar el control ciudadano y el pedido de los expedientes de fundamentación, no emitir un veredicto.</p>
+      <p>Se nombran empresas y personas <strong>únicamente en su carácter de proveedores del Estado</strong>, tal como figuran en el sistema oficial. Cualquier persona o entidad mencionada que quiera aportar su descargo o corregir un dato puede hacerlo, y se incorporará.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>Con la tuya, contribuyente — investigación de datos abiertos</span>
+    <span>Fuente: Compras Estatales (OCDS) · datos al 18/07/2026</span>
+  </div>
+</footer>
+
+<script>
+/* ---------------- DATA ---------------- */
+const CONTRACTS = [{"date":"2021-08-31","ocid":"ocds-yfs5dr-888124","idc":"888124","sup":"VIDEST S A","qty":12,"unit":88798,"tot":1065574,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/888124"},{"date":"2021-09-09","ocid":"ocds-yfs5dr-893881","idc":"893881","sup":"CODIGO DE BARRAS SRL","qty":12,"unit":211749,"tot":2540984,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/893881"},{"date":"2021-09-10","ocid":"ocds-yfs5dr-888481","idc":"888481","sup":"HERNANDEZ RODALES MARIA GIMENA","qty":12,"unit":70833,"tot":850000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/888481"},{"date":"2022-01-12","ocid":"ocds-yfs5dr-924591","idc":"924591","sup":"COSTA MARTINEZ EVER MARCELO","qty":1,"unit":30000,"tot":30000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/924591"},{"date":"2022-02-17","ocid":"ocds-yfs5dr-927561","idc":"927561","sup":"COSTA MARTINEZ EVER MARCELO","qty":12,"unit":73333,"tot":880000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/927561"},{"date":"2022-03-15","ocid":"ocds-yfs5dr-931843","idc":"931843","sup":"COSTA MARTINEZ EVER MARCELO","qty":12,"unit":37500,"tot":450000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/931843"},{"date":"2022-03-18","ocid":"ocds-yfs5dr-899479","idc":"899479","sup":"NIFELAR S A","qty":12,"unit":61475,"tot":737705,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/899479"},{"date":"2022-04-21","ocid":"ocds-yfs5dr-930765","idc":"930765","sup":"ALEMAN GARCIA FATIMA NOEMI","qty":12,"unit":47814,"tot":573770,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/930765"},{"date":"2022-06-24","ocid":"ocds-yfs5dr-954897","idc":"954897","sup":"ALEMAN GARCIA FATIMA NOEMI","qty":1,"unit":35246,"tot":35246,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/954897"},{"date":"2022-07-14","ocid":"ocds-yfs5dr-954898","idc":"954898","sup":"ALEMAN GARCIA FATIMA NOEMI","qty":1,"unit":35246,"tot":35246,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/954898"},{"date":"2023-03-09","ocid":"ocds-yfs5dr-993991","idc":"993991","sup":"NIFELAR S A","qty":13,"unit":56747,"tot":737705,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/993991"},{"date":"2023-04-11","ocid":"ocds-yfs5dr-972066","idc":"972066","sup":"CAFE DEL CENTRO SRL","qty":36,"unit":16697,"tot":601093,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/972066"},{"date":"2023-06-29","ocid":"ocds-yfs5dr-1039251","idc":"1039251","sup":"RODRIGUEZ CARDOZO MATIAS GERMAN","qty":36,"unit":81967,"tot":2950820,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1039251"},{"date":"2023-06-29","ocid":"ocds-yfs5dr-1050203","idc":"1050203","sup":"NAVES CRAMER CATALINA ALEJANDRA","qty":36,"unit":47814,"tot":1721311,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1050203"},{"date":"2023-07-19","ocid":"ocds-yfs5dr-1021823","idc":"1021823","sup":"TRIBINO BRUM CARLOS ROBERTO","qty":12,"unit":37568,"tot":450820,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1021823"},{"date":"2023-07-20","ocid":"ocds-yfs5dr-984499","idc":"984499","sup":"CODIGO DE BARRAS SRL","qty":12,"unit":211749,"tot":2540984,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/984499"},{"date":"2023-07-28","ocid":"ocds-yfs5dr-1049284","idc":"1049284","sup":"EULA BENTANCUR ANDRES ALEJANDRO","qty":36,"unit":8333,"tot":300000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1049284"},{"date":"2023-07-31","ocid":"ocds-yfs5dr-1021083","idc":"1021083","sup":"MENDEZ MARTINEZ MARIA CRISTINA","qty":36,"unit":58333,"tot":2100000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1021083"},{"date":"2023-07-31","ocid":"ocds-yfs5dr-1026839","idc":"1026839","sup":"ANZORENA CARRANCIO JORGE ENRIQUE","qty":12,"unit":27322,"tot":327869,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1026839"},{"date":"2023-07-31","ocid":"ocds-yfs5dr-1026613","idc":"1026613","sup":"NAVES CRAMER CATALINA ALEJANDRA","qty":12,"unit":51230,"tot":614754,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1026613"},{"date":"2023-08-09","ocid":"ocds-yfs5dr-984496","idc":"984496","sup":"ALEMAN GARCIA FATIMA NOEMI","qty":12,"unit":47814,"tot":573771,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/984496"},{"date":"2023-11-14","ocid":"ocds-yfs5dr-1024135","idc":"1024135","sup":"VIDEST S A","qty":12,"unit":26639,"tot":319672,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1024135"},{"date":"2023-11-29","ocid":"ocds-yfs5dr-1083532","idc":"1083532","sup":"NAVES CRAMER CATALINA ALEJANDRA","qty":12,"unit":58060,"tot":696721,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1083532"},{"date":"2023-12-19","ocid":"ocds-yfs5dr-1099250","idc":"1099250","sup":"VIDEST S A","qty":2,"unit":61475,"tot":122951,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1099250"},{"date":"2023-12-28","ocid":"ocds-yfs5dr-1103368","idc":"1103368","sup":"NAVES CRAMER CATALINA ALEJANDRA","qty":1,"unit":32787,"tot":32787,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1103368"},{"date":"2023-12-28","ocid":"ocds-yfs5dr-1103295","idc":"1103295","sup":"EULA BENTANCUR ANDRES ALEJANDRO","qty":1,"unit":11000,"tot":11000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1103295"},{"date":"2023-12-28","ocid":"ocds-yfs5dr-1103242","idc":"1103242","sup":"HERNANDEZ RODALES MARIA GIMENA","qty":1,"unit":19080,"tot":19080,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1103242"},{"date":"2024-01-08","ocid":"ocds-yfs5dr-1102936","idc":"1102936","sup":"PASWIR  S.A","qty":1,"unit":28689,"tot":28689,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1102936"},{"date":"2024-01-08","ocid":"ocds-yfs5dr-1102912","idc":"1102912","sup":"ANZORENA CARRANCIO JORGE ENRIQUE","qty":1,"unit":12295,"tot":12295,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1102912"},{"date":"2024-01-23","ocid":"ocds-yfs5dr-1083551","idc":"1083551","sup":"CARDOSO RODRIGUEZ MATIAS SANTIAGO","qty":36,"unit":45833,"tot":1650000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1083551"},{"date":"2024-04-01","ocid":"ocds-yfs5dr-1115465","idc":"1115465","sup":"RAMIREZ DEVICENTI NATALIA SOLEDAD","qty":12,"unit":54645,"tot":655738,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1115465"},{"date":"2024-04-18","ocid":"ocds-yfs5dr-1124657","idc":"1124657","sup":"CODIGO DE BARRAS SRL","qty":4,"unit":211749,"tot":846994,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1124657"},{"date":"2024-04-29","ocid":"ocds-yfs5dr-1114853","idc":"1114853","sup":"CODIGO DE BARRAS SRL","qty":12,"unit":211749,"tot":2540984,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1114853"},{"date":"2024-05-23","ocid":"ocds-yfs5dr-1114854","idc":"1114854","sup":"NIFELAR S A","qty":12,"unit":61475,"tot":737705,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1114854"},{"date":"2024-05-23","ocid":"ocds-yfs5dr-1109288","idc":"1109288","sup":"DURANTE MONTES DE OCA ALEJANDRO MANUEL","qty":12,"unit":68306,"tot":819672,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1109288"},{"date":"2024-05-29","ocid":"ocds-yfs5dr-1102891","idc":"1102891","sup":"ANZORENA CARRANCIO JORGE ENRIQUE","qty":1,"unit":28689,"tot":28689,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1102891"},{"date":"2024-09-10","ocid":"ocds-yfs5dr-1162260","idc":"1162260","sup":"GONZALEZ VIGLIANTE GERMAN CONO","qty":36,"unit":115437,"tot":4155738,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1162260"},{"date":"2024-10-14","ocid":"ocds-yfs5dr-1164929","idc":"1164929","sup":"HERNANDEZ KUSTER SARA LILIAN","qty":48,"unit":29167,"tot":1400000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1164929"},{"date":"2024-11-06","ocid":"ocds-yfs5dr-1181116","idc":"1181116","sup":"NAVES CRAMER CATALINA ALEJANDRA","qty":12,"unit":58060,"tot":696721,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1181116"},{"date":"2024-11-15","ocid":"ocds-yfs5dr-1181111","idc":"1181111","sup":"DEL CAMPO MARTINEZ ESTEBAN FABIAN","qty":12,"unit":58333,"tot":700000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1181111"},{"date":"2024-12-27","ocid":"ocds-yfs5dr-1206985","idc":"1206985","sup":"RAMIREZ DEVICENTI NATALIA SOLEDAD","qty":12,"unit":54645,"tot":655738,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1206985"},{"date":"2024-12-27","ocid":"ocds-yfs5dr-1206784","idc":"1206784","sup":"NIFELAR S A","qty":12,"unit":61475,"tot":737705,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1206784"},{"date":"2025-01-10","ocid":"ocds-yfs5dr-1208456","idc":"1208456","sup":"ANZORENA CARRANCIO JORGE ENRIQUE","qty":1,"unit":32459,"tot":32459,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1208456"},{"date":"2025-01-10","ocid":"ocds-yfs5dr-1206977","idc":"1206977","sup":"RODRIGUEZ CARDOZO MATIAS GERMAN","qty":1,"unit":122951,"tot":122951,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1206977"},{"date":"2025-01-13","ocid":"ocds-yfs5dr-1205251","idc":"1205251","sup":"ANZORENA CARRANCIO JORGE ENRIQUE","qty":1,"unit":24590,"tot":24590,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1205251"},{"date":"2025-01-13","ocid":"ocds-yfs5dr-1206978","idc":"1206978","sup":"CARDOSO RODRIGUEZ MATIAS SANTIAGO","qty":1,"unit":32000,"tot":32000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1206978"},{"date":"2025-04-15","ocid":"ocds-yfs5dr-1219789","idc":"1219789","sup":"HERNANDEZ KUSTER SARA LILIAN","qty":36,"unit":68306,"tot":2459016,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1219789"},{"date":"2025-05-06","ocid":"ocds-yfs5dr-1219789","idc":"1219789","sup":"HERNANDEZ KUSTER SARA LILIAN","qty":36,"unit":68306,"tot":2527322,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1219789"},{"date":"2025-05-06","ocid":"ocds-yfs5dr-1219789","idc":"1219789","sup":"NAVES CRAMER CATALINA ALEJANDRA","qty":0,"unit":68306,"tot":2527322,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1219789"},{"date":"2025-05-19","ocid":"ocds-yfs5dr-1225693","idc":"1225693","sup":"COSTA MARTINEZ EVER MARCELO","qty":36,"unit":27322,"tot":983607,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1225693"},{"date":"2025-06-05","ocid":"ocds-yfs5dr-1220218","idc":"1220218","sup":"COSTA MARTINEZ EVER MARCELO","qty":12,"unit":60109,"tot":721311,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1220218"},{"date":"2025-06-20","ocid":"ocds-yfs5dr-1237511","idc":"1237511","sup":"GONZALEZ VIGLIANTE GERMAN CONO","qty":36,"unit":21630,"tot":778689,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1237511"},{"date":"2025-09-29","ocid":"ocds-yfs5dr-1281229","idc":"1281229","sup":"DE LOS SANTOS COLMAN JUAN CARLOS","qty":18,"unit":45833,"tot":824994,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1281229"},{"date":"2025-11-06","ocid":"ocds-yfs5dr-1286230","idc":"1286230","sup":"DE LOS SANTOS COLMAN JUAN CARLOS","qty":10,"unit":30000,"tot":300000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1286230"},{"date":"2025-11-18","ocid":"ocds-yfs5dr-1290627","idc":"1290627","sup":"NIFELAR S A","qty":12,"unit":68306,"tot":819672,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1290627"},{"date":"2025-12-29","ocid":"ocds-yfs5dr-1303626","idc":"1303626","sup":"DE LOS SANTOS COLMAN JUAN CARLOS","qty":1,"unit":20000,"tot":20000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1303626"},{"date":"2026-03-09","ocid":"ocds-yfs5dr-1290691","idc":"1290691","sup":"RAMIREZ DEVICENTI NATALIA SOLEDAD","qty":12,"unit":57377,"tot":688525,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1290691"},{"date":"2026-05-20","ocid":"ocds-yfs5dr-1341660","idc":"1341660","sup":"DI MATTIA TROPIANO PABLO HUMBERTO","qty":5,"unit":23411,"tot":117055,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1341660"},{"date":"2026-05-25","ocid":"ocds-yfs5dr-1307206","idc":"1307206","sup":"NAVES CRAMER CATALINA ALEJANDRA","qty":36,"unit":141667,"tot":5100000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1307206"},{"date":"2026-05-25","ocid":"ocds-yfs5dr-1307284","idc":"1307284","sup":"HERNANDEZ KUSTER SARA LILIAN","qty":36,"unit":87500,"tot":3150000,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1307284"},{"date":"2026-06-17","ocid":"ocds-yfs5dr-1326091","idc":"1326091","sup":"MENDEZ MARTINEZ MARIA CRISTINA","qty":36,"unit":50205,"tot":1807377,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1326091"},{"date":"2026-06-17","ocid":"ocds-yfs5dr-1306730","idc":"1306730","sup":"GONZALEZ VIGLIANTE GERMAN CONO","qty":24,"unit":64891,"tot":1557377,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1306730"},{"date":"2026-07-03","ocid":"ocds-yfs5dr-1333220","idc":"1333220","sup":"NAVES CRAMER CATALINA ALEJANDRA","qty":36,"unit":64549,"tot":2323771,"url":"https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/1333220"}];
+const VERIFIED = {"893881":"Compra por Excepción 42/2021","984499":"Compra por Excepción 49/2022","1021083":"Compra por Excepción 19/2023","1039251":"Compra por Excepción 33/2023","1050203":"Compra por Excepción 51/2023","1103295":"Compra por Excepción 48/2023","1114853":"Compra por Excepción 7/2024","1162260":"Compra por Excepción 35/2024","1164929":"Compra por Excepción 40/2024","1307206":"Compra por Excepción 51/2025"};
+const BASE = {min:8333, p25:28688.53, p50:51229.51, p75:63012.3, p95:190724, max:211748.64};
+const BY_YEAR = [
+  {year:2021, spend:4456557},{year:2022, spend:2741967},{year:2023, spend:14121338},
+  {year:2024, spend:15666667},{year:2025, spend:7119289},{year:2026, spend:14744105}
+];
+const METHODS = [
+  {k:'Compra Directa', n:2921},{k:'Licitación Abreviada', n:1021},
+  {k:'Licitación Pública', n:216},{k:'Concurso de Precios', n:117},
+  {k:'Compra por Excepción', n:95},{k:'Concesión / otros', n:81}
+];
+const SUP_KIND = {
+  'NIFELAR S A':'Concesionario Argentino Hotel','VIDEST S A':'Catering (S.A.)',
+  'CAFE DEL CENTRO SRL':'Café / gastronomía','PASWIR  S.A':'Empresa',
+  'CODIGO DE BARRAS SRL':'Empresa (S.R.L.)'
+};
+
+/* ---------------- HELPERS ---------------- */
+const nf = new Intl.NumberFormat('es-UY');
+const fmt = n => '$ ' + nf.format(Math.round(n));
+const fmtM = n => '$ ' + (n/1e6).toFixed(1).replace('.',',') + ' M';
+const SVGNS='http://www.w3.org/2000/svg';
+function el(tag, attrs, parent){ const e=document.createElementNS(SVGNS,tag); for(const k in attrs) e.setAttribute(k, attrs[k]); if(parent) parent.appendChild(e); return e; }
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function magPct(a){ if(!a||a<=0) return 0; return Math.max(4, Math.min(100, (Math.log10(a)-2)/8*100)); }
+function moneyCell(a, warn){ if(!a||a<=0) return '<span class="mono" style="color:var(--text-faint)">—</span>';
+  return '<span class="money money--sm"><span class="money__fig">'+fmt(a)+(warn?'<span class="warnpill">qty 0</span>':'')+'</span><span class="money__bar" style="width:'+magPct(a).toFixed(0)+'%"></span></span>'; }
+const isCompany = n => /\bS\.?A\b|\bS\.?R\.?L\b|SRL|SAS|LTDA/.test(n);
+const titn = s => s.replace(/\s+/g,' ').trim().split(' ').map(w=>w.length>2?w[0]+w.slice(1).toLowerCase():w).join(' ');
+
+/* tooltip */
+const tip = document.getElementById('tip');
+function showTip(html, x, y){ tip.innerHTML=html; tip.style.opacity='1';
+  let nx=x+14, ny=y+14; const w=tip.offsetWidth, h=tip.offsetHeight;
+  if(nx+w>innerWidth-8) nx=x-w-14; if(ny+h>innerHeight-8) ny=y-h-14;
+  tip.style.left=nx+'px'; tip.style.top=ny+'px'; }
+function hideTip(){ tip.style.opacity='0'; }
+
+/* ---------------- CHART 1: gasto por año ---------------- */
+function chartYear(){
+  const box=document.getElementById('chart-year'); box.innerHTML='';
+  const W=880,H=300, m={t:24,r:16,b:44,l:56};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Gasto por año'},box);
+  const max=Math.max(...BY_YEAR.map(d=>d.spend))*1.1;
+  const y=v=>m.t+ih-(v/max)*ih;
+  // gridlines
+  for(let i=0;i<=4;i++){ const gv=max*i/4; const gy=y(gv);
+    el('line',{x1:m.l,y1:gy,x2:m.l+iw,y2:gy,class:'gl'},svg);
+    el('text',{x:m.l-8,y:gy+3,'text-anchor':'end',class:'ax'},svg).textContent=(gv/1e6).toFixed(0);
+  }
+  el('text',{x:m.l-8,y:m.t-8,'text-anchor':'end',class:'axlab'},svg).textContent='M$';
+  const bw=iw/BY_YEAR.length, bar=bw*0.56;
+  BY_YEAR.forEach((d,i)=>{
+    const bx=m.l+i*bw+(bw-bar)/2, bh=Math.max(2,(d.spend/max)*ih), by=y(d.spend);
+    const r=el('rect',{x:bx,y:by,width:bar,height:bh,rx:4,fill:css('--gold-fill'),class:'barmark'},svg);
+    r.addEventListener('mousemove',e=>showTip(`<b>${d.year}${d.year===2026?' (parcial)':''}</b><br><span class="t-gold">${fmt(d.spend)}</span>`,e.clientX,e.clientY));
+    r.addEventListener('mouseleave',hideTip);
+    el('text',{x:bx+bar/2,y:by-7,'text-anchor':'middle',class:'vlab'},svg).textContent=fmtM(d.spend);
+    el('text',{x:bx+bar/2,y:H-24,'text-anchor':'middle',class:'ax'},svg).textContent=d.year+(d.year===2026?'*':'');
+  });
+  el('line',{x1:m.l,y1:m.t+ih,x2:m.l+iw,y2:m.t+ih,stroke:css('--chart-axis'),'stroke-width':1},svg);
+}
+
+/* ---------------- CHART 2: dispersión precio unitario (signature) ---------------- */
+function chartScatter(){
+  const box=document.getElementById('chart-scatter'); box.innerHTML='';
+  const W=880,H=420, m={t:24,r:20,b:52,l:64};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Precio unitario por contrato'},box);
+  const rows=CONTRACTS.filter(c=>c.unit>0);
+  const t0=Date.parse('2021-06-01'), t1=Date.parse('2026-08-01');
+  const yMax=220000;
+  const X=d=>m.l+((Date.parse(d)-t0)/(t1-t0))*iw;
+  const Y=v=>m.t+ih-(v/yMax)*ih;
+  // p25-p75 band
+  el('rect',{x:m.l,y:Y(BASE.p75),width:iw,height:Y(BASE.p25)-Y(BASE.p75),fill:css('--celeste'),opacity:.10},svg);
+  // y grid + labels
+  [0,50000,100000,150000,200000].forEach(v=>{ const gy=Y(v);
+    el('line',{x1:m.l,y1:gy,x2:m.l+iw,y2:gy,class:'gl'},svg);
+    el('text',{x:m.l-8,y:gy+3,'text-anchor':'end',class:'ax'},svg).textContent=v/1000+'k';
+  });
+  el('text',{x:m.l-8,y:m.t-8,'text-anchor':'end',class:'axlab'},svg).textContent='$/u';
+  // x year ticks
+  for(let yr=2021; yr<=2026; yr++){ const gx=X(yr+'-01-01');
+    el('line',{x1:gx,y1:m.t,x2:gx,y2:m.t+ih,class:'gl'},svg);
+    el('text',{x:gx,y:H-28,'text-anchor':'middle',class:'ax'},svg).textContent=yr;
+  }
+  el('line',{x1:m.l,y1:m.t+ih,x2:m.l+iw,y2:m.t+ih,stroke:css('--chart-axis'),'stroke-width':1},svg);
+  // median line
+  const my=Y(BASE.p50);
+  el('line',{x1:m.l,y1:my,x2:m.l+iw,y2:my,class:'refline'},svg);
+  el('text',{x:m.l+iw-4,y:my-6,'text-anchor':'end',class:'reftext'},svg).textContent='mediana $ 51.230';
+  // dots
+  rows.forEach(c=>{
+    const cb = c.sup==='CODIGO DE BARRAS SRL';
+    const cx=X(c.date), cy=Y(Math.min(c.unit,yMax));
+    const d=el('circle',{cx,cy,r:cb?6:5,fill:cb?css('--alerta-fill'):css('--gold-fill'),
+      stroke:css('--chart-surface'),'stroke-width':1.5,class:'dot',opacity:cb?1:.85},svg);
+    d.addEventListener('mousemove',e=>showTip(
+      `<b>${titn(c.sup)}</b><br>${c.date}<br><span class="${cb?'t-red':'t-gold'}">${fmt(c.unit)}/u</span> · cant. ${c.qty}<br>total ${fmt(c.tot)}`,
+      e.clientX,e.clientY));
+    d.addEventListener('mouseleave',hideTip);
+  });
+}
+
+/* ---------------- CHART 3: proveedores (horizontal) ---------------- */
+function chartSuppliers(){
+  const box=document.getElementById('chart-suppliers'); box.innerHTML='';
+  const m0={}; CONTRACTS.forEach(c=>{ (m0[c.sup]=m0[c.sup]||{tot:0,lines:0}); m0[c.sup].tot+=c.tot; m0[c.sup].lines++; });
+  let rows=Object.entries(m0).map(([n,v])=>({n,tot:v.tot,lines:v.lines})).sort((a,b)=>b.tot-a.tot);
+  const top=rows.slice(0,12);
+  const otras=rows.slice(12); const oTot=otras.reduce((s,r)=>s+r.tot,0);
+  if(oTot>0) top.push({n:'OTROS ('+otras.length+' proveedores)',tot:oTot,lines:otras.reduce((s,r)=>s+r.lines,0),other:true});
+  const W=880, rowH=30, m={t:8,r:96,b:8,l:210}, H=m.t+m.b+top.length*rowH;
+  const iw=W-m.l-m.r;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Ranking de proveedores'},box);
+  const max=Math.max(...top.map(r=>r.tot));
+  top.forEach((r,i)=>{
+    const yy=m.t+i*rowH, bw=Math.max(2,(r.tot/max)*iw);
+    const cb=r.n==='CODIGO DE BARRAS SRL';
+    const fill = r.other?css('--neutral-mark'):(cb?css('--alerta-fill'):css('--gold-fill'));
+    el('text',{x:m.l-10,y:yy+rowH/2+4,'text-anchor':'end',class:'ax',style:'font-size:11.5px;fill:var(--text)'},svg).textContent=(r.other?r.n:titn(r.n)).slice(0,26);
+    const rect=el('rect',{x:m.l,y:yy+5,width:bw,height:rowH-12,rx:3,fill,class:'barmark'},svg);
+    rect.addEventListener('mousemove',e=>showTip(`<b>${r.other?r.n:titn(r.n)}</b><br><span class="t-gold">${fmt(r.tot)}</span> · ${r.lines} líneas`,e.clientX,e.clientY));
+    rect.addEventListener('mouseleave',hideTip);
+    el('text',{x:m.l+bw+8,y:yy+rowH/2+4,class:'vlab'},svg).textContent=fmtM(r.tot);
+    if(cb) el('text',{x:m.l+bw+8,y:yy+rowH/2+4,class:'vlab',style:'fill:var(--alerta);opacity:0'},svg);
+  });
+}
+
+/* ---------------- CHART 4: método DGC (sequential) ---------------- */
+function chartMethod(){
+  const box=document.getElementById('chart-method'); box.innerHTML='';
+  const rows=METHODS.slice().sort((a,b)=>b.n-a.n);
+  const W=560, rowH=42, m={t:6,r:56,b:6,l:150}, H=m.t+m.b+rows.length*rowH, iw=W-m.l-m.r;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Métodos de contratación'},box);
+  const max=Math.max(...rows.map(r=>r.n));
+  // sequential celeste ramp by rank (more competitive = darker? use magnitude)
+  rows.forEach((r,i)=>{
+    const yy=m.t+i*rowH, bw=Math.max(2,(r.n/max)*iw);
+    const pub = r.k==='Licitación Pública';
+    const fill = pub?css('--verde'):css('--celeste');
+    el('text',{x:m.l-10,y:yy+rowH/2+4,'text-anchor':'end',class:'ax',style:'font-size:11px;fill:var(--text)'},svg).textContent=r.k;
+    const rect=el('rect',{x:m.l,y:yy+8,width:bw,height:rowH-18,rx:3,fill,opacity:pub?1:.85,class:'barmark'},svg);
+    rect.addEventListener('mousemove',e=>showTip(`<b>${r.k}</b><br>${nf.format(r.n)} adjudicaciones`,e.clientX,e.clientY));
+    rect.addEventListener('mouseleave',hideTip);
+    el('text',{x:m.l+bw+8,y:yy+rowH/2+4,class:'vlab'},svg).textContent=nf.format(r.n);
+  });
+}
+
+/* ---------------- CHART 5: solapamiento ---------------- */
+function chartOverlap(){
+  const box=document.getElementById('chart-overlap'); box.innerHTML='';
+  const W=560,H=150,m={l:16,r:16,t:40,b:40}, iw=W-m.l-m.r;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Solapamiento de proveedores'},box);
+  const total=22, shared=12;
+  const barH=46, yy=m.t;
+  const sw=(shared/total)*iw;
+  el('rect',{x:m.l,y:yy,width:iw,height:barH,rx:6,fill:css('--neutral-mark'),opacity:.28},svg);
+  const r1=el('rect',{x:m.l,y:yy,width:sw,height:barH,rx:6,fill:css('--celeste'),class:'barmark'},svg);
+  r1.addEventListener('mousemove',e=>showTip('<b>12 de 22</b><br>también proveen desayuno/merienda',e.clientX,e.clientY));
+  r1.addEventListener('mouseleave',hideTip);
+  el('text',{x:m.l+8,y:yy+barH/2+5,style:'fill:#fff;font-size:14px;font-weight:600',class:'mono'},svg).textContent='12 compartidos';
+  el('text',{x:m.l+iw-8,y:yy+barH/2+5,'text-anchor':'end',style:'fill:var(--text);font-size:13px',class:'mono'},svg).textContent='de 22';
+  el('text',{x:m.l,y:yy-14,class:'axlab'},svg).textContent='Proveedores de «cortesía»';
+  el('text',{x:m.l,y:yy+barH+26,class:'ax',style:'fill:var(--text-muted)'},svg).textContent='55 % también factura el otro rubro de hospitalidad';
+}
+
+/* ---------------- TABLES ---------------- */
+function supTable(){
+  const m0={}; CONTRACTS.forEach(c=>{ (m0[c.sup]=m0[c.sup]||{lines:0,tot:0,units:[]}); m0[c.sup].lines++; m0[c.sup].tot+=c.tot; if(c.unit)m0[c.sup].units.push(c.unit); });
+  const rows=Object.entries(m0).map(([n,v])=>({n,lines:v.lines,tot:v.tot,min:Math.min(...v.units),max:Math.max(...v.units)})).sort((a,b)=>b.tot-a.tot);
+  document.querySelector('#supTable tbody').innerHTML=rows.map(r=>{
+    const flat=r.n==='CODIGO DE BARRAS SRL';
+    const rng=r.min===r.max?fmt(r.min):fmt(r.min)+' – '+fmt(r.max);
+    const kind=SUP_KIND[r.n]||(isCompany(r.n)?'Empresa':'Persona física');
+    return '<tr'+(flat?' class="row-flag"':'')+'><td class="sup-name">'+titn(r.n)+(flat?'<span class="warnpill">precio fijo 4×</span>':'')+'</td>'+
+      '<td><span class="badge '+(isCompany(r.n)?'badge--co':'badge--nd')+'">'+kind+'</span></td>'+
+      '<td class="num mono">'+r.lines+'</td><td class="num mono">'+rng+'</td><td class="num">'+moneyCell(r.tot)+'</td></tr>';
+  }).join('');
+}
+function ledger(){
+  const rows=CONTRACTS.slice().sort((a,b)=>a.date<b.date?-1:1);
+  document.querySelector('#ledger tbody').innerHTML=rows.map(c=>{
+    const flat=c.unit===211749, zero=c.qty===0, method=VERIFIED[c.idc];
+    const badge=method?'<span class="badge badge--exc">'+method+'</span>':'<span class="badge badge--nd">consultar ficha</span>';
+    return '<tr'+((flat||zero)?' class="row-flag"':'')+'><td class="mono">'+c.date+'</td>'+
+      '<td class="sup-name">'+titn(c.sup)+'</td><td class="num mono">'+c.qty+'</td>'+
+      '<td class="num mono">'+fmt(c.unit)+(flat?'<span class="warnpill">fijo</span>':'')+'</td>'+
+      '<td class="num">'+moneyCell(c.tot,zero)+'</td><td>'+badge+'</td>'+
+      '<td class="src"><a href="'+c.url+'" target="_blank" rel="noopener">'+c.idc+' ↗</a></td></tr>';
+  }).join('');
+}
+
+/* ---------------- RENDER + re-render on theme change ---------------- */
+function renderAll(){ chartYear(); chartScatter(); chartSuppliers(); chartMethod(); chartOverlap(); }
+supTable(); ledger(); renderAll();
+new MutationObserver(renderAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change',renderAll);
+addEventListener('resize',()=>{clearTimeout(window.__rt); window.__rt=setTimeout(renderAll,200);});
+</script>
+</body></html>

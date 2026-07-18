@@ -1,0 +1,426 @@
+<!DOCTYPE html><html lang=es><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>hub</title><style>*{margin:0;padding:0}</style></head><body><style>
+/* ============================================================
+   La consumición de cortesía — investigación DGC (artifact)
+   Design: auditor's expediente, native to "Con la tuya" system.
+   Gold = money (only). Alerta-red = flag. Celeste = structure.
+   ============================================================ */
+:root{
+  --ink:#0f1f2e; --paper:#eef1f2;
+  --bg:#e9eef1; --surface:#ffffff; --surface-2:#f4f6f7; --sunken:#e4eaee;
+  --text:#12212e; --text-muted:#576673; --text-faint:#8695a1;
+  --rule:#d6dde2; --rule-strong:#bcc7cf;
+  --celeste:#3f74a6; --celeste-ink:#2f5f8f;
+  --sol:#d9a441; --gold-fill:#c69528; --money:#8a6413;
+  --alerta:#b2423b; --alerta-fill:#b2423b; --alerta-soft:#f7ebe9;
+  --verde:#3f7d62;
+  --chart-surface:#ffffff; --chart-grid:#e6ebee; --chart-axis:#9aa7b1;
+  --neutral-mark:#9aa7b1;
+  --shadow:0 1px 2px rgba(16,31,46,.05), 0 8px 30px rgba(16,31,46,.06);
+  --font-display:'Archivo Expanded','Archivo',system-ui,'Segoe UI',Roboto,sans-serif;
+  --font-body:'Public Sans',system-ui,'Segoe UI',Roboto,-apple-system,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,'Cascadia Code','SF Mono',Menlo,Consolas,monospace;
+  --maxw:1140px;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;--s8:64px;--s9:96px;
+  --r-sm:5px;--r-md:9px;--r-lg:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#0a141d; --paper:#e7eef4;
+    --bg:#0c1620; --surface:#141f2b; --surface-2:#182633; --sunken:#0f1a24;
+    --text:#e6eef4; --text-muted:#9fb0bd; --text-faint:#6f8291;
+    --rule:#243545; --rule-strong:#33475a;
+    --celeste:#6ea6d6; --celeste-ink:#8fbde6;
+    --sol:#d9a441; --gold-fill:#d9a441; --money:#e7c05a;
+    --alerta:#d1685f; --alerta-fill:#d1685f; --alerta-soft:#2a1a1a;
+    --verde:#5aa588;
+    --chart-surface:#141f2b; --chart-grid:#22323f; --chart-axis:#4a5d6c;
+    --neutral-mark:#5f7180;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 34px rgba(0,0,0,.32);
+  }
+}
+:root[data-theme="light"]{
+  --ink:#0f1f2e; --paper:#eef1f2; --bg:#e9eef1; --surface:#ffffff; --surface-2:#f4f6f7; --sunken:#e4eaee;
+  --text:#12212e; --text-muted:#576673; --text-faint:#8695a1; --rule:#d6dde2; --rule-strong:#bcc7cf;
+  --celeste:#3f74a6; --celeste-ink:#2f5f8f; --sol:#d9a441; --gold-fill:#c69528; --money:#8a6413;
+  --alerta:#b2423b; --alerta-fill:#b2423b; --alerta-soft:#f7ebe9; --verde:#3f7d62;
+  --chart-surface:#ffffff; --chart-grid:#e6ebee; --chart-axis:#9aa7b1; --neutral-mark:#9aa7b1;
+  --shadow:0 1px 2px rgba(16,31,46,.05), 0 8px 30px rgba(16,31,46,.06);
+}
+:root[data-theme="dark"]{
+  --ink:#0a141d; --paper:#e7eef4; --bg:#0c1620; --surface:#141f2b; --surface-2:#182633; --sunken:#0f1a24;
+  --text:#e6eef4; --text-muted:#9fb0bd; --text-faint:#6f8291; --rule:#243545; --rule-strong:#33475a;
+  --celeste:#6ea6d6; --celeste-ink:#8fbde6; --sol:#d9a441; --gold-fill:#d9a441; --money:#e7c05a;
+  --alerta:#d1685f; --alerta-fill:#d1685f; --alerta-soft:#2a1a1a; --verde:#5aa588;
+  --chart-surface:#141f2b; --chart-grid:#22323f; --chart-axis:#4a5d6c; --neutral-mark:#5f7180;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 34px rgba(0,0,0,.32);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+::selection{background:var(--celeste);color:#fff}
+a{color:var(--celeste-ink);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:0;text-wrap:balance}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--s5)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--text-faint)}
+:focus-visible{outline:2px solid var(--celeste);outline-offset:2px;border-radius:3px}
+
+/* ---------- Cover ---------- */
+.cover{background:var(--ink);color:#e9f0f6;padding:var(--s8) 0;position:relative;overflow:hidden}
+.cover::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 40px,rgba(255,255,255,.022) 40px 41px);pointer-events:none}
+.cover .wrap{position:relative;z-index:1}
+.filetag{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);align-items:baseline;font-family:var(--font-mono);font-size:12.5px;letter-spacing:.03em;color:#89a0b5;border-bottom:1px solid rgba(255,255,255,.13);padding-bottom:var(--s4);margin-bottom:var(--s6)}
+.filetag b{color:#dbe7f0;font-weight:600}
+.kicker{font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--sol)}
+.cover h1{font-size:clamp(2.5rem,7vw,5rem);font-weight:800;color:#fff;margin:var(--s4) 0;max-width:15ch;letter-spacing:-.03em}
+.dek{font-size:clamp(1.05rem,2.1vw,1.38rem);line-height:1.45;color:#c4d2de;max-width:48ch;font-weight:400}
+.dek b{color:#fff;font-weight:600}
+.cover-meta{margin-top:var(--s7);display:flex;flex-wrap:wrap;gap:var(--s3)}
+.chip{font-family:var(--font-mono);font-size:12px;letter-spacing:.02em;padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;color:#c4d2de}
+
+/* ---------- Money magnitude (signature) ---------- */
+.money{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px;line-height:1}
+.money__fig{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--money);white-space:nowrap}
+.money__bar{height:2px;background:var(--sol);border-radius:2px;min-width:6px}
+.money--xl .money__fig{font-size:clamp(2.4rem,6vw,4rem);font-weight:600}
+.money--xl .money__bar{height:4px}
+.money--sm .money__fig{font-size:13px}
+
+/* ---------- Sections ---------- */
+section{padding:var(--s8) 0}
+section+section{border-top:1px solid var(--rule)}
+.alt{background:var(--surface)}
+.sec-head{max-width:66ch;margin-bottom:var(--s6)}
+.sec-head h2{font-size:clamp(1.65rem,3.5vw,2.4rem);margin-bottom:var(--s3)}
+.sec-head p{color:var(--text-muted);font-size:1.05rem;margin:0}
+.prose{max-width:66ch;font-size:1.05rem}
+.prose p{margin:0 0 var(--s4)}
+.prose strong{font-weight:600}
+.note{font-size:.92rem;color:var(--text-muted)}
+
+/* ---------- Hero band ---------- */
+.bignum{display:grid;grid-template-columns:1.05fr .95fr;gap:var(--s7);align-items:center}
+.bignum__usd{font-family:var(--font-mono);color:var(--text-faint);font-size:14px;margin-top:var(--s3)}
+.bignum__label{font-family:var(--font-body);font-size:1rem;color:var(--text-muted);margin-top:var(--s4);max-width:44ch}
+.bignum__label b{color:var(--text);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s4)}
+.tile{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s5);box-shadow:var(--shadow)}
+.tile__n{font-family:var(--font-display);font-size:2rem;font-weight:700;letter-spacing:-.03em;line-height:1}
+.tile__l{font-size:.9rem;color:var(--text-muted);margin-top:var(--s2)}
+.tile__s{font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint);margin-top:var(--s1)}
+
+/* ---------- Charts ---------- */
+.chart-card{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s2)}
+.chart-head h3{font-size:1.2rem}
+.chart-sub{color:var(--text-muted);font-size:.95rem;margin:0 0 var(--s5);max-width:70ch}
+.chart-scroll{overflow-x:auto}
+.legend{display:flex;flex-wrap:wrap;gap:var(--s4);margin-top:var(--s4);font-size:12.5px;font-family:var(--font-mono);color:var(--text-muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s5)}
+svg{display:block;width:100%;height:auto;font-family:var(--font-mono)}
+.ax{fill:var(--text-faint);font-size:11px}
+.axlab{fill:var(--text-muted);font-size:11px;font-weight:600}
+.gl{stroke:var(--chart-grid);stroke-width:1}
+.vlab{fill:var(--text);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+.refline{stroke:var(--celeste);stroke-width:1.3;stroke-dasharray:5 4}
+.reftext{fill:var(--celeste-ink);font-size:10.5px;font-weight:600}
+.dot{cursor:pointer;transition:opacity .12s}
+.dot:hover{opacity:.75}
+.barmark{cursor:pointer}
+/* tooltip */
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:#eaf1f6;font-family:var(--font-mono);font-size:12px;line-height:1.5;padding:9px 11px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);max-width:260px;opacity:0;transition:opacity .1s;border:1px solid rgba(255,255,255,.12)}
+#tip b{color:#fff}
+#tip .t-gold{color:var(--sol)}
+#tip .t-red{color:#e78a83}
+
+/* ---------- Finding ---------- */
+.finding{background:var(--ink);color:#e7eef4;border-radius:var(--r-lg);padding:var(--s7);box-shadow:var(--shadow)}
+.finding .kicker{color:var(--sol)}
+.finding h3{color:#fff;font-size:clamp(1.5rem,3.2vw,2.05rem);margin:var(--s3) 0 var(--s4);max-width:28ch}
+.finding p{color:#c4d2de;max-width:64ch;margin:0 0 var(--s4)}
+.law{font-family:var(--font-mono);font-size:.88rem;background:rgba(255,255,255,.055);border-left:2px solid var(--sol);padding:var(--s4) var(--s5);border-radius:0 var(--r-sm) var(--r-sm) 0;color:#d6e2ec;line-height:1.6;margin:var(--s5) 0}
+.contradiction{display:grid;grid-template-columns:1fr auto 1fr;gap:var(--s4);align-items:stretch;margin-top:var(--s6)}
+.contra-cell{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.11);border-radius:var(--r-md);padding:var(--s5)}
+.contra-cell .h{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#87a0b5;margin-bottom:var(--s2)}
+.contra-cell .b{font-size:1rem;color:#eaf1f6}
+.contra-cell .b b{color:#fff}
+.contra-vs{display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;color:var(--alerta);font-size:1.2rem}
+
+.balance{border:1px solid var(--rule-strong);border-left:4px solid var(--celeste);background:var(--surface);border-radius:0 var(--r-md) var(--r-md) 0;padding:var(--s5) var(--s6);margin-top:var(--s6);max-width:74ch;box-shadow:var(--shadow)}
+.balance .h{font-family:var(--font-mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--celeste-ink);margin-bottom:var(--s2);font-weight:600}
+.balance p{margin:0 0 var(--s3);font-size:1rem}
+.balance p:last-child{margin-bottom:0}
+
+/* ---------- Observations ---------- */
+.obs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s5)}
+.obs{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.obs__tag{display:inline-block;font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--alerta);border:1px solid var(--alerta);background:var(--alerta-soft);padding:3px 9px;border-radius:999px;margin-bottom:var(--s4)}
+.obs h3{font-size:1.15rem;margin-bottom:var(--s3);line-height:1.2}
+.obs p{margin:0;font-size:.96rem;color:var(--text-muted)}
+.obs__data{font-family:var(--font-mono);font-size:.82rem;color:var(--text);background:var(--sunken);border-radius:var(--r-sm);padding:var(--s3) var(--s4);margin-top:var(--s4)}
+.obs__data .hl{color:var(--alerta);font-weight:600}
+
+/* ---------- Tables ---------- */
+.scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+thead th{position:sticky;top:0;background:var(--surface-2);font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);font-weight:600;text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule-strong);white-space:nowrap;z-index:2}
+th.num,td.num{text-align:right}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+td.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.sup-name{font-weight:600}
+.row-flag{background:var(--alerta-soft)}
+.badge{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:2px 7px;border-radius:999px;white-space:nowrap;display:inline-block}
+.badge--exc{background:var(--alerta-soft);color:var(--alerta);border:1px solid var(--alerta)}
+.badge--nd{background:var(--sunken);color:var(--text-faint);border:1px solid var(--rule)}
+.badge--co{background:var(--sunken);color:var(--celeste-ink);border:1px solid var(--rule)}
+.warnpill{display:inline-block;font-family:var(--font-mono);font-size:10px;font-weight:600;color:#fff;background:var(--alerta);border-radius:3px;padding:1px 5px;margin-left:6px}
+.tbl-cap{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s4);margin-bottom:var(--s4);flex-wrap:wrap}
+.tbl-cap .h{font-family:var(--font-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted)}
+.src a{font-family:var(--font-mono);font-size:12px}
+
+/* ---------- Siblings ---------- */
+.sibs{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s5)}
+.sib{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.sib__code{font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint)}
+.sib h3{font-size:1.08rem;margin:var(--s2) 0 var(--s3)}
+.sib p{font-size:.93rem;color:var(--text-muted);margin:0 0 var(--s4)}
+.sib__row{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);padding:6px 0;border-top:1px dotted var(--rule);font-size:.88rem}
+.sib__row .k{color:var(--text-muted)}
+.sib__row .v{font-family:var(--font-mono);font-weight:500;text-align:right}
+.flagword{color:var(--alerta);font-weight:600}
+
+/* ---------- Method / sources ---------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s7)}
+.method-list{list-style:none;padding:0;margin:0}
+.method-list li{padding:var(--s4) 0;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:auto 1fr;gap:var(--s4)}
+.method-list li:last-child{border-bottom:none}
+.method-list .n{font-family:var(--font-mono);font-size:12px;color:var(--celeste-ink);font-weight:600;padding-top:3px}
+.method-list .t{font-size:.98rem}
+.method-list .t b{font-weight:600}
+.srcgroups{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s6) var(--s7)}
+.srcgroup h4{font-family:var(--font-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin:0 0 var(--s3);font-weight:600;border-bottom:1px solid var(--rule);padding-bottom:var(--s2)}
+.srclist{list-style:none;margin:0;padding:0}
+.srclist li{margin-bottom:var(--s3);font-size:.9rem;line-height:1.4}
+.srclist .u{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);word-break:break-all}
+.disclaimer{background:var(--ink);color:#c4d2de;border-radius:var(--r-lg);padding:var(--s7);box-shadow:var(--shadow)}
+.disclaimer h3{color:#fff;margin-bottom:var(--s4)}
+.disclaimer p{max-width:76ch;margin:0 0 var(--s3);font-size:.98rem}
+.disclaimer strong{color:#fff}
+.foot{background:var(--ink);color:#7f93a5;padding:var(--s7) 0;font-family:var(--font-mono);font-size:12.5px}
+.foot .wrap{display:flex;justify-content:space-between;gap:var(--s4);flex-wrap:wrap}
+.foot a{color:#a9bccc}
+
+@media (max-width:980px){
+  .bignum,.cols2{grid-template-columns:1fr;gap:var(--s6)}
+  .obs-grid,.sibs{grid-template-columns:1fr 1fr}
+  .grid2,.srcgroups{grid-template-columns:1fr}
+  .contradiction{grid-template-columns:1fr}
+  .contra-vs{transform:rotate(90deg);padding:var(--s2) 0}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  .tiles,.obs-grid,.sibs{grid-template-columns:1fr}
+  .wrap{padding:0 var(--s4)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<style>
+/* hub-specific */
+.hub-hero{background:var(--ink);color:#e9f0f6;padding:var(--s9) 0 var(--s8);position:relative;overflow:hidden}
+.hub-hero::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 40px,rgba(255,255,255,.02) 40px 41px);pointer-events:none}
+.hub-hero .wrap{position:relative;z-index:1}
+.hub-hero h1{font-size:clamp(2.6rem,7vw,5.2rem);font-weight:800;color:#fff;letter-spacing:-.03em;margin:var(--s4) 0;max-width:16ch}
+.hub-hero .dek{font-size:clamp(1.05rem,2.1vw,1.35rem);color:#c4d2de;max-width:56ch}
+.hub-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s4);margin-top:var(--s7)}
+.hub-stat{border:1px solid rgba(255,255,255,.14);border-radius:var(--r-md);padding:var(--s4) var(--s5)}
+.hub-stat b{display:block;font-family:var(--font-display);font-size:1.9rem;font-weight:700;color:#fff;letter-spacing:-.02em;line-height:1}
+.hub-stat span{font-family:var(--font-mono);font-size:11.5px;color:#9fb2c4;letter-spacing:.03em;margin-top:var(--s2);display:block}
+.serie-head{display:flex;align-items:baseline;gap:var(--s4);margin-bottom:var(--s6);flex-wrap:wrap}
+.serie-head h2{font-size:clamp(1.6rem,3.4vw,2.2rem)}
+.serie-head .tag-serie{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--celeste-ink);border:1px solid var(--rule-strong);border-radius:999px;padding:4px 12px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:var(--s6)}
+.icard{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow);transition:transform .16s var(--ease,ease),box-shadow .16s ease;text-decoration:none;color:inherit}
+.icard:hover{transform:translateY(-3px);box-shadow:0 10px 40px rgba(16,31,46,.13);text-decoration:none}
+.icard__top{background:var(--ink);color:#eaf1f6;padding:var(--s6);display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s4)}
+.icard__emoji{font-size:2rem;line-height:1}
+.icard__eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sol)}
+.icard__title{font-family:var(--font-display);font-weight:800;font-size:1.5rem;color:#fff;margin:var(--s2) 0 0;letter-spacing:-.02em}
+.icard__body{padding:var(--s6);display:flex;flex-direction:column;gap:var(--s4);flex:1}
+.icard__dek{color:var(--text-muted);font-size:1rem;margin:0}
+.icard__stats{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);border-top:1px solid var(--rule);padding-top:var(--s4);margin-top:auto}
+.icard__stat b{font-family:var(--font-mono);font-weight:600;font-size:1.05rem;color:var(--text);display:block}
+.icard__stat span{font-size:11.5px;color:var(--text-faint)}
+.icard__stat b.money{color:var(--money)}
+.icard__stat b.flag{color:var(--alerta)}
+.icard__cta{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--celeste-ink);padding:0 var(--s6) var(--s6)}
+.tags{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.tag-s{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.03em;color:var(--text-muted);background:var(--sunken);border:1px solid var(--rule);border-radius:999px;padding:2px 9px}
+.soon{opacity:.62}
+.soon .icard__top{background:var(--surface-2);color:var(--text-muted)}
+.soon .icard__title{color:var(--text)}
+.soon .icard__eyebrow{color:var(--text-faint)}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s5)}
+.how-item{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.how-item .n{font-family:var(--font-mono);font-size:12px;color:var(--celeste-ink);font-weight:600}
+.how-item h3{font-size:1.1rem;margin:var(--s2) 0 var(--s3)}
+.how-item p{font-size:.95rem;color:var(--text-muted);margin:0}
+@media (max-width:900px){.hub-stats,.how{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr}}
+@media (max-width:560px){.hub-stats{grid-template-columns:1fr}.how{grid-template-columns:1fr}}
+</style>
+
+<!-- ============ HERO ============ -->
+<header class="hub-hero">
+  <div class="wrap">
+    <p class="kicker" style="font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--sol)">Con la tuya, contribuyente · Investigaciones</p>
+    <h1>Adónde fue tu plata</h1>
+    <p class="dek">Investigaciones de datos abiertos sobre el gasto del Estado uruguayo. Cada una arranca en un número del sistema de Compras Estatales, se verifica en la fuente oficial y termina con lo que cualquiera puede volver a chequear. Sin sesgo, con enlaces.</p>
+    <div class="hub-stats">
+      <div class="hub-stat"><b>2</b><span>INVESTIGACIONES</span></div>
+      <div class="hub-stat"><b>+$300 M</b><span>EN CONTRATOS ANALIZADOS</span></div>
+      <div class="hub-stat"><b>18</b><span>MÉTODOS VERIFICADOS EN EL PORTAL</span></div>
+      <div class="hub-stat"><b>~70</b><span>FUENTES CITADAS</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ SERIE: CASINOS ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="serie-head">
+      <span class="tag-serie">Serie</span>
+      <h2>Casinos del Estado</h2>
+    </div>
+    <p class="prose" style="margin-bottom:var(--s7);color:var(--text-muted)">La Dirección General de Casinos (Ministerio de Economía y Finanzas) opera el monopolio estatal del juego: cuatro casinos y unas 30 salas. Es rentable —USD 65 M de ganancia en 2024— y por eso mismo su gasto merece control. Estas investigaciones siguen su contratación rubro por rubro.</p>
+
+    <div class="cards">
+      <!-- CORTESÍA -->
+      <a class="icard" href="https://claude.ai/code/artifact/b49b99c5-1978-4db9-a1c3-5e65df2382f5" target="_blank" rel="noopener">
+        <div class="icard__top">
+          <div>
+            <p class="icard__eyebrow">Art. 79764 · Excepción</p>
+            <h3 class="icard__title">La consumición de cortesía</h3>
+          </div>
+          <div class="icard__emoji">🎰</div>
+        </div>
+        <div class="icard__body">
+          <p class="icard__dek">Casi 59 millones de pesos en comida y bebida regalada a los jugadores, adjudicados por «proveedor exclusivo»… a 22 proveedores distintos. Un proveedor cobra 4× lo que los demás, sin variar en años.</p>
+          <div class="tags">
+            <span class="tag-s">TOCAF Art. 33.3</span>
+            <span class="tag-s">precio fijo 4×</span>
+            <span class="tag-s">roster cerrado</span>
+          </div>
+          <div class="icard__stats">
+            <div class="icard__stat"><b class="money">$ 58,8 M</b><span>gasto del rubro</span></div>
+            <div class="icard__stat"><b class="flag">22</b><span>proveedores «exclusivos»</span></div>
+            <div class="icard__stat"><b>63</b><span>contratos verificables</span></div>
+          </div>
+        </div>
+        <div class="icard__cta">Leer la investigación →</div>
+      </a>
+
+      <!-- MAPA -->
+      <a class="icard" href="https://claude.ai/code/artifact/e2db8f2a-06ac-405a-9fad-2acf47f44b14" target="_blank" rel="noopener">
+        <div class="icard__top">
+          <div>
+            <p class="icard__eyebrow">8 rubros · método verificado</p>
+            <h3 class="icard__title">El mapa de la competencia</h3>
+          </div>
+          <div class="icard__emoji">🎲</div>
+        </div>
+        <div class="icard__body">
+          <p class="icard__dek">La DGC licita las máquinas, las fichas y casi todo lo que se puede especificar. La excepción de «exclusividad» queda para el hardware propietario… y para la comida. Si licita 2 millones de fichas, ¿por qué compra el desayuno a dedo?</p>
+          <div class="tags">
+            <span class="tag-s">Licitación vs Excepción</span>
+            <span class="tag-s">lock-in de proveedor</span>
+            <span class="tag-s">$ 262 M a dedo</span>
+          </div>
+          <div class="icard__stats">
+            <div class="icard__stat"><b>8</b><span>rubros mapeados</span></div>
+            <div class="icard__stat"><b class="flag">$ 262 M</b><span>por excepción</span></div>
+            <div class="icard__stat"><b class="money">$ 86 M</b><span>licitados</span></div>
+          </div>
+        </div>
+        <div class="icard__cta">Leer la investigación →</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CÓMO SE HACE ============ -->
+<section>
+  <div class="wrap">
+    <div class="serie-head">
+      <span class="tag-serie">Método</span>
+      <h2>Cómo se hace cada una</h2>
+    </div>
+    <div class="how">
+      <div class="how-item">
+        <p class="n">Datos abiertos</p>
+        <h3>Empieza en la fuente</h3>
+        <p>Todo sale del sistema de Compras Estatales (formato OCDS, catalogodatos.gub.uy), la misma base que alimenta Con la tuya. Nada de números sin origen.</p>
+      </div>
+      <div class="how-item">
+        <p class="n">Verificación</p>
+        <h3>Se chequea a mano</h3>
+        <p>El método de compra, el monto y el proveedor se confirman abriendo la ficha oficial de cada contrato en el portal. Cada afirmación fuerte tiene su enlace.</p>
+      </div>
+      <div class="how-item">
+        <p class="n">Sin veredicto</p>
+        <h3>Marca, no acusa</h3>
+        <p>Se distinguen los hechos de las preguntas abiertas. Un patrón no es un delito: se señala dónde pedir el expediente, y se incluye el descargo del organismo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRÓXIMAS ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="serie-head">
+      <span class="tag-serie">En curso</span>
+      <h2>Próximas líneas</h2>
+    </div>
+    <div class="cards">
+      <div class="icard soon">
+        <div class="icard__top">
+          <div>
+            <p class="icard__eyebrow">Aguas arriba</p>
+            <h3 class="icard__title">Las concesiones de bar</h3>
+          </div>
+          <div class="icard__emoji">🍸</div>
+        </div>
+        <div class="icard__body">
+          <p class="icard__dek">La defensa de la «exclusividad» se apoya en que cada sala tiene un concesionario de bar. La pregunta que falta: cómo y con qué competencia se adjudicó cada concesión.</p>
+          <div class="tags"><span class="tag-s">próximamente</span></div>
+        </div>
+        <div class="icard__cta">En preparación</div>
+      </div>
+      <div class="icard soon">
+        <div class="icard__top">
+          <div>
+            <p class="icard__eyebrow">Más organismos</p>
+            <h3 class="icard__title">El resto del Estado</h3>
+          </div>
+          <div class="icard__emoji">🏛️</div>
+        </div>
+        <div class="icard__body">
+          <p class="icard__dek">El mismo método aplicado a otras reparticiones: dónde se concentra el gasto, quién gana sin competencia y qué patrones se repiten entre organismos.</p>
+          <div class="tags"><span class="tag-s">próximamente</span></div>
+        </div>
+        <div class="icard__cta">En preparación</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>Con la tuya, contribuyente — investigaciones de datos abiertos</span>
+    <span>Fuente: Compras Estatales (OCDS) · 18/07/2026</span>
+  </div>
+</footer>
+</body></html>

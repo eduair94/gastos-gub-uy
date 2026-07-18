@@ -287,6 +287,57 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 .tag--celeste { background: var(--celeste-wash); color: var(--celeste-deep); border-color: color-mix(in srgb, var(--celeste) 34%, transparent); }
 
 // ============================================================
+// Chips / pills — the app-wide primitive for compact rounded
+// tokens: filter pills, count pills, action pills. One source of
+// spacing so labels, icons and counts always have breathing room
+// and never crowd (the recurring cramped-chip bug). Use `.chip-row`
+// on the container to space siblings. Distinct from `.tag`, which is
+// the uppercase status/severity badge.
+// ============================================================
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-full);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+button.chip,
+a.chip {
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+button.chip:hover:not(:disabled),
+a.chip:hover { color: var(--text); border-color: var(--text-muted); }
+
+button.chip:disabled { cursor: default; }
+
+// The small leading glyph (an arrow / dot), sized down so it reads as an accent.
+.chip__ic { font-size: 0.72em; line-height: 1; }
+
+// A trailing count. Extra left pad past the flex gap so the number is clearly
+// its own token, and tabular figures so counts of different widths stay aligned.
+.chip__count {
+  padding-left: var(--s-1);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+// ============================================================
 // Quality floor
 // ============================================================
 :where(a, button, [tabindex], input, select, textarea, .v-btn, .v-list-item):focus-visible {

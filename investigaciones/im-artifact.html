@@ -1,0 +1,276 @@
+<title>Montevideo en rojo — gasto discrecional y déficit</title>
+<style>
+  /* Con la tuya, contribuyente — sistema "expediente del auditor".
+     Oro = dinero (sólo). Celeste = estructura. Alerta-rojo = señal. */
+  :root {
+    --ink: #0f2233; --paper: #eef1f2; --surface: #ffffff; --surface-sunken: #e7ecee;
+    --text: #172a3a; --text-muted: #5a6b78; --rule: #d3dade; --rule-strong: #b8c3cb;
+    --celeste: #5e93c4; --celeste-deep: #3d6f9e; --sol: #c69528; --money: #b07d15;
+    --alerta: #b2423b; --verde: #3f7d62;
+    --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+    --font-body: "Public Sans", system-ui, -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", monospace;
+    --maxw: 1120px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #0a1722; --paper: #0e1c28; --surface: #14232f; --surface-sunken: #0f1d28;
+      --text: #dfe7ec; --text-muted: #93a4b0; --rule: #263844; --rule-strong: #33495a;
+      --celeste: #6ea3d4; --celeste-deep: #8ab6de; --sol: #d9a441; --money: #e2b350;
+      --alerta: #d0655e; --verde: #5aa082;
+    }
+  }
+  :root[data-theme="light"] {
+    --ink: #0f2233; --paper: #eef1f2; --surface: #ffffff; --surface-sunken: #e7ecee;
+    --text: #172a3a; --text-muted: #5a6b78; --rule: #d3dade; --rule-strong: #b8c3cb;
+    --celeste: #5e93c4; --celeste-deep: #3d6f9e; --sol: #c69528; --money: #b07d15;
+    --alerta: #b2423b; --verde: #3f7d62;
+  }
+  :root[data-theme="dark"] {
+    --ink: #0a1722; --paper: #0e1c28; --surface: #14232f; --surface-sunken: #0f1d28;
+    --text: #dfe7ec; --text-muted: #93a4b0; --rule: #263844; --rule-strong: #33495a;
+    --celeste: #6ea3d4; --celeste-deep: #8ab6de; --sol: #d9a441; --money: #e2b350;
+    --alerta: #d0655e; --verde: #5aa082;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--text); font-family: var(--font-body);
+    line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px 80px; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .money { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--money); }
+  a { color: var(--celeste-deep); }
+
+  /* Cover */
+  .cover { background: var(--ink); color: #eef3f7; margin: 0 -9999px 0 -9999px; padding: 0; }
+  .cover .inner { max-width: var(--maxw); margin: 0 auto; padding: 48px 20px 52px; }
+  .file { display: flex; flex-wrap: wrap; gap: 6px 22px; font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.06em; color: #8fa6b6; text-transform: uppercase; border-bottom: 1px solid #24384a;
+    padding-bottom: 14px; margin-bottom: 26px; }
+  .file b { color: #cfe0ec; font-weight: 600; }
+  .kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--sol); margin: 0 0 14px; }
+  h1 { font-family: var(--font-display); font-weight: 800; font-stretch: 112%; font-size: clamp(28px, 5.2vw, 46px);
+    line-height: 1.08; margin: 0 0 18px; text-wrap: balance; letter-spacing: -0.01em; }
+  .dek { font-size: clamp(16px, 2.4vw, 19px); color: #c3d2dd; max-width: 62ch; margin: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+  .chip { font-family: var(--font-mono); font-size: 11px; padding: 4px 11px; border: 1px solid #2c4358;
+    border-radius: 999px; color: #a9c0d1; }
+
+  /* Sections */
+  section { padding-top: 52px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--celeste-deep); margin: 0 0 8px; }
+  h2 { font-family: var(--font-display); font-weight: 700; font-stretch: 110%; font-size: clamp(21px, 3.4vw, 28px);
+    line-height: 1.15; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font-family: var(--font-display); font-weight: 700; font-size: 17px; margin: 0 0 10px; }
+  p { margin: 0 0 14px; max-width: 66ch; }
+
+  /* Stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 6px; }
+  .tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 18px 16px; }
+  .tile .big { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 700;
+    line-height: 1; letter-spacing: -0.02em; }
+  .tile .big.m { color: var(--money); }
+  .tile .big.a { color: var(--alerta); }
+  .tile .lab { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-muted); margin-top: 10px; }
+  .tile .sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Bar chart */
+  .bars { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 22px; margin-top: 6px; }
+  .bar { display: grid; grid-template-columns: 190px 1fr auto; align-items: center; gap: 12px; padding: 9px 0; }
+  .bar + .bar { border-top: 1px dashed var(--rule); }
+  .bar .name { font-size: 14px; }
+  .bar .track { height: 12px; background: var(--surface-sunken); border-radius: 4px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--sol); border-radius: 4px; }
+  .bar .val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--money);
+    font-size: 13px; white-space: nowrap; }
+  .note { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--celeste);
+    border-radius: 10px; padding: 16px 18px; margin-top: 16px; font-size: 14px; color: var(--text-muted); }
+  .note b { color: var(--text); }
+
+  /* Ledger */
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 620px; }
+  th { text-align: left; font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-muted); padding: 12px 14px; border-bottom: 1px solid var(--rule);
+    background: var(--surface-sunken); }
+  th.r, td.r { text-align: right; }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  .badge { font-family: var(--font-mono); font-size: 10.5px; padding: 1px 8px; border-radius: 999px;
+    border: 1px solid var(--rule); color: var(--text-muted); white-space: nowrap; }
+  .badge.pub { border-color: color-mix(in srgb, var(--celeste) 45%, transparent); color: var(--celeste-deep); }
+  .badge.ev { border-color: color-mix(in srgb, var(--alerta) 40%, transparent); color: var(--alerta); }
+  .badge.mer { border-color: color-mix(in srgb, var(--sol) 55%, transparent); color: var(--money); }
+  .ficha { font-family: var(--font-mono); font-size: 11px; text-decoration: none; white-space: nowrap; }
+
+  /* News cards */
+  .news { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 6px; }
+  .ncard { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border: 1px solid var(--rule);
+    border-left: 3px solid var(--alerta); border-radius: 12px; padding: 18px; text-decoration: none; color: inherit; }
+  .ncard .amt { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 21px; font-weight: 700;
+    color: var(--alerta); }
+  .ncard .txt { font-size: 13.5px; color: var(--text); margin: 0; }
+  .ncard .src { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: auto; }
+
+  ul.src { list-style: none; padding: 0; margin: 0; }
+  ul.src li { padding: 8px 0; border-top: 1px dashed var(--rule); font-size: 13px; }
+  ul.src li:first-child { border-top: 0; }
+  .disc { background: var(--surface-sunken); border: 1px solid var(--rule); border-radius: 12px; padding: 20px 22px;
+    margin-top: 48px; }
+  .disc p { font-size: 13px; color: var(--text-muted); }
+  footer { margin-top: 40px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-align: center; }
+
+  @media (max-width: 640px) {
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    .news { grid-template-columns: 1fr; }
+    .bar { grid-template-columns: 130px 1fr auto; }
+  }
+</style>
+
+<div class="cover">
+  <div class="inner">
+    <div class="file">
+      <span>EXPEDIENTE&nbsp; <b>Intendencia de Montevideo</b></span>
+      <span>COMPRADOR&nbsp; <b>98-1</b></span>
+      <span>PERÍODO&nbsp; <b>2012–2025</b></span>
+      <span>Compras Estatales · verificado ficha por ficha</span>
+    </div>
+    <p class="kicker">Investigación · Gasto departamental</p>
+    <h1>Montevideo en rojo: en qué gastó la Intendencia mientras el déficit se multiplicaba por ocho</h1>
+    <p class="dek">En 2024 la Intendencia de Montevideo cerró con el mayor déficit en una década — USD 82,6 millones, ocho veces el del año anterior. Mientras tanto siguió pagando publicidad, espectáculos, catering y merchandising. Acá está el gasto discrecional, contrato por contrato.</p>
+    <div class="chips">
+      <span class="chip">Déficit 2024: USD 82,6 M</span>
+      <span class="chip">Compras 2012–2025</span>
+      <span class="chip">Cada contrato con su ficha</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <section>
+    <div class="tiles">
+      <div class="tile">
+        <div class="big m">$ 48,6&nbsp;mil M</div>
+        <div class="lab">Compras rastreables</div>
+        <div class="sub">Comprador 98-1 · tope de plausibilidad</div>
+      </div>
+      <div class="tile">
+        <div class="big a">USD 82,6 M</div>
+        <div class="lab">Déficit 2024</div>
+        <div class="sub">$ 3.640 millones · el mayor en 10 años</div>
+      </div>
+      <div class="tile">
+        <div class="big m">$ 15.631</div>
+        <div class="lab">Contrato mediano</div>
+      </div>
+      <div class="tile">
+        <div class="big a">×8</div>
+        <div class="lab">Veces el déficit de 2023</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">El contexto</p>
+    <h2>Un déficit que se multiplicó por ocho</h2>
+    <p>La Rendición de Cuentas 2024 dejó a la Intendencia de Montevideo con un déficit de <b class="mono">$3.640 millones</b> de pesos (USD 82,6 millones según El Observador; USD 90,4 millones según Ámbito), ocho veces el de 2023 y el mayor en una década. El déficit acumulado ronda los USD 497 millones.</p>
+    <p>La comuna lo atribuye a la caída de transferencias del gobierno central y a la eliminación de la Tasa de Inflamables. Ya con Mario Bergara (2025) anunció una reducción del orden del 70%, a unos USD 18 millones, mientras gestiona nuevos créditos. La pregunta de esta investigación es la otra cara: con ese rojo sobre la mesa, ¿en qué se siguió gastando lo discrecional?</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">Lo discrecional</p>
+    <h2>Publicidad, espectáculos, catering, mobiliario</h2>
+    <p>Son los rubros que un organismo en déficit suele recortar primero. No son ilegales ni necesariamente injustificados —parte es función cultural de la comuna— pero son elásticos: se pueden postergar. Esto es lo que la Intendencia gastó en cada uno (compras con precio, 2012–2025).</p>
+    <div class="bars">
+      <div class="bar"><span class="name">Publicidad y comunicación</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="val">$ 209,6 M</span></div>
+      <div class="bar"><span class="name">Eventos y espectáculos</span><span class="track"><span class="fill" style="width:75%"></span></span><span class="val">$ 157,7 M</span></div>
+      <div class="bar"><span class="name">Mobiliario y decoración</span><span class="track"><span class="fill" style="width:12.5%"></span></span><span class="val">$ 26,3 M</span></div>
+      <div class="bar"><span class="name">Catering y protocolo</span><span class="track"><span class="fill" style="width:9.5%"></span></span><span class="val">$ 19,9 M</span></div>
+    </div>
+    <div class="note"><b>Nota:</b> la consultoría es el rubro mayor (unos <span class="mono">$343 millones</span>), pero queda fuera de este conteo: en su mayoría es operativa (sistemas SAP/GRP, relleno sanitario, georreferenciación), no superflua. Preferimos no inflar la cifra.</div>
+  </section>
+
+  <section>
+    <p class="eyebrow">La evidencia</p>
+    <h2>Quince contratos, uno por uno</h2>
+    <p>Los contratos discrecionales más grandes del período, verificados en la base y enlazados a su ficha oficial. La publicidad se concentra en un puñado de proveedores; el merchandising (remeras, gorros) siguió incluso en 2023 y 2024, en pleno rojo.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Fecha</th><th>Objeto</th><th>Proveedor</th><th>Rubro</th><th class="r">Monto</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono">20/09/2018</td><td class="obj">Asesoramiento publicitario</td><td>SIETEVEINTE S.R.L.</td><td><span class="badge pub">Publicidad</span></td><td class="r money">$ 13.770.492</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i271252" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">07/03/2023</td><td class="obj">Asesoramiento publicitario</td><td>SIETEVEINTE S.R.L.</td><td><span class="badge pub">Publicidad</span></td><td class="r money">$ 9.016.393</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i384862" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">03/04/2020</td><td class="obj">Asesoramiento publicitario</td><td>SIETEVEINTE S.R.L.</td><td><span class="badge pub">Publicidad</span></td><td class="r money">$ 7.786.885</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i309070" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">24/09/2020</td><td class="obj">Asesoramiento publicitario</td><td>SIETEVEINTE S.R.L.</td><td><span class="badge pub">Publicidad</span></td><td class="r money">$ 7.377.049</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i315676" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">20/12/2019</td><td class="obj">Asesoramiento publicitario</td><td>SIETEVEINTE S.R.L.</td><td><span class="badge pub">Publicidad</span></td><td class="r money">$ 7.377.049</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i298544" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">25/06/2019</td><td class="obj">Asesoramiento publicitario</td><td>SIETEVEINTE S.R.L.</td><td><span class="badge pub">Publicidad</span></td><td class="r money">$ 6.885.246</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i290472" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">18/11/2024</td><td class="obj">Remeras de algodón (naranja)</td><td>LANCER S A</td><td><span class="badge mer">Merchandising</span></td><td class="r money">$ 5.784.554</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i444887" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">14/06/2016</td><td class="obj">Publicidad radial</td><td>MONTE CARLO S A</td><td><span class="badge pub">Publicidad</span></td><td class="r money">$ 4.238.800</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i231587" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">27/07/2016</td><td class="obj">Publicidad televisiva</td><td>SAETA (TV y Anexos)</td><td><span class="badge pub">Publicidad</span></td><td class="r money">$ 3.804.100</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i233600" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">13/12/2023</td><td class="obj">Remeras de algodón (naranja)</td><td>LANCER S A</td><td><span class="badge mer">Merchandising</span></td><td class="r money">$ 3.794.602</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i408848" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">08/05/2019</td><td class="obj">Venta de entradas</td><td>Asociación Rural del Uruguay</td><td><span class="badge ev">Eventos</span></td><td class="r money">$ 3.244.539</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i280144" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">13/09/2019</td><td class="obj">Carpa para espectáculos</td><td>CANCLINI VILAR FEDERICO</td><td><span class="badge ev">Eventos</span></td><td class="r money">$ 3.210.000</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i291780" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">06/03/2020</td><td class="obj">Venta de entradas</td><td>Asociación Rural del Uruguay</td><td><span class="badge ev">Eventos</span></td><td class="r money">$ 2.667.500</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i303299" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">07/03/2019</td><td class="obj">Campaña publicitaria</td><td>AMEN S.A.</td><td><span class="badge pub">Publicidad</span></td><td class="r money">$ 2.719.754</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i284087" target="_blank" rel="noopener">Ficha →</a></td></tr>
+          <tr><td class="mono">16/12/2022</td><td class="obj">Vallado desfile de Carnaval 2023</td><td>PALLADIUM S A</td><td><span class="badge ev">Eventos</span></td><td class="r money">$ 2.573.578</td><td class="r"><a class="ficha" href="https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/i375681" target="_blank" rel="noopener">Ficha →</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Los casos que fueron noticia</p>
+    <h2>Lo que ya había salido en la prensa</h2>
+    <p>Cuatro gastos que llegaron al debate público. No salen de la base de compras sino de la prensa citada; los sumamos como contexto.</p>
+    <div class="news">
+      <a class="ncard" href="https://www.lanacion.com.ar/el-mundo/revuelo-y-criticas-en-uruguay-revelan-cuanto-le-pagara-la-intendencia-de-montevideo-a-lali-esposito-nid14032023/" target="_blank" rel="noopener">
+        <span class="amt">USD 256.478</span>
+        <p class="txt">Pago a Lali Espósito por el festival gratuito «Acá estamos» en la rambla. La oposición lo llamó «pan y circo».</p>
+        <span class="src">La Nación · 2023 →</span>
+      </a>
+      <a class="ncard" href="https://www.montevideo.com.uy/Noticias/-Doble-discurso-y-le-cuesta-el-rating--oposicion-sobre-la-reestructura-de-TV-Ciudad-uc944684" target="_blank" rel="noopener">
+        <span class="amt">≈ USD 8 M/año</span>
+        <p class="txt">Costo anual del canal municipal TV Ciudad, cuestionado por su bajo rating mientras se pedía redirigir fondos a calles y saneamiento.</p>
+        <span class="src">Montevideo Portal · 2025 →</span>
+      </a>
+      <a class="ncard" href="https://www.subrayado.com.uy/adeom-acepto-probar-camiones-recolectores-que-cuestionaba-seguridad-lema-critico-compra-imm-n959087" target="_blank" rel="noopener">
+        <span class="amt">&gt; USD 8 M</span>
+        <p class="txt">16 camiones recolectores que quedaron meses sin usar por objeciones de seguridad del sindicato. «Compraron mal los camiones», dijo la oposición.</p>
+        <span class="src">Subrayado · 2024 →</span>
+      </a>
+      <a class="ncard" href="https://ladiaria.com.uy/politica/articulo/2026/5/junta-departamental-de-montevideo-aprobo-la-creacion-de-tres-cargos-de-confianza-sin-las-mayorias-requeridas-segun-el-tribunal-de-cuentas/" target="_blank" rel="noopener">
+        <span class="amt">3 cargos</span>
+        <p class="txt">La Junta Departamental creó tres cargos de confianza sin «las mayorías requeridas», según observó el Tribunal de Cuentas.</p>
+        <span class="src">la diaria · 2026 →</span>
+      </a>
+    </div>
+    <div class="note" style="margin-top:18px;border-left-color:var(--text-muted)">Estos cuatro montos vienen de la prensa, no de una ficha: no aparecen como un contrato único identificable en los datos abiertos de compras. La Intendencia sí compró camiones compactadores de residuos, pero en 2016, no en la compra de 2024 que se menciona. Los dejamos como contexto, con su enlace a la nota.</div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Seguí explorando</p>
+    <h2>Todos los contratos de la Intendencia</h2>
+    <p>Este informe es una foto de lo discrecional. El resto del gasto —obras, combustible, recolección, salud— es la mayor parte: unos <span class="mono">$48.594 millones</span> en compras rastreables (2012–2025), con una mediana de <span class="mono">$15.631</span> por contrato. Cada compra individual está en el portal oficial.</p>
+    <p><a href="https://www.comprasestatales.gub.uy/consultas/" target="_blank" rel="noopener">Ver todas las compras en Compras Estatales →</a></p>
+  </section>
+
+  <section>
+    <p class="eyebrow">Fuentes</p>
+    <h2>Verificado y enlazado</h2>
+    <ul class="src">
+      <li><a href="https://www.elobservador.com.uy/nacional/en-2024-la-intendencia-montevideo-tuvo-un-deficit-us-82-millones-y-tiene-un-acumulado-us-497-millones-n6007209" target="_blank" rel="noopener">El Observador — Déficit 2024 de la IM (USD 82,6 M; acumulado USD 497,4 M)</a></li>
+      <li><a href="https://www.ambito.com/uruguay/el-deficit-la-intendencia-montevideo-se-disparo-y-enciende-alarmas-la-gestion-electa-n6164137" target="_blank" rel="noopener">Ámbito — El déficit de la IM se disparó a USD 90,4 M (2024)</a></li>
+      <li><a href="https://www.montevideo.com.uy/Noticias/Intendencia-de-Montevideo-tuvo-deficit-de-US-18-millones-en-2025-un-70-menos-que-2024-uc956944" target="_blank" rel="noopener">Montevideo Portal — Déficit de USD 18 M en 2025 (-70%)</a></li>
+      <li><a href="https://www.comprasestatales.gub.uy/consultas/" target="_blank" rel="noopener">Compras Estatales — cada contrato del ledger enlaza a su ficha oficial</a></li>
+    </ul>
+    <div class="disc">
+      <h3>Sobre estos datos</h3>
+      <p>Este es un trabajo periodístico sobre datos abiertos, no una auditoría. Los montos de compras son los que publica el Estado; los del déficit y los casos mediáticos, los que publicó la prensa citada.</p>
+      <p>Marcar un gasto como «discrecional» o «superfluo» es una lectura editorial en el contexto del déficit, no una acusación de irregularidad. Cada contrato enlaza a su fuente oficial para que cualquiera lo verifique.</p>
+    </div>
+  </section>
+
+  <footer>Con la tuya, contribuyente · Investigaciones · foto verificada 2026-07</footer>
+</div>

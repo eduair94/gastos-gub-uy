@@ -1,0 +1,470 @@
+<style>
+/* ============================================================
+   La consumición de cortesía — investigación DGC (artifact)
+   Design: auditor's expediente, native to "Con la tuya" system.
+   Gold = money (only). Alerta-red = flag. Celeste = structure.
+   ============================================================ */
+:root{
+  --ink:#0f1f2e; --paper:#eef1f2;
+  --bg:#e9eef1; --surface:#ffffff; --surface-2:#f4f6f7; --sunken:#e4eaee;
+  --text:#12212e; --text-muted:#576673; --text-faint:#8695a1;
+  --rule:#d6dde2; --rule-strong:#bcc7cf;
+  --celeste:#3f74a6; --celeste-ink:#2f5f8f;
+  --sol:#d9a441; --gold-fill:#c69528; --money:#8a6413;
+  --alerta:#b2423b; --alerta-fill:#b2423b; --alerta-soft:#f7ebe9;
+  --verde:#3f7d62;
+  --chart-surface:#ffffff; --chart-grid:#e6ebee; --chart-axis:#9aa7b1;
+  --neutral-mark:#9aa7b1;
+  --shadow:0 1px 2px rgba(16,31,46,.05), 0 8px 30px rgba(16,31,46,.06);
+  --font-display:'Archivo Expanded','Archivo',system-ui,'Segoe UI',Roboto,sans-serif;
+  --font-body:'Public Sans',system-ui,'Segoe UI',Roboto,-apple-system,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,'Cascadia Code','SF Mono',Menlo,Consolas,monospace;
+  --maxw:1140px;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;--s8:64px;--s9:96px;
+  --r-sm:5px;--r-md:9px;--r-lg:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#0a141d; --paper:#e7eef4;
+    --bg:#0c1620; --surface:#141f2b; --surface-2:#182633; --sunken:#0f1a24;
+    --text:#e6eef4; --text-muted:#9fb0bd; --text-faint:#6f8291;
+    --rule:#243545; --rule-strong:#33475a;
+    --celeste:#6ea6d6; --celeste-ink:#8fbde6;
+    --sol:#d9a441; --gold-fill:#d9a441; --money:#e7c05a;
+    --alerta:#d1685f; --alerta-fill:#d1685f; --alerta-soft:#2a1a1a;
+    --verde:#5aa588;
+    --chart-surface:#141f2b; --chart-grid:#22323f; --chart-axis:#4a5d6c;
+    --neutral-mark:#5f7180;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 34px rgba(0,0,0,.32);
+  }
+}
+:root[data-theme="light"]{
+  --ink:#0f1f2e; --paper:#eef1f2; --bg:#e9eef1; --surface:#ffffff; --surface-2:#f4f6f7; --sunken:#e4eaee;
+  --text:#12212e; --text-muted:#576673; --text-faint:#8695a1; --rule:#d6dde2; --rule-strong:#bcc7cf;
+  --celeste:#3f74a6; --celeste-ink:#2f5f8f; --sol:#d9a441; --gold-fill:#c69528; --money:#8a6413;
+  --alerta:#b2423b; --alerta-fill:#b2423b; --alerta-soft:#f7ebe9; --verde:#3f7d62;
+  --chart-surface:#ffffff; --chart-grid:#e6ebee; --chart-axis:#9aa7b1; --neutral-mark:#9aa7b1;
+  --shadow:0 1px 2px rgba(16,31,46,.05), 0 8px 30px rgba(16,31,46,.06);
+}
+:root[data-theme="dark"]{
+  --ink:#0a141d; --paper:#e7eef4; --bg:#0c1620; --surface:#141f2b; --surface-2:#182633; --sunken:#0f1a24;
+  --text:#e6eef4; --text-muted:#9fb0bd; --text-faint:#6f8291; --rule:#243545; --rule-strong:#33475a;
+  --celeste:#6ea6d6; --celeste-ink:#8fbde6; --sol:#d9a441; --gold-fill:#d9a441; --money:#e7c05a;
+  --alerta:#d1685f; --alerta-fill:#d1685f; --alerta-soft:#2a1a1a; --verde:#5aa588;
+  --chart-surface:#141f2b; --chart-grid:#22323f; --chart-axis:#4a5d6c; --neutral-mark:#5f7180;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 34px rgba(0,0,0,.32);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+::selection{background:var(--celeste);color:#fff}
+a{color:var(--celeste-ink);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:0;text-wrap:balance}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--s5)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--text-faint)}
+:focus-visible{outline:2px solid var(--celeste);outline-offset:2px;border-radius:3px}
+
+/* ---------- Cover ---------- */
+.cover{background:var(--ink);color:#e9f0f6;padding:var(--s8) 0;position:relative;overflow:hidden}
+.cover::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 40px,rgba(255,255,255,.022) 40px 41px);pointer-events:none}
+.cover .wrap{position:relative;z-index:1}
+.filetag{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);align-items:baseline;font-family:var(--font-mono);font-size:12.5px;letter-spacing:.03em;color:#89a0b5;border-bottom:1px solid rgba(255,255,255,.13);padding-bottom:var(--s4);margin-bottom:var(--s6)}
+.filetag b{color:#dbe7f0;font-weight:600}
+.kicker{font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--sol)}
+.cover h1{font-size:clamp(2.5rem,7vw,5rem);font-weight:800;color:#fff;margin:var(--s4) 0;max-width:15ch;letter-spacing:-.03em}
+.dek{font-size:clamp(1.05rem,2.1vw,1.38rem);line-height:1.45;color:#c4d2de;max-width:48ch;font-weight:400}
+.dek b{color:#fff;font-weight:600}
+.cover-meta{margin-top:var(--s7);display:flex;flex-wrap:wrap;gap:var(--s3)}
+.chip{font-family:var(--font-mono);font-size:12px;letter-spacing:.02em;padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;color:#c4d2de}
+
+/* ---------- Money magnitude (signature) ---------- */
+.money{display:inline-flex;flex-direction:column;align-items:flex-start;gap:3px;line-height:1}
+.money__fig{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--money);white-space:nowrap}
+.money__bar{height:2px;background:var(--sol);border-radius:2px;min-width:6px}
+.money--xl .money__fig{font-size:clamp(2.4rem,6vw,4rem);font-weight:600}
+.money--xl .money__bar{height:4px}
+.money--sm .money__fig{font-size:13px}
+
+/* ---------- Sections ---------- */
+section{padding:var(--s8) 0}
+section+section{border-top:1px solid var(--rule)}
+.alt{background:var(--surface)}
+.sec-head{max-width:66ch;margin-bottom:var(--s6)}
+.sec-head h2{font-size:clamp(1.65rem,3.5vw,2.4rem);margin-bottom:var(--s3)}
+.sec-head p{color:var(--text-muted);font-size:1.05rem;margin:0}
+.prose{max-width:66ch;font-size:1.05rem}
+.prose p{margin:0 0 var(--s4)}
+.prose strong{font-weight:600}
+.note{font-size:.92rem;color:var(--text-muted)}
+
+/* ---------- Hero band ---------- */
+.bignum{display:grid;grid-template-columns:1.05fr .95fr;gap:var(--s7);align-items:center}
+.bignum__usd{font-family:var(--font-mono);color:var(--text-faint);font-size:14px;margin-top:var(--s3)}
+.bignum__label{font-family:var(--font-body);font-size:1rem;color:var(--text-muted);margin-top:var(--s4);max-width:44ch}
+.bignum__label b{color:var(--text);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s4)}
+.tile{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s5);box-shadow:var(--shadow)}
+.tile__n{font-family:var(--font-display);font-size:2rem;font-weight:700;letter-spacing:-.03em;line-height:1}
+.tile__l{font-size:.9rem;color:var(--text-muted);margin-top:var(--s2)}
+.tile__s{font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint);margin-top:var(--s1)}
+
+/* ---------- Charts ---------- */
+.chart-card{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s2)}
+.chart-head h3{font-size:1.2rem}
+.chart-sub{color:var(--text-muted);font-size:.95rem;margin:0 0 var(--s5);max-width:70ch}
+.chart-scroll{overflow-x:auto}
+.legend{display:flex;flex-wrap:wrap;gap:var(--s4);margin-top:var(--s4);font-size:12.5px;font-family:var(--font-mono);color:var(--text-muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s5)}
+svg{display:block;width:100%;height:auto;font-family:var(--font-mono)}
+.ax{fill:var(--text-faint);font-size:11px}
+.axlab{fill:var(--text-muted);font-size:11px;font-weight:600}
+.gl{stroke:var(--chart-grid);stroke-width:1}
+.vlab{fill:var(--text);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+.refline{stroke:var(--celeste);stroke-width:1.3;stroke-dasharray:5 4}
+.reftext{fill:var(--celeste-ink);font-size:10.5px;font-weight:600}
+.dot{cursor:pointer;transition:opacity .12s}
+.dot:hover{opacity:.75}
+.barmark{cursor:pointer}
+/* tooltip */
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:#eaf1f6;font-family:var(--font-mono);font-size:12px;line-height:1.5;padding:9px 11px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);max-width:260px;opacity:0;transition:opacity .1s;border:1px solid rgba(255,255,255,.12)}
+#tip b{color:#fff}
+#tip .t-gold{color:var(--sol)}
+#tip .t-red{color:#e78a83}
+
+/* ---------- Finding ---------- */
+.finding{background:var(--ink);color:#e7eef4;border-radius:var(--r-lg);padding:var(--s7);box-shadow:var(--shadow)}
+.finding .kicker{color:var(--sol)}
+.finding h3{color:#fff;font-size:clamp(1.5rem,3.2vw,2.05rem);margin:var(--s3) 0 var(--s4);max-width:28ch}
+.finding p{color:#c4d2de;max-width:64ch;margin:0 0 var(--s4)}
+.law{font-family:var(--font-mono);font-size:.88rem;background:rgba(255,255,255,.055);border-left:2px solid var(--sol);padding:var(--s4) var(--s5);border-radius:0 var(--r-sm) var(--r-sm) 0;color:#d6e2ec;line-height:1.6;margin:var(--s5) 0}
+.contradiction{display:grid;grid-template-columns:1fr auto 1fr;gap:var(--s4);align-items:stretch;margin-top:var(--s6)}
+.contra-cell{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.11);border-radius:var(--r-md);padding:var(--s5)}
+.contra-cell .h{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#87a0b5;margin-bottom:var(--s2)}
+.contra-cell .b{font-size:1rem;color:#eaf1f6}
+.contra-cell .b b{color:#fff}
+.contra-vs{display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;color:var(--alerta);font-size:1.2rem}
+
+.balance{border:1px solid var(--rule-strong);border-left:4px solid var(--celeste);background:var(--surface);border-radius:0 var(--r-md) var(--r-md) 0;padding:var(--s5) var(--s6);margin-top:var(--s6);max-width:74ch;box-shadow:var(--shadow)}
+.balance .h{font-family:var(--font-mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--celeste-ink);margin-bottom:var(--s2);font-weight:600}
+.balance p{margin:0 0 var(--s3);font-size:1rem}
+.balance p:last-child{margin-bottom:0}
+
+/* ---------- Observations ---------- */
+.obs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s5)}
+.obs{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.obs__tag{display:inline-block;font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--alerta);border:1px solid var(--alerta);background:var(--alerta-soft);padding:3px 9px;border-radius:999px;margin-bottom:var(--s4)}
+.obs h3{font-size:1.15rem;margin-bottom:var(--s3);line-height:1.2}
+.obs p{margin:0;font-size:.96rem;color:var(--text-muted)}
+.obs__data{font-family:var(--font-mono);font-size:.82rem;color:var(--text);background:var(--sunken);border-radius:var(--r-sm);padding:var(--s3) var(--s4);margin-top:var(--s4)}
+.obs__data .hl{color:var(--alerta);font-weight:600}
+
+/* ---------- Tables ---------- */
+.scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+thead th{position:sticky;top:0;background:var(--surface-2);font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);font-weight:600;text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule-strong);white-space:nowrap;z-index:2}
+th.num,td.num{text-align:right}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+td.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.sup-name{font-weight:600}
+.row-flag{background:var(--alerta-soft)}
+.badge{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:2px 7px;border-radius:999px;white-space:nowrap;display:inline-block}
+.badge--exc{background:var(--alerta-soft);color:var(--alerta);border:1px solid var(--alerta)}
+.badge--nd{background:var(--sunken);color:var(--text-faint);border:1px solid var(--rule)}
+.badge--co{background:var(--sunken);color:var(--celeste-ink);border:1px solid var(--rule)}
+.warnpill{display:inline-block;font-family:var(--font-mono);font-size:10px;font-weight:600;color:#fff;background:var(--alerta);border-radius:3px;padding:1px 5px;margin-left:6px}
+.tbl-cap{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s4);margin-bottom:var(--s4);flex-wrap:wrap}
+.tbl-cap .h{font-family:var(--font-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted)}
+.src a{font-family:var(--font-mono);font-size:12px}
+
+/* ---------- Siblings ---------- */
+.sibs{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s5)}
+.sib{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--shadow)}
+.sib__code{font-family:var(--font-mono);font-size:11.5px;color:var(--text-faint)}
+.sib h3{font-size:1.08rem;margin:var(--s2) 0 var(--s3)}
+.sib p{font-size:.93rem;color:var(--text-muted);margin:0 0 var(--s4)}
+.sib__row{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);padding:6px 0;border-top:1px dotted var(--rule);font-size:.88rem}
+.sib__row .k{color:var(--text-muted)}
+.sib__row .v{font-family:var(--font-mono);font-weight:500;text-align:right}
+.flagword{color:var(--alerta);font-weight:600}
+
+/* ---------- Method / sources ---------- */
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s7)}
+.method-list{list-style:none;padding:0;margin:0}
+.method-list li{padding:var(--s4) 0;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:auto 1fr;gap:var(--s4)}
+.method-list li:last-child{border-bottom:none}
+.method-list .n{font-family:var(--font-mono);font-size:12px;color:var(--celeste-ink);font-weight:600;padding-top:3px}
+.method-list .t{font-size:.98rem}
+.method-list .t b{font-weight:600}
+.srcgroups{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s6) var(--s7)}
+.srcgroup h4{font-family:var(--font-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin:0 0 var(--s3);font-weight:600;border-bottom:1px solid var(--rule);padding-bottom:var(--s2)}
+.srclist{list-style:none;margin:0;padding:0}
+.srclist li{margin-bottom:var(--s3);font-size:.9rem;line-height:1.4}
+.srclist .u{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);word-break:break-all}
+.disclaimer{background:var(--ink);color:#c4d2de;border-radius:var(--r-lg);padding:var(--s7);box-shadow:var(--shadow)}
+.disclaimer h3{color:#fff;margin-bottom:var(--s4)}
+.disclaimer p{max-width:76ch;margin:0 0 var(--s3);font-size:.98rem}
+.disclaimer strong{color:#fff}
+.foot{background:var(--ink);color:#7f93a5;padding:var(--s7) 0;font-family:var(--font-mono);font-size:12.5px}
+.foot .wrap{display:flex;justify-content:space-between;gap:var(--s4);flex-wrap:wrap}
+.foot a{color:#a9bccc}
+
+@media (max-width:980px){
+  .bignum,.cols2{grid-template-columns:1fr;gap:var(--s6)}
+  .obs-grid,.sibs{grid-template-columns:1fr 1fr}
+  .grid2,.srcgroups{grid-template-columns:1fr}
+  .contradiction{grid-template-columns:1fr}
+  .contra-vs{transform:rotate(90deg);padding:var(--s2) 0}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  .tiles,.obs-grid,.sibs{grid-template-columns:1fr}
+  .wrap{padding:0 var(--s4)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<!-- ============ COVER ============ -->
+<header class="cover">
+  <div class="wrap">
+    <div class="filetag">
+      <span>EXPEDIENTE&nbsp; <b>DGC · rubros</b></span>
+      <span>ORGANISMO&nbsp; <b>Dirección General de Casinos</b></span>
+      <span>INCISO&nbsp; <b>05 · UE 013</b></span>
+      <span>MÉTODO&nbsp; <b>verificado en Compras Estatales</b></span>
+      <span>FUENTE&nbsp; <b>OCDS · portal oficial</b></span>
+    </div>
+    <p class="kicker">Investigación de datos abiertos · Con la tuya, contribuyente</p>
+    <h1>El mapa de la competencia</h1>
+    <p class="dek">La Dirección General de Casinos <b>sí licita</b> casi todo: máquinas, fichas, mantenimientos. Pero hay una franja que compra <b>«sin sustituto posible»</b>, adjudicada a dedo por excepción. Este es el mapa de dónde entra la competencia y dónde no.</p>
+    <div class="cover-meta">
+      <span class="chip">8 rubros verificados</span>
+      <span class="chip">Licitación vs Excepción</span>
+      <span class="chip">Art. 33.3 «exclusividad»</span>
+      <span class="chip">Lock-in de proveedor</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============ THESIS ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">La pregunta</p>
+      <h2>Si el Estado licita 2 millones de fichas de casino, ¿por qué compra la comida «a dedo»?</h2>
+      <p>Verificamos, ficha por ficha en el portal oficial, cómo compra la DGC ocho de sus rubros. El método no es uniforme: revela una lógica.</p>
+    </div>
+    <div class="prose">
+      <p>La <a href="https://claude.ai/code/artifact/b49b99c5-1978-4db9-a1c3-5e65df2382f5" target="_blank" rel="noopener">investigación sobre la «consumición de cortesía»</a> mostró que ese rubro se adjudica por <strong>Compra por Excepción, invocando «proveedor exclusivo»</strong> (TOCAF Art. 33.3), pese a tener 22 proveedores. La pregunta natural: <strong>¿es así con todo?</strong> La respuesta es no —y por eso importa—.</p>
+      <p>Para los <strong>bienes que se pueden especificar en un pliego</strong> —las máquinas tragamonedas, los cajeros, las fichas de juego, el mantenimiento de cajas fuertes y cámaras—, la DGC <strong>llama a licitación</strong>, pública o abreviada. Ahí hay competencia. La excepción de «exclusividad» queda concentrada en dos lugares: los <strong>repuestos y el mantenimiento de hardware propietario</strong> (donde el fabricante original es, de hecho, el único posible) y la <strong>hospitalidad</strong> —la comida y bebida de cortesía—. El primero es un problema estructural conocido; el segundo es el que no cierra.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHART: MÉTODO POR RUBRO ============ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">El mapa</p>
+      <h2>Qué se licita y qué se compra a dedo</h2>
+      <p>Cada barra es un rubro de la DGC, por monto (UYU). En verde, lo que pasa por licitación; en rojo, lo adjudicado por excepción de «proveedor exclusivo». El método de cada uno fue confirmado en su ficha oficial.</p>
+    </div>
+    <div class="chart-card">
+      <div class="chart-head"><h3>Rubros de la DGC por método de contratación</h3></div>
+      <p class="chart-sub">Monto atribuible a la DGC (analítica de Con la tuya, ajustada por plausibilidad). Pasá el cursor por cada barra.</p>
+      <div class="chart-scroll"><div id="chart-map"></div></div>
+      <div class="legend">
+        <span><i style="background:var(--verde)"></i> Licitación (pública o abreviada) — hay competencia</span>
+        <span><i style="background:var(--alerta-fill)"></i> Compra por Excepción · Art. 33.3 «exclusividad»</span>
+      </div>
+    </div>
+    <div class="tiles" style="margin-top:var(--s6)">
+      <div class="tile"><div class="tile__n" style="color:var(--alerta)">$ 262 M</div><div class="tile__l">en rubros por «proveedor exclusivo»</div><div class="tile__s">cortesía + desayuno + repuestos + mant. ATM</div></div>
+      <div class="tile"><div class="tile__n" style="color:var(--verde)">$ 86 M</div><div class="tile__l">en rubros licitados de este grupo</div><div class="tile__s">ATM + fichas + caja fuerte + cámaras</div></div>
+      <div class="tile"><div class="tile__n">2 M</div><div class="tile__l">fichas de casino licitadas (2011)</div><div class="tile__s">Licitación Pública 110226/2011</div></div>
+      <div class="tile"><div class="tile__n">140</div><div class="tile__l">tragamonedas licitadas (2025)</div><div class="tile__s">Licitación Pública 2/2025</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOCK-IN ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">El mecanismo</p>
+      <h2>Comprá la máquina compitiendo. Pagá los repuestos a dedo para siempre.</h2>
+      <p>La excepción de «exclusividad» sobre hardware propietario no nace de la nada: la crea la propia compra competitiva anterior. Es lock-in de proveedor.</p>
+    </div>
+    <div class="finding">
+      <p class="kicker">El ciclo del lock-in · verificado</p>
+      <h3>Cajeros ATM: la máquina se licita, el mantenimiento no</h3>
+      <p>La DGC compró hasta 6 cajeros ATM con conectividad TITO por <strong>Licitación Pública 7/2022</strong> —competencia abierta—. Tres años después, el mantenimiento de esos mismos cajeros se adjudica a <strong>PERMAQUIM por Compra por Excepción 26/2025, Art. 33.3</strong>: una vez instalada la máquina propietaria, solo su proveedor puede mantenerla.</p>
+      <div class="contradiction">
+        <div class="contra-cell">
+          <div class="h">Paso 1 · con competencia</div>
+          <div class="b">Máquinas ATM → <b>Licitación Pública 7/2022</b>. Repuestos de tragamonedas Scientific Games → la máquina se licitó (<b>Lic. Pública 2/2025</b>).</div>
+        </div>
+        <div class="contra-vs">→</div>
+        <div class="contra-cell">
+          <div class="h">Paso 2 · sin competencia, para siempre</div>
+          <div class="b">Mantenimiento ATM → <b>Excepción 26/2025</b>. Repuestos → <b>Excepción 18/2026</b>. «Suministro exclusivo del fabricante.»</div>
+        </div>
+      </div>
+      <div class="law">Es un patrón legítimo por contrato —solo el fabricante hace la pieza— pero costoso en agregado: <strong>$ 118 M en repuestos de tragamonedas</strong> y el mantenimiento de ATM salen sin competencia. La palanca de control no está en cada excepción, sino en el <strong>pliego de la compra original</strong>: exigir código abierto, repuestos de terceros o SLA de mantenimiento competido evita el cautiverio posterior. La auditoría AIN 2022 ya lo marcó para el sistema de control de tragamonedas.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RUBRO CARDS ============ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Rubro por rubro</p>
+      <h2>Los ocho, con su método verificado</h2>
+      <p>Cada tarjeta enlaza a una ficha oficial donde figura el tipo de compra. El color del método marca si hubo competencia.</p>
+    </div>
+    <div class="sibs" id="rubroCards"></div>
+    <p class="note" style="margin-top:var(--s5)">Montos atribuibles a la DGC. Los totales crudos del organismo están inflados por 3 registros con cantidades corruptas (un contrato de 2012 «suma» $ 210 M por prorrateo); se usan los ajustados por plausibilidad. Máquinas tragamonedas (art. 7102) se excluye del gráfico por ese mismo motivo, pero su método está verificado: Licitación Pública 2/2025.</p>
+  </div>
+</section>
+
+<!-- ============ CONTRASTE ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">El punto que no cierra</p>
+      <h2>La comida no es hardware propietario</h2>
+    </div>
+    <div class="prose">
+      <p>El lock-in de repuestos tiene una defensa técnica: la pieza de una tragamonedas Scientific Games solo la fabrica Scientific Games. Pero la <strong>hospitalidad —cortesía, desayuno, merienda— no es propietaria de nadie</strong>. Es comida y bebida, un servicio con decenas de proveedores posibles; la propia DGC lo demuestra al repartirlo entre <strong>22 caterers distintos</strong>.</p>
+      <p>Y el contraste interno es el argumento más fuerte: la DGC <strong>licitó 2 millones de fichas de casino</strong> (un bien mucho más específico y controlado que un desayuno) por Licitación Pública, y <strong>licita 140 máquinas tragamonedas</strong> por Licitación Pública. Si el aparato del Estado puede escribir un pliego para dos millones de fichas de juego, <strong>puede escribir uno para un servicio de cafetería</strong>. Que no lo haga —y en cambio invoque «proveedor exclusivo» para la comida— es la pieza que el expediente de fundamentación debería explicar.</p>
+      <div class="balance">
+        <div class="h">Para ser justos</div>
+        <p>La defensa de la DGC (el concesionario del bar de cada sala tiene la exclusividad de vender dentro del local) es real para algunos proveedores —Nifelar explota el bar del Argentino Hotel, Videst es catering—. Pero eso traslada la pregunta a <strong>cómo se adjudica cada concesión de bar</strong>, no la elimina. Nada de esto prueba un ilícito: son decisiones administrativas que pueden tener fundamento válido y que el control ciudadano tiene derecho a ver.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FUENTES ============ -->
+<section>
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Fuentes</p>
+      <h2>Cada método, verificado en su ficha</h2>
+      <p>Todas las fichas fueron abiertas en el portal oficial. El tipo de compra figura en cada una.</p>
+    </div>
+    <div class="srcgroups">
+      <div class="srcgroup">
+        <h4>Rubros licitados (competencia)</h4>
+        <ul class="srclist">
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/288163" target="_blank" rel="noopener">Fichas de casino — Licitación Pública 110226/2011 (2M fichas)</a><div class="u">comprasestatales.gub.uy/consultas/detalle/id/288163</div></li>
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/944593" target="_blank" rel="noopener">Cajeros ATM — Licitación Pública 7/2022</a><div class="u">comprasestatales.gub.uy/consultas/detalle/id/944593</div></li>
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/1220867" target="_blank" rel="noopener">Máquinas tragamonedas — Licitación Pública 2/2025 (140 slots)</a><div class="u">comprasestatales.gub.uy/consultas/detalle/id/1220867</div></li>
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/853705" target="_blank" rel="noopener">Mant. caja fuerte — Licitación Abreviada 28/2017</a><div class="u">comprasestatales.gub.uy/consultas/detalle/id/853705</div></li>
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/1259480" target="_blank" rel="noopener">Mant. cámaras — Licitación Abreviada 25/2024</a><div class="u">comprasestatales.gub.uy/consultas/detalle/id/1259480</div></li>
+        </ul>
+      </div>
+      <div class="srcgroup">
+        <h4>Rubros por excepción («exclusividad»)</h4>
+        <ul class="srclist">
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/1321272" target="_blank" rel="noopener">Repuestos tragamonedas — Excepción 18/2026, Art. 33.3</a><div class="u">comprasestatales.gub.uy/consultas/detalle/id/1321272</div></li>
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/1257241" target="_blank" rel="noopener">Mant. cajeros ATM — Excepción 26/2025, Art. 33.3 (PERMAQUIM)</a><div class="u">comprasestatales.gub.uy/consultas/detalle/id/1257241</div></li>
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/821353" target="_blank" rel="noopener">Desayuno/merienda — Excepción 35/2020, Art. 33.3</a><div class="u">comprasestatales.gub.uy/consultas/detalle/id/821353</div></li>
+          <li><a href="https://claude.ai/code/artifact/b49b99c5-1978-4db9-a1c3-5e65df2382f5" target="_blank" rel="noopener">Consumición de cortesía — investigación dedicada</a><div class="u">claude.ai/code/artifact/…cortesía</div></li>
+        </ul>
+      </div>
+      <div class="srcgroup">
+        <h4>Normativa y control</h4>
+        <ul class="srclist">
+          <li><a href="https://impo.com.uy/bases/tocaf-tcr/150-2012/33" target="_blank" rel="noopener">TOCAF Art. 33 — causales de excepción (IMPO)</a><div class="u">impo.com.uy/bases/tocaf-tcr/150-2012/33</div></li>
+          <li><a href="https://www.gub.uy/ministerio-economia-finanzas/sites/ministerio-economia-finanzas/files/documentos/publicaciones/2022_MinisteriodeEconomiayFinanzas-DireccionGeneraldeCasinos.pdf" target="_blank" rel="noopener">Auditoría Interna de la Nación — DGC 2022 (lock-in del control de slots)</a><div class="u">gub.uy/…/2022_…-DireccionGeneraldeCasinos.pdf</div></li>
+        </ul>
+      </div>
+      <div class="srcgroup">
+        <h4>Datos y catálogo</h4>
+        <ul class="srclist">
+          <li><a href="https://www.comprasestatales.gub.uy/consultas/buscar/tipo-pub/ADJ/inciso/5/ue/13/tipo-doc/C/filtro-cat/CAT/tipo-orden/DESC" target="_blank" rel="noopener">Todas las adjudicaciones DGC (Inciso 05 / UE 013)</a><div class="u">comprasestatales.gub.uy/consultas/buscar/…/inciso/5/ue/13</div></li>
+          <li><a href="https://catalogodatos.gub.uy/dataset/acce-catalogo-acce" target="_blank" rel="noopener">Catálogo de Artículos ACCE (códigos de rubro)</a><div class="u">catalogodatos.gub.uy/dataset/acce-catalogo-acce</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DISCLAIMER ============ -->
+<section class="alt">
+  <div class="wrap">
+    <div class="disclaimer">
+      <h3>Cómo leer esta investigación</h3>
+      <p>Es un análisis de <strong>datos de contratación pública, que son registro público</strong>. Documenta hechos verificables (método de compra, montos, proveedores) y señala <strong>patrones que ameritan escrutinio</strong>, sin afirmar irregularidad ni delito.</p>
+      <p>Una compra por excepción por «exclusividad» <strong>puede tener fundamento válido</strong> —sobre todo en hardware propietario—. El objetivo es habilitar el control ciudadano y el pedido de los expedientes de fundamentación y de los pliegos de las compras originales. Se nombran empresas y personas solo en su carácter de proveedores del Estado; quien quiera aportar su descargo puede hacerlo.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>Con la tuya, contribuyente — investigación de datos abiertos</span>
+    <span>Fuente: Compras Estatales (OCDS) · métodos verificados 18/07/2026</span>
+  </div>
+</footer>
+
+<script>
+const RUBROS = [{"code":"42828","name":"Repuestos de tragamonedas","dgc":118249816,"cat":"lock-in","note":"Piezas de máquinas Scientific Games; solo el fabricante.","verif":"Excepción 18/2026 · Art. 33.3","id":"1321272"},{"code":"14953","name":"Desayuno / merienda","dgc":82507672,"cat":"hospitalidad","note":"Comp de hospitalidad, gemelo de la cortesía.","verif":"Excepción 35/2020 · Art. 33.3","id":"821353"},{"code":"79764","name":"Consumición de cortesía","dgc":58849923,"cat":"hospitalidad","note":"22 proveedores para un servicio «exclusivo». Investigación dedicada.","verif":"Excepción · Art. 33.3","id":"1307206"},{"code":"73208","name":"Cajeros ATM (máquinas)","dgc":51789129,"cat":"competitivo","note":"Suministro e instalación con conectividad TITO.","verif":"Lic. Pública 7/2022","id":"944593"},{"code":"66364","name":"Fichas de casino","dgc":20283606,"cat":"competitivo","note":"Dos millones de fichas, licitadas por pliego.","verif":"Lic. Pública 110226/2011","id":"288163"},{"code":"25350","name":"Mant. caja fuerte","dgc":10940559,"cat":"competitivo","note":"Servicio genérico; se compite aunque ganen pocos.","verif":"Lic. Abreviada 28/2017","id":"853705"},{"code":"64547","name":"Mant. cámaras vigilancia","dgc":3307200,"cat":"competitivo","note":"Un proveedor gana seguido, pero se licita.","verif":"Lic. Abreviada 25/2024","id":"1259480"},{"code":"76541","name":"Mant. cajeros ATM","dgc":2942876,"cat":"lock-in","note":"PERMAQUIM, único mantenedor de sus máquinas.","verif":"Excepción 26/2025 · Art. 33.3","id":"1257241"}];
+const nf = new Intl.NumberFormat('es-UY');
+const fmtM = n => '$ ' + (n/1e6).toFixed(1).replace('.',',') + ' M';
+const SVGNS='http://www.w3.org/2000/svg';
+function el(t,a,p){const e=document.createElementNS(SVGNS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+const tip=document.getElementById('tip');
+function showTip(h,x,y){tip.innerHTML=h;tip.style.opacity='1';let nx=x+14,ny=y+14;const w=tip.offsetWidth,ht=tip.offsetHeight;if(nx+w>innerWidth-8)nx=x-w-14;if(ny+ht>innerHeight-8)ny=y-ht-14;tip.style.left=nx+'px';tip.style.top=ny+'px';}
+function hideTip(){tip.style.opacity='0';}
+
+function chartMap(){
+  const box=document.getElementById('chart-map'); box.innerHTML='';
+  const rows=RUBROS.slice().sort((a,b)=>b.dgc-a.dgc);
+  const W=880, rowH=46, m={t:8,r:80,b:8,l:220}, H=m.t+m.b+rows.length*rowH, iw=W-m.l-m.r;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Rubros por método'},box);
+  const max=Math.max(...rows.map(r=>r.dgc));
+  rows.forEach((r,i)=>{
+    const yy=m.t+i*rowH, bw=Math.max(3,(r.dgc/max)*iw);
+    const comp = r.cat==='competitivo';
+    const fill = comp?css('--verde'):css('--alerta-fill');
+    el('text',{x:m.l-10,y:yy+rowH/2-1,'text-anchor':'end',style:'font-size:12px;fill:var(--text);font-weight:600',class:'mono'},svg).textContent=r.name.slice(0,26);
+    el('text',{x:m.l-10,y:yy+rowH/2+13,'text-anchor':'end',style:'font-size:9.5px;fill:var(--text-faint)',class:'mono'},svg).textContent=r.verif.slice(0,30);
+    const rect=el('rect',{x:m.l,y:yy+9,width:bw,height:rowH-22,rx:3,fill,class:'barmark'},svg);
+    rect.addEventListener('mousemove',e=>showTip(`<b>${r.name}</b><br>${r.verif}<br><span class="${comp?'':'t-red'}">${fmtM(r.dgc)}</span> · ${r.note}`,e.clientX,e.clientY));
+    rect.addEventListener('mouseleave',hideTip);
+    el('text',{x:m.l+bw+8,y:yy+rowH/2+4,class:'vlab'},svg).textContent=fmtM(r.dgc);
+  });
+}
+
+function cards(){
+  const order={hospitalidad:0,'lock-in':1,competitivo:2};
+  const rows=RUBROS.slice().sort((a,b)=>(order[a.cat]-order[b.cat])||(b.dgc-a.dgc));
+  const catLabel={hospitalidad:'Hospitalidad · excepción',['lock-in']:'Lock-in · excepción',competitivo:'Competitivo'};
+  document.getElementById('rubroCards').innerHTML=rows.map(r=>{
+    const comp=r.cat==='competitivo';
+    const badge=comp?'<span class="badge badge--co">'+r.verif.split(' · ')[0]+'</span>':'<span class="badge badge--exc">'+r.verif.split(' · ')[0]+'</span>';
+    return '<div class="sib"><div class="sib__code">ART. '+r.code+' · '+catLabel[r.cat]+'</div>'+
+      '<h3>'+r.name+'</h3><p>'+r.note+'</p>'+
+      '<div class="sib__row"><span class="k">Monto DGC</span><span class="v">'+fmtM(r.dgc)+'</span></div>'+
+      '<div class="sib__row"><span class="k">Método</span><span class="v">'+badge+'</span></div>'+
+      '<div class="sib__row"><span class="k">Ficha</span><span class="v"><a href="https://www.comprasestatales.gub.uy/consultas/detalle/id/'+r.id+'" target="_blank" rel="noopener">'+r.id+' ↗</a></span></div></div>';
+  }).join('');
+}
+
+function renderAll(){ chartMap(); }
+cards(); renderAll();
+new MutationObserver(renderAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change',renderAll);
+addEventListener('resize',()=>{clearTimeout(window.__rt);window.__rt=setTimeout(renderAll,200);});
+</script>

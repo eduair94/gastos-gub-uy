@@ -149,6 +149,24 @@ export interface ISavedCall extends Document {
   updatedAt: Date
 }
 
+// A user's verdict on one price-anomaly flag. `vote` is the true-positive signal:
+// 1 = real anomaly, -1 = false positive. The snapshot fields (anomalyType/
+// releaseId/supplierName) are copied from the anomaly on insert for offline analysis.
+export type AnomalyVote = 1 | -1
+
+export interface IAnomalyFeedback extends Document {
+  userId: string
+  anomalyId: string
+  vote: AnomalyVote
+  comment?: string | undefined
+  anomalyType?: string | undefined
+  releaseId?: string | undefined
+  awardId?: string | undefined
+  supplierName?: string | undefined
+  createdAt: Date
+  updatedAt: Date
+}
+
 export type WebhookEvent = 'tender.matched' | 'anomaly.detected' | 'award.created'
 export type WebhookDeliveryStatus = 'pending' | 'sent' | 'failed'
 

@@ -472,9 +472,12 @@ async function main(): Promise<void> {
       // backs the public count aggregate; userId+createdAt backs the "my feedback" list.
       const anomalyFeedback = db.collection('anomaly_feedback')
       await anomalyFeedback.createIndex({ userId: 1, anomalyId: 1 }, { unique: true, background: true })
-      await anomalyFeedback.createIndex({ anomalyId: 1 }, { background: true })
+      // Compound so the up/down count aggregate ($match anomalyId, $group by vote) is
+      // covered by the index — no per-vote document fetch. The {anomalyId} prefix still
+      // serves plain by-anomaly lookups.
+      await anomalyFeedback.createIndex({ anomalyId: 1, vote: 1 }, { background: true })
       await anomalyFeedback.createIndex({ userId: 1, createdAt: -1 }, { background: true })
-      console.log('✅ anomaly_feedback indexes ensured (userId+anomalyId unique, anomalyId, userId+createdAt)')
+      console.log('✅ anomaly_feedback indexes ensured (userId+anomalyId unique, anomalyId+vote, userId+createdAt)')
 
       // api_keys: user-issued API credentials. `prefix` unique is the O(1) lookup
       // key the apiAuth middleware resolves the bearer/x-api-key header against.
@@ -534,7 +537,7 @@ async function main(): Promise<void> {
       console.log('   plan: open_calls.{compraId unique, classificationSet, tenderPeriod.endDate, buyer.id, status+endDate, firstSeenAt, text}')
       console.log('   plan: notifications.{dedupeKey unique, status+type, userId+createdAt, status+scheduledFor}')
       console.log('   plan: saved_calls.{userId+compraId unique, userId+createdAt}')
-      console.log('   plan: anomaly_feedback.{userId+anomalyId unique, anomalyId, userId+createdAt}')
+      console.log('   plan: anomaly_feedback.{userId+anomalyId unique, anomalyId+vote, userId+createdAt}')
       console.log('   plan: api_keys.{prefix unique, userId+createdAt}')
       console.log('   plan: webhook_subscriptions.{userId+createdAt, active+events}')
       console.log('   plan: webhook_deliveries.{dedupeKey unique, status+nextAttemptAt}')

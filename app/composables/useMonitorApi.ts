@@ -51,6 +51,18 @@ export function useMonitorApi() {
     list: () => $fetch<{ data: { items: unknown[] } }>('/api/calendar'),
   }
 
+  // Community feedback on anomaly flags: up (1) / down (-1) vote + optional comment.
+  const feedback = {
+    save: (anomalyId: string, body: { vote: 1 | -1, comment?: string }) =>
+      $fetch<{ data: { feedback: unknown, counts: { up: number, down: number } } }>(
+        `/api/analytics/anomalies/${anomalyId}/feedback`, { method: 'POST', body },
+      ),
+    remove: (anomalyId: string) =>
+      $fetch<{ data: { counts: { up: number, down: number } } }>(
+        `/api/analytics/anomalies/${anomalyId}/feedback`, { method: 'DELETE' },
+      ),
+  }
+
   const account = {
     getPrefs: () => $fetch<{ data: unknown }>('/api/account/preferences'),
     updatePrefs: (body: { enabled?: boolean, frequency?: string, locale?: string }) => $fetch<{ data: unknown }>('/api/account/preferences', { method: 'PUT', body }),
@@ -75,5 +87,5 @@ export function useMonitorApi() {
     test: (id: string) => $fetch<{ success: boolean, data: { ok: boolean, status?: number, error?: string } }>(`/api/v1/webhooks/${id}/test`, { method: 'POST' }),
   }
 
-  return { watches, openCalls, savedCalls, calendar, account, categories, apiKeys, webhooks }
+  return { watches, openCalls, savedCalls, calendar, feedback, account, categories, apiKeys, webhooks }
 }

@@ -41,6 +41,8 @@
     "pm2:logs": "pm2 logs",
     "pm2:monit": "pm2 monit",
     "pm2:delete": "pm2 delete ecosystem.config.js",
+    "deploy:dashboard": "node scripts/deploy-dashboard.mjs",
+    "deploy:dashboard:dry": "node scripts/deploy-dashboard.mjs --dry-run",
     "cronserver:start": "npm run build && pm2 start cronserver.config.js",
     "cronserver:stop": "pm2 stop cronserver.config.js",
     "cronserver:restart": "pm2 restart cronserver.config.js",

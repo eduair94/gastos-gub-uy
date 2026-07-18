@@ -19,6 +19,7 @@ export * from './watch';
 export * from './open_call';
 export * from './notification';
 export * from './saved_call';
+export * from './anomaly_feedback';
 export * from './api_key';
 export * from './webhook_subscription';
 export * from './webhook_delivery';

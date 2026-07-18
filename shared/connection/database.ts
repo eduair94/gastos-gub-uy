@@ -21,10 +21,32 @@ export async function connectToDatabase() {
     console.log('Using MongoDB URI:', mongoUri)
     console.log('Current connection state:', mongoose.connection.readyState)
 
-    // Disconnect if there's an existing connection in bad state
-    if (mongoose.connection.readyState !== 0) {
-      console.log('🔄 Disconnecting existing connection...')
-      await mongoose.disconnect()
+    // If mongoose is mid-(re)connect (2) or disconnecting (3) — e.g. its own auto-reconnect
+    // after an idle-close — WAIT for that socket instead of calling disconnect(). Ripping out
+    // an in-flight connection here was the root cause of intermittent SSR 404s: bufferCommands
+    // is off, so every query issued during the teardown window throws, the API 500s, and the
+    // page turned that into a "product not found" 404. Only connect fresh from state 0.
+    const preState = mongoose.connection.readyState as number
+    if (preState === 2 || preState === 3) {
+      console.log(`⏳ Waiting for in-flight connection (state ${preState})...`)
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('Timed out waiting for in-flight connection')), 10000)
+          mongoose.connection.once('connected', () => { clearTimeout(timer); resolve() })
+          mongoose.connection.once('error', (err) => { clearTimeout(timer); reject(err) })
+        })
+      }
+      catch (waitError) {
+        console.warn('⚠️ In-flight connection did not settle, reconnecting:', waitError)
+      }
+      if ((mongoose.connection.readyState as number) === 1) {
+        connectionPromise = null
+        return mongoose
+      }
+      // Still not ready (timed out or errored) — fall through to a clean reconnect from 0.
+      if ((mongoose.connection.readyState as number) !== 0) {
+        await mongoose.disconnect().catch(() => {})
+      }
     }
 
     // MongoDB connection options optimized for performance and preventing overload

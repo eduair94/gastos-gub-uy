@@ -23,6 +23,10 @@ export interface FilterState {
    *  contracts/[id].vue. Must be a first-class filter or the link's product
    *  filter is silently dropped and the explorer lists every award. */
   categoryId: string[]
+  /** Buyer id ("98-1"). Like `categoryId`, a link-only filter with no rail control:
+   *  it arrives from the Intendencias/organism pages, where the buyer is known by its
+   *  stable id, not its exact published name. Must round-trip or the link is dropped. */
+  buyerIds: string[]
   procurementMethodDetails: string[]
   status: string[]
   currency: string[]
