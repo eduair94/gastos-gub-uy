@@ -19,10 +19,37 @@ const minZ = ref(Number(route.query.minZ) || 0)
 // when the reader cares about the amounts. Empty = all (each row is still
 // labelled, and divergence is per-currency so mixing is safe to read).
 const currency = ref((route.query.currency as string) ?? '')
-// Drill-down from the provider cross-reference: show only one provider's flags. Matches
-// metadata.supplierName exactly (anomalies carry the name, not the RUT). Clearable.
-const supplier = ref((route.query.supplier as string) ?? '')
+// Advanced filters (multi-select): provider, buyer ("a quién le suministran") and SICE rubro.
+// Each matches its metadata field exactly and is completed in-page via the typeahead panel
+// below — the values that actually carry a flag, with counts. A URL value may arrive as a single
+// string (an inbound ?supplier=NAME drill-down link) or a repeated param; normalise both to an
+// array. Names contain commas, so multiples travel as repeated params, never comma-joined.
+function toArr(v: unknown): string[] {
+  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string' && x !== '')
+  return typeof v === 'string' && v ? [v] : []
+}
+const supplier = ref<string[]>(toArr(route.query.supplier))
+const buyer = ref<string[]>(toArr(route.query.buyer))
+const rubroName = ref<string[]>(toArr(route.query.rubroName))
+// One contract year — still a single drill-down from the recurrence-by-year chart, no in-page
+// control, so it stays a clearable chip in the banner.
+const year = ref((route.query.year as string) ?? '')
 const page = ref(Number(route.query.page ?? 1))
+
+/** The active single-value drill-downs, for the clearable banner (year only — the multi-select
+ *  filters show their own removable chips inside the advanced panel). */
+const drills = computed(() => [
+  { key: 'year', label: t('common.year'), value: year },
+].filter(d => d.value.value))
+
+/** How many advanced (multi-select) filter values are active — drives the panel's count + clear. */
+const advancedCount = computed(() => supplier.value.length + buyer.value.length + rubroName.value.length)
+
+function clearAdvanced() {
+  supplier.value = []
+  buyer.value = []
+  rubroName.value = []
+}
 
 const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
   divergence: { sortBy: 'divergence', sortOrder: 'desc' },
@@ -36,18 +63,23 @@ const MINZ_STEPS = [0, 10, 25, 50] as const
 const CURRENCIES = ['UYU', 'USD'] as const
 
 // A page number from a different filter/sort set is meaningless.
-watch([severity, ai, sort, minZ, currency, supplier], () => {
+watch([severity, ai, sort, minZ, currency, supplier, buyer, rubroName, year], () => {
   page.value = 1
 })
 
-watch([severity, ai, sort, minZ, currency, supplier, page], () => {
-  const q: Record<string, string> = {}
+watch([severity, ai, sort, minZ, currency, supplier, buyer, rubroName, year, page], () => {
+  // Arrays serialise to repeated params (?supplier=A&supplier=B), never comma-joined —
+  // supplier/buyer names contain commas.
+  const q: Record<string, string | string[]> = {}
   if (severity.value) q.severity = severity.value
   if (ai.value) q.ai = ai.value
   if (sort.value !== 'divergence') q.sort = sort.value
   if (minZ.value > 0) q.minZ = String(minZ.value)
   if (currency.value) q.currency = currency.value
-  if (supplier.value) q.supplier = supplier.value
+  if (supplier.value.length) q.supplier = supplier.value
+  if (buyer.value.length) q.buyer = buyer.value
+  if (rubroName.value.length) q.rubroName = rubroName.value
+  if (year.value) q.year = year.value
   if (page.value > 1) q.page = String(page.value)
   router.replace({ query: q })
 })
@@ -61,7 +93,10 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/anomal
     ...(ai.value ? { ai: ai.value } : {}),
     ...(minZ.value > 0 ? { minZ: minZ.value } : {}),
     ...(currency.value ? { currency: currency.value } : {}),
-    ...(supplier.value ? { supplier: supplier.value } : {}),
+    ...(supplier.value.length ? { supplier: supplier.value } : {}),
+    ...(buyer.value.length ? { buyer: buyer.value } : {}),
+    ...(rubroName.value.length ? { rubroName: rubroName.value } : {}),
+    ...(year.value ? { year: year.value } : {}),
   })),
 })
 
@@ -228,20 +263,27 @@ useSeo(() => ({
       </div>
     </header>
 
-    <!-- Drill-down banner: the flags are scoped to one provider (from the cross-reference). -->
+    <!-- Drill-down banner for single-value scopes with no in-page control (currently the contract
+         year, from the recurrence-by-year chart). Provider / buyer / rubro moved to the advanced
+         filters panel below, where they show their own removable chips. Clearable. -->
     <div
-      v-if="supplier"
+      v-if="drills.length"
       class="supbar"
     >
-      <span class="supbar__l u-mono">{{ t('anomalies.supplierFilter') }}</span>
-      <strong class="supbar__n">{{ supplier }}</strong>
-      <button
-        class="supbar__x"
-        type="button"
-        @click="supplier = ''"
+      <span
+        v-for="d in drills"
+        :key="d.key"
+        class="supbar__item"
       >
-        {{ t('common.clearAll') }} ✕
-      </button>
+        <span class="supbar__l u-mono">{{ d.label }}</span>
+        <strong class="supbar__n">{{ d.value.value }}</strong>
+        <button
+          class="supbar__x"
+          type="button"
+          :aria-label="t('common.clear')"
+          @click="d.value.value = ''"
+        >✕</button>
+      </span>
     </div>
 
     <!-- The method, stated plainly. A flag that doesn't explain itself
@@ -393,6 +435,54 @@ useSeo(() => ({
         </button>
       </div>
     </div>
+
+    <!-- Advanced filters. Typeaheads over the values that actually carry a flag (supplier, buyer,
+         rubro) with their counts — so a reader can narrow to "this provider", "sold to this
+         organism", or "in this rubro" in-page, not only via a query-param drill-down. Multi-select;
+         each shows its own removable chips. Reuses the shared EntityAutocomplete (same core as the
+         contracts filter rail). -->
+    <section class="adv">
+      <div class="adv__head">
+        <span class="adv__t u-mono">{{ t('anomalies.filters.advanced') }}</span>
+        <button
+          v-if="advancedCount"
+          class="adv__clear u-mono"
+          type="button"
+          @click="clearAdvanced"
+        >
+          {{ t('common.clearAll') }} ({{ advancedCount }})
+        </button>
+      </div>
+      <div class="adv__grid">
+        <div class="adv__field">
+          <label class="adv__l u-mono">{{ t('filters.supplier') }}</label>
+          <AnomalyFacetAutocomplete
+            :model-value="supplier"
+            field="supplierName"
+            :placeholder="t('anomalies.filters.supplierPlaceholder')"
+            @update:model-value="v => supplier = v"
+          />
+        </div>
+        <div class="adv__field">
+          <label class="adv__l u-mono">{{ t('anomalies.filters.buyerLabel') }}</label>
+          <AnomalyFacetAutocomplete
+            :model-value="buyer"
+            field="buyerName"
+            :placeholder="t('anomalies.filters.buyerPlaceholder')"
+            @update:model-value="v => buyer = v"
+          />
+        </div>
+        <div class="adv__field">
+          <label class="adv__l u-mono">{{ t('provAnom.rubro.label') }}</label>
+          <AnomalyFacetAutocomplete
+            :model-value="rubroName"
+            field="rubroName"
+            :placeholder="t('anomalies.filters.rubroPlaceholder')"
+            @update:model-value="v => rubroName = v"
+          />
+        </div>
+      </div>
+    </section>
 
     <PaginatedList
       v-model:page="page"
@@ -594,6 +684,16 @@ useSeo(() => ({
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
+
+          <!-- Community feedback: is this a real anomaly or a false positive?
+               Kept OUTSIDE the NuxtLink so voting never navigates away. -->
+          <AnomalyFeedback
+            :anomaly-id="String(a._id)"
+            :up="a.feedback?.up ?? 0"
+            :down="a.feedback?.down ?? 0"
+            :my-vote="a.feedback?.myVote ?? null"
+            :my-comment="a.feedback?.myComment ?? null"
+          />
         </li>
       </ul>
     </PaginatedList>
@@ -636,12 +736,22 @@ useSeo(() => ({
   align-items: center;
   flex-wrap: wrap;
   gap: var(--s-2) var(--s-3);
-  margin: var(--s-5) 0 0;
+  margin: var(--s-5) 0 var(--s-5);
   padding: var(--s-3) var(--s-4);
   border: 1px solid var(--rule);
   border-left: 3px solid var(--celeste);
   border-radius: var(--r-md);
   background: var(--surface);
+}
+
+.supbar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-1) var(--s-1) var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-full);
+  background: var(--surface-sunken);
 }
 
 .supbar__l {
@@ -653,23 +763,27 @@ useSeo(() => ({
 
 .supbar__n {
   font-size: var(--t-sm);
-  flex: 1;
   min-width: 0;
 }
 
 .supbar__x {
   flex: none;
-  padding: var(--s-1) var(--s-3);
-  border: 1px solid var(--rule-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
   border-radius: var(--r-full);
-  background: var(--surface);
+  background: transparent;
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: var(--t-xs);
+  line-height: 1;
   cursor: pointer;
 }
 
-.supbar__x:hover { color: var(--text); border-color: var(--text-muted); }
+.supbar__x:hover { color: #fff; background: var(--alerta); }
 
 /* ---- Method ---- */
 .method {
@@ -856,6 +970,66 @@ useSeo(() => ({
 .chip--sm {
   padding: var(--s-1) var(--s-3);
   font-size: var(--t-xs);
+}
+
+/* ---- Advanced filters (supplier / buyer / rubro typeaheads) ---- */
+.adv {
+  margin-bottom: var(--s-6);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.adv__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+
+.adv__t {
+  font-size: var(--t-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.adv__clear {
+  padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.adv__clear:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.adv__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s-3) var(--s-4);
+}
+
+.adv__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.adv__l {
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .flags__unit {

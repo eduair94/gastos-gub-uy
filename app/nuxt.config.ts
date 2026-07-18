@@ -32,6 +32,22 @@ const firebaseWeb = (() => {
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
+  // Server source maps are disabled: on Windows a cold production build races the
+  // `nuxt:sourcemap-import` plugin against the freshly-written server chunks
+  // (`ENOENT … .nuxt/dist/server/_nuxt/<Component>-<hash>.js`), which fails the
+  // build nondeterministically. Server maps only aid server-stack debugging, so
+  // dropping them makes `nuxt build` reliable at no prod cost. Client maps stay on.
+  sourcemap: { server: false, client: true },
+
+  // Mirror tsconfig's `#shared/*` -> ../shared/* into the Vite/Nitro build. Nuxt's built-in
+  // `#shared` resolves to <rootDir>/shared (app/shared, which does not exist here — the shared code
+  // lives one level up at the repo root). Without this, any PAGE that imports `#shared/...`
+  // (e.g. contracts/[id].vue -> #shared/utils/units) fails the production build with an ENOENT,
+  // even though tsconfig and the dev server resolve it fine.
+  alias: {
+    '#shared': resolve(process.cwd(), '../shared'),
+  },
+
   typescript: {
     strict: true,
     typeCheck: false, // vue-tsc chokes on the shared/ models outside app/

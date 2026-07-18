@@ -86,6 +86,11 @@ export default defineNuxtPlugin((nuxtApp) => {
       VAutocomplete: { variant: 'outlined', density: 'comfortable', hideDetails: 'auto' },
       VCombobox: { variant: 'outlined', density: 'comfortable', hideDetails: 'auto' },
       VDataTable: { density: 'comfortable' },
+      VDataTableServer: { density: 'comfortable' },
+      // Chip groups wrap into rows by default instead of the horizontal
+      // slide-group with side arrows (which hid options off-screen). Global so
+      // no future filter bar reintroduces the arrows. See main.scss for the gap.
+      VChipGroup: { column: true },
       VChip: { rounded: 'sm', variant: 'tonal' },
       VTooltip: { location: 'top' },
     },

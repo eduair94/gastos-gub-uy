@@ -62,7 +62,9 @@ export default defineEventHandler(async (event) => {
     const SORT_FIELDS: Record<string, string> = {
       flags: 'flagCount',
       flagCount: 'flagCount',
-      overprice: 'primaryOverprice',
+      // Overprice ranks by the comparable UYU-today figure (FX + inflation), so USD and old
+      // UYU flags sort on one scale rather than by raw nominal amount.
+      overprice: 'overpriceUyuToday',
       worstZ: 'worstZ',
       divergence: 'worstZ',
     }

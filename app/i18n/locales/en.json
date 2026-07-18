@@ -582,6 +582,14 @@
     "seeProviders": "See flagged providers",
     "supplierFilter": "Provider",
     "buyerFilter": "Buyer",
+    "filters": {
+      "advanced": "Advanced filters",
+      "buyerLabel": "Buyer (who they supply)",
+      "supplierPlaceholder": "Search a flagged provider",
+      "buyerPlaceholder": "Search a buyer",
+      "rubroPlaceholder": "Search a category",
+      "flagCount": "{n} flags"
+    },
     "confidence": "Confidence",
     "empty": {
       "title": "No flags for these filters",
@@ -618,6 +626,20 @@
         "sin-explicacion": "Unexplained",
         "otro": "Other"
       }
+    },
+    "feedback": {
+      "prompt": "Is this a real anomaly?",
+      "valid": "Valid",
+      "invalid": "False positive",
+      "upTitle": "Mark as a real anomaly",
+      "downTitle": "Mark as a false positive",
+      "addReason": "Add a reason (optional)",
+      "editReason": "Edit reason",
+      "reasonPlaceholder": "Why? Tell us what does (or doesn't) explain this flag.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "login": "Sign in to vote",
+      "error": "Couldn't save your vote. Try again."
     }
   },
   "errors": {
@@ -668,7 +690,7 @@
     "method": {
       "title": "How it's built",
       "body": "A flag is 'unexplained' when the unit price paid extremely exceeds the usual range for the same item and a second AI review (Gemini) found no legitimate reason. Here we group them by provider and by buyer. Recomputed every 24 hours.",
-      "overprice": "Overprice is an estimate: (price paid − top of the usual range) × quantity, in each contract's own currency. Amounts in different currencies are never summed together.",
+      "overprice": "Overprice is an estimate: (price paid − top of the usual range) × quantity, brought to today's pesos — foreign currency is converted at the contract month's rate, then inflation-adjusted via the Unidad Indexada, so years and currencies compare on one figure.",
       "clamped": "{n} flag(s) with an implausible quantity were capped so a bad record can't dominate the totals."
     },
     "kpi": {
@@ -740,15 +762,24 @@
     "method": {
       "title": "How it's calculated",
       "body": "We sum the purchases each Intendencia publishes on Compras Estatales (amount in pesos, normalised). Per-capita spend divides that total by the department's population.",
+      "interannual": "The view opens on the latest full year and compares each department against the year before. The running year is still partial, so it's never the default; pick \"All-time\" for the cumulative total.",
       "percapita": "Population: {source}, {year} Census.",
       "cap": "{n} records with impossible amounts (source quantity errors) are excluded so they don't distort the sums; the rest is exactly as the State publishes it.",
       "coverage": "Mind the coverage: some Intendencias publish little or nothing on Compras Estatales, so a low per-capita figure can mean under-reporting, not thrift. Lavalleja and Soriano have no priced purchases and don't appear."
     },
+    "year": {
+      "label": "Year",
+      "all": "All-time (every year)",
+      "partialOpt": "{year} (partial)",
+      "partialNote": "{year} is a running year: partial data."
+    },
     "kpi": {
       "total": "Spend of the 19 Intendencias",
+      "totalYear": "{year} spend",
       "perCapita": "Average per resident",
       "departments": "Departments with data",
-      "mvdShare": "Montevideo's share"
+      "mvdShare": "Montevideo's share",
+      "yoy": "Change vs {year}"
     },
     "sort": {
       "label": "Sort by",
@@ -759,13 +790,17 @@
     "col": {
       "dept": "Department",
       "spend": "Spend",
+      "spendYear": "{year} spend",
       "perCapita": "Per resident",
       "contracts": "Contracts",
       "share": "Of total",
-      "years": "Years"
+      "years": "Years",
+      "yoyVs": "vs {year}"
     },
     "hab": "{n} pop.",
     "ratio": "{x}× the average",
+    "new": "new",
+    "viewContracts": "View contracts",
     "updated": "Updated {date}",
     "empty": {
       "title": "No spending data",
@@ -773,6 +808,7 @@
     },
     "panels": {
       "title": "How the spending is distributed",
+      "titleYear": "Spending in {year}",
       "note": "Everything below is computed over published purchases; the explorer has the detail for each agency."
     },
     "panel": {
@@ -782,10 +818,16 @@
       "totalSub": "The absolute amount, where Montevideo dominates by size.",
       "trend": "Spend by year",
       "trendSub": "Purchases of all Intendencias, by year.",
+      "trendHint": "Tap a bar to filter the page to that year.",
       "distribution": "Far from the average",
       "distributionSub": "Departments that deviate most from the national average of {line} per resident.",
       "above": "Well above",
-      "below": "Well below"
+      "below": "Well below",
+      "interannual": "Year-over-year change",
+      "interannualSub": "{year} vs {prev}: which Intendencias raised and cut spending the most.",
+      "risers": "Biggest rises",
+      "fallers": "Biggest falls",
+      "noYoy": "No comparison available."
     }
   },
   "organismos": {

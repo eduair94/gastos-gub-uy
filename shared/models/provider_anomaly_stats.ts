@@ -40,6 +40,10 @@ export interface IProviderAnomalyStats {
   flagCount: number;
   /** Estimated overprice per currency: sum of max(0, paid - rangeTop) * quantity. */
   overprice: IOverpriceEntry[];
+  /** Overprice re-expressed in TODAY's pesos: each flag converted to UYU at the contract month's
+   *  BCU rate, then inflation-adjusted via the Unidad Indexada (shared/utils/real-value toTodayUyu).
+   *  A single comparable figure across currencies AND years — the primary sort/display. */
+  overpriceUyuToday: number;
   /** Dominant currency (the one carrying the most flags) — for default display + sort. */
   primaryCurrency: string;
   /** Overprice amount in the primary currency (denormalised for indexed sorting). */
@@ -103,6 +107,8 @@ export interface IProviderAnomalySummary {
    *  capped. Surfaced as a footnote so the overprice figures are honest about the clamp. */
   clampedFlags: number;
   overpriceTotals: IOverpriceEntry[];
+  /** Total overprice across all providers in today's pesos (see stats.overpriceUyuToday). */
+  overpriceUyuTodayTotal: number;
   rubroTotals: IProviderRubroCount[];
   yearTotals: IProviderYearCount[];
   topProviders: IProviderTop[];
@@ -131,6 +137,7 @@ const ProviderAnomalyStatsSchema = new Schema<IProviderAnomalyStats>(
     supplierId: { type: String },
     flagCount: { type: Number, required: true, default: 0 },
     overprice: { type: [OverpriceSchema], default: [] },
+    overpriceUyuToday: { type: Number, default: 0 },
     primaryCurrency: { type: String, default: "UYU" },
     primaryOverprice: { type: Number, default: 0 },
     worstZ: { type: Number, default: 0 },
@@ -181,6 +188,7 @@ const ProviderAnomalySummarySchema = new Schema<IProviderAnomalySummary>(
     captiveCount: { type: Number, default: 0 },
     clampedFlags: { type: Number, default: 0 },
     overpriceTotals: { type: [OverpriceSchema], default: [] },
+    overpriceUyuTodayTotal: { type: Number, default: 0 },
     rubroTotals: { type: [RubroCountSchema], default: [] },
     yearTotals: { type: [YearCountSchema], default: [] },
     topProviders: { type: [TopProviderSchema], default: [] },

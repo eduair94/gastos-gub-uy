@@ -582,6 +582,14 @@
     "seeProviders": "Ver proveedores señalados",
     "supplierFilter": "Proveedor",
     "buyerFilter": "Comprador",
+    "filters": {
+      "advanced": "Filtros avanzados",
+      "buyerLabel": "Organismo (a quién le suministran)",
+      "supplierPlaceholder": "Buscá un proveedor señalado",
+      "buyerPlaceholder": "Buscá un organismo",
+      "rubroPlaceholder": "Buscá un rubro",
+      "flagCount": "{n} alertas"
+    },
     "confidence": "Confianza",
     "empty": {
       "title": "Sin alertas para estos filtros",
@@ -618,6 +626,20 @@
         "sin-explicacion": "Sin explicación",
         "otro": "Otro"
       }
+    },
+    "feedback": {
+      "prompt": "¿Es una anomalía real?",
+      "valid": "Válida",
+      "invalid": "Falso positivo",
+      "upTitle": "Marcar como anomalía real",
+      "downTitle": "Marcar como falso positivo",
+      "addReason": "Justificar (opcional)",
+      "editReason": "Editar justificación",
+      "reasonPlaceholder": "¿Por qué? Contanos qué explica (o no) esta alerta.",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "login": "Iniciá sesión para votar",
+      "error": "No se pudo guardar tu voto. Reintentá."
     }
   },
   "errors": {
@@ -668,7 +690,7 @@
     "method": {
       "title": "Cómo se arma",
       "body": "Una alerta queda «sin explicación» cuando el precio unitario pagado supera de forma extrema el rango habitual del mismo artículo y una segunda revisión con IA (Gemini) no encontró una razón legítima. Acá las agrupamos por proveedor y por comprador. Se recalcula cada 24 horas.",
-      "overprice": "El sobreprecio es una estimación: (precio pagado − tope del rango habitual) × cantidad, en la moneda de cada contrato. Los importes en monedas distintas nunca se suman entre sí.",
+      "overprice": "El sobreprecio es una estimación: (precio pagado − tope del rango habitual) × cantidad, llevado a pesos de hoy — la moneda extranjera se convierte al tipo de cambio del mes del contrato y luego se ajusta por inflación con la Unidad Indexada, para comparar años y monedas en una sola cifra.",
       "clamped": "{n} alerta(s) con cantidad implausible se acotaron a un tope para que un dato erróneo no domine los totales."
     },
     "kpi": {
@@ -740,15 +762,24 @@
     "method": {
       "title": "Cómo se calcula",
       "body": "Sumamos las compras que cada Intendencia publica en Compras Estatales (importe en pesos, normalizado). El gasto por habitante divide ese total entre la población del departamento.",
+      "interannual": "La vista abre en el último año completo y compara cada departamento contra el año anterior. El año en curso todavía es parcial, así que nunca es el predeterminado; con «Acumulado» ves el total histórico.",
       "percapita": "Población: {source}, Censo {year}.",
       "cap": "Se excluyen {n} registros con montos imposibles (errores de cantidad en la fuente) para que no distorsionen las sumas; el resto queda tal cual lo publica el Estado.",
       "coverage": "Ojo con la cobertura: algunas Intendencias publican poco o nada en Compras Estatales, así que un gasto por habitante bajo puede significar subregistro, no austeridad. Lavalleja y Soriano no tienen compras con precio y no aparecen."
     },
+    "year": {
+      "label": "Año",
+      "all": "Acumulado (todos los años)",
+      "partialOpt": "{year} (parcial)",
+      "partialNote": "{year} es un año en curso: datos parciales."
+    },
     "kpi": {
       "total": "Gasto de las 19 Intendencias",
+      "totalYear": "Gasto {year}",
       "perCapita": "Media por habitante",
       "departments": "Departamentos con datos",
-      "mvdShare": "Peso de Montevideo"
+      "mvdShare": "Peso de Montevideo",
+      "yoy": "Variación vs {year}"
     },
     "sort": {
       "label": "Ordenar por",
@@ -759,13 +790,17 @@
     "col": {
       "dept": "Departamento",
       "spend": "Gasto",
+      "spendYear": "Gasto {year}",
       "perCapita": "Por habitante",
       "contracts": "Contratos",
       "share": "Del total",
-      "years": "Años"
+      "years": "Años",
+      "yoyVs": "vs {year}"
     },
     "hab": "{n} hab.",
     "ratio": "{x}× la media",
+    "new": "nuevo",
+    "viewContracts": "Ver contratos",
     "updated": "Actualizado el {date}",
     "empty": {
       "title": "Sin datos de gasto",
@@ -773,6 +808,7 @@
     },
     "panels": {
       "title": "La distribución del gasto",
+      "titleYear": "El gasto en {year}",
       "note": "Todo lo de abajo se calcula sobre las compras publicadas; el explorador tiene el detalle de cada organismo."
     },
     "panel": {
@@ -782,10 +818,16 @@
       "totalSub": "El monto absoluto, donde Montevideo domina por tamaño.",
       "trend": "Gasto por año",
       "trendSub": "Compras de todas las Intendencias, por año.",
+      "trendHint": "Tocá una barra para filtrar la página por ese año.",
       "distribution": "Lejos de la media",
       "distributionSub": "Departamentos que más se apartan de la media nacional de {line} por habitante.",
       "above": "Muy por encima",
-      "below": "Muy por debajo"
+      "below": "Muy por debajo",
+      "interannual": "Cambio interanual",
+      "interannualSub": "{year} frente a {prev}: qué Intendencias subieron y bajaron más su gasto.",
+      "risers": "Más subieron",
+      "fallers": "Más bajaron",
+      "noYoy": "Sin comparación disponible."
     }
   },
   "organismos": {

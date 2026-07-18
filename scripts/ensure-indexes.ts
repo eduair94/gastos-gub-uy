@@ -404,6 +404,7 @@ async function main(): Promise<void> {
       await provStats.createIndex({ supplierName: 1 }, { unique: true, background: true })
       await provStats.createIndex({ flagCount: -1 }, { background: true })
       await provStats.createIndex({ primaryOverprice: -1 }, { background: true })
+      await provStats.createIndex({ overpriceUyuToday: -1 }, { background: true })
       await provStats.createIndex({ worstZ: -1 }, { background: true })
       await client.db(DB_NAME)
         .collection('provider_anomaly_summary')
@@ -466,6 +467,15 @@ async function main(): Promise<void> {
       await savedCalls.createIndex({ userId: 1, createdAt: -1 }, { background: true })
       console.log('✅ saved_calls indexes ensured (userId+compraId unique, userId+createdAt)')
 
+      // anomaly_feedback: a user's up/down verdict (+ optional comment) on one anomaly
+      // flag. userId+anomalyId unique makes re-voting an idempotent upsert; anomalyId
+      // backs the public count aggregate; userId+createdAt backs the "my feedback" list.
+      const anomalyFeedback = db.collection('anomaly_feedback')
+      await anomalyFeedback.createIndex({ userId: 1, anomalyId: 1 }, { unique: true, background: true })
+      await anomalyFeedback.createIndex({ anomalyId: 1 }, { background: true })
+      await anomalyFeedback.createIndex({ userId: 1, createdAt: -1 }, { background: true })
+      console.log('✅ anomaly_feedback indexes ensured (userId+anomalyId unique, anomalyId, userId+createdAt)')
+
       // api_keys: user-issued API credentials. `prefix` unique is the O(1) lookup
       // key the apiAuth middleware resolves the bearer/x-api-key header against.
       const apiKeys = db.collection('api_keys')
@@ -524,6 +534,7 @@ async function main(): Promise<void> {
       console.log('   plan: open_calls.{compraId unique, classificationSet, tenderPeriod.endDate, buyer.id, status+endDate, firstSeenAt, text}')
       console.log('   plan: notifications.{dedupeKey unique, status+type, userId+createdAt, status+scheduledFor}')
       console.log('   plan: saved_calls.{userId+compraId unique, userId+createdAt}')
+      console.log('   plan: anomaly_feedback.{userId+anomalyId unique, anomalyId, userId+createdAt}')
       console.log('   plan: api_keys.{prefix unique, userId+createdAt}')
       console.log('   plan: webhook_subscriptions.{userId+createdAt, active+events}')
       console.log('   plan: webhook_deliveries.{dedupeKey unique, status+nextAttemptAt}')

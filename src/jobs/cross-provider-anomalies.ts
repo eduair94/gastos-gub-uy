@@ -27,8 +27,10 @@
 import { connectToDatabase } from '../../shared/connection/database'
 import {
   AnomalyModel,
+  ExchangeRateModel,
   ProviderAnomalyStatsModel,
   ProviderAnomalySummaryModel,
+  ReleaseModel,
   SupplierPatternModel,
 } from '../../shared/models'
 import type {
@@ -36,6 +38,8 @@ import type {
   IProviderAnomalyStats,
   IProviderAnomalySummary,
 } from '../../shared/models'
+import type { RateTable } from '../../shared/utils/real-value'
+import { toTodayUyu } from '../../shared/utils/real-value'
 import { Logger } from '../services/logger-service'
 
 /** The canonical "unexplained" marker: the second-stage AI found no legitimate explanation. */
@@ -65,6 +69,20 @@ function overpriceCeiling(currency: string): number {
   return OVERPRICE_CEILING[currency] ?? OVERPRICE_CEILING_DEFAULT
 }
 
+/** Ceiling for the comparable UYU-today overprice — the same plausibility guard applied to the
+ *  converted figure, so one bogus-quantity flag can't dominate the totals or the sort. Set a touch
+ *  above the UYU nominal ceiling to leave room for inflation re-basing of a genuine large case. */
+const UYU_TODAY_CEILING = Number(process.env.PROVIDER_OVERPRICE_UYU_TODAY_CEILING ?? 150_000_000)
+
+/** Raw per-flag overprice in the flag's own currency (unclamped) — the basis for the UYU-today value. */
+function rawOverpriceOf(a: any): number {
+  const paid = a?.detectedValue
+  const hi = a?.expectedRange?.max
+  if (!Number.isFinite(paid) || !Number.isFinite(hi)) return 0
+  const qty = Number.isFinite(a?.metadata?.itemQuantity) && a.metadata.itemQuantity > 0 ? a.metadata.itemQuantity : 1
+  return Math.max(0, paid - hi) * qty
+}
+
 /** Per-flag overprice in the flag's own currency, clamped to the plausibility ceiling. Returns the
  *  clamped value and whether the raw value was above the ceiling (a quantity/data artifact). */
 function overpriceOf(a: any, currency: string): { value: number, clamped: boolean } {
@@ -89,6 +107,7 @@ interface ProviderAcc {
   supplierName: string
   flagCount: number
   overprice: Map<string, number>
+  overpriceUyuToday: number
   curCounts: Map<string, number>
   worstZ: number
   confSum: number
@@ -109,6 +128,7 @@ export class CrossProviderAnomalies {
   private rubroTotals = new Map<string, number>()
   private yearTotals = new Map<number, number>()
   private overpriceTotals = new Map<string, number>()
+  private overpriceUyuTodayTotal = 0
   private flagTotal = 0
   private clampedFlags = 0
 
@@ -119,6 +139,7 @@ export class CrossProviderAnomalies {
         supplierName: name,
         flagCount: 0,
         overprice: new Map(),
+        overpriceUyuToday: 0,
         curCounts: new Map(),
         worstZ: 0,
         confSum: 0,
@@ -133,28 +154,63 @@ export class CrossProviderAnomalies {
     return a
   }
 
-  /** Stream the unexplained flags and fold them into the provider / buyer / pair accumulators. */
-  async build(): Promise<void> {
-    const cursor = AnomalyModel.find(UNEXPLAINED)
-      .select('detectedValue expectedRange currency metadata.supplierName metadata.buyerName metadata.itemClassification metadata.itemQuantity metadata.currency metadata.zScore metadata.year sourceYear aiVerdict.confidence')
-      .lean()
-      .cursor({ batchSize: BULK_BATCH })
+  /** Monthly BCU table (usd/eur + Unidad Indexada) → a RateTable for toTodayUyu. Mirrors the web
+   *  app's app/server/utils/rates.ts, which the job can't import (it lives under app/). */
+  private async loadRates(): Promise<RateTable> {
+    const rows: any[] = await ExchangeRateModel.find().select('month usd eur ui').lean()
+    const byMonth: RateTable['byMonth'] = {}
+    let latestMonth = ''
+    let latestUi: number | null = null
+    for (const r of rows) {
+      byMonth[r.month] = { usd: r.usd, eur: r.eur, ui: r.ui }
+      if (r.ui && r.month > latestMonth) { latestMonth = r.month; latestUi = r.ui }
+    }
+    return { byMonth, latestUi }
+  }
 
-    for await (const a of cursor as any) {
+  /** Load the unexplained flags, join their contract dates, and fold them into the accumulators.
+   *  Small set (hundreds), so it loads into memory rather than streaming — that lets us batch the
+   *  release-date and exchange-rate lookups the UYU-today conversion needs. */
+  async build(): Promise<void> {
+    const flags: any[] = await AnomalyModel.find(UNEXPLAINED)
+      .select('releaseId detectedValue expectedRange currency metadata.supplierName metadata.buyerName metadata.itemClassification metadata.itemQuantity metadata.currency metadata.zScore metadata.year sourceYear aiVerdict.confidence')
+      .lean()
+
+    // Contract dates (release.date) for the FX month + inflation base, keyed by releaseId.
+    const releaseIds = [...new Set(flags.map(f => f.releaseId).filter(Boolean))]
+    const dateByRelease = new Map<string, string | Date>()
+    const RCHUNK = 5000
+    for (let i = 0; i < releaseIds.length; i += RCHUNK) {
+      const rows: any[] = await ReleaseModel.find({ id: { $in: releaseIds.slice(i, i + RCHUNK) } }).select('id date').lean()
+      for (const r of rows) if (r.date) dateByRelease.set(r.id, r.date)
+    }
+    const rates = await this.loadRates()
+    let noRate = 0
+
+    for (const a of flags) {
       this.flagTotal++
       const name = ((a?.metadata?.supplierName ?? '') as string).trim() || '—'
       const buyer = ((a?.metadata?.buyerName ?? '') as string).trim() || '—'
       const c = currencyOf(a)
-      const { value: op, clamped } = overpriceOf(a, c)
-      if (clamped) this.clampedFlags++
+      const { value: op } = overpriceOf(a, c)
       const z = Number.isFinite(a?.metadata?.zScore) ? a.metadata.zScore : 0
       const conf = Number.isFinite(a?.aiVerdict?.confidence) ? a.aiVerdict.confidence : null
       const rubro = rubroOf(a)
       const year = Number(a?.sourceYear ?? a?.metadata?.year)
 
+      // Comparable overprice in TODAY's pesos: convert the raw overprice at the contract month's
+      // rate, inflation-adjust via the UI, then clamp. Fallback: a UYU flag with no UI keeps its
+      // nominal value; a foreign flag we can't convert contributes 0 (rare) rather than a wrong peso.
+      const raw = rawOverpriceOf(a)
+      const date = dateByRelease.get(a.releaseId)
+      let uyuToday = toTodayUyu(raw, c, date ?? null, rates)
+      if (uyuToday === null) { noRate++; uyuToday = c === 'UYU' ? Math.min(raw, UYU_TODAY_CEILING) : 0 }
+      if (uyuToday > UYU_TODAY_CEILING) { this.clampedFlags++; uyuToday = UYU_TODAY_CEILING }
+
       const p = this.accFor(name)
       p.flagCount++
       p.overprice.set(c, (p.overprice.get(c) ?? 0) + op)
+      p.overpriceUyuToday += uyuToday
       p.curCounts.set(c, (p.curCounts.get(c) ?? 0) + 1)
       p.worstZ = Math.max(p.worstZ, z)
       if (conf !== null) { p.confSum += conf; p.confN++ }
@@ -164,6 +220,7 @@ export class CrossProviderAnomalies {
       if (Number.isFinite(year)) p.years.add(year)
 
       // Global rollups for the summary.
+      this.overpriceUyuTodayTotal += uyuToday
       this.pairAgg.set(`${name}||${buyer}`, (this.pairAgg.get(`${name}||${buyer}`) ?? 0) + 1)
       const b = this.buyerAgg.get(buyer) ?? { count: 0, providers: new Set<string>() }
       b.count++; b.providers.add(name); this.buyerAgg.set(buyer, b)
@@ -171,7 +228,7 @@ export class CrossProviderAnomalies {
       if (Number.isFinite(year)) this.yearTotals.set(year, (this.yearTotals.get(year) ?? 0) + 1)
       this.overpriceTotals.set(c, (this.overpriceTotals.get(c) ?? 0) + op)
     }
-    this.logger.info(`  scanned ${this.flagTotal} unexplained flags across ${this.providers.size} providers`)
+    this.logger.info(`  scanned ${this.flagTotal} unexplained flags across ${this.providers.size} providers (${noRate} without a usable FX/UI rate)`)
   }
 
   /** Best-effort RUT: only when the name maps to ONE distinct supplier_patterns id. */
@@ -218,6 +275,7 @@ export class CrossProviderAnomalies {
         supplierId: ruts.get(p.supplierName),
         flagCount: p.flagCount,
         overprice,
+        overpriceUyuToday: Math.round(p.overpriceUyuToday),
         primaryCurrency,
         primaryOverprice: p.overprice.get(primaryCurrency) ?? 0,
         worstZ: Math.round(p.worstZ),
@@ -258,6 +316,7 @@ export class CrossProviderAnomalies {
       flagTotal: this.flagTotal,
       captiveCount,
       clampedFlags: this.clampedFlags,
+      overpriceUyuTodayTotal: Math.round(this.overpriceUyuTodayTotal),
       overpriceTotals: [...this.overpriceTotals.entries()].map(([currency, amount]) => ({ currency, amount })).sort((a, b) => b.amount - a.amount),
       rubroTotals: [...this.rubroTotals.entries()].map(([rubro, count]) => ({ rubro, count })).sort((a, b) => b.count - a.count),
       yearTotals: [...this.yearTotals.entries()].map(([year, count]) => ({ year, count })).sort((a, b) => a.year - b.year),

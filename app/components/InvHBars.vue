@@ -17,10 +17,15 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip)
 const props = withDefaults(defineProps<{
   items: { label: string, value: number, color?: string, sub?: string }[]
   /** How to format the value label + tooltip. */
-  format?: 'moneyM' | 'count'
+  format?: 'moneyM' | 'money' | 'count'
   /** Bar height per row, drives the canvas height. */
   rowHeight?: number
+  /** Called with the bar's index when activated. Return a URL to make the bar a
+   *  link (pointer cursor + navigate on click). Omit for a static chart. */
+  hrefFor?: (index: number) => string | undefined
 }>(), { format: 'moneyM', rowHeight: 34 })
+
+const router = useRouter()
 
 const theme = ref({ gold: '#c69528', verde: '#3f7d62', alerta: '#b2423b', celeste: '#3f74a6', neutral: '#9aa7b1', text: '#12212e', muted: '#576673', rule: '#d6dde2', ink: '#0f1f2e', surface: '#ffffff' })
 function readTokens() {
@@ -56,7 +61,12 @@ onMounted(() => {
 const height = computed(() => Math.max(120, props.items.length * props.rowHeight + 16))
 
 function fmtVal(v: number): string {
-  return props.format === 'count' ? formatNumber(v) : `$ ${(v / 1e6).toFixed(1).replace('.', ',')} M`
+  // `money` renders a full compact peso figure (adapts mil/M/mil M) — for values
+  // that aren't in the millions, like per-capita spend. `moneyM` fixes the unit at
+  // millions so a ranked column reads on one scale.
+  if (props.format === 'count') return formatNumber(v)
+  if (props.format === 'money') return formatMoney(v, 'UYU', { compact: true })
+  return `$ ${(v / 1e6).toFixed(1).replace('.', ',')} M`
 }
 
 const chartData = computed(() => ({
@@ -129,6 +139,20 @@ const chartOptions = computed(() => ({
         crossAlign: 'far' as const,
       },
     },
+  },
+  // Optional drill-through: a bar becomes a link when `hrefFor` yields a URL.
+  onClick: (_e: unknown, els: any[]) => {
+    const i = els?.[0]?.index
+    if (i === undefined || i === null) return
+    const href = props.hrefFor?.(i)
+    if (href) router.push(href)
+  },
+  onHover: (e: any, els: any[]) => {
+    if (e?.native?.target) {
+      const i = els?.[0]?.index
+      const clickable = i !== undefined && i !== null && props.hrefFor && props.hrefFor(i)
+      e.native.target.style.cursor = clickable ? 'pointer' : 'default'
+    }
   },
 }))
 </script>

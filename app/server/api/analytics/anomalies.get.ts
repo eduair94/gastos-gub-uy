@@ -2,7 +2,27 @@ import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { AnomalyModel } from '../../utils/models'
 import { escapeRegex } from '../../utils/query'
+import { feedbackSummaries } from '../../utils/anomaly-feedback'
 import { parseToken } from '../../../../shared/utils/rubro-tokens'
+
+/**
+ * Normalise a query value that may be a single string or a repeated param into a
+ * clean string[]. The advanced filters (supplier/buyer/rubro) are multi-select
+ * and send repeated params rather than a comma-joined string, because supplier
+ * and buyer NAMES contain commas — a comma-join would split one name into two.
+ */
+function toStrArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+  if (typeof v === 'string' && v.trim() !== '') return [v]
+  return []
+}
+
+/** An exact match for one value, an `$in` for several, or null for none. */
+function exactOrIn(values: string[]): string | { $in: string[] } | null {
+  if (values.length === 1) return values[0]!
+  if (values.length > 1) return { $in: values }
+  return null
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -47,12 +67,30 @@ export default defineEventHandler(async (event) => {
       filter.releaseId = releaseId
     }
 
-    // One provider's flags — the drill-down from the provider cross-reference
-    // (/analytics/proveedores-anomalias). Anomalies carry only the supplier NAME, never the RUT,
-    // so this matches metadata.supplierName exactly (the same key the cross-reference groups on).
-    const supplier = query.supplier
-    if (typeof supplier === 'string' && supplier) {
-      filter['metadata.supplierName'] = supplier
+    // Provider flags — matches metadata.supplierName (anomalies carry the NAME, never the RUT,
+    // the same key the cross-reference groups on). Now multi-select from the advanced-filters
+    // panel: one value is an exact match, several an `$in`. A single ?supplier=NAME inbound link
+    // from /analytics/proveedores-anomalias still works — it normalises to a one-element array.
+    const supplierFilter = exactOrIn(toStrArray(query.supplier))
+    if (supplierFilter !== null) filter['metadata.supplierName'] = supplierFilter
+
+    // Buyer flags — "a quién le suministran". Same multi-select shape, exact match on the buyer
+    // name the anomaly carries. Single ?buyer=NAME inbound links (the "compradores que concentran"
+    // panel) still work via the one-element-array normalisation.
+    const buyerFilter = exactOrIn(toStrArray(query.buyer))
+    if (buyerFilter !== null) filter['metadata.buyerName'] = buyerFilter
+
+    // SICE top-level rubro by its human NAME (e.g. "MATERIALES Y SUMINISTROS"). Distinct from the
+    // `rubro` token filter below (a rubroPath prefix): this matches the enriched
+    // itemClassification.rubro exactly. Multi-select, same shape as supplier/buyer.
+    const rubroNameFilter = exactOrIn(toStrArray(query.rubroName))
+    if (rubroNameFilter !== null) filter['metadata.itemClassification.rubro'] = rubroNameFilter
+
+    // One contract year — the drill-down from the recurrence-by-year chart. sourceYear is the
+    // contract's year; legacy rows without it are excluded once this is set, which is correct.
+    const yearNum = Number(query.year)
+    if (Number.isInteger(yearNum) && yearNum > 1900) {
+      filter.sourceYear = yearNum
     }
 
     // SICE rubro filter: a node token (F/SF/C/SC) narrows to anomalies whose item
@@ -137,10 +175,19 @@ export default defineEventHandler(async (event) => {
       AnomalyModel.countDocuments(filter),
     ])
 
+    // Attach community feedback (public up/down counts + the requesting user's own
+    // vote/comment) to each row so the list can render the vote widget without a
+    // per-row round-trip. Anonymous callers still get the public counts.
+    const summaries = await feedbackSummaries(event, anomalies.map((a: any) => String(a._id)))
+    const anomaliesWithFeedback = anomalies.map((a: any) => ({
+      ...a,
+      feedback: summaries.get(String(a._id)) ?? { up: 0, down: 0, myVote: null, myComment: null },
+    }))
+
     return {
       success: true,
       data: {
-        anomalies,
+        anomalies: anomaliesWithFeedback,
         pagination: {
           page: Number(page),
           limit: Number(limit),

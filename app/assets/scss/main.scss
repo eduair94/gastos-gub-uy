@@ -575,4 +575,56 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
   text-transform: uppercase;
   color: var(--text-muted) !important;
   white-space: nowrap;
+  // Vuetify packs header + rows tight; give them real vertical rhythm so a
+  // table never reads as "aplastado". Applied globally to every v-data-table.
+  padding-top: var(--s-4) !important;
+  padding-bottom: var(--s-3) !important;
+  height: auto !important;
+}
+
+.v-data-table__td,
+.v-data-table td {
+  padding-top: var(--s-4) !important;
+  padding-bottom: var(--s-4) !important;
+  height: auto !important;
+  line-height: 1.5;
+}
+
+// Ink-hero alignment (global). The analytics pages apply `.u-container.hero__in`
+// on a single element: u-container centres it at the site max-width, then a
+// narrow `.hero__in { max-width: ~72ch }` re-centres a skinny column, so the
+// hero text floated inward and no longer lined up with the full-width header or
+// the content below. Keep the block at the container's width (its left edge
+// aligns with everything else) and cap only the MEASURE of each child line.
+.hero__in {
+  max-width: none !important;
+}
+.hero__in > * {
+  max-width: 74ch;
+}
+// The hero title was `clamp(28px, 5vw, --t-3xl)` where --t-3xl tops out at
+// 4.25rem (~68px) — a long headline then wrapped to 5-6 lines and ate the whole
+// viewport, hiding under the sticky header. Cap it to a restrained display size
+// globally so every hero stays proportionate.
+.hero__title {
+  font-size: clamp(1.5rem, 1rem + 2vw, 2.4rem) !important;
+  line-height: 1.12 !important;
+  text-wrap: balance;
+}
+
+// Chip groups wrap onto multiple rows (paired with the `VChipGroup { column }`
+// default in plugins/vuetify.ts) instead of the side-arrow slide group. The
+// slide arrows hid options behind a horizontal scroll; wrapping shows them all.
+.v-chip-group {
+  .v-slide-group__content {
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    padding-block: 2px;
+  }
+
+  // The prev/next arrows the slide group injects — never wanted once wrapping.
+  .v-slide-group__prev,
+  .v-slide-group__next {
+    display: none !important;
+  }
 }
