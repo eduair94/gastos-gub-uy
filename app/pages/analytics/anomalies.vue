@@ -5,16 +5,19 @@ const route = useRoute()
 const router = useRouter()
 
 const severity = ref((route.query.severity as string) ?? '')
+// Second-stage AI triage filter: '' | unexplained | uncertain | explainable | unscored.
+const ai = ref((route.query.ai as string) ?? '')
 const page = ref(Number(route.query.page ?? 1))
 
 // A page number from a different filter set is meaningless.
-watch([severity], () => {
+watch([severity, ai], () => {
   page.value = 1
 })
 
-watch([severity, page], () => {
+watch([severity, ai, page], () => {
   const q: Record<string, string> = {}
   if (severity.value) q.severity = severity.value
+  if (ai.value) q.ai = ai.value
   if (page.value > 1) q.page = String(page.value)
   router.replace({ query: q })
 })
@@ -29,6 +32,7 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/anomal
     sortBy: 'severity',
     sortOrder: 'desc',
     ...(severity.value ? { severity: severity.value } : {}),
+    ...(ai.value ? { ai: ai.value } : {}),
   })),
 })
 
@@ -38,6 +42,10 @@ const pagination = computed(() => res.value?.data?.pagination ?? null)
 // Only price_spike is ever generated, so severity is the only axis
 // worth filtering on. Order is meaningful — worst first.
 const SEVERITIES = ['critical', 'high', 'medium', 'low'] as const
+
+// Second-stage AI triage buckets. 'unexplained' first — it is the point of the
+// layer: the flags no legitimate explanation covers. See score-anomalies-ai.ts.
+const AI_FILTERS = ['unexplained', 'uncertain', 'explainable', 'unscored'] as const
 
 /**
  * Never derive a "times over average" ratio from `expectedRange`.
@@ -72,6 +80,53 @@ function baselineN(a: any): number | null {
 
 function unitName(a: any): string | null {
   return a?.metadata?.itemUnit?.name ?? null
+}
+
+/**
+ * The second-stage AI verdict, when present. Advisory: it annotates the
+ * statistical flag, never replaces it. `explainable: 'no'` is the real signal.
+ * Now carries the journalist-facing detail: analysis, evidence, documents.
+ */
+function aiOf(a: any): {
+  explainable: string
+  category: string
+  reason: string
+  analysis?: string
+  evidence?: string[]
+  confidence: number
+  usedFeatures?: number
+  documents?: { type?: string, url: string, format?: string }[]
+  model?: string
+  scoredAt?: string
+} | null {
+  const v = a?.aiVerdict
+  return v && typeof v.explainable === 'string' ? v : null
+}
+
+/** The verdict's confidence as a whole percent, or null. */
+function aiConfidencePct(a: any): number | null {
+  const c = aiOf(a)?.confidence
+  return typeof c === 'number' && Number.isFinite(c) ? Math.round(c * 100) : null
+}
+
+/** Evidence bullet points the model returned. */
+function aiEvidence(a: any): string[] {
+  const e = aiOf(a)?.evidence
+  return Array.isArray(e) ? e.filter(x => typeof x === 'string' && x.trim()) : []
+}
+
+/** Attached contract documents (resolutions, pliegos) — links a journalist can open. */
+function aiDocs(a: any): { type?: string, url: string, format?: string }[] {
+  const d = aiOf(a)?.documents
+  return Array.isArray(d) ? d.filter(x => x && typeof x.url === 'string') : []
+}
+
+/** When the verdict was produced, as YYYY-MM-DD (UTC — deadlines here are Uruguayan wall-clock). */
+function aiScoredAt(a: any): string | null {
+  const s = aiOf(a)?.scoredAt
+  if (!s) return null
+  const d = new Date(s)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
 }
 
 /**
@@ -175,138 +230,229 @@ useSeo(() => ({
       </p>
     </div>
 
+    <!-- Second-stage AI triage filter. Separate row because it is a different
+         axis from severity: it splits the same flags by whether an LLM found a
+         legitimate explanation, isolating the genuinely unexplained ones. -->
     <div
-      v-if="error"
-      class="state"
+      class="aibar"
+      role="group"
+      :aria-label="t('anomalies.ai.label')"
     >
-      <h2 class="state__t">
-        {{ t('errors.generic.title') }}
-      </h2>
-      <p class="state__b">
-        {{ t('errors.generic.body') }}
-      </p>
+      <span class="aibar__l u-mono">{{ t('anomalies.ai.label') }}</span>
+      <div class="chips">
+        <button
+          class="chip"
+          :class="{ 'chip--on': !ai }"
+          type="button"
+          @click="ai = ''"
+        >
+          {{ t('anomalies.ai.filter.all') }}
+        </button>
+        <button
+          v-for="f in AI_FILTERS"
+          :key="f"
+          class="chip"
+          :class="[{ 'chip--on': ai === f }, f === 'unexplained' ? 'chip--critical' : '']"
+          type="button"
+          @click="ai = f"
+        >
+          {{ t(`anomalies.ai.filter.${f}`) }}
+        </button>
+      </div>
     </div>
 
-    <div
-      v-else-if="pending && !anomalies.length"
-      class="skeleton"
+    <PaginatedList
+      v-model:page="page"
+      :total-pages="pagination?.totalPages ?? 1"
     >
       <div
-        v-for="i in 6"
-        :key="i"
-        class="skeleton__row"
-      />
-    </div>
-
-    <div
-      v-else-if="!anomalies.length"
-      class="state"
-    >
-      <h2 class="state__t">
-        {{ t('anomalies.empty.title') }}
-      </h2>
-      <p class="state__b">
-        {{ t('anomalies.empty.body') }}
-      </p>
-      <button
-        v-if="severity"
-        class="state__a"
-        type="button"
-        @click="severity = ''"
+        v-if="error"
+        class="state"
       >
-        {{ t('common.clearAll') }}
-      </button>
-    </div>
+        <h2 class="state__t">
+          {{ t('errors.generic.title') }}
+        </h2>
+        <p class="state__b">
+          {{ t('errors.generic.body') }}
+        </p>
+      </div>
 
-    <ul
-      v-else
-      class="flags"
-    >
-      <li
-        v-for="a in anomalies"
-        :key="a._id"
-        class="flags__row"
+      <div
+        v-else-if="pending && !anomalies.length"
+        class="skeleton"
       >
-        <NuxtLink
-          :to="localePath(`/contracts/${a.releaseId}`)"
-          class="flags__link"
+        <div
+          v-for="i in 6"
+          :key="i"
+          class="skeleton__row"
+        />
+      </div>
+
+      <div
+        v-else-if="!anomalies.length"
+        class="state"
+      >
+        <h2 class="state__t">
+          {{ t('anomalies.empty.title') }}
+        </h2>
+        <p class="state__b">
+          {{ t('anomalies.empty.body') }}
+        </p>
+        <button
+          v-if="severity"
+          class="state__a"
+          type="button"
+          @click="severity = ''"
         >
-          <div class="flags__l">
-            <div class="flags__tags">
-              <span class="tag tag--alerta">{{ t(`anomalies.severity.${a.severity}`) }}</span>
-              <span
-                v-if="baselineN(a)"
-                class="flags__x u-mono"
+          {{ t('common.clearAll') }}
+        </button>
+      </div>
+
+      <ul
+        v-else
+        class="flags"
+      >
+        <li
+          v-for="a in anomalies"
+          :key="a._id"
+          class="flags__row"
+        >
+          <NuxtLink
+            :to="localePath(`/contracts/${a.releaseId}`)"
+            class="flags__link"
+          >
+            <div class="flags__l">
+              <div class="flags__tags">
+                <span class="tag tag--alerta">{{ t(`anomalies.severity.${a.severity}`) }}</span>
+                <span
+                  v-if="baselineN(a)"
+                  class="flags__x u-mono"
+                >
+                  {{ t('anomalies.baseline', { n: formatNumber(baselineN(a)) }) }}
+                </span>
+              </div>
+              <p class="flags__what">
+                {{ itemLabel(a) }}
+                <span
+                  v-if="unitName(a)"
+                  class="flags__unit u-mono"
+                >{{ unitName(a) }}</span>
+              </p>
+              <p class="flags__who">
+                {{ a.metadata?.buyerName }}
+                <span v-if="a.metadata?.supplierName"> · {{ a.metadata.supplierName }}</span>
+                <span
+                  v-if="a.sourceYear ?? a.metadata?.year"
+                  class="u-mono"
+                > · {{ a.sourceYear ?? a.metadata?.year }}</span>
+              </p>
+
+              <!-- Advisory AI verdict, compact. Accent when unexplained (the real signal),
+                 muted when the LLM found a plausible explanation. -->
+              <p
+                v-if="aiOf(a)"
+                class="flags__ai"
+                :class="`flags__ai--${aiOf(a)!.explainable}`"
               >
-                {{ t('anomalies.baseline', { n: formatNumber(baselineN(a)) }) }}
-              </span>
+                <span class="flags__aiv">{{ t(`anomalies.ai.verdict.${aiOf(a)!.explainable}`) }}</span>
+                <span class="flags__aicat">{{ t(`anomalies.ai.category.${aiOf(a)!.category}`) }}</span>
+                <span
+                  v-if="aiConfidencePct(a) !== null"
+                  class="flags__aiconf u-mono"
+                  :title="t('anomalies.confidence')"
+                >{{ aiConfidencePct(a) }}%</span>
+              </p>
+              <p
+                v-if="aiOf(a)?.reason"
+                class="flags__air"
+              >
+                {{ aiOf(a)!.reason }}
+              </p>
             </div>
-            <p class="flags__what">
-              {{ itemLabel(a) }}
-              <span
-                v-if="unitName(a)"
-                class="flags__unit u-mono"
-              >{{ unitName(a) }}</span>
-            </p>
-            <p class="flags__who">
-              {{ a.metadata?.buyerName }}
-              <span v-if="a.metadata?.supplierName"> · {{ a.metadata.supplierName }}</span>
-              <span
-                v-if="a.sourceYear ?? a.metadata?.year"
-                class="u-mono"
-              > · {{ a.sourceYear ?? a.metadata?.year }}</span>
-            </p>
-          </div>
 
-          <div class="flags__r">
-            <div class="flags__fig">
-              <span class="flags__figl">{{ t('anomalies.detected') }}</span>
-              <MoneyAmount
-                :amount="a.detectedValue"
-                :currency="cur(a)"
-                compact
-              />
+            <div class="flags__r">
+              <div class="flags__fig">
+                <span class="flags__figl">{{ t('anomalies.detected') }}</span>
+                <MoneyAmount
+                  :amount="a.detectedValue"
+                  :currency="cur(a)"
+                  compact
+                />
+              </div>
+              <div class="flags__fig flags__fig--exp">
+                <span class="flags__figl">{{ t('anomalies.expected') }}</span>
+                <span class="flags__range u-mono">{{ rangeLabel(a) }}</span>
+              </div>
             </div>
-            <div class="flags__fig flags__fig--exp">
-              <span class="flags__figl">{{ t('anomalies.expected') }}</span>
-              <span class="flags__range u-mono">{{ rangeLabel(a) }}</span>
-            </div>
-          </div>
-        </NuxtLink>
-      </li>
-    </ul>
+          </NuxtLink>
 
-    <nav
-      v-if="pagination && pagination.totalPages > 1"
-      class="pager"
-      :aria-label="t('common.page')"
-    >
-      <button
-        class="pager__b"
-        type="button"
-        :disabled="page <= 1"
-        @click="page = Math.max(1, page - 1)"
-      >
-        <v-icon size="16">
-          mdi-chevron-left
-        </v-icon>
-        {{ t('common.previous') }}
-      </button>
-      <span class="pager__n">
-        {{ t('common.page') }} <strong>{{ page }}</strong> {{ t('common.of') }} {{ formatNumber(pagination.totalPages) }}
-      </span>
-      <button
-        class="pager__b"
-        type="button"
-        :disabled="page >= pagination.totalPages"
-        @click="page = page + 1"
-      >
-        {{ t('common.next') }}
-        <v-icon size="16">
-          mdi-chevron-right
-        </v-icon>
-      </button>
-    </nav>
+          <!-- Journalist/researcher detail: the full AI analysis, the checkable
+               evidence, the source documents, and the provenance. Kept OUTSIDE the
+               NuxtLink so expanding it never navigates away. -->
+          <details
+            v-if="aiOf(a) && (aiOf(a)!.analysis || aiEvidence(a).length || aiDocs(a).length)"
+            class="aidet"
+          >
+            <summary class="aidet__s">
+              {{ t('anomalies.ai.detailsToggle') }}
+            </summary>
+            <div class="aidet__b">
+              <p
+                v-if="aiOf(a)!.analysis"
+                class="aidet__analysis"
+              >
+                {{ aiOf(a)!.analysis }}
+              </p>
+
+              <div v-if="aiEvidence(a).length">
+                <p class="aidet__h">
+                  {{ t('anomalies.ai.evidence') }}
+                </p>
+                <ul class="aidet__list">
+                  <li
+                    v-for="(e, i) in aiEvidence(a)"
+                    :key="`e${i}`"
+                  >
+                    {{ e }}
+                  </li>
+                </ul>
+              </div>
+
+              <div v-if="aiDocs(a).length">
+                <p class="aidet__h">
+                  {{ t('anomalies.ai.documents') }}
+                </p>
+                <ul class="aidet__list">
+                  <li
+                    v-for="(d, i) in aiDocs(a)"
+                    :key="`d${i}`"
+                  >
+                    <a
+                      :href="d.url"
+                      target="_blank"
+                      rel="noopener nofollow"
+                    >{{ d.type || t('anomalies.ai.document') }}</a>
+                    <span
+                      v-if="d.format"
+                      class="aidet__fmt u-mono"
+                    >{{ d.format }}</span>
+                  </li>
+                </ul>
+              </div>
+
+              <p class="aidet__meta u-mono">
+                <span v-if="aiOf(a)!.usedFeatures">{{ t('anomalies.ai.usedFeatures', { n: aiOf(a)!.usedFeatures }) }} · </span>
+                <span>{{ aiOf(a)!.model }}</span>
+                <span v-if="aiScoredAt(a)"> · {{ aiScoredAt(a) }}</span>
+              </p>
+              <p class="aidet__note">
+                {{ t('anomalies.ai.note') }}
+              </p>
+            </div>
+          </details>
+        </li>
+      </ul>
+    </PaginatedList>
   </div>
 </template>
 
@@ -397,6 +543,22 @@ useSeo(() => ({
   color: var(--text-muted);
 }
 
+/* ---- AI triage filter bar ---- */
+.aibar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-3);
+  margin: 0 0 var(--s-4);
+}
+
+.aibar__l {
+  font-size: var(--t-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 /* ---- Flags ---- */
 .flags {
   margin: 0;
@@ -461,6 +623,133 @@ useSeo(() => ({
   margin: 2px 0 0;
   font-size: var(--t-xs);
   color: var(--text-muted);
+}
+
+/* ---- AI verdict line ---- */
+.flags__ai {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-2);
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+}
+
+.flags__aiv {
+  flex: none;
+  font-weight: 600;
+  padding: 1px var(--s-2);
+  border-radius: var(--r-full);
+  border: 1px solid var(--rule);
+  color: var(--text-muted);
+}
+
+.flags__air {
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+/* Unexplained = the real signal: accent it with the same "alerta" hue as the severity tag. */
+.flags__ai--no .flags__aiv {
+  color: var(--alerta);
+  border-color: color-mix(in srgb, var(--alerta) 40%, transparent);
+  background: color-mix(in srgb, var(--alerta) 10%, transparent);
+}
+
+.flags__ai--no .flags__air { color: var(--text); }
+
+.flags__aicat {
+  flex: none;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  padding: 1px var(--s-2);
+  border-radius: var(--r-full);
+  background: var(--surface-sunken);
+}
+
+.flags__aiconf {
+  flex: none;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+/* ---- Journalist detail panel (outside the row link) ---- */
+.aidet {
+  border-top: 1px dashed var(--rule);
+  padding: 0 var(--s-5) var(--s-3);
+  font-size: var(--t-sm);
+}
+
+.aidet__s {
+  cursor: pointer;
+  padding: var(--s-2) 0;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  list-style: none;
+}
+
+.aidet__s::-webkit-details-marker { display: none; }
+.aidet__s::before { content: '▸ '; }
+.aidet[open] .aidet__s::before { content: '▾ '; }
+.aidet__s:hover { color: var(--text); }
+
+.aidet__b {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding-top: var(--s-2);
+}
+
+.aidet__analysis {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.aidet__h {
+  margin: 0 0 var(--s-1);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.aidet__list {
+  margin: 0;
+  padding-left: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.55;
+}
+
+.aidet__list a {
+  color: var(--alerta);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.aidet__fmt {
+  margin-left: var(--s-2);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.aidet__meta {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.aidet__note {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .flags__r {
@@ -540,39 +829,6 @@ useSeo(() => ({
 @keyframes shimmer {
   0% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
-}
-
-/* ---- Pager ---- */
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s-4);
-  margin-top: var(--s-5);
-}
-
-.pager__b {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-1);
-  padding: var(--s-2) var(--s-4);
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.pager__b:disabled { opacity: 0.4; cursor: not-allowed; }
-.pager__b:not(:disabled):hover { background: var(--surface-sunken); }
-
-.pager__n {
-  font-family: var(--font-mono);
-  font-size: var(--t-sm);
-  color: var(--text-muted);
 }
 
 /* ---- Responsive ---- */

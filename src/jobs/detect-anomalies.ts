@@ -84,6 +84,9 @@ interface LoadedBaseline extends BaselineInput {
   p95: number;
 }
 
+/** Below this many observations a per-unit-total reconstruction is not worth trusting. */
+const LINE_TOTAL_MIN_QUANTITY = 2;
+
 interface ScoredRow {
   releaseId: string;
   awardId: string | null;
@@ -108,6 +111,7 @@ interface Finding {
   doc: Record<string, unknown>;
   releaseId: string;
   awardId: string | null;
+  method: string;
 }
 
 function parseArgs(argv: string[]): CliOptions {
@@ -181,6 +185,21 @@ function asString(value: unknown): string | null {
 
 function asNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * True when the flagged unit price looks like a line TOTAL mis-stored as a unit price: dividing it
+ * by an integer quantity >= LINE_TOTAL_MIN_QUANTITY lands it back inside the baseline's usual
+ * [p25, p95] range. See heuristic #2. Integer quantity guards against placeholder/fractional
+ * quantities coincidentally reconstructing an in-range price.
+ */
+function isLineTotalArtifact(row: ScoredRow, baseline: LoadedBaseline): boolean {
+  const q = row.quantity;
+  if (q === null || !Number.isFinite(q) || !Number.isInteger(q) || q < LINE_TOTAL_MIN_QUANTITY) {
+    return false;
+  }
+  const perUnit = row.unitPrice / q;
+  return Number.isFinite(baseline.p25) && Number.isFinite(baseline.p95) && perUnit >= baseline.p25 && perUnit <= baseline.p95;
 }
 
 class AnomalyDetector {
@@ -283,6 +302,8 @@ class AnomalyDetector {
               max: stats.max,
               distinctPrices: stats.distinctPrices,
               recurringPrices: stats.recurringPrices,
+              modePrice: stats.modePrice,
+              modeShare: stats.modeShare,
               windowStart,
               windowEnd,
               dataVersion: this.dataVersion,
@@ -345,7 +366,7 @@ class AnomalyDetector {
 
   private async loadBaselines(): Promise<Map<string, LoadedBaseline>> {
     const baselines = new Map<string, LoadedBaseline>();
-    const cursor = ItemPriceBaselineModel.find({}, { classificationId: 1, currency: 1, unitName: 1, n: 1, medianLn: 1, madLn: 1, p25: 1, p75: 1, p95: 1, recurringPrices: 1 })
+    const cursor = ItemPriceBaselineModel.find({}, { classificationId: 1, currency: 1, unitName: 1, n: 1, medianLn: 1, madLn: 1, p25: 1, p75: 1, p95: 1, recurringPrices: 1, modePrice: 1, modeShare: 1 })
       .lean()
       .cursor({ batchSize: CURSOR_BATCH_SIZE });
 
@@ -360,6 +381,8 @@ class AnomalyDetector {
           p75: doc.p75,
           p95: doc.p95,
           recurringPrices: doc.recurringPrices?.length ? new Set(doc.recurringPrices) : undefined,
+          modePrice: doc.modePrice,
+          modeShare: doc.modeShare,
         }
       );
     }
@@ -417,6 +440,7 @@ class AnomalyDetector {
     let itemsScored = 0;
     let itemsWithoutBaseline = 0;
     let itemsAtRecurringPrice = 0;
+    let itemsLineTotalArtifact = 0;
     let truncated = false;
 
     // Keyed by {releaseId, awardId} - the anomaly upsert key. Holding only the
@@ -459,11 +483,21 @@ class AnomalyDetector {
         continue;
       }
 
+      // Line-total-in-unit-price (heuristic #2): the few records where unit.value.amount actually
+      // holds the line TOTAL (not a unit price) are exactly the ones that dominate reported spend.
+      // If dividing the flagged price by an integer quantity >= 2 lands it back inside the usual
+      // [p25, p95] range, this is a data-entry artifact, not a real spike — suppress and count it.
+      if (isLineTotalArtifact(row, baseline)) {
+        itemsLineTotalArtifact++;
+        continue;
+      }
+
       const finding: Finding = {
         severityRank: scored.severityRank,
         absZ: scored.absZ,
         releaseId: row.releaseId,
         awardId: row.awardId,
+        method: scored.method,
         doc: this.buildAnomalyDoc(row, scored, baseline),
       };
 
@@ -491,8 +525,10 @@ class AnomalyDetector {
     console.log(`   award items scored      : ${itemsScored}`);
     console.log(`   items without baseline  : ${itemsWithoutBaseline}`);
     console.log(`   at recurring list price : ${itemsAtRecurringPrice} (tariff/list prices, never anomalous)`);
+    console.log(`   line-total artifacts    : ${itemsLineTotalArtifact} (total mis-stored as unit price, suppressed)`);
     console.log(`   anomalies found         : ${findings.length}${truncated ? " (capped)" : ""}`);
     this.logSeverityBreakdown(findings);
+    this.logMethodBreakdown(findings);
 
     if (options.dryRun) {
       console.log(`   🧪 --dry-run: no writes performed.`);
@@ -536,9 +572,19 @@ class AnomalyDetector {
 
   private buildAnomalyDoc(row: ScoredRow, scored: ScoredFinding, baseline: LoadedBaseline): Record<string, unknown> {
     const label = row.classificationDescription ?? row.itemDescription ?? row.classificationId;
-    const methodWord = scored.method === "iqr_fence" ? "IQR extreme fence" : "robust log z-score";
 
-    const description = `Unit price ${row.unitPrice.toFixed(2)} ${row.currency} for "${label}" (per ${row.unitName}) sits ${scored.absZ.toFixed(1)} robust z ${scored.direction} the ${row.currency} baseline of ${baseline.n} comparable items [${methodWord}]`;
+    // The deviation-from-mode branch carries a representative pseudo-z, not a dispersion z, so its
+    // description speaks in multiples of the dominant price rather than "robust z" — otherwise it
+    // would read as a z-score it never computed.
+    let description: string;
+    if (scored.method === "mode_deviation") {
+      const mult = baseline.modePrice && baseline.modePrice > 0 ? row.unitPrice / baseline.modePrice : null;
+      const multWord = mult !== null ? `${mult.toFixed(1)}x` : "well above";
+      description = `Unit price ${row.unitPrice.toFixed(2)} ${row.currency} for "${label}" (per ${row.unitName}) is ${multWord} the dominant price of ${baseline.n} comparable items [deviation from mode]`;
+    } else {
+      const methodWord = scored.method === "iqr_fence" ? "IQR extreme fence" : "robust log z-score";
+      description = `Unit price ${row.unitPrice.toFixed(2)} ${row.currency} for "${label}" (per ${row.unitName}) sits ${scored.absZ.toFixed(1)} robust z ${scored.direction} the ${row.currency} baseline of ${baseline.n} comparable items [${methodWord}]`;
+    }
 
     // expectedRange is reported in the SAME currency as detectedValue. The old
     // detector stamped "UYU" on everything regardless of the actual currency.
@@ -590,6 +636,17 @@ class AnomalyDetector {
     const names: Record<number, string> = { 4: "critical", 3: "high", 2: "medium", 1: "low" };
     for (const rank of [4, 3, 2, 1]) {
       console.log(`     ${names[rank]!.padEnd(8)}: ${counts.get(rank) ?? 0}`);
+    }
+  }
+
+  private logMethodBreakdown(findings: Finding[]): void {
+    const counts = new Map<string, number>();
+    for (const finding of findings) {
+      counts.set(finding.method, (counts.get(finding.method) ?? 0) + 1);
+    }
+    console.log(`   by method:`);
+    for (const method of ["log_modified_zscore", "iqr_fence", "mode_deviation"]) {
+      console.log(`     ${method.padEnd(18)}: ${counts.get(method) ?? 0}`);
     }
   }
 

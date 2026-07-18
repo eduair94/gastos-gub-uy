@@ -111,6 +111,44 @@ export const IQR_FENCE_K = 3;
  */
 export const RECURRING_PRICE_MIN_COUNT = 3;
 
+/**
+ * CONTAMINATION GUARD (heuristic #3).
+ *
+ * When one classification code pools genuinely different products (e.g. a code that mixes a cheap
+ * consumable with an expensive instrument), the pooled baseline spans a huge price range and its
+ * low/medium findings are noise: a price in the upper cluster is a DIFFERENT product, not an
+ * overpay. `ln(p95/p25)` measures that span in log units.
+ *
+ * The cutoff is deliberately high. Measured over the 5,265 production baselines that reach the
+ * robust path (n>=30, p25>0), the MEDIAN p95/p25 is already ~5.5x and the p90 is ~78x — wide
+ * baselines are the norm in procurement, not the exception. A cutoff of 50x hardens only the top
+ * ~13%, i.e. the genuinely pathological buckets, leaving ordinary commodity dispersion untouched.
+ *
+ * "Harden" here means only raising the effect-size floor to ln(2) — a finding on such a baseline
+ * must be at least 2x the median, not merely 25% over it. It never fabricates or suppresses an
+ * extreme finding; the robust z-score's own severity ladder is untouched. Absent p95/p25 => the
+ * guard is skipped (older baselines behave exactly as before).
+ */
+export const CONTAMINATION_LOG_SPAN = Math.log(50);
+export const CONTAMINATION_MIN_LOG_DEVIATION = Math.log(2);
+
+/**
+ * DEVIATION-FROM-MODE (heuristic #5) — the detector's biggest documented blind spot.
+ *
+ * When one price holds most of a baseline's count mass, MAD and IQR are BOTH ~0, so neither the
+ * robust z-score nor the IQR fence can score anything and the item is silently skipped — the exact
+ * failure the source admits: "an item priced at 1.53M in 75% of purchases will not flag at 3.28M".
+ * This is a dispersion rule's blind spot to a deviation-FROM-MODE fact.
+ *
+ * The branch fires ONLY as a last resort, when both dispersion estimators are already degenerate,
+ * and only on a concentrated baseline (the mode holds at least this share of observations) where
+ * the scored price is at least this many log-units above the mode. Severity is capped at "high"
+ * (never critical) because concentrated buckets are also where classification contamination lives.
+ * Absent modePrice/modeShare => the rule is skipped, like recurringPrices.
+ */
+export const DEVIATION_FROM_MODE_MIN_SHARE = 0.55;
+export const DEVIATION_FROM_MODE_MIN_LOG_DEVIATION = Math.log(2);
+
 /** Below this many observations a baseline is not trustworthy at all - emit nothing. */
 export const MIN_BASELINE_N = 10;
 
@@ -160,6 +198,10 @@ export interface BaselineStats {
    * MIN_LOG_DEVIATION over the median), so storing the lower ones would be dead weight.
    */
   recurringPrices: number[];
+  /** The single most-frequently-observed unit price (the histogram's tallest bin). */
+  modePrice: number;
+  /** modeCount / n — how concentrated the baseline is on that one price. Drives deviation-from-mode. */
+  modeShare: number;
 }
 
 /** The subset of a baseline document the scorer actually needs. */
@@ -170,6 +212,11 @@ export interface BaselineInput {
   p25: number;
   p75: number;
   /**
+   * 95th-percentile price. Optional: only the contamination guard (heuristic #3) reads it, so
+   * baselines written before it existed simply skip that guard.
+   */
+  p95?: number | undefined;
+  /**
    * Exact-match lookup of recurring (list/tariff) prices. EXACT equality is correct here:
    * the scored price and the baseline bins both originate from the same JSON number in the
    * same source files, so they are bit-identical doubles — no tolerance needed, and a
@@ -177,9 +224,12 @@ export interface BaselineInput {
    * existed simply skip the rule.
    */
   recurringPrices?: ReadonlySet<number> | undefined;
+  /** Most-frequent price + its share of n. Optional: absent => deviation-from-mode (#5) is skipped. */
+  modePrice?: number | undefined;
+  modeShare?: number | undefined;
 }
 
-export type ScoringMethod = "log_modified_zscore" | "iqr_fence";
+export type ScoringMethod = "log_modified_zscore" | "iqr_fence" | "mode_deviation";
 
 export interface ScoredFinding {
   /** Signed for the z-score path; positive pseudo-z for the (upper-tail-only) IQR path. */
@@ -286,6 +336,17 @@ export function computeBaselineStats(rawBins: HistogramBin[]): BaselineStats | n
   const p50 = weightedPercentile(bins, 0.5);
   const recurringPrices = bins.filter((bin) => bin.count >= RECURRING_PRICE_MIN_COUNT && bin.value > p50).map((bin) => bin.value);
 
+  // The mode: the tallest histogram bin. One pass over the already-resident bins, so it is free.
+  // On the concentrated baselines deviation-from-mode targets, this is the dominant list price.
+  let modeCount = 0;
+  let modePrice = bins[0]!.value;
+  for (const bin of bins) {
+    if (bin.count > modeCount) {
+      modeCount = bin.count;
+      modePrice = bin.value;
+    }
+  }
+
   return {
     n,
     medianLn,
@@ -298,6 +359,8 @@ export function computeBaselineStats(rawBins: HistogramBin[]): BaselineStats | n
     max: bins[bins.length - 1]!.value,
     distinctPrices: bins.length,
     recurringPrices,
+    modePrice,
+    modeShare: modeCount / n,
   };
 }
 
@@ -391,6 +454,11 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
   const canUseRobustZ =
     n >= ROBUST_MIN_N && Number.isFinite(baseline.madLn) && baseline.madLn >= MAD_LN_EPSILON;
 
+  // Contamination guard (heuristic #3): on a baseline whose p95/p25 span is extreme, one code is
+  // pooling different products, so require a larger effect before flagging. Only ever raises the
+  // floor; skipped when p95/p25 are absent. See CONTAMINATION_LOG_SPAN.
+  const minLogDeviation = contaminationHardenedFloor(baseline);
+
   if (canUseRobustZ) {
     const z = modifiedZScore(price, baseline.medianLn, baseline.madLn);
     if (!Number.isFinite(z)) {
@@ -410,9 +478,9 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
       return null;
     }
 
-    // Practical significance, not just statistical. See MIN_LOG_DEVIATION.
+    // Practical significance, not just statistical. See MIN_LOG_DEVIATION (raised on contaminated baselines).
     const logDeviation = Math.log(price) - baseline.medianLn;
-    if (logDeviation < MIN_LOG_DEVIATION) {
+    if (logDeviation < minLogDeviation) {
       return null;
     }
 
@@ -440,7 +508,10 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
   const medianPrice = Math.exp(baseline.medianLn);
   const iqrFloor = Number.isFinite(medianPrice) ? Math.abs(medianPrice) * IQR_REL_EPSILON : 0;
   if (!Number.isFinite(iqr) || iqr <= 0 || iqr < iqrFloor) {
-    return null;
+    // BOTH dispersion estimators are degenerate. Last resort: deviation-from-mode (heuristic #5),
+    // which catches a price many times the sole dominant list price where MAD and IQR are both ~0.
+    // Returns null when the mode fields are absent or the gate is not met.
+    return scoreDeviationFromMode(price, baseline, severityCap);
   }
   const excess = (price - baseline.p75) / iqr;
   if (!(excess > IQR_FENCE_K)) {
@@ -450,7 +521,7 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
   // Same practical-significance floor the z path applies, so a finding means the same thing
   // regardless of which estimator produced it. A tight-but-not-degenerate baseline can otherwise
   // clear a k=3 fence on a price only a few percent over the median.
-  if (Math.log(price) - baseline.medianLn < MIN_LOG_DEVIATION) {
+  if (Math.log(price) - baseline.medianLn < minLogDeviation) {
     return null;
   }
 
@@ -473,6 +544,68 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
     severityRank: cappedRank,
     confidence: confidenceFromZ(pseudoZ, n),
     method: "iqr_fence",
+    direction: "above",
+  };
+}
+
+/**
+ * The effect-size floor for this baseline, raised to CONTAMINATION_MIN_LOG_DEVIATION when the
+ * p95/p25 span is extreme (heuristic #3). Returns the ordinary MIN_LOG_DEVIATION when p95/p25 are
+ * absent or the span is ordinary — so it can only ever make flagging STRICTER, never looser.
+ */
+function contaminationHardenedFloor(baseline: BaselineInput): number {
+  const { p25, p95 } = baseline;
+  if (Number.isFinite(p25) && Number.isFinite(p95) && (p25 as number) > 0 && (p95 as number) > 0) {
+    if (Math.log((p95 as number) / (p25 as number)) >= CONTAMINATION_LOG_SPAN) {
+      return CONTAMINATION_MIN_LOG_DEVIATION;
+    }
+  }
+  return MIN_LOG_DEVIATION;
+}
+
+/**
+ * Deviation-from-mode scorer (heuristic #5).
+ *
+ * Called only when BOTH dispersion estimators are degenerate, so a concentrated baseline no longer
+ * silently swallows a gross overprice. Fires only when the mode is genuinely dominant
+ * (modeShare >= DEVIATION_FROM_MODE_MIN_SHARE) and the price is at least DEVIATION_FROM_MODE_MIN_LOG_DEVIATION
+ * (ln 2, i.e. 2x) above that mode. Severity is capped at "high" — concentrated buckets are also
+ * where classification contamination lives, so this never asserts "critical" on a mode alone.
+ *
+ * Absent modePrice/modeShare => returns null (rule skipped, like recurringPrices). The scored price
+ * is already guaranteed to be non-recurring by the gate at the top of scoreUnitPrice.
+ */
+function scoreDeviationFromMode(price: number, baseline: BaselineInput, severityCap: number): ScoredFinding | null {
+  const { modePrice, modeShare, n } = baseline;
+  if (!Number.isFinite(modePrice) || !Number.isFinite(modeShare)) {
+    return null;
+  }
+  if ((modeShare as number) < DEVIATION_FROM_MODE_MIN_SHARE) {
+    return null;
+  }
+  if (!((modePrice as number) > 0) || price <= (modePrice as number)) {
+    return null;
+  }
+
+  const logDeviation = Math.log(price) - Math.log(modePrice as number);
+  if (logDeviation < DEVIATION_FROM_MODE_MIN_LOG_DEVIATION) {
+    return null;
+  }
+
+  // Rank from the multiple over the mode: >=3x is "high", >=2x is "medium". Capped at high (3) and
+  // by the small-n severity cap. A representative pseudo-z carries the finding onto the shared
+  // severity/confidence scale without pretending a dispersion z exists.
+  const ratio = price / (modePrice as number);
+  const baseRank = ratio >= 3 ? 3 : 2;
+  const rank = Math.min(baseRank, severityCap, 3);
+  const pseudoZ = rank >= 3 ? 8 : 6;
+  return {
+    zScore: pseudoZ,
+    absZ: pseudoZ,
+    severity: SEVERITY_BY_RANK[rank]!,
+    severityRank: rank,
+    confidence: confidenceFromZ(pseudoZ, n),
+    method: "mode_deviation",
     direction: "above",
   };
 }

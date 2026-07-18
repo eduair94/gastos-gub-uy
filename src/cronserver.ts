@@ -652,6 +652,17 @@ class CronServer {
     try {
       this.logger.info("Starting anomaly detection...");
       await this.runJobProcess("jobs/detect-anomalies");
+
+      // Second-stage LLM triage of the fresh flags. Runs right after detection so new/changed
+      // anomalies get an aiVerdict the same night. Non-fatal and last, like the analytics tail
+      // jobs: a Gemini/network hiccup (or a missing GEMINI_API_KEY) must not mark the statistical
+      // detection — which is the source of truth — as failed. It is incremental by construction,
+      // so it only spends on flags that changed since its last run.
+      this.logger.info("Starting AI anomaly triage...");
+      await this.runJobProcess("jobs/score-anomalies-ai").catch((error) => {
+        this.logger.error("AI anomaly triage failed (non-fatal):", error);
+      });
+
       this.anomalyStatus.status = "idle";
       this.anomalyStatus.successfulRuns++;
       this.logger.info("Anomaly detection completed successfully");

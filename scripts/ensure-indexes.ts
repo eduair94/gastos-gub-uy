@@ -375,10 +375,20 @@ async function main(): Promise<void> {
       await products.createIndex({ rankBySpend: 1 }, { background: true })
       await products.createIndex({ rankByLines: 1 }, { background: true })
       console.log('✅ product_analytics indexes ensured (code unique, rankBySpend, rankByLines)')
+
+      // anomalies: the AI-triage view filters on aiVerdict.explainable and sorts
+      // worst-first by severityRank (see src/jobs/score-anomalies-ai.ts + the
+      // /api/analytics/anomalies `ai` filter). Declared on AnomalySchema, but
+      // autoIndex is off so it is ensured here.
+      await client.db(DB_NAME)
+        .collection('anomalies')
+        .createIndex({ 'aiVerdict.explainable': 1, severityRank: -1 }, { background: true })
+      console.log('✅ anomalies.aiVerdict.explainable_1_severityRank_-1 ensured')
     }
     else {
       console.log('   plan: contract_item_features.compraId_1 (unique)')
       console.log('   plan: product_analytics.code_1 (unique), rankBySpend_1, rankByLines_1')
+      console.log('   plan: anomalies.aiVerdict.explainable_1_severityRank_-1')
     }
 
     if (failed > 0) {

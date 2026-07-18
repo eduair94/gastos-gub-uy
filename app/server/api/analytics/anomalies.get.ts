@@ -12,6 +12,7 @@ export default defineEventHandler(async (event) => {
       limit = 20,
       type,
       severity,
+      ai,
       sortBy = 'createdAt',
       sortOrder = 'desc',
     } = query
@@ -25,6 +26,23 @@ export default defineEventHandler(async (event) => {
 
     if (severity) {
       filter.severity = severity
+    }
+
+    // Second-stage AI triage filter (see src/jobs/score-anomalies-ai.ts). Lets the
+    // UI isolate the genuinely unexplained flags — the real signal — from the ones
+    // the LLM found a legitimate explanation for.
+    //   unexplained → aiVerdict.explainable = 'no'   (the actionable view)
+    //   explainable → 'yes'      uncertain → 'uncertain'
+    //   scored → has any verdict      unscored → not yet triaged
+    const AI_VERDICT: Record<string, string> = { unexplained: 'no', explainable: 'yes', uncertain: 'uncertain' }
+    if (ai === 'scored') {
+      filter['aiVerdict.explainable'] = { $exists: true }
+    }
+    else if (ai === 'unscored') {
+      filter['aiVerdict.explainable'] = { $exists: false }
+    }
+    else if (typeof ai === 'string' && AI_VERDICT[ai]) {
+      filter['aiVerdict.explainable'] = AI_VERDICT[ai]
     }
 
     // Build sort options.

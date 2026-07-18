@@ -513,6 +513,38 @@
     "empty": {
       "title": "Sin alertas para estos filtros",
       "body": "Probá con otra severidad o quitá el filtro de año."
+    },
+    "ai": {
+      "label": "Análisis IA",
+      "note": "Triaje con IA (Gemini) sobre la alerta estadística: es orientativo y no reemplaza el criterio humano. Verificá siempre contra la fuente oficial.",
+      "detailsToggle": "Análisis detallado",
+      "evidence": "Evidencia",
+      "documents": "Documentos adjuntos",
+      "document": "Documento",
+      "usedFeatures": "{n} características leídas de la página oficial",
+      "filter": {
+        "all": "Todas",
+        "unexplained": "Sin explicación",
+        "uncertain": "A revisar",
+        "explainable": "Con explicación",
+        "unscored": "Sin analizar"
+      },
+      "verdict": {
+        "no": "Sin explicación aparente",
+        "yes": "Posible explicación",
+        "uncertain": "Requiere revisión"
+      },
+      "category": {
+        "cantidad-baja": "Cantidad baja",
+        "producto-distinto": "Producto distinto",
+        "marca-especializado": "Marca / especializado",
+        "urgencia": "Urgencia",
+        "servicio-incluido": "Servicio incluido",
+        "error-carga": "Error de carga",
+        "moneda-erronea": "Moneda errónea",
+        "sin-explicacion": "Sin explicación",
+        "otro": "Otro"
+      }
     }
   },
   "errors": {

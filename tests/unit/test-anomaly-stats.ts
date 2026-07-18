@@ -395,6 +395,70 @@ console.log("\n📊 recurring tariff prices are suppressed (timbre profesional)"
   check("count == threshold-1 -> not recurring", !stats.recurringPrices.includes(700));
 }
 
+// --- deviation-from-mode (heuristic #5) -----------------------------------
+// The documented blind spot: when one price holds the count mass, MAD and IQR are both 0, so the
+// robust z-score and the IQR fence both go degenerate and the item is silently skipped — even at
+// many times that dominant price. This branch recovers exactly that class.
+console.log("\n📊 deviation-from-mode on concentrated baselines");
+{
+  const stats = computeBaselineStats(bins([[1_532_486, 45]]))!;
+  check("modePrice = the sole dominant price", stats.modePrice === 1_532_486);
+  closeTo("modeShare = 1 on a single-price baseline", stats.modeShare, 1);
+  closeTo("madLn is 0 (degenerate) as expected", stats.madLn, 0);
+
+  const withMode: BaselineInput = {
+    n: stats.n, medianLn: stats.medianLn, madLn: stats.madLn, p25: stats.p25, p75: stats.p75,
+    modePrice: stats.modePrice, modeShare: stats.modeShare,
+  };
+  const flagged = scoreUnitPrice(3_280_780, withMode); // 2.14x the dominant price
+  check("2.14x the dominant price -> flagged (was silently skipped before)", flagged !== null);
+  check("...via the mode_deviation path", flagged!.method === "mode_deviation");
+  check("...capped at high, never critical", flagged!.severityRank <= 3);
+  check("...direction above", flagged!.direction === "above");
+
+  check("1.5x the mode -> not flagged (under the 2x floor)", scoreUnitPrice(1_532_486 * 1.5, withMode) === null);
+  check("exactly at the mode -> not flagged", scoreUnitPrice(1_532_486, withMode) === null);
+  check("below the mode -> not flagged (upper-tail only)", scoreUnitPrice(1_000_000, withMode) === null);
+
+  // Back-compat: absent modePrice/modeShare -> the rule is skipped, behaviour exactly as before.
+  const withoutMode: BaselineInput = { n: 45, medianLn: Math.log(1_532_486), madLn: 0, p25: 1_532_486, p75: 1_532_486 };
+  check("absent mode fields -> rule skipped (degenerate item still not flagged)", scoreUnitPrice(3_280_780, withoutMode) === null);
+
+  // Concentration gate: a diffuse baseline that reaches the branch must not fire.
+  const diffuse: BaselineInput = { n: 45, medianLn: Math.log(100), madLn: 0, p25: 100, p75: 100, modePrice: 100, modeShare: 0.4 };
+  check("modeShare below 0.55 -> not flagged", scoreUnitPrice(1000, diffuse) === null);
+
+  const high = scoreUnitPrice(1_532_486 * 3.2, withMode);
+  check("3.2x the mode -> high severity (rank 3)", high!.severityRank === 3);
+
+  const withRecurring: BaselineInput = { ...withMode, recurringPrices: new Set([3_280_780]) };
+  check("recurring price -> immune even on the mode branch", scoreUnitPrice(3_280_780, withRecurring) === null);
+
+  const smallN: BaselineInput = { ...withMode, n: 15 };
+  check("small-n (10<=n<30) mode finding capped at medium", scoreUnitPrice(1_532_486 * 3.2, smallN)!.severityRank === 2);
+
+  const belowMinN: BaselineInput = { ...withMode, n: 9 };
+  check("n<10 -> nothing, mode branch included", scoreUnitPrice(1_532_486 * 3.2, belowMinN) === null);
+}
+
+// --- contamination guard (heuristic #3) -----------------------------------
+// A baseline whose p95/p25 span is extreme is pooling different products. The guard raises the
+// effect-size floor to ln(2) there, so a small percentage-over-median (which a TIGHT central mass
+// still scores as a large z) no longer flags — but a genuine 2x+ still does. It only ever hardens.
+console.log("\n📊 contamination guard raises the floor on wildly-spanning baselines");
+{
+  // Tight centre (small madLn, so z clears easily) but a few outliers stretch p95 -> p95/p25 = 66x.
+  const contaminated: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.02, p25: 90, p75: 110, p95: 6000 };
+  check("+50% over median on a contaminated baseline -> suppressed by the hardened floor", scoreUnitPrice(150, contaminated) === null);
+  check("+120% over median (2.2x) -> still flagged (clears the ln2 floor)", scoreUnitPrice(220, contaminated) !== null);
+
+  const cleanSpan: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.02, p25: 90, p75: 110, p95: 300 }; // 3.3x span
+  check("+50% over median on an ordinary-span baseline -> still flagged (ordinary floor)", scoreUnitPrice(150, cleanSpan) !== null);
+
+  const noP95: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.02, p25: 90, p75: 110 };
+  check("absent p95 -> guard skipped, +50% flagged as before", scoreUnitPrice(150, noP95) !== null);
+}
+
 console.log("\n=====================");
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

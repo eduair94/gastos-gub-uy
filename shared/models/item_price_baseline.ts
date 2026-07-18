@@ -35,6 +35,11 @@ const ItemPriceBaselineSchema = new Schema<IItemPriceBaseline>(
     // prices of this bucket (e.g. every legal timbre profesional denomination). The scorer
     // never flags an exact match. Absent on pre-rule baselines, which simply skip the rule.
     recurringPrices: { type: [Number], default: undefined },
+    // Mode (tallest histogram bin) + its share of n. Drives deviation-from-mode scoring, which
+    // catches a gross overprice against a single dominant list price where MAD and IQR are both 0.
+    // Absent on pre-heuristic baselines, which simply skip that rule.
+    modePrice: { type: Number },
+    modeShare: { type: Number },
     windowStart: { type: Date, required: true },
     windowEnd: { type: Date, required: true },
     dataVersion: { type: String, required: true },

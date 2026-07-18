@@ -61,6 +61,33 @@ const AnomalySchema = new Schema<IAnomaly>(
       currency: { type: String },
       sourceFileName: { type: String },
     },
+    // Second-stage LLM triage. Advisory only — never overrides the statistical
+    // flag, only annotates it. Declared explicitly so mongoose strict mode does
+    // not silently strip it on write (the same trap that dropped detectedAt).
+    // Written by src/jobs/score-anomalies-ai.ts.
+    aiVerdict: {
+      explainable: { type: String, enum: ["yes", "no", "uncertain"] },
+      category: {
+        type: String,
+        enum: ["cantidad-baja", "producto-distinto", "marca-especializado", "urgencia", "servicio-incluido", "error-carga", "moneda-erronea", "sin-explicacion", "otro"],
+      },
+      reason: { type: String },
+      // Journalist/researcher-facing detail: the full analysis + the individually-checkable points.
+      analysis: { type: String },
+      evidence: { type: [String], default: undefined },
+      confidence: { type: Number, min: 0, max: 1 },
+      model: { type: String },
+      // Mirror of the anomaly's dataVersion at scoring time, so the job can
+      // re-triage only findings that actually changed since the last verdict.
+      dataVersion: { type: String },
+      scoredAt: { type: Date },
+      // Provenance: what extra context informed the verdict, so a reader can re-check it.
+      usedFeatures: { type: Number },
+      documents: {
+        type: [new Schema({ type: { type: String }, url: { type: String }, format: { type: String } }, { _id: false })],
+        default: undefined,
+      },
+    },
   },
   {
     timestamps: true,
@@ -76,6 +103,8 @@ AnomalySchema.index({ sourceYear: 1, severityRank: -1 });
 AnomalySchema.index({ "metadata.supplierName": 1 });
 AnomalySchema.index({ detectedAt: -1 });
 AnomalySchema.index({ firstDetectedAt: -1 });
+// Serves the "sin explicación" view: the unexplained flags, worst first.
+AnomalySchema.index({ "aiVerdict.explainable": 1, severityRank: -1 });
 
 
 

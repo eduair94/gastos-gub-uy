@@ -513,6 +513,38 @@
     "empty": {
       "title": "No flags for these filters",
       "body": "Try another severity or clear the year filter."
+    },
+    "ai": {
+      "label": "AI review",
+      "note": "AI triage (Gemini) over the statistical flag: advisory only, it does not replace human judgement. Always verify against the official source.",
+      "detailsToggle": "Detailed analysis",
+      "evidence": "Evidence",
+      "documents": "Attached documents",
+      "document": "Document",
+      "usedFeatures": "{n} characteristics read from the official page",
+      "filter": {
+        "all": "All",
+        "unexplained": "Unexplained",
+        "uncertain": "To review",
+        "explainable": "Explained",
+        "unscored": "Not analysed"
+      },
+      "verdict": {
+        "no": "No apparent explanation",
+        "yes": "Possible explanation",
+        "uncertain": "Needs review"
+      },
+      "category": {
+        "cantidad-baja": "Low quantity",
+        "producto-distinto": "Different product",
+        "marca-especializado": "Brand / specialised",
+        "urgencia": "Urgency",
+        "servicio-incluido": "Service included",
+        "error-carga": "Data-entry error",
+        "moneda-erronea": "Wrong currency",
+        "sin-explicacion": "Unexplained",
+        "otro": "Other"
+      }
     }
   },
   "errors": {

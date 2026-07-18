@@ -146,6 +146,59 @@ export interface IAnomaly extends Document {
   detectedAt?: Date
   /** When this finding was FIRST seen. Written once via $setOnInsert: "is this new?" */
   firstDetectedAt?: Date
+  /**
+   * Second-stage LLM triage of this statistical flag. ADVISORY ONLY — the
+   * statistical detector remains the source of truth. Written by
+   * src/jobs/score-anomalies-ai.ts, which reads the item description and the
+   * surrounding contract (basket, subject, procedure, buyer) and judges whether
+   * the price gap is EXPLAINABLE (small lot, different real product, brand,
+   * urgency, bundled service, data error) or genuinely unexplained. The
+   * unexplained flags (`explainable: 'no'`) are the real signal.
+   */
+  aiVerdict?: {
+    /** 'yes' = a plausible legitimate explanation exists; 'no' = none found (the real signal); 'uncertain' = not enough context to decide. */
+    explainable: 'yes' | 'no' | 'uncertain'
+    /** Coarse reason bucket. `sin-explicacion` pairs with `explainable: 'no'`. */
+    category:
+      | 'cantidad-baja'
+      | 'producto-distinto'
+      | 'marca-especializado'
+      | 'urgencia'
+      | 'servicio-incluido'
+      | 'error-carga'
+      | 'moneda-erronea'
+      | 'sin-explicacion'
+      | 'otro'
+    /** One-line summary rationale in Spanish, shown in the list. */
+    reason: string
+    /**
+     * Detailed factual analysis in Spanish (2-4 sentences), written for journalists and researchers
+     * auditing state spending: what was paid, against what norm, and why it is or is not explainable.
+     */
+    analysis: string
+    /** Specific, individually-checkable factual points supporting the verdict. */
+    evidence: string[]
+    /** The model's self-reported confidence in this verdict, 0-1. */
+    confidence: number
+    /** Gemini model id that produced the verdict. */
+    model: string
+    /**
+     * The anomaly `dataVersion` this verdict was scored against. The job
+     * re-triages a flag only when this differs from the anomaly's current
+     * `dataVersion`, so a stable finding is never re-charged to the API.
+     */
+    dataVersion?: string
+    /** When this verdict was produced. */
+    scoredAt: Date
+    /**
+     * Provenance — the extra context the verdict was based on beyond the OCDS fields, so a reader
+     * can see (and re-check) exactly what informed the AI.
+     */
+    /** Number of scraped "Características del Ítem" rows fed to the model (0 = none available). */
+    usedFeatures?: number
+    /** Attached contract documents (resolutions, pliegos) — links a journalist can open. */
+    documents?: { type?: string, url: string, format?: string }[]
+  }
 }
 
 /**
@@ -175,6 +228,10 @@ export interface IItemPriceBaseline extends Document {
   distinctPrices: number
   /** Tariff/list prices (count >= RECURRING_PRICE_MIN_COUNT, above p50). Never flagged. */
   recurringPrices?: number[]
+  /** The most-frequently-observed unit price (tallest histogram bin). */
+  modePrice?: number
+  /** modeCount / n — concentration on that one price. Drives deviation-from-mode scoring. */
+  modeShare?: number
   windowStart: Date
   windowEnd: Date
   dataVersion: string

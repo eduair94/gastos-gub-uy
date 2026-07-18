@@ -7,3 +7,6 @@ db
 database-export
 dist
 logs
+
+# Generated AI anomaly-triage dumps (verdicts-*.json, latest.json)
+data/
