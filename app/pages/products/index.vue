@@ -105,7 +105,6 @@ useSeo(() => ({
     </div>
 
     <div
-      id="p-results-top"
       class="chips"
       role="group"
       :aria-label="t('products.sortLabel')"
@@ -122,103 +121,92 @@ useSeo(() => ({
       </button>
     </div>
 
-    <DataPager
-      v-if="products.length && pagination && pagination.totalPages > 1"
+    <PaginatedList
       v-model:page="page"
-      :total-pages="pagination.totalPages"
-      sticky
-      scroll-target-id="p-results-top"
-    />
-
-    <div
-      v-if="error"
-      class="state"
-    >
-      <h2 class="state__t">
-        {{ t('errors.generic.title') }}
-      </h2>
-      <p class="state__b">
-        {{ t('errors.generic.body') }}
-      </p>
-    </div>
-
-    <div
-      v-else-if="pending && !products.length"
-      class="skeleton"
+      :total-pages="pagination?.totalPages ?? 1"
     >
       <div
-        v-for="i in 8"
-        :key="i"
-        class="skeleton__row"
-      />
-    </div>
-
-    <div
-      v-else-if="!products.length"
-      class="state"
-    >
-      <h2 class="state__t">
-        {{ t('products.empty.title') }}
-      </h2>
-      <p class="state__b">
-        {{ t('products.empty.body') }}
-      </p>
-      <button
-        v-if="search"
-        class="state__a"
-        type="button"
-        @click="search = ''"
+        v-if="error"
+        class="state"
       >
-        {{ t('common.clearAll') }}
-      </button>
-    </div>
+        <h2 class="state__t">
+          {{ t('errors.generic.title') }}
+        </h2>
+        <p class="state__b">
+          {{ t('errors.generic.body') }}
+        </p>
+      </div>
 
-    <!-- The link lives in the name cell, not on the whole row: an <a> as a
+      <div
+        v-else-if="pending && !products.length"
+        class="skeleton"
+      >
+        <div
+          v-for="i in 8"
+          :key="i"
+          class="skeleton__row"
+        />
+      </div>
+
+      <div
+        v-else-if="!products.length"
+        class="state"
+      >
+        <h2 class="state__t">
+          {{ t('products.empty.title') }}
+        </h2>
+        <p class="state__b">
+          {{ t('products.empty.body') }}
+        </p>
+        <button
+          v-if="search"
+          class="state__a"
+          type="button"
+          @click="search = ''"
+        >
+          {{ t('common.clearAll') }}
+        </button>
+      </div>
+
+      <!-- The link lives in the name cell, not on the whole row: an <a> as a
          direct child of <table>/<tbody> is invalid HTML the browser hoists out
          of the table, which desynchronises SSR from client and warns on
          hydration. A cell-level NuxtLink is what the buyer/supplier tables do. -->
-    <DataTable
-      v-else
-      :columns="columns"
-      :rows="products"
-      :row-key="(r) => r.code"
-      min-width="640px"
-    >
-      <template #cell:description="{ row }">
-        <NuxtLink
-          :to="localePath(`/products/${encodeURIComponent(row.code)}`)"
-          class="pname pname--link"
-        >{{ row.description }}</NuxtLink>
-        <span class="pcode u-mono">{{ t('products.codeLabel', { code: row.code }) }}</span>
-      </template>
-      <template #cell:totalUYU="{ row }">
-        <!-- MoneyAmount renders the "Sin monto" label for a null amount, so a
+      <DataTable
+        v-else
+        :columns="columns"
+        :rows="products"
+        :row-key="(r) => r.code"
+        min-width="640px"
+      >
+        <template #cell:description="{ row }">
+          <NuxtLink
+            :to="localePath(`/products/${encodeURIComponent(row.code)}`)"
+            class="pname pname--link"
+          >{{ row.description }}</NuxtLink>
+          <span class="pcode u-mono">{{ t('products.codeLabel', { code: row.code }) }}</span>
+        </template>
+        <template #cell:totalUYU="{ row }">
+          <!-- MoneyAmount renders the "Sin monto" label for a null amount, so a
              code the source never priced reads cleanly rather than "$ 0". -->
-        <MoneyAmount
-          :amount="row.totalUYU > 0 ? row.totalUYU : null"
-          currency="UYU"
-          compact
-          size="sm"
-        />
-      </template>
-      <template #cell:contractCount="{ row }">
-        {{ formatNumber(row.contractCount) }}
-      </template>
-      <template #cell:buyerCount="{ row }">
-        {{ formatNumber(row.buyerCount) }}
-      </template>
-      <template #cell:supplierCount="{ row }">
-        {{ formatNumber(row.supplierCount) }}
-      </template>
-    </DataTable>
-
-    <DataPager
-      v-if="products.length && pagination && pagination.totalPages > 1"
-      v-model:page="page"
-      :total-pages="pagination.totalPages"
-      class="pager--foot"
-      scroll-target-id="p-results-top"
-    />
+          <MoneyAmount
+            :amount="row.totalUYU > 0 ? row.totalUYU : null"
+            currency="UYU"
+            compact
+            size="sm"
+          />
+        </template>
+        <template #cell:contractCount="{ row }">
+          {{ formatNumber(row.contractCount) }}
+        </template>
+        <template #cell:buyerCount="{ row }">
+          {{ formatNumber(row.buyerCount) }}
+        </template>
+        <template #cell:supplierCount="{ row }">
+          {{ formatNumber(row.supplierCount) }}
+        </template>
+      </DataTable>
+    </PaginatedList>
   </div>
 </template>
 
@@ -383,10 +371,6 @@ useSeo(() => ({
   0% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-
-/* Pager markup + styles live in <DataPager>. */
-.pager--foot { margin-top: var(--s-5); }
-.chips { scroll-margin-top: calc(var(--header-h) + var(--s-3)); }
 
 @media (max-width: 560px) {
   .bar { flex-direction: column; align-items: stretch; }

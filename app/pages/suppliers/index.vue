@@ -116,13 +116,20 @@ useSeo(() => ({
     </header>
 
     <!-- ===== Toolbar: search + sort ===== -->
-    <div
-      id="s-results-top"
-      class="toolbar"
-    >
-      <form class="find" role="search" @submit.prevent>
-        <label class="u-sr-only" for="supplier-q">{{ t('common.search') }}</label>
-        <v-icon class="find__icon" size="20">
+    <div class="toolbar">
+      <form
+        class="find"
+        role="search"
+        @submit.prevent
+      >
+        <label
+          class="u-sr-only"
+          for="supplier-q"
+        >{{ t('common.search') }}</label>
+        <v-icon
+          class="find__icon"
+          size="20"
+        >
           mdi-magnify
         </v-icon>
         <input
@@ -147,7 +154,10 @@ useSeo(() => ({
 
       <label class="toolbar__sort">
         <span class="u-sr-only">{{ t('common.sortBy') }}</span>
-        <select v-model="sort" class="toolbar__select">
+        <select
+          v-model="sort"
+          class="toolbar__select"
+        >
           <option value="totalDesc">
             {{ t('suppliers.sort.totalDesc') }}
           </option>
@@ -161,101 +171,155 @@ useSeo(() => ({
       </label>
     </div>
 
-    <p v-if="pagination?.total != null" class="count">
+    <p
+      v-if="pagination?.total != null"
+      class="count"
+    >
       {{ t('suppliers.resultsSummary', { count: formatNumber(pagination.total) }) }}
     </p>
 
-    <DataPager
-      v-if="suppliers.length && totalPages > 1"
-      v-model:page="page"
-      :total-pages="totalPages"
-      sticky
-      scroll-target-id="s-results-top"
-    />
-
     <!-- ===== Results ===== -->
-    <div v-if="error" class="state">
-      <h2 class="state__t">
-        {{ t('errors.generic.title') }}
-      </h2>
-      <p class="state__b">
-        {{ t('errors.generic.body') }}
-      </p>
-      <button class="state__a" type="button" @click="() => refreshNuxtData()">
-        {{ t('errors.generic.action') }}
-      </button>
-    </div>
-
-    <div v-else-if="pending && !suppliers.length" class="skeleton">
-      <div v-for="i in 8" :key="i" class="skeleton__row" />
-    </div>
-
-    <div v-else-if="!suppliers.length" class="state">
-      <h2 class="state__t">
-        {{ t('suppliers.empty.title') }}
-      </h2>
-      <p class="state__b">
-        {{ t('suppliers.empty.body') }}
-      </p>
-      <button v-if="searchTerm" class="state__a" type="button" @click="clearSearch">
-        {{ t('suppliers.empty.action') }}
-      </button>
-    </div>
-
-    <div v-else>
-      <table class="ctable dtable">
-        <thead>
-          <tr>
-            <th scope="col">
-              {{ t('suppliers.table.name') }}
-            </th>
-            <th scope="col" class="ctable__c-n">
-              {{ t('suppliers.table.contracts') }}
-            </th>
-            <th scope="col" class="ctable__c-n">
-              {{ t('suppliers.table.buyers') }}
-            </th>
-            <th scope="col" class="ctable__c-amt">
-              {{ t('suppliers.table.total') }}
-            </th>
-            <th scope="col" class="ctable__c-amt">
-              {{ t('suppliers.table.avg') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="s in suppliers" :key="s.supplierId" class="ctable__row">
-            <td class="ctable__obj" data-primary>
-              <NuxtLink :to="supplierPath(s.supplierId)" class="ctable__link">
-                {{ s.name }}
-              </NuxtLink>
-              <span class="ctable__id">{{ s.supplierId }}</span>
-            </td>
-            <td class="ctable__c-n u-mono" :data-label="t('suppliers.table.contracts')">
-              {{ formatNumber(s.totalContracts) }}
-            </td>
-            <td class="ctable__c-n u-mono" :data-label="t('suppliers.table.buyers')">
-              {{ formatNumber(s.buyerCount) }}
-            </td>
-            <td class="ctable__c-amt" :data-label="t('suppliers.table.total')">
-              <MoneyAmount :amount="s.totalValue" compact />
-            </td>
-            <td class="ctable__c-amt" :data-label="t('suppliers.table.avg')">
-              <MoneyAmount :amount="s.avgContractValue" compact size="sm" />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- ===== Pagination ===== -->
-    <DataPager
-      v-if="suppliers.length && totalPages > 1"
+    <PaginatedList
       v-model:page="page"
       :total-pages="totalPages"
-      class="pager--foot"
-      scroll-target-id="s-results-top"
-    />
+    >
+      <div
+        v-if="error"
+        class="state"
+      >
+        <h2 class="state__t">
+          {{ t('errors.generic.title') }}
+        </h2>
+        <p class="state__b">
+          {{ t('errors.generic.body') }}
+        </p>
+        <button
+          class="state__a"
+          type="button"
+          @click="() => refreshNuxtData()"
+        >
+          {{ t('errors.generic.action') }}
+        </button>
+      </div>
+
+      <div
+        v-else-if="pending && !suppliers.length"
+        class="skeleton"
+      >
+        <div
+          v-for="i in 8"
+          :key="i"
+          class="skeleton__row"
+        />
+      </div>
+
+      <div
+        v-else-if="!suppliers.length"
+        class="state"
+      >
+        <h2 class="state__t">
+          {{ t('suppliers.empty.title') }}
+        </h2>
+        <p class="state__b">
+          {{ t('suppliers.empty.body') }}
+        </p>
+        <button
+          v-if="searchTerm"
+          class="state__a"
+          type="button"
+          @click="clearSearch"
+        >
+          {{ t('suppliers.empty.action') }}
+        </button>
+      </div>
+
+      <div v-else>
+        <table class="ctable dtable">
+          <thead>
+            <tr>
+              <th scope="col">
+                {{ t('suppliers.table.name') }}
+              </th>
+              <th
+                scope="col"
+                class="ctable__c-n"
+              >
+                {{ t('suppliers.table.contracts') }}
+              </th>
+              <th
+                scope="col"
+                class="ctable__c-n"
+              >
+                {{ t('suppliers.table.buyers') }}
+              </th>
+              <th
+                scope="col"
+                class="ctable__c-amt"
+              >
+                {{ t('suppliers.table.total') }}
+              </th>
+              <th
+                scope="col"
+                class="ctable__c-amt"
+              >
+                {{ t('suppliers.table.avg') }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="s in suppliers"
+              :key="s.supplierId"
+              class="ctable__row"
+            >
+              <td
+                class="ctable__obj"
+                data-primary
+              >
+                <NuxtLink
+                  :to="supplierPath(s.supplierId)"
+                  class="ctable__link"
+                >
+                  {{ s.name }}
+                </NuxtLink>
+                <span class="ctable__id">{{ s.supplierId }}</span>
+              </td>
+              <td
+                class="ctable__c-n u-mono"
+                :data-label="t('suppliers.table.contracts')"
+              >
+                {{ formatNumber(s.totalContracts) }}
+              </td>
+              <td
+                class="ctable__c-n u-mono"
+                :data-label="t('suppliers.table.buyers')"
+              >
+                {{ formatNumber(s.buyerCount) }}
+              </td>
+              <td
+                class="ctable__c-amt"
+                :data-label="t('suppliers.table.total')"
+              >
+                <MoneyAmount
+                  :amount="s.totalValue"
+                  compact
+                />
+              </td>
+              <td
+                class="ctable__c-amt"
+                :data-label="t('suppliers.table.avg')"
+              >
+                <MoneyAmount
+                  :amount="s.avgContractValue"
+                  compact
+                  size="sm"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </PaginatedList>
 
     <p class="source">
       {{ t('home.sourceNote') }}
@@ -473,10 +537,6 @@ useSeo(() => ({
   0% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-
-/* ---- Pager ---- (markup + styles live in <DataPager>) */
-.pager--foot { margin-top: var(--s-5); }
-.toolbar { scroll-margin-top: calc(var(--header-h) + var(--s-3)); }
 
 .source {
   margin: var(--s-6) 0 0;

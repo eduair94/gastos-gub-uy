@@ -490,10 +490,7 @@ useSeo(() => ({
         </div>
 
         <!-- ===== Toolbar ===== -->
-        <div
-          id="c-results-top"
-          class="toolbar"
-        >
+        <div class="toolbar">
           <p class="toolbar__count">
             <span
               v-if="pagination?.totalIsCapped"
@@ -530,220 +527,207 @@ useSeo(() => ({
           </label>
         </div>
 
-        <!-- Sticky pager: page a long list without scrolling to its foot. -->
-        <DataPager
-          v-if="contracts.length && totalPages > 1"
+        <!-- ===== Results ===== -->
+        <PaginatedList
           v-model:page="page"
           :total-pages="totalPages"
-          sticky
-          scroll-target-id="c-results-top"
-        />
-
-        <!-- ===== Results ===== -->
-        <div
-          v-if="error"
-          class="state"
-        >
-          <h2 class="state__t">
-            {{ t('errors.generic.title') }}
-          </h2>
-          <p class="state__b">
-            {{ t('errors.generic.body') }}
-          </p>
-          <button
-            class="state__a"
-            type="button"
-            @click="() => refreshNuxtData()"
-          >
-            {{ t('errors.generic.action') }}
-          </button>
-        </div>
-
-        <div
-          v-else-if="pending && !contracts.length"
-          class="skeleton"
         >
           <div
-            v-for="i in 8"
-            :key="i"
-            class="skeleton__row"
-          />
-        </div>
-
-        <div
-          v-else-if="!contracts.length"
-          class="state"
-        >
-          <h2 class="state__t">
-            {{ activeCount ? t('contracts.empty.title') : t('contracts.emptyInitial.title') }}
-          </h2>
-          <p class="state__b">
-            {{ activeCount ? t('contracts.empty.body') : t('contracts.emptyInitial.body') }}
-          </p>
-          <button
-            v-if="activeCount"
-            class="state__a"
-            type="button"
-            @click="clearAll"
+            v-if="error"
+            class="state"
           >
-            {{ t('contracts.empty.action') }}
-          </button>
-        </div>
+            <h2 class="state__t">
+              {{ t('errors.generic.title') }}
+            </h2>
+            <p class="state__b">
+              {{ t('errors.generic.body') }}
+            </p>
+            <button
+              class="state__a"
+              type="button"
+              @click="() => refreshNuxtData()"
+            >
+              {{ t('errors.generic.action') }}
+            </button>
+          </div>
 
-        <div v-else>
-          <table class="ctable dtable">
-            <thead>
-              <tr>
-                <th scope="col">
-                  {{ t('contracts.table.object') }}
-                </th>
-                <th
-                  scope="col"
-                  class="ctable__c-buyer"
-                >
-                  {{ t('contracts.table.buyer') }}
-                </th>
-                <th
-                  scope="col"
-                  class="ctable__c-sup"
-                >
-                  {{ t('contracts.table.supplier') }}
-                </th>
-                <th
-                  scope="col"
-                  class="ctable__c-date"
-                >
-                  {{ t('contracts.table.date') }}
-                </th>
-                <th
-                  scope="col"
-                  class="ctable__c-amt"
-                >
-                  {{ t('contracts.table.amount') }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="c in contracts"
-                :key="c.id"
-                class="ctable__row"
-              >
-                <td
-                  class="ctable__obj"
-                  data-primary
-                >
-                  <NuxtLink
-                    :to="localePath(`/contracts/${c.id}`)"
-                    class="ctable__link"
+          <div
+            v-else-if="pending && !contracts.length"
+            class="skeleton"
+          >
+            <div
+              v-for="i in 8"
+              :key="i"
+              class="skeleton__row"
+            />
+          </div>
+
+          <div
+            v-else-if="!contracts.length"
+            class="state"
+          >
+            <h2 class="state__t">
+              {{ activeCount ? t('contracts.empty.title') : t('contracts.emptyInitial.title') }}
+            </h2>
+            <p class="state__b">
+              {{ activeCount ? t('contracts.empty.body') : t('contracts.emptyInitial.body') }}
+            </p>
+            <button
+              v-if="activeCount"
+              class="state__a"
+              type="button"
+              @click="clearAll"
+            >
+              {{ t('contracts.empty.action') }}
+            </button>
+          </div>
+
+          <div v-else>
+            <table class="ctable dtable">
+              <thead>
+                <tr>
+                  <th scope="col">
+                    {{ t('contracts.table.object') }}
+                  </th>
+                  <th
+                    scope="col"
+                    class="ctable__c-buyer"
                   >
-                    {{ rowTitle(c) }}
-                  </NuxtLink>
-                  <span class="ctable__sub">
-                    <!-- The stage is why a row may carry no supplier or
+                    {{ t('contracts.table.buyer') }}
+                  </th>
+                  <th
+                    scope="col"
+                    class="ctable__c-sup"
+                  >
+                    {{ t('contracts.table.supplier') }}
+                  </th>
+                  <th
+                    scope="col"
+                    class="ctable__c-date"
+                  >
+                    {{ t('contracts.table.date') }}
+                  </th>
+                  <th
+                    scope="col"
+                    class="ctable__c-amt"
+                  >
+                    {{ t('contracts.table.amount') }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="c in contracts"
+                  :key="c.id"
+                  class="ctable__row"
+                >
+                  <td
+                    class="ctable__obj"
+                    data-primary
+                  >
+                    <NuxtLink
+                      :to="localePath(`/contracts/${c.id}`)"
+                      class="ctable__link"
+                    >
+                      {{ rowTitle(c) }}
+                    </NuxtLink>
+                    <span class="ctable__sub">
+                      <!-- The stage is why a row may carry no supplier or
                          amount. Naming it turns "missing data" into a
                          fact the reader can act on. -->
-                    <span
-                      v-if="primaryTag(c)"
-                      class="tag"
-                      :class="tagTone(primaryTag(c))"
-                      :title="t(`contract.stageHelp.${primaryTag(c)}`)"
-                    >{{ t(`contract.stage.${primaryTag(c)}`) }}</span>
-                    <span
-                      v-if="c.tender?.procurementMethodDetails"
-                      class="ctable__method"
-                    >{{ c.tender.procurementMethodDetails }}</span>
-                    <span
-                      v-if="itemCount(c) > 1"
-                      class="ctable__method"
-                    >{{ t('contract.itemsCount', itemCount(c), { n: itemCount(c) }) }}</span>
-                  </span>
+                      <span
+                        v-if="primaryTag(c)"
+                        class="tag"
+                        :class="tagTone(primaryTag(c))"
+                        :title="t(`contract.stageHelp.${primaryTag(c)}`)"
+                      >{{ t(`contract.stage.${primaryTag(c)}`) }}</span>
+                      <span
+                        v-if="c.tender?.procurementMethodDetails"
+                        class="ctable__method"
+                      >{{ c.tender.procurementMethodDetails }}</span>
+                      <span
+                        v-if="itemCount(c) > 1"
+                        class="ctable__method"
+                      >{{ t('contract.itemsCount', itemCount(c), { n: itemCount(c) }) }}</span>
+                    </span>
 
-                  <!-- What was actually bought. The title collapses a
+                    <!-- What was actually bought. The title collapses a
                        multi-line contract into one phrase; these are the
                        lines behind it. -->
-                  <ul
-                    v-if="itemPreview(c).rows.length"
-                    class="items"
-                  >
-                    <li
-                      v-for="(it, i) in itemPreview(c).rows"
-                      :key="i"
-                      class="items__row"
+                    <ul
+                      v-if="itemPreview(c).rows.length"
+                      class="items"
                     >
-                      <span class="items__desc">{{ it.description || '—' }}</span>
-                      <span
-                        v-if="it.quantity"
-                        class="items__qty"
-                      >{{ qtyLabel(it) }}</span>
-                      <MoneyAmount
-                        v-if="it.unitAmount !== null"
-                        :amount="it.unitAmount"
-                        :currency="it.currency"
-                        :rule="false"
-                        size="sm"
-                        compact
-                      />
-                    </li>
-                    <!-- Opens the full item list in place. Sending the
+                      <li
+                        v-for="(it, i) in itemPreview(c).rows"
+                        :key="i"
+                        class="items__row"
+                      >
+                        <span class="items__desc">{{ it.description || '—' }}</span>
+                        <span
+                          v-if="it.quantity"
+                          class="items__qty"
+                        >{{ qtyLabel(it) }}</span>
+                        <MoneyAmount
+                          v-if="it.unitAmount !== null"
+                          :amount="it.unitAmount"
+                          :currency="it.currency"
+                          :rule="false"
+                          size="sm"
+                          compact
+                        />
+                      </li>
+                      <!-- Opens the full item list in place. Sending the
                          reader to the detail page to answer "what else is
                          in this contract?" loses their filters and their
                          scroll position for one question. -->
-                    <li
-                      v-if="itemPreview(c).more"
-                      class="items__more"
-                    >
-                      <button
-                        type="button"
-                        @click="openItems(c)"
+                      <li
+                        v-if="itemPreview(c).more"
+                        class="items__more"
                       >
-                        {{ t('contracts.moreItems', itemPreview(c).more, { n: itemPreview(c).more }) }}
-                      </button>
-                    </li>
-                  </ul>
-                </td>
-                <td
-                  class="ctable__c-buyer"
-                  :data-label="t('contracts.table.buyer')"
-                >
-                  <span class="u-clamp-2">{{ c.buyer?.name || '—' }}</span>
-                </td>
-                <td
-                  class="ctable__c-sup"
-                  :data-label="t('contracts.table.supplier')"
-                >
-                  <span class="u-clamp-2">{{ contractSuppliers(c)[0]?.name || '—' }}</span>
-                </td>
-                <td
-                  class="ctable__c-date u-mono"
-                  :data-label="t('contracts.table.date')"
-                >
-                  {{ formatDate(contractDate(c)) }}
-                </td>
-                <td
-                  class="ctable__c-amt"
-                  :data-label="t('contracts.table.amount')"
-                  :title="!isMoneyStage(c) ? t('contract.noMoneyStage') : undefined"
-                >
-                  <MoneyAmount
-                    :amount="contractAmount(c)"
-                    :currency="contractCurrency(c)"
-                    compact
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- ===== Pagination ===== -->
-        <DataPager
-          v-if="contracts.length && totalPages > 1"
-          v-model:page="page"
-          :total-pages="totalPages"
-          class="pager--foot"
-          scroll-target-id="c-results-top"
-        />
+                        <button
+                          type="button"
+                          @click="openItems(c)"
+                        >
+                          {{ t('contracts.moreItems', itemPreview(c).more, { n: itemPreview(c).more }) }}
+                        </button>
+                      </li>
+                    </ul>
+                  </td>
+                  <td
+                    class="ctable__c-buyer"
+                    :data-label="t('contracts.table.buyer')"
+                  >
+                    <span class="u-clamp-2">{{ c.buyer?.name || '—' }}</span>
+                  </td>
+                  <td
+                    class="ctable__c-sup"
+                    :data-label="t('contracts.table.supplier')"
+                  >
+                    <span class="u-clamp-2">{{ contractSuppliers(c)[0]?.name || '—' }}</span>
+                  </td>
+                  <td
+                    class="ctable__c-date u-mono"
+                    :data-label="t('contracts.table.date')"
+                  >
+                    {{ formatDate(contractDate(c)) }}
+                  </td>
+                  <td
+                    class="ctable__c-amt"
+                    :data-label="t('contracts.table.amount')"
+                    :title="!isMoneyStage(c) ? t('contract.noMoneyStage') : undefined"
+                  >
+                    <MoneyAmount
+                      :amount="contractAmount(c)"
+                      :currency="contractCurrency(c)"
+                      compact
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </PaginatedList>
       </div>
     </div>
 
@@ -998,8 +982,6 @@ useSeo(() => ({
   justify-content: space-between;
   gap: var(--s-4);
   margin: var(--s-5) 0 var(--s-3);
-  /* When the pager scrolls this back to the top, clear the sticky header. */
-  scroll-margin-top: calc(var(--header-h) + var(--s-3));
 }
 
 .toolbar__count {
@@ -1351,9 +1333,6 @@ useSeo(() => ({
   0% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-
-/* ---- Pager ---- (markup + styles live in <DataPager>) */
-.pager--foot { margin-top: var(--s-5); }
 
 /* ---- Rail sheet (mobile) ---- */
 .railsheet {

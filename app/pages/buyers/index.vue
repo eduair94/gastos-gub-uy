@@ -137,10 +137,7 @@ useSeo(() => ({
     </header>
 
     <!-- ===== Toolbar ===== -->
-    <div
-      id="b-results-top"
-      class="toolbar"
-    >
+    <div class="toolbar">
       <form
         class="finder"
         role="search"
@@ -188,165 +185,152 @@ useSeo(() => ({
       </label>
     </div>
 
-    <DataPager
-      v-if="rows.length && totalPages > 1"
+    <!-- ===== States ===== -->
+    <PaginatedList
       :page="currentPage"
       :total-pages="totalPages"
-      sticky
-      scroll-target-id="b-results-top"
       @update:page="page = $event"
-    />
-
-    <!-- ===== States ===== -->
-    <div
-      v-if="error"
-      class="state"
-    >
-      <h2 class="state__t">
-        {{ t('errors.generic.title') }}
-      </h2>
-      <p class="state__b">
-        {{ t('errors.generic.body') }}
-      </p>
-      <button
-        class="state__a"
-        type="button"
-        @click="() => refreshNuxtData()"
-      >
-        {{ t('errors.generic.action') }}
-      </button>
-    </div>
-
-    <div
-      v-else-if="pending && !all.length"
-      class="skeleton"
     >
       <div
-        v-for="i in 10"
-        :key="i"
-        class="skeleton__row"
-      />
-    </div>
-
-    <div
-      v-else-if="!rows.length"
-      class="state"
-    >
-      <h2 class="state__t">
-        {{ t('buyers.empty.title') }}
-      </h2>
-      <p class="state__b">
-        {{ t('buyers.empty.body') }}
-      </p>
-      <button
-        v-if="term"
-        class="state__a"
-        type="button"
-        @click="clearSearch"
+        v-if="error"
+        class="state"
       >
-        {{ t('buyers.empty.action') }}
-      </button>
-    </div>
+        <h2 class="state__t">
+          {{ t('errors.generic.title') }}
+        </h2>
+        <p class="state__b">
+          {{ t('errors.generic.body') }}
+        </p>
+        <button
+          class="state__a"
+          type="button"
+          @click="() => refreshNuxtData()"
+        >
+          {{ t('errors.generic.action') }}
+        </button>
+      </div>
 
-    <!-- ===== Table ===== -->
-    <div v-else>
-      <table class="ctable dtable">
-        <thead>
-          <tr>
-            <th scope="col">
-              {{ t('buyers.table.name') }}
-            </th>
-            <th
-              scope="col"
-              class="ctable__c-num"
-            >
-              {{ t('buyers.table.contracts') }}
-            </th>
-            <th
-              scope="col"
-              class="ctable__c-num"
-            >
-              {{ t('buyers.table.suppliers') }}
-            </th>
-            <th
-              scope="col"
-              class="ctable__c-amt"
-            >
-              {{ t('buyers.table.total') }}
-            </th>
-            <th
-              scope="col"
-              class="ctable__c-amt"
-            >
-              {{ t('buyers.table.avg') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="b in rows"
-            :key="b.buyerId"
-            class="ctable__row"
-          >
-            <td
-              class="ctable__obj"
-              data-primary
-            >
-              <NuxtLink
-                :to="localePath(`/buyers/${encodeURIComponent(b.buyerId)}`)"
-                class="ctable__link"
+      <div
+        v-else-if="pending && !all.length"
+        class="skeleton"
+      >
+        <div
+          v-for="i in 10"
+          :key="i"
+          class="skeleton__row"
+        />
+      </div>
+
+      <div
+        v-else-if="!rows.length"
+        class="state"
+      >
+        <h2 class="state__t">
+          {{ t('buyers.empty.title') }}
+        </h2>
+        <p class="state__b">
+          {{ t('buyers.empty.body') }}
+        </p>
+        <button
+          v-if="term"
+          class="state__a"
+          type="button"
+          @click="clearSearch"
+        >
+          {{ t('buyers.empty.action') }}
+        </button>
+      </div>
+
+      <!-- ===== Table ===== -->
+      <div v-else>
+        <table class="ctable dtable">
+          <thead>
+            <tr>
+              <th scope="col">
+                {{ t('buyers.table.name') }}
+              </th>
+              <th
+                scope="col"
+                class="ctable__c-num"
               >
-                {{ b.name }}
-              </NuxtLink>
-              <span class="ctable__meta">
-                {{ b.yearCount }} {{ t('buyers.table.years').toLowerCase() }}
-              </span>
-            </td>
-            <td
-              class="ctable__c-num u-mono"
-              :data-label="t('buyers.table.contracts')"
+                {{ t('buyers.table.contracts') }}
+              </th>
+              <th
+                scope="col"
+                class="ctable__c-num"
+              >
+                {{ t('buyers.table.suppliers') }}
+              </th>
+              <th
+                scope="col"
+                class="ctable__c-amt"
+              >
+                {{ t('buyers.table.total') }}
+              </th>
+              <th
+                scope="col"
+                class="ctable__c-amt"
+              >
+                {{ t('buyers.table.avg') }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="b in rows"
+              :key="b.buyerId"
+              class="ctable__row"
             >
-              {{ formatNumber(b.totalContracts) }}
-            </td>
-            <td
-              class="ctable__c-num u-mono"
-              :data-label="t('buyers.table.suppliers')"
-            >
-              {{ formatNumber(b.supplierCount) }}
-            </td>
-            <td
-              class="ctable__c-amt"
-              :data-label="t('buyers.table.total')"
-            >
-              <MoneyAmount
-                :amount="b.totalSpending"
-                compact
-              />
-            </td>
-            <td
-              class="ctable__c-amt"
-              :data-label="t('buyers.table.avg')"
-            >
-              <MoneyAmount
-                :amount="b.avgContractValue"
-                compact
-                size="sm"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- ===== Pagination ===== -->
-    <DataPager
-      v-if="rows.length && totalPages > 1"
-      :page="currentPage"
-      :total-pages="totalPages"
-      class="pager--foot"
-      scroll-target-id="b-results-top"
-      @update:page="page = $event"
-    />
+              <td
+                class="ctable__obj"
+                data-primary
+              >
+                <NuxtLink
+                  :to="localePath(`/buyers/${encodeURIComponent(b.buyerId)}`)"
+                  class="ctable__link"
+                >
+                  {{ b.name }}
+                </NuxtLink>
+                <span class="ctable__meta">
+                  {{ b.yearCount }} {{ t('buyers.table.years').toLowerCase() }}
+                </span>
+              </td>
+              <td
+                class="ctable__c-num u-mono"
+                :data-label="t('buyers.table.contracts')"
+              >
+                {{ formatNumber(b.totalContracts) }}
+              </td>
+              <td
+                class="ctable__c-num u-mono"
+                :data-label="t('buyers.table.suppliers')"
+              >
+                {{ formatNumber(b.supplierCount) }}
+              </td>
+              <td
+                class="ctable__c-amt"
+                :data-label="t('buyers.table.total')"
+              >
+                <MoneyAmount
+                  :amount="b.totalSpending"
+                  compact
+                />
+              </td>
+              <td
+                class="ctable__c-amt"
+                :data-label="t('buyers.table.avg')"
+              >
+                <MoneyAmount
+                  :amount="b.avgContractValue"
+                  compact
+                  size="sm"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </PaginatedList>
   </div>
 </template>
 
@@ -374,8 +358,6 @@ useSeo(() => ({
   align-items: center;
   gap: var(--s-4);
   margin-bottom: var(--s-4);
-  /* When the pager scrolls this back to the top, clear the sticky header. */
-  scroll-margin-top: calc(var(--header-h) + var(--s-3));
 }
 
 .finder {
@@ -541,9 +523,6 @@ useSeo(() => ({
   0% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
-
-/* ---- Pager ---- (markup + styles live in <DataPager>) */
-.pager--foot { margin-top: var(--s-5); }
 
 /* ---- Responsive ---- */
 @media (max-width: 760px) {
