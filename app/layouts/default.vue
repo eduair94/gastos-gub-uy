@@ -30,6 +30,8 @@ const nav = computed(() => [
   { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
   { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
   { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
+  { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
+  { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
   { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan' },
   { key: 'llamados', to: localePath('/llamados'), icon: 'mdi-bullhorn-outline' },
   // The API reference is a Nitro server route (server/routes/docs.get.ts), not a Nuxt page, so it
@@ -391,6 +393,11 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                 prepend-icon="mdi-cog-outline"
                 :title="t('accountPage.title')"
               />
+              <v-list-item
+                :to="localePath('/app/api-keys')"
+                prepend-icon="mdi-key-variant"
+                :title="t('apiKeys.title')"
+              />
               <v-divider />
               <v-list-item
                 prepend-icon="mdi-logout"
@@ -532,6 +539,13 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             @click="drawer = false"
           >
             {{ t('accountPage.title') }}
+          </NuxtLink>
+          <NuxtLink
+            :to="localePath('/app/api-keys')"
+            class="drawer__sub"
+            @click="drawer = false"
+          >
+            {{ t('apiKeys.title') }}
           </NuxtLink>
           <button
             type="button"

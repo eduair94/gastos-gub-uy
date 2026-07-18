@@ -11,6 +11,8 @@
     "suppliers": "Suppliers",
     "buyers": "Agencies",
     "anomalies": "Flags",
+    "intendencias": "Intendencias",
+    "organismos": "Public bodies",
     "investigaciones": "Investigations",
     "llamados": "Open calls",
     "more": "More",
@@ -146,7 +148,9 @@
     "moreItems": "+{n} more item | +{n} more items",
     "histogramCount": "Contracts per year",
     "histogramValue": "Amount per year",
-    "needFilter": "Add a filter (year, agency, supplier or amount) to see totals."
+    "needFilter": "Add a filter (year, agency, supplier or amount) to see totals.",
+    "itemFilter": "Filter items…",
+    "itemFilterNoMatch": "No item matches."
   },
   "filters": {
     "title": "Filters",
@@ -177,6 +181,10 @@
     "categoryHelp": "Only purchases of this article. This is the population the price comparisons use.",
     "categoryCode": "Catalogue code",
     "categoryCodeHelp": "Only purchases with this catalogue code — exactly the reference the price was compared against.",
+    "product": "Product / catalogue code",
+    "productPlaceholder": "Search by name or code…",
+    "productHelp": "Filter contracts by one or more catalogue articles. Applied by exact code.",
+    "productCount": "{n} contracts",
     "hasAmount": "Only with a reported amount",
     "hasAmountHelp": "Some official records publish no amount.",
     "presets": "Common searches",
@@ -218,6 +226,13 @@
       "title": "AI review of the price flag"
     },
     "itemsHelp": "Awarded items with quantity and unit price.",
+    "itemsFilter": {
+      "placeholder": "Filter by item or code…",
+      "onlyAlerts": "Flagged only",
+      "shown": "{shown} of {total}",
+      "noMatch": "No item matches the filter.",
+      "alert": "Price flag"
+    },
     "noItems": "The official record lists no items for this contract.",
     "noDocuments": "No documents are published for this contract.",
     "timeline": {
@@ -624,6 +639,14 @@
     "title": "Providers behind the unexplained flags",
     "lead": "We cross-reference the overprice flags the AI could not justify against the providers that receive them, to see whether one provider or one buyer concentrates many anomalies. Not an accusation — a place to start looking.",
     "seeFlags": "See the unexplained flags",
+    "updated": "Updated",
+    "autoNote": "recomputed every 24 h",
+    "refresh": "Refresh",
+    "ago": {
+      "minutes": "{n} min ago",
+      "hours": "{n} h ago",
+      "days": "{n} d ago"
+    },
     "method": {
       "title": "How it's built",
       "body": "A flag is 'unexplained' when the unit price paid extremely exceeds the usual range for the same item and a second AI review (Gemini) found no legitimate reason. Here we group them by provider and by buyer. Recomputed every 24 hours.",
@@ -688,7 +711,105 @@
       "body": "Try lowering the minimum flags or clearing the category filter."
     }
   },
+  "intend": {
+    "title": "The Intendencias, per head",
+    "lead": "How much each departmental government spends on public procurement, and how much that is per resident. The per-person figure evens out Montevideo's size and shows who spends well above or below the national line.",
+    "seeInvestigation": "Read the investigation: Intendencia de Montevideo",
+    "method": {
+      "title": "How it's calculated",
+      "body": "We sum the purchases each Intendencia publishes on Compras Estatales (amount in pesos, normalised). Per-capita spend divides that total by the department's population.",
+      "percapita": "Population: {source}, {year} Census.",
+      "cap": "{n} records with impossible amounts (source quantity errors) are excluded so they don't distort the sums; the rest is exactly as the State publishes it.",
+      "coverage": "Mind the coverage: some Intendencias publish little or nothing on Compras Estatales, so a low per-capita figure can mean under-reporting, not thrift. Lavalleja and Soriano have no priced purchases and don't appear."
+    },
+    "kpi": {
+      "total": "Spend of the 19 Intendencias",
+      "perCapita": "Average per resident",
+      "departments": "Departments with data",
+      "mvdShare": "Montevideo's share"
+    },
+    "sort": {
+      "label": "Sort by",
+      "perCapita": "Spend per resident",
+      "total": "Total spend",
+      "contracts": "Number of contracts"
+    },
+    "col": {
+      "dept": "Department",
+      "spend": "Spend",
+      "perCapita": "Per resident",
+      "contracts": "Contracts",
+      "share": "Of total",
+      "years": "Years"
+    },
+    "hab": "{n} pop.",
+    "ratio": "{x}× the average",
+    "updated": "Updated {date}",
+    "empty": {
+      "title": "No spending data",
+      "body": "There are no priced purchases for the Intendencias right now."
+    },
+    "panels": {
+      "title": "How the spending is distributed",
+      "note": "Everything below is computed over published purchases; the explorer has the detail for each agency."
+    },
+    "panel": {
+      "perCapita": "Spend per resident",
+      "perCapitaSub": "Pesos spent per person in each department. Montevideo in blue.",
+      "total": "Total spend",
+      "totalSub": "The absolute amount, where Montevideo dominates by size.",
+      "trend": "Spend by year",
+      "trendSub": "Purchases of all Intendencias, by year.",
+      "distribution": "Far from the average",
+      "distributionSub": "Departments that deviate most from the national average of {line} per resident.",
+      "above": "Well above",
+      "below": "Well below"
+    }
+  },
+  "organismos": {
+    "title": "State spending, by public body",
+    "lead": "Public procurement grouped by type of body: departmental governments, ministries, health, state enterprises and education. Who spends most and how spending evolves.",
+    "toIntendencias": "See the per-resident breakdown of the Intendencias",
+    "method": {
+      "title": "How it's calculated",
+      "body": "We sum the purchases published on Compras Estatales (amount in pesos, normalised), grouped by body. Ministries aggregate all their executing units; enterprises and hospitals are shown individually.",
+      "cap": "{n} records with impossible amounts (source quantity errors) are excluded; the rest is exactly as the State publishes it.",
+      "refresh": "The data is recalculated automatically once a month.",
+      "percapita": "Per-resident spend only applies to the Intendencias, which have a clear population behind them. For the rest, absolute spend is compared."
+    },
+    "kpi": {
+      "total": "Group spend",
+      "members": "Bodies",
+      "top": "Biggest spender",
+      "span": "Period"
+    },
+    "col": {
+      "member": "Body",
+      "spend": "Spend",
+      "contracts": "Contracts",
+      "share": "Of group"
+    },
+    "panel": {
+      "ranking": "Who spends most",
+      "rankingSub": "Procurement spend per body within the group.",
+      "trend": "Spend by year",
+      "trendSub": "Group purchases, by year."
+    },
+    "updated": "Updated {date}",
+    "empty": {
+      "title": "No data yet",
+      "body": "The monthly per-body computation hasn't run yet."
+    }
+  },
   "seo": {
+    "organismos": {
+      "title": "Uruguay's state spending by public body",
+      "description": "Public procurement grouped by type of body: departmental governments, ministries, health, state enterprises and education. Who spends most, with official Compras Estatales data."
+    },
+    "intendencias": {
+      "title": "Uruguay's Intendencias spending, per resident",
+      "description": "How much each departmental government spends on public procurement, and how much per resident. All 19 departments compared with official Compras Estatales data."
+    },
     "home": {
       "title": "Con la tuya, contribuyente — Uruguay's public procurement",
       "description": "Explore {count} Uruguayan state contracts: who buys, who sells, and how much is paid. Official open data, searchable and comparable."
@@ -906,6 +1027,37 @@
     "save": "Save changes",
     "saved": "Changes saved",
     "logout": "Sign out"
+  },
+  "apiKeys": {
+    "title": "API keys",
+    "lead": "Keys to use the API from Zapier, MCP or other integrations.",
+    "intro": "Create a key, store it somewhere safe, and send it in the x-api-key header or as Authorization: Bearer. Read keys query data; write keys can also manage your alerts and saved calls.",
+    "docsLink": "View the API documentation",
+    "create": "Create API key",
+    "createTitle": "New API key",
+    "labelField": "Label",
+    "labelHint": "A name to recognise it (e.g. \"Zapier production\").",
+    "scopes": "Permissions",
+    "scopeRead": "Read — query data",
+    "scopeWrite": "Write — manage alerts and saved calls",
+    "cancel": "Cancel",
+    "confirmCreate": "Create",
+    "createdTitle": "Save your API key",
+    "createdWarning": "Copy it now: for security it won't be shown again.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "done": "Done",
+    "colLabel": "Label",
+    "colPrefix": "Prefix",
+    "colScopes": "Permissions",
+    "colCreated": "Created",
+    "colLastUsed": "Last used",
+    "colActions": "",
+    "never": "Never",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke this API key? Integrations using it will stop working.",
+    "empty": "You don't have any API keys yet.",
+    "createError": "We couldn't create the key. Please try again."
   },
   "dashboard": {
     "title": "Dashboard",

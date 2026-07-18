@@ -11,6 +11,8 @@
     "suppliers": "Proveedores",
     "buyers": "Organismos",
     "anomalies": "Alertas",
+    "intendencias": "Intendencias",
+    "organismos": "Organismos",
     "investigaciones": "Investigaciones",
     "llamados": "Llamados",
     "more": "Más",
@@ -146,7 +148,9 @@
     "moreItems": "+{n} artículo más | +{n} artículos más",
     "histogramCount": "Contratos por año",
     "histogramValue": "Monto por año",
-    "needFilter": "Agregá un filtro (año, organismo, proveedor o monto) para ver totales."
+    "needFilter": "Agregá un filtro (año, organismo, proveedor o monto) para ver totales.",
+    "itemFilter": "Filtrar artículos…",
+    "itemFilterNoMatch": "Ningún artículo coincide."
   },
   "filters": {
     "title": "Filtros",
@@ -177,6 +181,10 @@
     "categoryHelp": "Solo compras de este artículo. Es la referencia que usan las comparaciones de precio.",
     "categoryCode": "Código de catálogo",
     "categoryCodeHelp": "Solo compras con este código de artículo. Es exactamente la referencia contra la que se comparó el precio.",
+    "product": "Producto / código de catálogo",
+    "productPlaceholder": "Buscá por nombre o código…",
+    "productHelp": "Filtrá los contratos por uno o más artículos del catálogo. Se aplica por código exacto.",
+    "productCount": "{n} contratos",
     "hasAmount": "Solo con monto informado",
     "hasAmountHelp": "Algunos registros oficiales no publican importe.",
     "presets": "Búsquedas frecuentes",
@@ -218,6 +226,13 @@
       "title": "Análisis IA de la alerta de precio"
     },
     "itemsHelp": "Artículos adjudicados con su cantidad y precio unitario.",
+    "itemsFilter": {
+      "placeholder": "Filtrar por artículo o código…",
+      "onlyAlerts": "Solo con alerta",
+      "shown": "{shown} de {total}",
+      "noMatch": "Ningún artículo coincide con el filtro.",
+      "alert": "Alerta de precio"
+    },
     "noItems": "El registro oficial no detalla artículos para este contrato.",
     "noDocuments": "No hay documentos publicados para este contrato.",
     "timeline": {
@@ -624,6 +639,14 @@
     "title": "Proveedores detrás de las alertas sin explicación",
     "lead": "Cruzamos las alertas de sobreprecio que la IA no pudo justificar contra los proveedores que las reciben, para ver si un proveedor o un comprador concentra muchas anomalías. No es una acusación: es por dónde empezar a mirar.",
     "seeFlags": "Ver las alertas sin explicación",
+    "updated": "Actualizado",
+    "autoNote": "se recalcula cada 24 h",
+    "refresh": "Actualizar",
+    "ago": {
+      "minutes": "hace {n} min",
+      "hours": "hace {n} h",
+      "days": "hace {n} d"
+    },
     "method": {
       "title": "Cómo se arma",
       "body": "Una alerta queda «sin explicación» cuando el precio unitario pagado supera de forma extrema el rango habitual del mismo artículo y una segunda revisión con IA (Gemini) no encontró una razón legítima. Acá las agrupamos por proveedor y por comprador. Se recalcula cada 24 horas.",
@@ -688,7 +711,105 @@
       "body": "Probá bajar el mínimo de alertas o quitar el filtro de rubro."
     }
   },
+  "intend": {
+    "title": "Las Intendencias, peso por habitante",
+    "lead": "Cuánto gasta cada gobierno departamental en compras públicas y cuánto es por habitante. La cifra por persona empareja el tamaño de Montevideo y muestra quién gasta muy por encima o por debajo de la media.",
+    "seeInvestigation": "Ver la investigación: Intendencia de Montevideo",
+    "method": {
+      "title": "Cómo se calcula",
+      "body": "Sumamos las compras que cada Intendencia publica en Compras Estatales (importe en pesos, normalizado). El gasto por habitante divide ese total entre la población del departamento.",
+      "percapita": "Población: {source}, Censo {year}.",
+      "cap": "Se excluyen {n} registros con montos imposibles (errores de cantidad en la fuente) para que no distorsionen las sumas; el resto queda tal cual lo publica el Estado.",
+      "coverage": "Ojo con la cobertura: algunas Intendencias publican poco o nada en Compras Estatales, así que un gasto por habitante bajo puede significar subregistro, no austeridad. Lavalleja y Soriano no tienen compras con precio y no aparecen."
+    },
+    "kpi": {
+      "total": "Gasto de las 19 Intendencias",
+      "perCapita": "Media por habitante",
+      "departments": "Departamentos con datos",
+      "mvdShare": "Peso de Montevideo"
+    },
+    "sort": {
+      "label": "Ordenar por",
+      "perCapita": "Gasto por habitante",
+      "total": "Gasto total",
+      "contracts": "Cantidad de contratos"
+    },
+    "col": {
+      "dept": "Departamento",
+      "spend": "Gasto",
+      "perCapita": "Por habitante",
+      "contracts": "Contratos",
+      "share": "Del total",
+      "years": "Años"
+    },
+    "hab": "{n} hab.",
+    "ratio": "{x}× la media",
+    "updated": "Actualizado el {date}",
+    "empty": {
+      "title": "Sin datos de gasto",
+      "body": "No hay compras con precio para las Intendencias en este momento."
+    },
+    "panels": {
+      "title": "La distribución del gasto",
+      "note": "Todo lo de abajo se calcula sobre las compras publicadas; el explorador tiene el detalle de cada organismo."
+    },
+    "panel": {
+      "perCapita": "Gasto por habitante",
+      "perCapitaSub": "Pesos gastados por persona en cada departamento. Montevideo en celeste.",
+      "total": "Gasto total",
+      "totalSub": "El monto absoluto, donde Montevideo domina por tamaño.",
+      "trend": "Gasto por año",
+      "trendSub": "Compras de todas las Intendencias, por año.",
+      "distribution": "Lejos de la media",
+      "distributionSub": "Departamentos que más se apartan de la media nacional de {line} por habitante.",
+      "above": "Muy por encima",
+      "below": "Muy por debajo"
+    }
+  },
+  "organismos": {
+    "title": "El gasto del Estado, por organismo",
+    "lead": "Compras públicas agrupadas por tipo de organismo: intendencias, ministerios, salud, entes y educación. Quién gasta más y en qué evoluciona el gasto.",
+    "toIntendencias": "Ver el detalle por habitante de las Intendencias",
+    "method": {
+      "title": "Cómo se calcula",
+      "body": "Sumamos las compras publicadas en Compras Estatales (importe en pesos, normalizado) agrupando por organismo. Los ministerios agregan todas sus unidades ejecutoras; los entes y hospitales se muestran individualmente.",
+      "cap": "Se excluyen {n} registros con montos imposibles (errores de cantidad en la fuente); el resto queda tal cual lo publica el Estado.",
+      "refresh": "Los datos se recalculan automáticamente una vez por mes.",
+      "percapita": "El gasto por habitante solo aplica a las Intendencias, que tienen una población clara detrás. Para el resto, se compara el gasto absoluto."
+    },
+    "kpi": {
+      "total": "Gasto del grupo",
+      "members": "Organismos",
+      "top": "El que más gasta",
+      "span": "Período"
+    },
+    "col": {
+      "member": "Organismo",
+      "spend": "Gasto",
+      "contracts": "Contratos",
+      "share": "Del grupo"
+    },
+    "panel": {
+      "ranking": "Quién gasta más",
+      "rankingSub": "Gasto en compras por organismo dentro del grupo.",
+      "trend": "Gasto por año",
+      "trendSub": "Compras del grupo, por año."
+    },
+    "updated": "Actualizado el {date}",
+    "empty": {
+      "title": "Sin datos todavía",
+      "body": "El cálculo mensual por organismo aún no se ejecutó."
+    }
+  },
   "seo": {
+    "organismos": {
+      "title": "El gasto del Estado uruguayo por organismo",
+      "description": "Compras públicas agrupadas por tipo de organismo: intendencias, ministerios, salud, entes y educación. Quién gasta más, con datos oficiales de Compras Estatales."
+    },
+    "intendencias": {
+      "title": "Gasto de las Intendencias del Uruguay, por habitante",
+      "description": "Cuánto gasta cada gobierno departamental en compras públicas y cuánto es por habitante. Comparación de los 19 departamentos con datos oficiales de Compras Estatales."
+    },
     "home": {
       "title": "Con la tuya, contribuyente — Compras públicas del Uruguay",
       "description": "Explorá {count} contratos del Estado uruguayo: quién compra, quién vende y cuánto se paga. Datos abiertos oficiales, buscables y comparables."
@@ -906,6 +1027,37 @@
     "save": "Guardar cambios",
     "saved": "Cambios guardados",
     "logout": "Cerrar sesión"
+  },
+  "apiKeys": {
+    "title": "API keys",
+    "lead": "Claves para usar la API desde Zapier, MCP u otras integraciones.",
+    "intro": "Creá una clave, guardala en un lugar seguro y enviala en el header x-api-key o como Authorization: Bearer. Las claves de lectura consultan datos; las de escritura además gestionan tus alertas y guardados.",
+    "docsLink": "Ver la documentación de la API",
+    "create": "Crear API key",
+    "createTitle": "Nueva API key",
+    "labelField": "Etiqueta",
+    "labelHint": "Un nombre para reconocerla (ej. \"Zapier producción\").",
+    "scopes": "Permisos",
+    "scopeRead": "Lectura — consultar datos",
+    "scopeWrite": "Escritura — gestionar alertas y guardados",
+    "cancel": "Cancelar",
+    "confirmCreate": "Crear",
+    "createdTitle": "Guardá tu API key",
+    "createdWarning": "Copiala ahora: por seguridad no se vuelve a mostrar.",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "done": "Listo",
+    "colLabel": "Etiqueta",
+    "colPrefix": "Prefijo",
+    "colScopes": "Permisos",
+    "colCreated": "Creada",
+    "colLastUsed": "Último uso",
+    "colActions": "",
+    "never": "Nunca",
+    "revoke": "Revocar",
+    "revokeConfirm": "¿Revocar esta API key? Las integraciones que la usen dejarán de funcionar.",
+    "empty": "Todavía no tenés ninguna API key.",
+    "createError": "No pudimos crear la clave. Intentá de nuevo."
   },
   "dashboard": {
     "title": "Panel",

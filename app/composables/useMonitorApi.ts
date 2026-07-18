@@ -62,5 +62,11 @@ export function useMonitorApi() {
     resolve: (tokens: string[]) => $fetch<{ data: CatItem[] }>('/api/categories', { params: { resolve: tokens.join(',') } }),
   }
 
-  return { watches, openCalls, savedCalls, calendar, account, categories }
+  const apiKeys = {
+    list: () => $fetch<{ data: Array<{ _id: string, label: string, prefix: string, scopes: string[], lastUsedAt: string | null, createdAt: string }> }>('/api/account/api-keys'),
+    create: (body: { label: string, scopes?: string[] }) => $fetch<{ data: { id: string, label: string, prefix: string, scopes: string[], token: string } }>('/api/account/api-keys', { method: 'POST', body }),
+    revoke: (id: string) => $fetch<{ success: boolean }>(`/api/account/api-keys/${id}`, { method: 'DELETE' }),
+  }
+
+  return { watches, openCalls, savedCalls, calendar, account, categories, apiKeys }
 }
