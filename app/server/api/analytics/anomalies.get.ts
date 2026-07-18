@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
       ai,
       releaseId,
       minZ,
+      currency,
       sortBy = 'createdAt',
       sortOrder = 'desc',
     } = query
@@ -28,6 +29,15 @@ export default defineEventHandler(async (event) => {
 
     if (severity) {
       filter.severity = severity
+    }
+
+    // Currency filter. Prices in different currencies are NEVER comparable by
+    // magnitude (a USD unit price and a UYU one for the same item differ ~40×),
+    // and we hold no historical FX rate to convert them safely. The detector
+    // already baselines per-currency, so a flag's z-score is sound; this lets
+    // the reader keep the LIST and the amount sort within one currency too.
+    if (typeof currency === 'string' && currency) {
+      filter.currency = currency.toUpperCase()
     }
 
     // Anomalies for one contract (release) — used by the contract detail page to show the AI review.

@@ -14,6 +14,11 @@ const ai = ref((route.query.ai as string) ?? '')
 // the detector's trailing 24-month window anyway).
 const sort = ref((route.query.sort as string) ?? 'divergence')
 const minZ = ref(Number(route.query.minZ) || 0)
+// Currency of the prices shown. USD and UYU amounts are never comparable by
+// magnitude and we hold no historical FX rate, so keep one currency at a time
+// when the reader cares about the amounts. Empty = all (each row is still
+// labelled, and divergence is per-currency so mixing is safe to read).
+const currency = ref((route.query.currency as string) ?? '')
 const page = ref(Number(route.query.page ?? 1))
 
 const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
@@ -24,18 +29,21 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
 }
 /** Minimum robust deviation: any, or ≥ N× the baseline spread. */
 const MINZ_STEPS = [0, 10, 25, 50] as const
+/** The currencies worth a filter (EUR has a single flag). */
+const CURRENCIES = ['UYU', 'USD'] as const
 
 // A page number from a different filter/sort set is meaningless.
-watch([severity, ai, sort, minZ], () => {
+watch([severity, ai, sort, minZ, currency], () => {
   page.value = 1
 })
 
-watch([severity, ai, sort, minZ, page], () => {
+watch([severity, ai, sort, minZ, currency, page], () => {
   const q: Record<string, string> = {}
   if (severity.value) q.severity = severity.value
   if (ai.value) q.ai = ai.value
   if (sort.value !== 'divergence') q.sort = sort.value
   if (minZ.value > 0) q.minZ = String(minZ.value)
+  if (currency.value) q.currency = currency.value
   if (page.value > 1) q.page = String(page.value)
   router.replace({ query: q })
 })
@@ -48,6 +56,7 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/anomal
     ...(severity.value ? { severity: severity.value } : {}),
     ...(ai.value ? { ai: ai.value } : {}),
     ...(minZ.value > 0 ? { minZ: minZ.value } : {}),
+    ...(currency.value ? { currency: currency.value } : {}),
   })),
 })
 
@@ -326,6 +335,32 @@ useSeo(() => ({
           @click="minZ = z"
         >
           {{ z === 0 ? t('anomalies.minZ.any') : t('anomalies.minZ.step', { z }) }}
+        </button>
+      </div>
+
+      <div
+        class="controls__cur"
+        role="group"
+        :aria-label="t('anomalies.currency.label')"
+      >
+        <span class="controls__l u-mono">{{ t('anomalies.currency.label') }}</span>
+        <button
+          class="chip chip--sm"
+          :class="{ 'chip--on': !currency }"
+          type="button"
+          @click="currency = ''"
+        >
+          {{ t('anomalies.currency.all') }}
+        </button>
+        <button
+          v-for="cx in CURRENCIES"
+          :key="cx"
+          class="chip chip--sm"
+          :class="{ 'chip--on': currency === cx }"
+          type="button"
+          @click="currency = cx"
+        >
+          {{ cx }}
         </button>
       </div>
     </div>
@@ -726,7 +761,8 @@ useSeo(() => ({
   cursor: pointer;
 }
 
-.controls__minz {
+.controls__minz,
+.controls__cur {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;

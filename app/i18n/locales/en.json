@@ -528,6 +528,10 @@
       "any": "Any",
       "step": "≥ ×{z}"
     },
+    "currency": {
+      "label": "Currency",
+      "all": "All"
+    },
     "seeUnexplained": "See the worst unexplained ones",
     "confidence": "Confidence",
     "empty": {
