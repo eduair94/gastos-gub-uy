@@ -19,6 +19,9 @@ const minZ = ref(Number(route.query.minZ) || 0)
 // when the reader cares about the amounts. Empty = all (each row is still
 // labelled, and divergence is per-currency so mixing is safe to read).
 const currency = ref((route.query.currency as string) ?? '')
+// Drill-down from the provider cross-reference: show only one provider's flags. Matches
+// metadata.supplierName exactly (anomalies carry the name, not the RUT). Clearable.
+const supplier = ref((route.query.supplier as string) ?? '')
 const page = ref(Number(route.query.page ?? 1))
 
 const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
@@ -33,17 +36,18 @@ const MINZ_STEPS = [0, 10, 25, 50] as const
 const CURRENCIES = ['UYU', 'USD'] as const
 
 // A page number from a different filter/sort set is meaningless.
-watch([severity, ai, sort, minZ, currency], () => {
+watch([severity, ai, sort, minZ, currency, supplier], () => {
   page.value = 1
 })
 
-watch([severity, ai, sort, minZ, currency, page], () => {
+watch([severity, ai, sort, minZ, currency, supplier, page], () => {
   const q: Record<string, string> = {}
   if (severity.value) q.severity = severity.value
   if (ai.value) q.ai = ai.value
   if (sort.value !== 'divergence') q.sort = sort.value
   if (minZ.value > 0) q.minZ = String(minZ.value)
   if (currency.value) q.currency = currency.value
+  if (supplier.value) q.supplier = supplier.value
   if (page.value > 1) q.page = String(page.value)
   router.replace({ query: q })
 })
@@ -57,6 +61,7 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/anomal
     ...(ai.value ? { ai: ai.value } : {}),
     ...(minZ.value > 0 ? { minZ: minZ.value } : {}),
     ...(currency.value ? { currency: currency.value } : {}),
+    ...(supplier.value ? { supplier: supplier.value } : {}),
   })),
 })
 
@@ -207,13 +212,37 @@ useSeo(() => ({
       <p class="u-lead">
         {{ t('anomalies.lead') }}
       </p>
-      <NuxtLink
-        :to="localePath('/analytics/unexplained')"
-        class="head__cta"
-      >
-        {{ t('anomalies.seeUnexplained') }} →
-      </NuxtLink>
+      <div class="head__ctas">
+        <NuxtLink
+          :to="localePath('/analytics/unexplained')"
+          class="head__cta"
+        >
+          {{ t('anomalies.seeUnexplained') }} →
+        </NuxtLink>
+        <NuxtLink
+          :to="localePath('/analytics/proveedores-anomalias')"
+          class="head__cta head__cta--alt"
+        >
+          {{ t('anomalies.seeProviders') }} →
+        </NuxtLink>
+      </div>
     </header>
+
+    <!-- Drill-down banner: the flags are scoped to one provider (from the cross-reference). -->
+    <div
+      v-if="supplier"
+      class="supbar"
+    >
+      <span class="supbar__l u-mono">{{ t('anomalies.supplierFilter') }}</span>
+      <strong class="supbar__n">{{ supplier }}</strong>
+      <button
+        class="supbar__x"
+        type="button"
+        @click="supplier = ''"
+      >
+        {{ t('common.clearAll') }} ✕
+      </button>
+    </div>
 
     <!-- The method, stated plainly. A flag that doesn't explain itself
          is just an accusation. -->
@@ -581,9 +610,15 @@ useSeo(() => ({
 
 .head h1 { margin: var(--s-2) 0 var(--s-3); }
 
+.head__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin-top: var(--s-3);
+}
+
 .head__cta {
   display: inline-block;
-  margin-top: var(--s-3);
   font-family: var(--font-mono);
   font-size: var(--t-sm);
   font-weight: 600;
@@ -591,7 +626,50 @@ useSeo(() => ({
   text-decoration: none;
 }
 
+.head__cta--alt { color: var(--celeste-deep); }
+
 .head__cta:hover { text-decoration: underline; }
+
+/* ---- Provider drill-down banner ---- */
+.supbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-3);
+  margin: var(--s-5) 0 0;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--celeste);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.supbar__l {
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.supbar__n {
+  font-size: var(--t-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.supbar__x {
+  flex: none;
+  padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  cursor: pointer;
+}
+
+.supbar__x:hover { color: var(--text); border-color: var(--text-muted); }
 
 /* ---- Method ---- */
 .method {

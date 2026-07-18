@@ -57,6 +57,10 @@ class CronServer {
   // SICE catalog import — independent (writes its own sice_catalog/sice_rubro).
   private catalogStatus: CronJobStatus;
   private isCatalogRunning: boolean = false;
+  // Provider × unexplained-anomaly cross-reference — independent (reads anomalies + supplier_patterns,
+  // writes its own provider_anomaly_stats/summary). Runs after the anomaly detector + AI triage.
+  private crossProviderStatus: CronJobStatus;
+  private isCrossProviderRunning: boolean = false;
 
   constructor() {
     this.app = express();
@@ -72,6 +76,7 @@ class CronServer {
     this.remindersStatus = freshStatus();
     this.digestStatus = freshStatus();
     this.catalogStatus = freshStatus();
+    this.crossProviderStatus = freshStatus();
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -315,6 +320,23 @@ class CronServer {
     };
     this.app.post("/cron/anomalies", triggerAnomalies);
     this.app.get("/cron/anomalies", triggerAnomalies);
+
+    // Provider × unexplained-anomaly cross-reference: status + manual trigger. Independent guard
+    // (does not touch releases), so it never consults busyWith().
+    this.app.get("/cron/cross-provider/status", (_req, res) => {
+      res.json({ ...this.crossProviderStatus, isRunning: this.isCrossProviderRunning });
+    });
+    const triggerCrossProvider = (_req: express.Request, res: express.Response): void => {
+      if (this.isCrossProviderRunning) {
+        res.status(409).json({ error: "Provider cross-reference already running", status: this.crossProviderStatus });
+        return;
+      }
+      this.logger.info("Manual provider cross-reference trigger initiated");
+      this.runCrossProviderJob().catch((error) => this.logger.error("Manual cross-provider trigger failed:", error));
+      res.json({ message: "Provider anomaly cross-reference triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/cross-provider", triggerCrossProvider);
+    this.app.get("/cron/cross-provider", triggerCrossProvider);
 
     // Monitor de Llamados: open-calls sync, reminders, digest — status + triggers
     this.app.get("/cron/open-calls/status", (_req, res) => {
@@ -620,6 +642,19 @@ class CronServer {
       { scheduled: true, timezone: "America/Montevideo" }
     );
     this.logger.info(`SICE catalog import scheduled with expression: ${catalogExpression} (Uruguay timezone)`);
+
+    // Provider × unexplained-anomaly cross-reference, daily at 06:00 — after the 04:15 detector +
+    // AI triage have written fresh aiVerdicts, so it groups the current unexplained set. Light job
+    // (reads a few hundred flags), independent of busyWith (writes its own collections).
+    const crossProviderExpression = "0 6 * * *";
+    cron.schedule(
+      crossProviderExpression,
+      async () => {
+        await this.runCrossProviderJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Provider anomaly cross-reference scheduled with expression: ${crossProviderExpression} (Uruguay timezone)`);
   }
 
   /**
@@ -810,6 +845,39 @@ class CronServer {
       this.logger.error("Anomaly detection failed:", errorMessage);
     } finally {
       this.isAnomalyRunning = false;
+    }
+  }
+
+  /**
+   * Provider × unexplained-anomaly cross-reference: group the flags the AI could not explain
+   * (aiVerdict.explainable = 'no') by provider and by buyer into provider_anomaly_stats/summary,
+   * which /analytics/proveedores-anomalias reads. Reads anomalies + supplier_patterns and writes its
+   * own collections, so it is independent of busyWith(); its own boolean serialises repeat runs.
+   */
+  private async runCrossProviderJob(): Promise<void> {
+    if (this.isCrossProviderRunning) {
+      this.logger.warn("Skipping provider cross-reference - already running");
+      return;
+    }
+    this.isCrossProviderRunning = true;
+    this.crossProviderStatus.status = "running";
+    this.crossProviderStatus.lastRun = new Date();
+    this.crossProviderStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting provider anomaly cross-reference...");
+      await this.runJobProcess("jobs/cross-provider-anomalies");
+      this.crossProviderStatus.status = "idle";
+      this.crossProviderStatus.successfulRuns++;
+      this.logger.info("Provider anomaly cross-reference completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.crossProviderStatus.status = "error";
+      this.crossProviderStatus.lastError = errorMessage;
+      this.crossProviderStatus.failedRuns++;
+      this.logger.error("Provider anomaly cross-reference failed:", errorMessage);
+    } finally {
+      this.isCrossProviderRunning = false;
     }
   }
 

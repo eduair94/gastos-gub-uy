@@ -547,6 +547,8 @@
       "all": "Todas"
     },
     "seeUnexplained": "Ver las peores sin explicación",
+    "seeProviders": "Ver proveedores señalados",
+    "supplierFilter": "Proveedor",
     "confidence": "Confianza",
     "empty": {
       "title": "Sin alertas para estos filtros",
@@ -618,6 +620,74 @@
       "body": "Ninguna alerta en este momento quedó sin una explicación plausible tras la revisión."
     }
   },
+  "provAnom": {
+    "title": "Proveedores detrás de las alertas sin explicación",
+    "lead": "Cruzamos las alertas de sobreprecio que la IA no pudo justificar contra los proveedores que las reciben, para ver si un proveedor o un comprador concentra muchas anomalías. No es una acusación: es por dónde empezar a mirar.",
+    "seeFlags": "Ver las alertas sin explicación",
+    "method": {
+      "title": "Cómo se arma",
+      "body": "Una alerta queda «sin explicación» cuando el precio unitario pagado supera de forma extrema el rango habitual del mismo artículo y una segunda revisión con IA (Gemini) no encontró una razón legítima. Acá las agrupamos por proveedor y por comprador. Se recalcula cada 24 horas.",
+      "overprice": "El sobreprecio es una estimación: (precio pagado − tope del rango habitual) × cantidad, en la moneda de cada contrato. Los importes en monedas distintas nunca se suman entre sí.",
+      "clamped": "{n} alerta(s) con cantidad implausible se acotaron a un tope para que un dato erróneo no domine los totales."
+    },
+    "kpi": {
+      "flags": "alertas sin explicación",
+      "providers": "proveedores señalados",
+      "captive": "pares cautivos",
+      "topRubro": "en el rubro principal"
+    },
+    "sort": {
+      "flags": "Más alertas",
+      "overprice": "Mayor sobreprecio",
+      "worstZ": "Peor divergencia"
+    },
+    "minFlags": {
+      "label": "Alertas mínimas",
+      "step": "≥ {n}"
+    },
+    "rubro": {
+      "label": "Rubro"
+    },
+    "rubroUnknown": "Sin rubro",
+    "zCapped": "×1000+",
+    "captiveOnly": "Solo cautivos",
+    "captiveHelp": "Cautivo: todas las alertas del proveedor provienen de un único comprador.",
+    "captiveBadge": "cautivo · {n} de un comprador",
+    "captiveTag": "cautivo",
+    "ofBuyers": "de {n} compradores",
+    "seeItsFlags": "ver sus alertas",
+    "col": {
+      "provider": "Proveedor",
+      "flags": "Alertas",
+      "overprice": "Sobreprecio",
+      "worstZ": "Peor div.",
+      "topBuyer": "Comprador principal"
+    },
+    "patterns": {
+      "title": "Patrones",
+      "note": "Lo que se repite detrás de las alertas."
+    },
+    "panel": {
+      "concentration": "Concentración por proveedor",
+      "concentrationSub": "Los proveedores con más alertas sin explicación.",
+      "buyers": "Compradores que concentran",
+      "buyersSub": "Compradores con más alertas, y entre cuántos proveedores se reparten.",
+      "pairs": "Pares con más alertas",
+      "pairsSub": "Un mismo proveedor y un mismo comprador, repetidos.",
+      "rubro": "Rubro",
+      "rubroSub": "Casi todo cae en insumos médicos y de oficina.",
+      "recurrence": "Recurrencia por año"
+    },
+    "buyerSub": "{n} proveedores",
+    "notReady": {
+      "title": "Todavía no hay datos del cruce",
+      "body": "El cálculo por proveedor aún no se ejecutó. Vuelve a intentar más tarde."
+    },
+    "empty": {
+      "title": "Sin proveedores para estos filtros",
+      "body": "Probá bajar el mínimo de alertas o quitar el filtro de rubro."
+    }
+  },
   "seo": {
     "home": {
       "title": "Con la tuya, contribuyente — Compras públicas del Uruguay",
@@ -662,6 +732,10 @@
     "unexplained": {
       "title": "Sobreprecios sin explicación — compras públicas del Uruguay",
       "description": "Compras del Estado uruguayo pagadas muy por encima del precio habitual y que, tras una revisión con IA, no tienen explicación legítima visible."
+    },
+    "providerAnomalies": {
+      "title": "Proveedores con sobreprecios sin explicación — Uruguay",
+      "description": "Qué proveedores y compradores concentran los sobreprecios que la IA no pudo explicar en las compras del Estado uruguayo. Cruce actualizado cada 24 horas."
     }
   },
   "about": {

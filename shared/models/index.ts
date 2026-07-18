@@ -7,6 +7,7 @@ export * from './filter_data';
 export * from './item_price_baseline';
 export * from './precalculated-models';
 export * from './product_analytics';
+export * from './provider_anomaly_stats';
 export * from './release';
 export * from './supplier_pattern';
 

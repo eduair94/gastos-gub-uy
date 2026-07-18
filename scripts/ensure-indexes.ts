@@ -387,6 +387,20 @@ async function main(): Promise<void> {
         .createIndex({ 'aiVerdict.explainable': 1, severityRank: -1 }, { background: true })
       console.log('✅ anomalies.aiVerdict.explainable_1_severityRank_-1 ensured')
 
+      // provider_anomaly_stats: the unexplained-flags-by-provider cross-reference, rebuilt
+      // (compute-then-swap) by src/jobs/cross-provider-anomalies.ts. `supplierName` unique is the
+      // upsert key; the rest back the /api/analytics/provider-anomalies sorts. The summary rollup
+      // is read by calculatedAt desc.
+      const provStats = client.db(DB_NAME).collection('provider_anomaly_stats')
+      await provStats.createIndex({ supplierName: 1 }, { unique: true, background: true })
+      await provStats.createIndex({ flagCount: -1 }, { background: true })
+      await provStats.createIndex({ primaryOverprice: -1 }, { background: true })
+      await provStats.createIndex({ worstZ: -1 }, { background: true })
+      await client.db(DB_NAME)
+        .collection('provider_anomaly_summary')
+        .createIndex({ calculatedAt: -1 }, { background: true })
+      console.log('✅ provider_anomaly_stats indexes ensured (supplierName unique, flagCount, primaryOverprice, worstZ) + summary.calculatedAt')
+
       // ---- Monitor de Llamados + auth collections ----
       // These are small, hot collections whose schema-declared indexes must be
       // ensured here (autoIndex off). Unique keys enforce idempotent upserts and
@@ -463,6 +477,7 @@ async function main(): Promise<void> {
       console.log('   plan: contract_item_features.compraId_1 (unique)')
       console.log('   plan: product_analytics.code_1 (unique), rankBySpend_1, rankByLines_1')
       console.log('   plan: anomalies.aiVerdict.explainable_1_severityRank_-1')
+      console.log('   plan: provider_anomaly_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
       console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')
       console.log('   plan: watches.{userId, active+categories, active}')
       console.log('   plan: open_calls.{compraId unique, classificationSet, tenderPeriod.endDate, buyer.id, status+endDate, firstSeenAt, text}')

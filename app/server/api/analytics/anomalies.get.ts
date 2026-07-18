@@ -47,6 +47,14 @@ export default defineEventHandler(async (event) => {
       filter.releaseId = releaseId
     }
 
+    // One provider's flags — the drill-down from the provider cross-reference
+    // (/analytics/proveedores-anomalias). Anomalies carry only the supplier NAME, never the RUT,
+    // so this matches metadata.supplierName exactly (the same key the cross-reference groups on).
+    const supplier = query.supplier
+    if (typeof supplier === 'string' && supplier) {
+      filter['metadata.supplierName'] = supplier
+    }
+
     // SICE rubro filter: a node token (F/SF/C/SC) narrows to anomalies whose item
     // sits under that rubro (prefix on the enriched itemClassification.rubroPath).
     // Rows detected before the catalog enrichment have no rubroPath and so are

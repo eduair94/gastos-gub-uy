@@ -547,6 +547,8 @@
       "all": "All"
     },
     "seeUnexplained": "See the worst unexplained ones",
+    "seeProviders": "See flagged providers",
+    "supplierFilter": "Provider",
     "confidence": "Confidence",
     "empty": {
       "title": "No flags for these filters",
@@ -618,6 +620,74 @@
       "body": "No alert is currently left without a plausible explanation after review."
     }
   },
+  "provAnom": {
+    "title": "Providers behind the unexplained flags",
+    "lead": "We cross-reference the overprice flags the AI could not justify against the providers that receive them, to see whether one provider or one buyer concentrates many anomalies. Not an accusation — a place to start looking.",
+    "seeFlags": "See the unexplained flags",
+    "method": {
+      "title": "How it's built",
+      "body": "A flag is 'unexplained' when the unit price paid extremely exceeds the usual range for the same item and a second AI review (Gemini) found no legitimate reason. Here we group them by provider and by buyer. Recomputed every 24 hours.",
+      "overprice": "Overprice is an estimate: (price paid − top of the usual range) × quantity, in each contract's own currency. Amounts in different currencies are never summed together.",
+      "clamped": "{n} flag(s) with an implausible quantity were capped so a bad record can't dominate the totals."
+    },
+    "kpi": {
+      "flags": "unexplained flags",
+      "providers": "flagged providers",
+      "captive": "captive pairs",
+      "topRubro": "in the top category"
+    },
+    "sort": {
+      "flags": "Most flags",
+      "overprice": "Largest overprice",
+      "worstZ": "Worst divergence"
+    },
+    "minFlags": {
+      "label": "Min. flags",
+      "step": "≥ {n}"
+    },
+    "rubro": {
+      "label": "Category"
+    },
+    "rubroUnknown": "No category",
+    "zCapped": "×1000+",
+    "captiveOnly": "Captive only",
+    "captiveHelp": "Captive: all of the provider's flags come from a single buyer.",
+    "captiveBadge": "captive · {n} from one buyer",
+    "captiveTag": "captive",
+    "ofBuyers": "of {n} buyers",
+    "seeItsFlags": "see its flags",
+    "col": {
+      "provider": "Provider",
+      "flags": "Flags",
+      "overprice": "Overprice",
+      "worstZ": "Worst div.",
+      "topBuyer": "Top buyer"
+    },
+    "patterns": {
+      "title": "Patterns",
+      "note": "What repeats behind the flags."
+    },
+    "panel": {
+      "concentration": "Concentration by provider",
+      "concentrationSub": "The providers with the most unexplained flags.",
+      "buyers": "Buyers that concentrate",
+      "buyersSub": "Buyers with the most flags, and across how many providers they spread.",
+      "pairs": "Pairs with the most flags",
+      "pairsSub": "The same provider and the same buyer, repeated.",
+      "rubro": "Category",
+      "rubroSub": "Almost all of it is medical and office supplies.",
+      "recurrence": "Recurrence by year"
+    },
+    "buyerSub": "{n} providers",
+    "notReady": {
+      "title": "No cross-reference data yet",
+      "body": "The per-provider computation hasn't run yet. Try again later."
+    },
+    "empty": {
+      "title": "No providers for these filters",
+      "body": "Try lowering the minimum flags or clearing the category filter."
+    }
+  },
   "seo": {
     "home": {
       "title": "Con la tuya, contribuyente — Uruguay's public procurement",
@@ -662,6 +732,10 @@
     "unexplained": {
       "title": "Unexplained overprices — Uruguay's public procurement",
       "description": "Uruguayan state purchases paid far above the usual price that, after an AI review, have no visible legitimate explanation."
+    },
+    "providerAnomalies": {
+      "title": "Providers with unexplained overprices — Uruguay",
+      "description": "Which providers and buyers concentrate the overprices the AI could not explain in Uruguay's public spending. Cross-reference updated every 24 hours."
     }
   },
   "about": {
