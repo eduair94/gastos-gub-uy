@@ -15,24 +15,38 @@ const router = useRouter()
 const search = ref((route.query.search as string) ?? '')
 const sort = ref((route.query.sort as string) ?? 'spend')
 const page = ref(Number(route.query.page ?? 1))
+// SICE rubro-node filter (set by the product-page breadcrumb links).
+const rubro = ref((route.query.rubro as string) ?? '')
+const rubroLabel = ref('')
 
 const SORTS = ['spend', 'contracts', 'buyers', 'lines'] as const
 
 // A page from a different query set is meaningless.
-watch([search, sort], () => {
+watch([search, sort, rubro], () => {
   page.value = 1
 })
 
 // Debounced so typing doesn't fire a request per keystroke.
 const debouncedSearch = refDebounced(search, 300)
 
-watch([debouncedSearch, sort, page], () => {
+watch([debouncedSearch, sort, page, rubro], () => {
   const q: Record<string, string> = {}
   if (debouncedSearch.value) q.search = debouncedSearch.value
   if (sort.value !== 'spend') q.sort = sort.value
   if (page.value > 1) q.page = String(page.value)
+  if (rubro.value) q.rubro = rubro.value
   router.replace({ query: q })
 })
+
+// Resolve the rubro token to a human label for the active-filter banner.
+watch(rubro, async (tok) => {
+  if (!tok) { rubroLabel.value = ''; return }
+  try {
+    const r = await $fetch<{ data: Array<{ token: string, label: string }> }>('/api/categories', { params: { resolve: tok } })
+    rubroLabel.value = r?.data?.[0]?.label ?? tok
+  }
+  catch { rubroLabel.value = tok }
+}, { immediate: true })
 
 const { data: res, pending, error } = await useFetch<any>('/api/analytics/products', {
   query: computed(() => ({
@@ -40,6 +54,7 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/produc
     page: page.value,
     sort: sort.value,
     ...(debouncedSearch.value ? { search: debouncedSearch.value } : {}),
+    ...(rubro.value ? { rubro: rubro.value } : {}),
   })),
 })
 
@@ -102,6 +117,21 @@ useSeo(() => ({
       >
         {{ t('products.count', { n: formatNumber(totalProducts) }) }}
       </p>
+    </div>
+
+    <div
+      v-if="rubro"
+      class="rubrobar"
+    >
+      <span class="rubrobar__l">{{ t('products.detail.category') }}:</span>
+      <span class="rubrobar__v">{{ rubroLabel || rubro }}</span>
+      <button
+        type="button"
+        class="rubrobar__x"
+        @click="rubro = ''"
+      >
+        {{ t('common.clearAll') }}
+      </button>
     </div>
 
     <div
@@ -183,8 +213,11 @@ useSeo(() => ({
           <NuxtLink
             :to="localePath(`/products/${encodeURIComponent(row.code)}`)"
             class="pname pname--link"
-          >{{ row.description }}</NuxtLink>
-          <span class="pcode u-mono">{{ t('products.codeLabel', { code: row.code }) }}</span>
+          >{{ row.canonicalName || row.description }}</NuxtLink>
+          <span class="pcode u-mono">
+            {{ t('products.codeLabel', { code: row.code }) }}
+            <template v-if="row.subcName"> · {{ row.subcName }}</template>
+          </span>
         </template>
         <template #cell:totalUYU="{ row }">
           <!-- MoneyAmount renders the "Sin monto" label for a null amount, so a
@@ -300,6 +333,36 @@ useSeo(() => ({
 .chip:hover { color: var(--text); border-color: var(--rule-strong); }
 
 .chip--on { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+/* ---- Active rubro filter banner ---- */
+.rubrobar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--celeste);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: var(--t-sm);
+}
+
+.rubrobar__l { color: var(--text-muted); }
+.rubrobar__v { font-weight: 600; }
+
+.rubrobar__x {
+  margin-left: auto;
+  padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  cursor: pointer;
+}
+
+.rubrobar__x:hover { color: var(--text); border-color: var(--rule-strong); }
 
 /* ---- Product cell ---- */
 .pname {

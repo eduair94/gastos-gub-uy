@@ -374,7 +374,9 @@ async function main(): Promise<void> {
       await products.createIndex({ code: 1 }, { unique: true, background: true })
       await products.createIndex({ rankBySpend: 1 }, { background: true })
       await products.createIndex({ rankByLines: 1 }, { background: true })
-      console.log('✅ product_analytics indexes ensured (code unique, rankBySpend, rankByLines)')
+      // rubroPath backs the SICE rubro filter on the products list (prefix regex).
+      await products.createIndex({ rubroPath: 1 }, { background: true })
+      console.log('✅ product_analytics indexes ensured (code unique, rankBySpend, rankByLines, rubroPath)')
 
       // anomalies: the AI-triage view filters on aiVerdict.explainable and sorts
       // worst-first by severityRank (see src/jobs/score-anomalies-ai.ts + the

@@ -28,7 +28,7 @@
  */
 
 import { connectToDatabase } from '../../shared/connection/database'
-import { ProductAnalyticsModel, ReleaseModel } from '../../shared/models'
+import { ProductAnalyticsModel, ReleaseModel, SiceCatalogModel } from '../../shared/models'
 import type { IProductAnalytics, IProductRankEntry, IProductYear } from '../../shared/models'
 import { Logger } from '../services/logger-service'
 import {
@@ -273,6 +273,43 @@ export class ProductAnalyticsRefresher {
     return docs
   }
 
+  /**
+   * Left-join the SICE catalog by `code` and attach the canonical name, rubro
+   * path/names and official unit to each doc — the SAME enrichment the alerts
+   * and the anomaly detector read, so product pages show catalog-consistent
+   * names/units. Codes absent from the catalog keep their modal `description`.
+   */
+  async enrich(docs: IProductAnalytics[]): Promise<void> {
+    const CHUNK = 5000
+    const cat = new Map<string, {
+      canonicalName?: string; rubroPath?: string; famiName?: string; subfName?: string;
+      clasName?: string; subcName?: string; unitName?: string; isService?: boolean
+    }>()
+    const codes = docs.map(d => d.code)
+    for (let i = 0; i < codes.length; i += CHUNK) {
+      const rows = await SiceCatalogModel
+        .find({ code: { $in: codes.slice(i, i + CHUNK) } })
+        .select('code canonicalName rubroPath famiName subfName clasName subcName unitName isService')
+        .lean()
+      for (const r of rows) cat.set(r.code, r)
+    }
+    let hit = 0
+    for (const d of docs) {
+      const c = cat.get(d.code)
+      if (!c) continue
+      hit++
+      d.canonicalName = c.canonicalName
+      d.rubroPath = c.rubroPath
+      d.famiName = c.famiName
+      d.subfName = c.subfName
+      d.clasName = c.clasName
+      d.subcName = c.subcName
+      d.unitName = c.unitName
+      d.isService = c.isService
+    }
+    this.logger.info(`  enriched ${hit}/${docs.length} codes from sice_catalog`)
+  }
+
   async save(docs: IProductAnalytics[]): Promise<void> {
     this.logger.info(`  writing ${docs.length} product docs (version ${this.dataVersion})`)
     // Upsert by `code` rather than insertMany: the collection has a UNIQUE index on `code`, and the
@@ -300,6 +337,7 @@ export class ProductAnalyticsRefresher {
     await connectToDatabase()
     const map = await this.build()
     const docs = this.toDocs(map)
+    await this.enrich(docs)
     await this.save(docs)
     this.logger.info(`Product analytics rebuilt: ${docs.length} codes in ${((Date.now() - started) / 1000).toFixed(1)}s`)
   }

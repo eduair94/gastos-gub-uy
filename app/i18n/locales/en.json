@@ -370,6 +370,8 @@
     },
     "detail": {
       "eyebrow": "Product",
+      "category": "Category",
+      "officialUnit": "Official unit: {unit}",
       "totalSpent": "Reported spend",
       "contracts": "Contracts",
       "buyers": "Buying agencies",

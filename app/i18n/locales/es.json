@@ -370,6 +370,8 @@
     },
     "detail": {
       "eyebrow": "Producto",
+      "category": "Rubro",
+      "officialUnit": "Unidad oficial: {unit}",
       "totalSpent": "Gasto informado",
       "contracts": "Contratos",
       "buyers": "Organismos compradores",

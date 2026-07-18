@@ -50,6 +50,16 @@ export interface IProductAnalytics {
   rankByLines: number;
   calculatedAt: Date;
   dataVersion: string;
+  // SICE catalog enrichment (left-joined by code in refresh-product-analytics).
+  // Absent when the code is not in the catalog; the page falls back to `description`.
+  canonicalName?: string;
+  rubroPath?: string;
+  famiName?: string;
+  subfName?: string;
+  clasName?: string;
+  subcName?: string;
+  unitName?: string;
+  isService?: boolean;
 }
 
 const RankEntrySchema = new Schema<IProductRankEntry>(
@@ -90,6 +100,14 @@ const ProductAnalyticsSchema = new Schema<IProductAnalytics>(
     rankByLines: { type: Number, required: true, default: 0 },
     calculatedAt: { type: Date, required: true, default: Date.now },
     dataVersion: { type: String, required: true },
+    canonicalName: { type: String },
+    rubroPath: { type: String },
+    famiName: { type: String },
+    subfName: { type: String },
+    clasName: { type: String },
+    subcName: { type: String },
+    unitName: { type: String },
+    isService: { type: Boolean },
   },
   {
     timestamps: true,

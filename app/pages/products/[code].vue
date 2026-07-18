@@ -15,19 +15,52 @@ const orgLd = useOrgLd()
 
 const code = computed(() => String(route.params.code ?? ''))
 
-const { data: res, error } = await useFetch<any>(
+const { data: res, error, refresh } = await useFetch<any>(
   () => `/api/analytics/products/${encodeURIComponent(code.value)}`,
+  // A cold SSR/DB connection can make the first read throw a transient 500. Retry once at
+  // SSR time so a connection blip doesn't get turned into a hard 404 on a real product.
+  { retry: 1, retryDelay: 400 },
 )
 
 const product = computed<any | null>(() => res.value?.data ?? null)
-const notFound = computed(() => !!error.value || !product.value)
 
-if (notFound.value) {
-  setResponseStatus(useRequestEvent()!, 404)
+/**
+ * A product is truly *missing* only when the API says 404, or it answered OK with no data.
+ * A 5xx / network error is *transient* — it must NOT become a 404 (that would noindex and
+ * cache a real, existing product as gone). The two states render differently below.
+ */
+const errStatus = computed<number>(() =>
+  (error.value as any)?.statusCode ?? (error.value as any)?.response?.status ?? 0,
+)
+const notFound = computed(() => errStatus.value === 404 || (!error.value && !product.value))
+const loadError = computed(() => !!error.value && errStatus.value !== 404)
+
+if (import.meta.server) {
+  const event = useRequestEvent()
+  if (event && notFound.value) setResponseStatus(event, 404)
+  else if (event && loadError.value) setResponseStatus(event, 503)
 }
 
-const description = computed(() => product.value?.description ?? code.value)
+// Prefer the official SICE catalog canonical name over the noisy modal award
+// description ('Papel A4' / 'PAPEL A4' / 'Papel A-4'); fall back when uncataloged.
+const description = computed(() => product.value?.canonicalName || product.value?.description || code.value)
 const hasSpend = computed(() => (product.value?.totalUYU ?? 0) > 0)
+
+// Rubro breadcrumb from the catalog path (familia › subfamilia › clase › subclase),
+// each linking to the products list filtered to that rubro node.
+const rubroChain = computed<Array<{ label: string, token: string }>>(() => {
+  const p = product.value
+  if (!p?.rubroPath) return []
+  const parts = String(p.rubroPath).split('.')
+  const names = [p.famiName, p.subfName, p.clasName, p.subcName]
+  const prefixes = ['F', 'SF', 'C', 'SC']
+  const out: Array<{ label: string, token: string }> = []
+  for (let i = 0; i < parts.length && i < 4; i++) {
+    if (!names[i]) continue
+    out.push({ label: names[i]!, token: prefixes[i]! + parts.slice(0, i + 1).join('.') })
+  }
+  return out
+})
 
 /** Purchases per year — always meaningful (line counts), unlike the sparsely-priced spend. */
 const byYear = computed(() =>
@@ -123,6 +156,26 @@ useSeo(() => ({
       </NuxtLink>
     </div>
 
+    <!-- ===== Transient load error (never a 404) ===== -->
+    <div
+      v-else-if="loadError"
+      class="state"
+    >
+      <h1 class="state__t">
+        {{ t('products.detail.error.title') }}
+      </h1>
+      <p class="state__b">
+        {{ t('products.detail.error.body') }}
+      </p>
+      <button
+        type="button"
+        class="state__a"
+        @click="refresh()"
+      >
+        {{ t('products.detail.error.action') }}
+      </button>
+    </div>
+
     <template v-else>
       <!-- ===== Header ===== -->
       <header class="head">
@@ -133,8 +186,28 @@ useSeo(() => ({
           <h1 class="head__name">
             {{ description }}
           </h1>
+          <nav
+            v-if="rubroChain.length"
+            class="head__rubro"
+            :aria-label="t('products.detail.category')"
+          >
+            <template
+              v-for="(r, i) in rubroChain"
+              :key="r.token"
+            >
+              <span
+                v-if="i"
+                class="head__sep"
+              >›</span>
+              <NuxtLink
+                :to="localePath(`/products?rubro=${encodeURIComponent(r.token)}`)"
+                class="head__rubrolink"
+              >{{ r.label }}</NuxtLink>
+            </template>
+          </nav>
           <p class="head__code u-mono">
             {{ t('products.codeLabel', { code }) }}
+            <span v-if="product?.unitName"> · {{ t('products.detail.officialUnit', { unit: product.unitName }) }}</span>
           </p>
         </div>
         <div
@@ -341,6 +414,24 @@ useSeo(() => ({
   font-size: var(--t-xs);
   color: var(--text-muted);
 }
+
+.head__rubro {
+  margin: var(--s-2) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-2);
+  font-size: var(--t-xs);
+}
+
+.head__sep { color: var(--text-muted); }
+
+.head__rubrolink {
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
+
+.head__rubrolink:hover { text-decoration: underline; }
 
 .head__money {
   display: flex;

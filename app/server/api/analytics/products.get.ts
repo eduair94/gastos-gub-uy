@@ -2,6 +2,7 @@ import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { ProductAnalyticsModel } from '../../utils/models'
 import { escapeRegex, toInt } from '../../utils/query'
+import { parseToken } from '../../../../shared/utils/rubro-tokens'
 
 /**
  * The product-analytics list: what the state buys, by catalogue code.
@@ -36,14 +37,22 @@ export default defineEventHandler(async (event) => {
     const filter: Record<string, unknown> = {}
     if (search) {
       const rx = new RegExp(escapeRegex(search), 'i')
-      filter.$or = [{ description: rx }, { code: search }]
+      filter.$or = [{ description: rx }, { canonicalName: rx }, { code: search }]
+    }
+
+    // Rubro filter: a SICE node token (F/SF/C/SC) narrows to product docs whose
+    // rubroPath sits under that node (prefix match on the numeric dotted path).
+    const rubro = typeof query.rubro === 'string' ? query.rubro.trim() : ''
+    if (rubro) {
+      const { path } = parseToken(rubro)
+      if (path) filter.rubroPath = new RegExp('^' + escapeRegex(path) + '(\\.|$)')
     }
 
     const skip = (page - 1) * limit
 
     const [products, total, totalProducts] = await Promise.all([
       ProductAnalyticsModel.find(filter)
-        .select('code description lineCount contractCount buyerCount supplierCount totalUYU currencies rankBySpend rankByLines lastYear')
+        .select('code description canonicalName rubroPath famiName subfName clasName subcName unitName isService lineCount contractCount buyerCount supplierCount totalUYU currencies rankBySpend rankByLines lastYear')
         .sort(sort)
         .skip(skip)
         .limit(limit)
