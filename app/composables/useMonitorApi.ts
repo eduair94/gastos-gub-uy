@@ -1,5 +1,17 @@
 // Client-side typed helpers for the Monitor de Llamados endpoints. SSR pages use
 // useFetch directly for initial data; this is for interactive mutations/queries.
+
+// A SICE catalog node the watch builder can subscribe to: a rubro node (F/SF/C/SC
+// token) or a bare article code. `token` is what the watch stores in `categories`.
+export interface CatItem {
+  token: string
+  label: string
+  level: 'familia' | 'subfamilia' | 'clase' | 'subclase' | 'articulo'
+  path?: string
+  articleCount?: number
+  breadcrumb?: string[]
+}
+
 export interface WatchPayload {
   name: string
   active?: boolean
@@ -45,7 +57,9 @@ export function useMonitorApi() {
   }
 
   const categories = {
-    search: (q: string, limit = 30) => $fetch<{ data: Array<{ code: string, description: string, lineCount: number, contractCount: number }> }>('/api/categories', { params: { q, limit } }),
+    browse: (parent?: string) => $fetch<{ data: CatItem[] }>('/api/categories', { params: parent ? { parent } : {} }),
+    search: (q: string, limit = 30) => $fetch<{ data: CatItem[] }>('/api/categories', { params: { q, limit } }),
+    resolve: (tokens: string[]) => $fetch<{ data: CatItem[] }>('/api/categories', { params: { resolve: tokens.join(',') } }),
   }
 
   return { watches, openCalls, savedCalls, calendar, account, categories }

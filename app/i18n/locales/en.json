@@ -11,7 +11,9 @@
     "suppliers": "Suppliers",
     "buyers": "Agencies",
     "anomalies": "Flags",
+    "investigaciones": "Investigations",
     "llamados": "Open calls",
+    "more": "More",
     "login": "Sign in",
     "account": "My account",
     "about": "How it works",
@@ -387,6 +389,11 @@
         "title": "We couldn't find that product",
         "body": "The catalogue code may not exist or may have no recorded purchases.",
         "action": "View all products"
+      },
+      "error": {
+        "title": "We couldn't load this product",
+        "body": "There was a temporary problem reading the data. Please try again in a few seconds.",
+        "action": "Retry"
       }
     }
   },
@@ -764,6 +771,19 @@
     "namePlaceholder": "e.g. Toner and cartridges",
     "categories": "Categories (catalogue codes)",
     "categoriesHint": "Search and pick the categories you care about.",
+    "products": "Products / categories you offer",
+    "productsHint": "Search or browse the official procurement catalogue and add whole categories (they cover all their articles) or individual articles.",
+    "searchProducts": "Search a product or category…",
+    "productsCount": "{n} products/categories",
+    "articleCount": "{n} articles",
+    "level_familia": "Family",
+    "level_subfamilia": "Subfamily",
+    "level_clase": "Class",
+    "level_subclase": "Subclass",
+    "level_articulo": "Article",
+    "refinements": "Advanced filters (optional)",
+    "method": "Procurement method",
+    "valueHint": "The range only excludes calls whose published amount falls outside it; calls with no published amount still show.",
     "keywords": "Keywords",
     "keywordsHint": "Press Enter to add. Matches ignore case and accents.",
     "keywordMode": "Keyword match",

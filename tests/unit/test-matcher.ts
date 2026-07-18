@@ -91,5 +91,29 @@ const reason = watchMatchesCall(
 );
 ok("reason lists matched category + keyword", !!reason && reason.categories.includes("4472") && reason.keywords.includes("aire"));
 
+// --- Rubro-node subscriptions (SICE catalog token namespace) ---
+// After catalog enrichment a call's classificationSet carries the article code
+// PLUS its ancestor tokens, so a watch on a rubro node matches by plain
+// intersection with no matcher change.
+const enrichedCall = call({ classificationSet: ["28267", "F2", "SF2.6", "C2.6.5", "SC2.6.5.3"] });
+ok("rubro clase-node subscription matches an article under it", watchMatchesCall(
+  watch({ categories: ["C2.6.5"] }), enrichedCall,
+) !== null);
+ok("rubro subclase-node subscription matches", watchMatchesCall(
+  watch({ categories: ["SC2.6.5.3"] }), enrichedCall,
+) !== null);
+ok("rubro familia-node subscription matches", watchMatchesCall(
+  watch({ categories: ["F2"] }), enrichedCall,
+) !== null);
+ok("disjoint rubro node does not match", watchMatchesCall(
+  watch({ categories: ["C9.9.9"] }), enrichedCall,
+) === null);
+ok("leaf article code still matches after enrichment (regression)", watchMatchesCall(
+  watch({ categories: ["28267"] }), enrichedCall,
+) !== null);
+ok("mixed leaf+rubro watch matches on the rubro", watchMatchesCall(
+  watch({ categories: ["9999", "SF2.6"] }), enrichedCall,
+) !== null);
+
 console.log(`\n${failed === 0 ? "✅" : "❌"} ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

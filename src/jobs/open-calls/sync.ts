@@ -8,9 +8,10 @@
  */
 import { ReleaseModel } from "../../../shared/models/release";
 import { OpenCallModel } from "../../../shared/models/open_call";
+import { SiceCatalogModel } from "../../../shared/models/sice_catalog";
 import type { OpenCallStatus } from "../../../shared/types/monitor";
-import { projectOpenCall } from "./project";
-import type { ReleaseLike } from "./project";
+import { enrichProjectionWithCatalog, projectOpenCall } from "./project";
+import type { CatalogLookupEntry, OpenCallProjection, ReleaseLike } from "./project";
 
 const TENDER_ID_REGEX = /^(llamado|aclar_llamado|ajuste_llamado)-/;
 const LLAMADO_ID_REGEX = /^llamado-/;
@@ -37,6 +38,22 @@ export interface SyncResult {
 
 const RELEASE_FIELDS = "id ocid date tag buyer tender awards";
 const OCID_BATCH = 500;
+
+/**
+ * Enrich a batch of freshly-projected calls with SICE catalog data in place. One
+ * `sice_catalog` query for the codes in this batch; missing codes fall through.
+ * Pre-enrichment `classificationSet` holds only bare article codes.
+ */
+async function enrichBatch(projections: OpenCallProjection[]): Promise<void> {
+  const codes = new Set<string>();
+  for (const p of projections) for (const c of p.classificationSet) codes.add(c);
+  if (!codes.size) return;
+  const docs = (await SiceCatalogModel.find({ code: { $in: [...codes] } })
+    .select("code rubroTokens canonicalName synonyms unitName")
+    .lean()) as Array<{ code: string } & CatalogLookupEntry>;
+  const lookup = new Map<string, CatalogLookupEntry>(docs.map((d) => [d.code, d]));
+  for (const p of projections) enrichProjectionWithCatalog(p, (code) => lookup.get(code));
+}
 
 export async function syncOpenCalls(options: SyncOptions = {}): Promise<SyncResult> {
   const now = options.now ?? new Date();
@@ -74,12 +91,19 @@ export async function syncOpenCalls(options: SyncOptions = {}): Promise<SyncResu
       byOcid.set(r.ocid, arr);
     }
 
+    // Project every group first, then enrich all of them with one catalog query
+    // for just the codes present in this batch (a few thousand, not all 90k).
+    const projections: OpenCallProjection[] = [];
+    for (const group of byOcid.values()) {
+      const proj = projectOpenCall(group, now);
+      if (proj) projections.push(proj);
+    }
+    await enrichBatch(projections);
+
     const ops: Parameters<typeof OpenCallModel.bulkWrite>[0] = [];
     const meta: Array<{ compraId: string; status: OpenCallStatus }> = [];
 
-    for (const group of byOcid.values()) {
-      const proj = projectOpenCall(group, now);
-      if (!proj) continue;
+    for (const proj of projections) {
       processed++;
 
       const { compraId, ...rest } = proj;

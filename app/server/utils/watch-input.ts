@@ -5,7 +5,10 @@ import { normalizeKeyword } from '../../../shared/utils/text'
 export const WATCH_CAP = Number(process.env.WATCH_CAP_FREE ?? 10)
 
 const MAX_KEYWORDS = 25
-const MAX_CATEGORIES = 50
+// Categories are now SICE tokens (rubro nodes or article codes). One rubro node
+// stands in for many articles, but a supplier declaring a broad offer can still
+// pick many nodes, so the cap is generous. Adjustable without a redeploy.
+const MAX_CATEGORIES = Number(process.env.WATCH_CATEGORY_CAP ?? 300)
 const MAX_BUYERS = 50
 const MAX_METHODS = 20
 

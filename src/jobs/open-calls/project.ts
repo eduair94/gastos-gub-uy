@@ -133,6 +133,48 @@ export function buildSearchText(
   return normalizeText(parts.join(" "));
 }
 
+export interface CatalogLookupEntry {
+  rubroTokens: string[];
+  canonicalName?: string | undefined;
+  synonyms?: string[] | undefined;
+  unitName?: string | undefined;
+}
+
+/**
+ * Enrich a projection with SICE catalog data (pure). For every item whose
+ * `classificationId` (== article code) is in the catalog:
+ *   - add the article's rubro ANCESTOR TOKENS to `classificationSet`, so a watch
+ *     subscribed to a rubro node (F/SF/C/SC token) matches via the same plain set
+ *     intersection the matcher already does — no matcher change, no migration;
+ *   - prefer the canonical article name as the item label (kills description noise);
+ *   - fold the canonical name + synonyms into `searchText` for keyword matching;
+ *   - fill a missing item unit from the catalog's official unit.
+ * Codes absent from the catalog fall through unchanged (their bare code stays).
+ */
+export function enrichProjectionWithCatalog(
+  p: OpenCallProjection,
+  lookup: (code: string) => CatalogLookupEntry | undefined,
+): OpenCallProjection {
+  const tokens = new Set<string>(p.classificationSet);
+  const extra: string[] = [];
+  for (const it of p.items) {
+    const code = it.classificationId;
+    if (!code) continue;
+    const cat = lookup(code);
+    if (!cat) continue;
+    for (const tk of cat.rubroTokens) tokens.add(tk);
+    if (cat.canonicalName) {
+      it.classificationLabel = cat.canonicalName;
+      extra.push(cat.canonicalName);
+    }
+    if (!it.unit?.name && cat.unitName) it.unit = { id: it.unit?.id, name: cat.unitName };
+    for (const syn of cat.synonyms ?? []) extra.push(syn);
+  }
+  p.classificationSet = Array.from(tokens);
+  if (extra.length) p.searchText = normalizeText(`${p.searchText} ${extra.join(" ")}`);
+  return p;
+}
+
 /** Sort key that tolerates missing dates (undated releases sort earliest). */
 function dateMs(r: ReleaseLike): number {
   const d = toDate(r.date);

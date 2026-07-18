@@ -79,5 +79,39 @@ eq("parseToken of SC", parseToken("SC2.6.5.3"), { level: "subclase", path: "2.6.
 eq("parseToken of C", parseToken("C2.6.5"), { level: "clase", path: "2.6.5" });
 eq("parseToken of bare code", parseToken("28267"), { level: "articulo", path: "28267" });
 
+console.log("\n🧪 open-call catalog enrichment");
+console.log("==============================");
+import { enrichProjectionWithCatalog } from "../../src/jobs/open-calls/project";
+import type { OpenCallProjection } from "../../src/jobs/open-calls/project";
+
+function proj(items: OpenCallProjection["items"], classificationSet: string[]): OpenCallProjection {
+  return {
+    compraId: "1", ocid: "o", latestReleaseId: "l", sourceReleaseIds: [],
+    title: "Compra de pintura", buyer: {}, procuringEntity: {},
+    status: "open", items, classificationSet, searchText: "compra de pintura", documents: [],
+  } as OpenCallProjection;
+}
+
+const lookup = (code: string) => code === "28267"
+  ? { rubroTokens: ["F2", "SF2.6", "C2.6.5", "SC2.6.5.3"], canonicalName: "PINTURA EPOXI", synonyms: ["ESMALTE EPOXICO"], unitName: "L" }
+  : undefined;
+
+const p = enrichProjectionWithCatalog(
+  proj([{ classificationId: "28267", description: "pintura" }], ["28267"]),
+  lookup,
+);
+ok("classificationSet gains the 4 ancestor tokens", ["F2", "SF2.6", "C2.6.5", "SC2.6.5.3"].every((t) => p.classificationSet.includes(t)));
+ok("classificationSet keeps the bare code", p.classificationSet.includes("28267"));
+ok("item label replaced by canonical name", p.items[0].classificationLabel === "PINTURA EPOXI");
+ok("missing unit filled from catalog", p.items[0].unit?.name === "L");
+ok("searchText folds canonical name", p.searchText.includes("pintura epoxi"));
+ok("searchText folds synonyms", p.searchText.includes("esmalte epoxico"));
+
+const p2 = enrichProjectionWithCatalog(
+  proj([{ classificationId: "999999", description: "x" }], ["999999"]),
+  lookup,
+);
+ok("uncataloged code falls through unchanged", p2.classificationSet.length === 1 && p2.classificationSet[0] === "999999");
+
 console.log(`\n${failed === 0 ? "✅" : "❌"} ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

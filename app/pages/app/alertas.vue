@@ -104,7 +104,7 @@ async function remove(w: Watch) {
           v-if="w.categories?.length"
           class="alertas__cat u-muted"
         >
-          {{ w.categories.length }} {{ t('alerts.categories') }}
+          {{ t('alerts.productsCount', { n: w.categories.length }) }}
         </p>
         <p
           v-if="w.lastMatchedAt"

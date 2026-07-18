@@ -11,7 +11,9 @@
     "suppliers": "Proveedores",
     "buyers": "Organismos",
     "anomalies": "Alertas",
+    "investigaciones": "Investigaciones",
     "llamados": "Llamados",
+    "more": "Más",
     "login": "Ingresar",
     "account": "Mi cuenta",
     "about": "Cómo funciona",
@@ -387,6 +389,11 @@
         "title": "No encontramos ese producto",
         "body": "El código de catálogo puede no existir o no tener compras registradas.",
         "action": "Ver todos los productos"
+      },
+      "error": {
+        "title": "No pudimos cargar este producto",
+        "body": "Hubo un problema temporal al leer los datos. Volvé a intentar en unos segundos.",
+        "action": "Reintentar"
       }
     }
   },
@@ -764,6 +771,19 @@
     "namePlaceholder": "Ej: Toner y cartuchos",
     "categories": "Rubros (categorías del catálogo)",
     "categoriesHint": "Buscá y elegí los rubros que te interesan.",
+    "products": "Productos / rubros que ofrecés",
+    "productsHint": "Buscá o navegá el catálogo oficial de compras y agregá rubros enteros (cubren todos sus artículos) o artículos puntuales.",
+    "searchProducts": "Buscar producto o rubro…",
+    "productsCount": "{n} productos/rubros",
+    "articleCount": "{n} artículos",
+    "level_familia": "Familia",
+    "level_subfamilia": "Subfamilia",
+    "level_clase": "Clase",
+    "level_subclase": "Subclase",
+    "level_articulo": "Artículo",
+    "refinements": "Filtros avanzados (opcional)",
+    "method": "Procedimiento de compra",
+    "valueHint": "El rango solo excluye llamados con un monto publicado fuera de él; los que no publican monto igual se muestran.",
     "keywords": "Palabras clave",
     "keywordsHint": "Enter para agregar. Coincide sin distinguir mayúsculas ni acentos.",
     "keywordMode": "Coincidencia de palabras",
