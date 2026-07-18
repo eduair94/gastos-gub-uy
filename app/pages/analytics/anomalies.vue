@@ -808,7 +808,7 @@ useSeo(() => ({
      sitting a few px below the pill caps. */
   align-items: center;
   gap: var(--s-1) var(--s-2);
-  margin: var(--s-2) 0 0;
+  margin: var(--s-3) 0 0;
   font-size: var(--t-xs);
   line-height: 1.5;
 }
@@ -825,9 +825,13 @@ useSeo(() => ({
 .flags__air {
   /* A <p>: zero the UA block margin (it was leaking ~16px above and below
      the reason and pushing the card out) and set the gap in tokens. */
-  margin: var(--s-1) 0 0;
+  margin: var(--s-2) 0 0;
   color: var(--text-muted);
   min-width: 0;
+  /* Cap the measure so a long reason stays readable instead of running the
+     full ~950px of the identity column on a wide screen. */
+  max-width: 80ch;
+  line-height: 1.55;
 }
 
 /* Unexplained = the real signal: accent it with the same "alerta" hue as the severity tag. */
