@@ -430,6 +430,32 @@ async function main(): Promise<void> {
       await savedCalls.createIndex({ userId: 1, compraId: 1 }, { unique: true, background: true })
       await savedCalls.createIndex({ userId: 1, createdAt: -1 }, { background: true })
       console.log('✅ saved_calls indexes ensured (userId+compraId unique, userId+createdAt)')
+
+      // ---- SICE / CUBS article catalog ----
+      // sice_catalog: per-article, keyed by `code` (== classification.id). The text
+      // index backs the alerts picker search over canonical name + synonyms.
+      const siceCatalog = db.collection('sice_catalog')
+      await siceCatalog.createIndex({ code: 1 }, { unique: true, background: true })
+      await siceCatalog.createIndex({ rubroPath: 1 }, { background: true })
+      await siceCatalog.createIndex({ rubroTokens: 1 }, { background: true })
+      await siceCatalog.createIndex({ dataVersion: 1 }, { background: true })
+      await siceCatalog.createIndex(
+        { canonicalName: 'text', synonyms: 'text' },
+        { name: 'sice_catalog_text', default_language: 'none', background: true },
+      )
+      console.log('✅ sice_catalog indexes ensured (code unique, rubroPath, rubroTokens, dataVersion, text)')
+
+      // sice_rubro: the tree nodes for the picker/breadcrumbs.
+      const siceRubro = db.collection('sice_rubro')
+      await siceRubro.createIndex({ token: 1 }, { unique: true, background: true })
+      await siceRubro.createIndex({ parentToken: 1 }, { background: true })
+      await siceRubro.createIndex({ level: 1 }, { background: true })
+      await siceRubro.createIndex({ dataVersion: 1 }, { background: true })
+      await siceRubro.createIndex(
+        { name: 'text' },
+        { name: 'sice_rubro_text', default_language: 'none', background: true },
+      )
+      console.log('✅ sice_rubro indexes ensured (token unique, parentToken, level, dataVersion, text)')
     }
     else {
       console.log('   plan: contract_item_features.compraId_1 (unique)')
@@ -440,6 +466,8 @@ async function main(): Promise<void> {
       console.log('   plan: open_calls.{compraId unique, classificationSet, tenderPeriod.endDate, buyer.id, status+endDate, firstSeenAt, text}')
       console.log('   plan: notifications.{dedupeKey unique, status+type, userId+createdAt, status+scheduledFor}')
       console.log('   plan: saved_calls.{userId+compraId unique, userId+createdAt}')
+      console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
+      console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
     }
 
     if (failed > 0) {

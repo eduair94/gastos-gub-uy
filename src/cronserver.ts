@@ -54,6 +54,9 @@ class CronServer {
   private isRemindersRunning: boolean = false;
   private digestStatus: CronJobStatus;
   private isDigestRunning: boolean = false;
+  // SICE catalog import — independent (writes its own sice_catalog/sice_rubro).
+  private catalogStatus: CronJobStatus;
+  private isCatalogRunning: boolean = false;
 
   constructor() {
     this.app = express();
@@ -68,6 +71,7 @@ class CronServer {
     this.openCallsStatus = freshStatus();
     this.remindersStatus = freshStatus();
     this.digestStatus = freshStatus();
+    this.catalogStatus = freshStatus();
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -352,6 +356,23 @@ class CronServer {
     this.app.post("/cron/digest", triggerDigest);
     this.app.get("/cron/digest", triggerDigest);
 
+    // SICE catalog import: status + manual trigger.
+    this.app.get("/cron/import-catalog/status", (_req, res) => {
+      res.json({ ...this.catalogStatus, isRunning: this.isCatalogRunning });
+    });
+    const triggerCatalog = (req: express.Request, res: express.Response): void => {
+      if (this.isCatalogRunning) {
+        res.status(409).json({ error: "Catalog import already running", status: this.catalogStatus });
+        return;
+      }
+      const force = "force" in req.query;
+      this.logger.info(`Manual SICE catalog import trigger initiated${force ? " (force)" : ""}`);
+      this.runCatalogImportJob(force).catch((error) => this.logger.error("Manual catalog import trigger failed:", error));
+      res.json({ message: "SICE catalog import triggered manually", force, timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/import-catalog", triggerCatalog);
+    this.app.get("/cron/import-catalog", triggerCatalog);
+
     // MongoDB restart endpoint
     this.app.post("/admin/restart-mongodb", async (_req, res) => {
       try {
@@ -586,6 +607,19 @@ class CronServer {
       { scheduled: true, timezone: "America/Montevideo" }
     );
     this.logger.info(`Alert digest scheduled with expression: ${digestExpression} (Uruguay timezone)`);
+
+    // SICE catalog import, weekly Monday 03:00. The ACCE catalog dump regenerates
+    // ~daily but changes slowly; weekly is ample and the job self-skips when the
+    // TGZ ETag/Last-Modified is unchanged. Independent of busyWith (own collections).
+    const catalogExpression = "0 3 * * 1";
+    cron.schedule(
+      catalogExpression,
+      async () => {
+        await this.runCatalogImportJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`SICE catalog import scheduled with expression: ${catalogExpression} (Uruguay timezone)`);
   }
 
   /**
@@ -864,6 +898,37 @@ class CronServer {
       this.logger.error("Alert digest failed:", errorMessage);
     } finally {
       this.isDigestRunning = false;
+    }
+  }
+
+  /**
+   * Imports the SICE/CUBS article catalog (ACCE open data) into sice_catalog +
+   * sice_rubro. Self-skips when the source TGZ is unchanged unless `force`.
+   */
+  private async runCatalogImportJob(force = false): Promise<void> {
+    if (this.isCatalogRunning) {
+      this.logger.warn("Skipping catalog import - already running");
+      return;
+    }
+    this.isCatalogRunning = true;
+    this.catalogStatus.status = "running";
+    this.catalogStatus.lastRun = new Date();
+    this.catalogStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting SICE catalog import...");
+      await this.runJobProcess("jobs/import-sice-catalog", force ? ["--force"] : []);
+      this.catalogStatus.status = "idle";
+      this.catalogStatus.successfulRuns++;
+      this.logger.info("SICE catalog import completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.catalogStatus.status = "error";
+      this.catalogStatus.lastError = errorMessage;
+      this.catalogStatus.failedRuns++;
+      this.logger.error("SICE catalog import failed:", errorMessage);
+    } finally {
+      this.isCatalogRunning = false;
     }
   }
 

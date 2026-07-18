@@ -17,3 +17,7 @@ export * from './open_call';
 export * from './notification';
 export * from './saved_call';
 
+// SICE / CUBS article catalog
+export * from './sice_catalog';
+export * from './sice_rubro';
+

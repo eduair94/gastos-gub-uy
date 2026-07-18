@@ -182,9 +182,9 @@ In the build step, left-join `sice_catalog` by `code` and store on each product 
 
 ---
 
-## 6. Workstream 4d — Anomaly detector + AI triage (same catalog representation)
+## 6. Workstream 4d — Overpricing detector + AI triage (same catalog representation)
 
-All catalog data here comes from the **same `sice_catalog`** the alerts use — no parallel taxonomy.
+All catalog data here comes from the **same `sice_catalog`** the alerts use — no parallel taxonomy. **Scope:** improve the EXISTING overpricing (unit-price outlier) anomaly, its baselines, and its AI triage — do **not** add a new anomaly type/category. The catalog makes the current overpricing flag more accurate (like-for-like baselines) and better explained.
 
 ### 6.1 Canonical unit as the baseline key — `src/jobs/detect-anomalies.ts` + `src/jobs/anomaly-stats.ts`
 Today baselines group by `{classification.id, currency, unit.name}` where `unit.name` is free text, so `u`/`un`/`uni`/`unid`/`unidad` fragment one economic baseline. Introduce `canonicalUnit`:
@@ -196,11 +196,10 @@ Also build **subclase-level baselines** keyed by `{subclaseToken, currency, cano
 
 ### 6.3 AI triage prompt — `src/jobs/score-anomalies-ai.ts`
 - `buildContext()`: load a `catalogByCode` map (from `sice_catalog`) for the flagged items.
-- `buildPrompt()` / `SYSTEM_INSTRUCTION`: add authoritative lines — "Nombre canónico (catálogo)", "Unidad oficial", "Rubro/Subrubro" — and a boolean unit-mismatch signal. This **replaces** the best-effort HTML scraping in `src/jobs/ai/item-features.ts` (which failed on ~29% of compras) with deterministic catalog data as the primary source (keep the scraper only as a secondary enrichment, or retire it).
-- Add category `unidad-erronea` to `CATEGORY_VALUES` and the enum in `shared/models/anomaly.ts`.
+- `buildPrompt()` / `SYSTEM_INSTRUCTION`: add authoritative context lines — "Nombre canónico (catálogo)", "Unidad oficial", "Rubro/Subrubro" — and an internal unit-mismatch hint so the triage can discount a "high price" that is really a unit mismatch. This **replaces** the best-effort HTML scraping in `src/jobs/ai/item-features.ts` (which failed on ~29% of compras) with deterministic catalog data as the primary source (keep the scraper only as a secondary enrichment, or retire it). **No new anomaly category** — the existing `CATEGORY_VALUES` / `shared/models/anomaly.ts` enum is unchanged; this only feeds better context into the existing overpricing verdict.
 
 ### 6.4 Metadata + filters
-- `buildAnomalyDoc()`: enrich `metadata.itemClassification` with `rubroPath` + `canonicalName`, and `metadata.itemUnit` with the official unit + a `unitMismatch` boolean.
+- `buildAnomalyDoc()`: enrich `metadata.itemClassification` with `rubroPath` + `canonicalName`, and `metadata.itemUnit` with the official unit + an internal `unitMismatch` boolean (a precision signal, not a new category).
 - `app/server/api/analytics/anomalies.get.ts` + `app/pages/analytics/anomalies.vue`: add a **rubro filter** and prefer the canonical name in `itemLabel()`.
 
 ---
