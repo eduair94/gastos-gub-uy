@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { canonicalUnit } from '#shared/utils/units'
+
 // `te` checks a key exists before we translate an OCDS documentType we
 // may not have a Spanish label for.
 const { t, te } = useI18n()
@@ -229,11 +231,68 @@ const { data: featRes } = useLazyFetch<any>(
 // The AI review of this contract's price flag, if any. Shown as a prominent panel so a
 // journalist/researcher lands on the analysis + evidence + source links, not just the numbers.
 // Client-only and keyed on the release id (how the alerts list links here).
+// Every price flag on this release. limit=100 covers even the largest
+// multi-award contracts; sorted severity-desc so [0] is the one the AI panel
+// leads with, and the rest mark each flagged line inside the items table.
 const { data: anomalyRes } = useLazyFetch<any>(
-  () => `/api/analytics/anomalies?releaseId=${encodeURIComponent(id.value)}&limit=1&sortBy=severity&sortOrder=desc`,
+  () => `/api/analytics/anomalies?releaseId=${encodeURIComponent(id.value)}&limit=100&sortBy=severity&sortOrder=desc`,
   { server: false },
 )
-const aiFlag = computed<any | null>(() => anomalyRes.value?.data?.anomalies?.[0] ?? null)
+const anomaliesList = computed<any[]>(() => anomalyRes.value?.data?.anomalies ?? [])
+const aiFlag = computed<any | null>(() => anomaliesList.value[0] ?? null)
+
+// Join each flagged unit-price back to the line that carries it. The flag
+// records the catalogue code, the canonical unit and the exact unit price it
+// fired on, so the same triple identifies the row in the items table.
+function anomalyRowKey(code: string, currency: string, unitName: string, unitAmount: number | null): string {
+  return `${code}|${currency}|${canonicalUnit(unitName)}|${unitAmount ?? ''}`
+}
+const anomalyByRow = computed<Map<string, any>>(() => {
+  const m = new Map<string, any>()
+  for (const a of anomaliesList.value) {
+    const code = a.metadata?.itemClassification?.id ?? a.classificationId ?? ''
+    const val = typeof a.detectedValue === 'number' ? a.detectedValue : null
+    if (!code || val === null) continue
+    m.set(anomalyRowKey(code, a.currency ?? 'UYU', a.metadata?.itemUnit?.name ?? '', val), a)
+  }
+  return m
+})
+function rowAnomaly(row: ItemRow): any | null {
+  return anomalyByRow.value.get(anomalyRowKey(row.code, row.currency, row.unitName, row.unitAmount)) ?? null
+}
+
+// ---- Filter the items table -----------------------------------------
+// A contract can carry hundreds of lines across several awards (one here has
+// ten across seven). A free-text filter plus an "only flagged" toggle turns
+// scanning into finding. Both are client-only refinements of already-loaded
+// rows — nothing is refetched.
+const itemQuery = ref('')
+const onlyAlerts = ref(false)
+
+const totalItemRows = computed(() => itemGroups.value.reduce((n, g) => n + g.rows.length, 0))
+const hasItemAlerts = computed(() =>
+  anomalyByRow.value.size > 0 && itemGroups.value.some(g => g.rows.some(r => !!rowAnomaly(r))),
+)
+// The toolbar earns its space only when there's enough to navigate: many
+// lines, or at least one flag to isolate.
+const showItemFilter = computed(() => totalItemRows.value > 6 || hasItemAlerts.value)
+
+function rowMatchesQuery(row: ItemRow, tokens: string[]): boolean {
+  if (!tokens.length) return true
+  const hay = `${row.description} ${row.code} ${row.codeDescription} ${row.unitName}`.toLowerCase()
+  return tokens.every(tk => hay.includes(tk))
+}
+
+const filteredItemGroups = computed<ItemGroup[]>(() => {
+  const tokens = itemQuery.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const alerts = onlyAlerts.value
+  if (!tokens.length && !alerts) return itemGroups.value
+  return itemGroups.value
+    .map(g => ({ ...g, rows: g.rows.filter(r => rowMatchesQuery(r, tokens) && (!alerts || !!rowAnomaly(r))) }))
+    .filter(g => g.rows.length > 0)
+})
+const shownItemRows = computed(() => filteredItemGroups.value.reduce((n, g) => n + g.rows.length, 0))
+const noItemMatch = computed(() => itemGroups.value.length > 0 && filteredItemGroups.value.length === 0)
 const aiVerdict = computed<any | null>(() => {
   const v = aiFlag.value?.aiVerdict
   return v && typeof v.explainable === 'string' ? v : null
@@ -473,7 +532,10 @@ const priceReferences = computed<PriceRef[]>(() => {
       if (!classificationId || !paid || paid <= 0) continue
 
       const currency = item.unit?.value?.currency?.trim() || 'UYU'
-      const unitName = item.unit?.name?.trim() || ''
+      // Canonical unit (lowercased, unidad-folded) — the baseline and the
+      // detail API both key on this, so "FRASCO" must fold to "frasco" or the
+      // lookup misses and the reference row disappears. See shared/utils/units.
+      const unitName = canonicalUnit(item.unit?.name)
       const key = `${classificationId}|${currency}|${unitName}`
       if (seen.has(key)) continue
 
@@ -870,6 +932,7 @@ useSeo(() => ({
           <!-- ===== AI review of the price flag (journalist/researcher panel) ===== -->
           <section
             v-if="aiVerdict"
+            id="alerta-precio"
             class="panel block airev"
             :class="`airev--${aiVerdict.explainable}`"
           >
@@ -1138,6 +1201,44 @@ useSeo(() => ({
                 {{ showsMoney ? t('contract.itemsHelp') : t('contract.itemsTenderHelp') }}
               </p>
             </div>
+
+            <!-- Filter the lines: free text over description/code, plus an
+                 "only flagged" toggle when a price alert fired. Both refine
+                 already-loaded rows client-side. -->
+            <div
+              v-if="showItemFilter"
+              class="ifilter"
+            >
+              <label class="ifilter__box">
+                <v-icon
+                  size="16"
+                  class="ifilter__icon"
+                >
+                  mdi-magnify
+                </v-icon>
+                <input
+                  v-model="itemQuery"
+                  type="search"
+                  class="ifilter__input"
+                  :placeholder="t('contract.itemsFilter.placeholder')"
+                >
+              </label>
+              <button
+                v-if="hasItemAlerts"
+                type="button"
+                class="ifilter__toggle"
+                :class="{ 'ifilter__toggle--on': onlyAlerts }"
+                :aria-pressed="onlyAlerts"
+                @click="onlyAlerts = !onlyAlerts"
+              >
+                <v-icon size="15">
+                  mdi-alert-outline
+                </v-icon>
+                {{ t('contract.itemsFilter.onlyAlerts') }}
+              </button>
+              <span class="ifilter__count u-mono">{{ t('contract.itemsFilter.shown', { shown: shownItemRows, total: totalItemRows }) }}</span>
+            </div>
+
             <div
               v-if="!itemGroups.length"
               class="panel__body"
@@ -1151,7 +1252,7 @@ useSeo(() => ({
                  sit above the lines it paid for, so a release with more
                  than one award never blurs into a single list. -->
             <div
-              v-for="g in itemGroups"
+              v-for="g in filteredItemGroups"
               :key="g.key"
               class="agroup"
             >
@@ -1217,6 +1318,21 @@ useSeo(() => ({
               >
                 <template #cell:description="{ row }">
                   {{ row.description || '—' }}
+                  <!-- The price flag on this exact line, restored inline: the
+                       feed unit price sits far above this item's usual range.
+                       The full analysis is the panel at the top of the page. -->
+                  <a
+                    v-if="rowAnomaly(row)"
+                    class="ialert"
+                    :class="`ialert--${rowAnomaly(row).severity}`"
+                    href="#alerta-precio"
+                    :title="rowAnomaly(row).description"
+                  >
+                    <v-icon size="12">
+                      mdi-alert
+                    </v-icon>
+                    {{ t('contract.itemsFilter.alert') }}
+                  </a>
                   <!-- Características scraped from the gov page — the
                        open-data feed doesn't carry them. See
                        /api/contracts/[id]/features. -->
@@ -1276,6 +1392,13 @@ useSeo(() => ({
                   />
                 </template>
               </DataTable>
+            </div>
+
+            <div
+              v-if="noItemMatch"
+              class="ifilter__empty u-muted"
+            >
+              {{ t('contract.itemsFilter.noMatch') }}
             </div>
           </section>
 
@@ -2582,5 +2705,113 @@ a.itable__code:hover { text-decoration: underline; }
   font-size: var(--t-xs);
   font-style: italic;
   color: var(--text-muted);
+}
+
+/* ===== Items filter toolbar ===== */
+.ifilter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.ifilter__box {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+}
+
+.ifilter__box:focus-within { border-color: var(--celeste-deep); }
+.ifilter__icon { flex: none; color: var(--text-muted); }
+
+.ifilter__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  outline: none;
+}
+
+.ifilter__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex: none;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ifilter__toggle:hover { color: var(--text); }
+
+.ifilter__toggle--on {
+  color: var(--alerta);
+  border-color: color-mix(in srgb, var(--alerta) 45%, transparent);
+  background: color-mix(in srgb, var(--alerta) 10%, transparent);
+}
+
+.ifilter__count {
+  margin-left: auto;
+  flex: none;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.ifilter__empty {
+  padding: var(--s-5);
+  text-align: center;
+  font-size: var(--t-sm);
+}
+
+@media (max-width: 560px) {
+  .ifilter__count { margin-left: 0; }
+}
+
+/* ===== Per-line price flag =====
+   The inline "alerta respectiva": a line whose unit price the detector
+   flagged, linking up to the full analysis panel. */
+.ialert {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: var(--s-2);
+  padding: 1px var(--s-2) 1px 5px;
+  border-radius: var(--r-full);
+  vertical-align: middle;
+  font-family: var(--font-body);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--alerta);
+  background: color-mix(in srgb, var(--alerta) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--alerta) 40%, transparent);
+}
+
+.ialert:hover { background: color-mix(in srgb, var(--alerta) 22%, transparent); }
+
+/* Medium/low flags read as caution, not alarm. */
+.ialert--medium,
+.ialert--low {
+  color: var(--text-muted);
+  background: var(--surface-sunken);
+  border-color: var(--rule-strong);
 }
 </style>

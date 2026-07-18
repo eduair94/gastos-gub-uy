@@ -48,6 +48,10 @@ function fromRoute(): FilterState {
     // The catalogue code the "ver comparables" link filters by. Read it or the
     // link silently shows every award as if it were a comparable.
     categoryId: parseList(q.categoryId),
+    // Buyer id ("98-1") — arrives from the Intendencias/organism analytics links,
+    // where the buyer is known by its stable id. No rail control; read it or the
+    // per-intendencia link would show every award instead of that buyer's.
+    buyerIds: parseList(q.buyerIds),
     procurementMethodDetails: parseList(q.procurementMethodDetails),
     status: parseList(q.status),
     currency: parseList(q.currency),
@@ -90,7 +94,7 @@ watch(focusCode, (v) => {
 const activeCount = computed(() => {
   const f = filters.value
   return [
-    f.search, f.tag.length, f.buyers.length, f.suppliers.length, f.category.length, f.categoryId.length,
+    f.search, f.tag.length, f.buyers.length, f.buyerIds.length, f.suppliers.length, f.category.length, f.categoryId.length,
     f.procurementMethodDetails.length,
     f.status.length, f.currency.length, f.yearFrom, f.yearTo,
     f.amountFrom, f.amountTo, f.hasAmount || null,
@@ -104,6 +108,7 @@ const apiQueryNow = computed(() => {
   if (f.search) q.search = f.search
   if (f.tag.length) q.tag = f.tag.join(',')
   if (f.buyers.length) q.buyers = f.buyers.join(',')
+  if (f.buyerIds.length) q.buyerIds = f.buyerIds.join(',')
   if (f.suppliers.length) q.suppliers = f.suppliers.join(',')
   if (f.category.length) q.category = f.category.join(',')
   if (f.categoryId.length) q.categoryId = f.categoryId.join(',')
@@ -250,7 +255,9 @@ async function loadFeatures() {
   catch { /* leave cells blank; a later view retries */ }
 }
 
-watch(contracts, () => { loadFeatures() }, { immediate: true })
+watch(contracts, () => {
+  loadFeatures()
+}, { immediate: true })
 
 /**
  * The histogram plots money when we could total it, and contract counts
@@ -293,7 +300,7 @@ function clearAll() {
   filters.value = {
     // Back to the default view, not to an empty one: clearing should
     // land the reader on contracts again, not on a wall of $0 paperwork.
-    search: '', tag: [...DEFAULT_TAGS], buyers: [], suppliers: [], category: [], categoryId: [],
+    search: '', tag: [...DEFAULT_TAGS], buyers: [], buyerIds: [], suppliers: [], category: [], categoryId: [],
     procurementMethodDetails: [],
     status: [], currency: [], yearFrom: null, yearTo: null,
     amountFrom: null, amountTo: null, hasAmount: false,

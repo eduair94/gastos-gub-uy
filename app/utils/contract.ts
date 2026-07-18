@@ -69,7 +69,7 @@ export interface ContractLike {
     items?: {
       description?: string
       quantity?: number
-      classification?: { description?: string }
+      classification?: { id?: string, description?: string }
       unit?: { name?: string, value?: { amount?: number, currency?: string } }
     }[]
   }[]
@@ -240,6 +240,11 @@ export function contractItems(c?: ContractLike | null) {
   return (c?.awards ?? []).flatMap(a =>
     (a.items ?? []).map(i => ({
       description: i.description?.trim() || i.classification?.description?.trim() || '',
+      // The catalogue code (classification.id) — the key the product page and
+      // the price baseline both join on. Carried so the search results dialog
+      // can link each line to its product profile.
+      code: i.classification?.id?.trim() || '',
+      codeDescription: i.classification?.description?.trim() || '',
       quantity: i.quantity ?? null,
       unitName: i.unit?.name?.trim() || '',
       unitAmount: i.unit?.value?.amount ?? null,

@@ -6,6 +6,7 @@ import { ContractItemFeaturesModel, ItemPriceBaselineModel, ReleaseModel } from 
 import { awardUrl, compraIdFromOcid, ocdsJsonUrl, sourceUrl } from '../../utils/query'
 import { loadRateTable } from '../../utils/rates'
 import { toTodayUyu } from '../../../../shared/utils/real-value'
+import { canonicalUnit } from '../../../../shared/utils/units'
 
 /**
  * The reference price distribution for each item this contract bought.
@@ -28,7 +29,11 @@ async function itemBaselines(contract: IRelease) {
       const classificationId = item.classification?.id?.trim()
       if (!classificationId) continue
       const currency = item.unit?.value?.currency?.trim() || 'UYU'
-      const unitName = item.unit?.name?.trim() || ''
+      // The baseline stores the CANONICAL unit (lowercased, unidad-folded — see
+      // shared/utils/units). The award item carries the raw "FRASCO"/"Unidad",
+      // so match on the canonical form or the point lookup silently misses and
+      // the price-reference/alert row for that item vanishes.
+      const unitName = canonicalUnit(item.unit?.name)
       const key = `${classificationId}|${currency}|${unitName}`
       keys.set(key, { classificationId, currency, unitName })
       const paid = item.unit?.value?.amount
