@@ -449,14 +449,31 @@ console.log("\n📊 contamination guard raises the floor on wildly-spanning base
 {
   // Tight centre (small madLn, so z clears easily) but a few outliers stretch p95 -> p95/p25 = 66x.
   const contaminated: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.02, p25: 90, p75: 110, p95: 6000 };
-  check("+50% over median on a contaminated baseline -> suppressed by the hardened floor", scoreUnitPrice(150, contaminated) === null);
-  check("+120% over median (2.2x) -> still flagged (clears the ln2 floor)", scoreUnitPrice(220, contaminated) !== null);
+  check("+50% over median on a contaminated baseline -> suppressed", scoreUnitPrice(150, contaminated) === null);
+  // On a contaminated baseline p95 is enormous, so the p95 floor also suppresses a 2.2x-median price:
+  // 220 << p95 6000 is a different product in the pooled code, not a spike.
+  check("2.2x median but below p95 -> suppressed (p95 floor)", scoreUnitPrice(220, contaminated) === null);
+  // Only a price ABOVE p95 is a genuine outlier on such a baseline.
+  check("above p95 on contaminated baseline -> flagged", scoreUnitPrice(8000, contaminated) !== null);
 
-  const cleanSpan: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.02, p25: 90, p75: 110, p95: 300 }; // 3.3x span
-  check("+50% over median on an ordinary-span baseline -> still flagged (ordinary floor)", scoreUnitPrice(150, cleanSpan) !== null);
+  // Ordinary-span baseline with a realistic tight p95: the ordinary MIN_LOG_DEVIATION (1.25x) applies,
+  // so a 1.5x-median price above p95 still flags (the hardened ln2 floor would have suppressed it).
+  const cleanSpan: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.02, p25: 90, p75: 110, p95: 120 };
+  check("+50% over median, above p95, ordinary span -> flagged (ordinary floor)", scoreUnitPrice(150, cleanSpan) !== null);
 
   const noP95: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.02, p25: 90, p75: 110 };
   check("absent p95 -> guard skipped, +50% flagged as before", scoreUnitPrice(150, noP95) !== null);
+}
+
+console.log("\n📊 upper-tail p95 floor: a price_spike must exceed the baseline p95");
+{
+  // A tight centre would give a huge z, but a price at/below p95 sits inside the normal upper tail.
+  const b: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.02, p25: 90, p75: 110, p95: 500 };
+  check("price below p95 -> suppressed", scoreUnitPrice(400, b) === null);
+  check("price exactly at p95 -> suppressed", scoreUnitPrice(500, b) === null);
+  check("price just above p95 -> allowed (clears the other floors)", scoreUnitPrice(650, b) !== null);
+  const noFloor: BaselineInput = { n: 200, medianLn: Math.log(100), madLn: 0.02, p25: 90, p75: 110 };
+  check("absent p95 -> floor skipped", scoreUnitPrice(150, noFloor) !== null);
 }
 
 console.log("\n=====================");

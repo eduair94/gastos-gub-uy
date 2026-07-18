@@ -450,6 +450,19 @@ export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFi
     return null;
   }
 
+  // UPPER-TAIL p95 FLOOR. A "price_spike" must sit above the baseline's own 95th percentile. The
+  // MIN_LOG_DEVIATION floor only measures distance from the MEDIAN, so on a long-tailed or
+  // contaminated baseline (p95 >> median) a price merely 1.25x the median clears it while still
+  // sitting well within the normal upper tail — an ordinary price, not a spike. Degenerate baselines
+  // make this worse: MAD≈0 turns a 1.36x-median price into a z=1000 "critical" (HIDROGEL alginato
+  // 195 vs median 143, p95 607). Requiring price > p95 removed ~24% of the surfaced "sin explicación"
+  // set, all of it priced at or below the 95th percentile — by definition not over-priced. Applied
+  // only when p95 is known; older baselines without it fall back to the prior behaviour, exactly like
+  // the contamination guard (heuristic #3).
+  if (Number.isFinite(baseline.p95) && (baseline.p95 as number) > 0 && price <= (baseline.p95 as number)) {
+    return null;
+  }
+
   const severityCap = n < ROBUST_MIN_N ? 2 : 4;
   const canUseRobustZ =
     n >= ROBUST_MIN_N && Number.isFinite(baseline.madLn) && baseline.madLn >= MAD_LN_EPSILON;

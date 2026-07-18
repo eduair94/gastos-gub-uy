@@ -33,6 +33,8 @@
  *   npx tsx src/jobs/score-anomalies-ai.ts --all           # re-triage everything in scope
  *   npx tsx src/jobs/score-anomalies-ai.ts --dry-run       # plan + cost estimate, no API calls, no writes
  *   npx tsx src/jobs/score-anomalies-ai.ts --reset         # clear every stored verdict, then exit
+ *   npx tsx src/jobs/score-anomalies-ai.ts --rescore-featureless --dry-run   # count verdicts the itemNro fix repairs
+ *   npx tsx src/jobs/score-anomalies-ai.ts --rescore-featureless             # re-triage ONLY those (bug-affected) flags
  *   npx tsx src/jobs/score-anomalies-ai.ts --concurrency=8 --model=gemini-2.5-flash-lite
  */
 
@@ -94,6 +96,12 @@ interface CliOptions {
   scrapeFeatures: boolean;
   /** Parallel gov-page fetches when populating the características cache. */
   scrapeConcurrency: number;
+  /**
+   * Re-triage ONLY the flags the itemNro() fix repairs: a stored verdict with no características
+   * attached (`usedFeatures`=0) whose release carries "<nro>-<sub>" string item ids. Bypasses the
+   * incremental dataVersion gate (those rows are unchanged) without re-charging the whole corpus.
+   */
+  rescoreFeatureless: boolean;
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -122,6 +130,7 @@ const RESPONSE_SCHEMA: GeminiSchema = {
 const SYSTEM_INSTRUCTION = [
   "Sos un auditor de compras públicas de Uruguay (datos OCDS del portal de Compras Estatales).",
   "Recibís UNA alerta estadística: un precio unitario que se aparta mucho de lo que se suele pagar por el mismo código de artículo.",
+  "IMPORTANTE — DIRECCIÓN: por construcción esta alerta es SIEMPRE de SOBREPRECIO: el precio pagado está POR ENCIMA del rango habitual, nunca por debajo. NUNCA lo describas como 'más bajo', 'menor', 'inferior' ni 'por debajo del rango' — si el número lo contradice, es un error tuyo.",
   "Tu tarea NO es recalcular la estadística: es decidir si esa diferencia de precio tiene una explicación legítima leyendo la descripción del ítem y TODO el contexto del contrato: la canasta completa, el asunto, el procedimiento, el comprador, el proveedor, y sobre todo las CARACTERÍSTICAS del ítem scrapeadas de la página oficial (p. ej. 'Presentación: ENVASE / Medida: 250 G' cambia lo que significa un precio 'por G') y los DOCUMENTOS adjuntos.",
   "",
   "Marcá explainable='yes' cuando haya una explicación legítima plausible, y elegí la categoría:",
@@ -135,6 +144,11 @@ const SYSTEM_INSTRUCTION = [
   "",
   "Marcá explainable='no' con categoría 'sin-explicacion' SOLO cuando, con el contexto dado, NINGUNA de esas explicaciones aplica de forma plausible: un sobreprecio genuino sin justificación visible. Estos son la señal real.",
   "Marcá explainable='uncertain' cuando el contexto no alcanza para decidir.",
+  "",
+  "REGLA — RENGLONES VECINOS DEL MISMO CÓDIGO: bajo un mismo código de catálogo conviven presentaciones y concentraciones DISTINTAS. Dos renglones con el mismo código pero distinto precio unitario son, casi siempre, productos distintos (p. ej. una ampolla de 100 MG / 16,67 ML frente a otra de 30 MG / 5 ML del mismo código), NO el mismo producto a dos precios. Por eso: NUNCA uses el precio de un renglón vecino del mismo código como referencia para afirmar sobreprecio. La ÚNICA referencia válida es el rango estadístico (p25–p95). Antes de marcar 'no', mirá las CARACTERÍSTICAS del ítem alertado (concentración, presentación, medida, volumen/ML, unidades por envase): si es una presentación mayor, más concentrada o de más volumen que lo habitual, es 'producto-distinto' y corresponde 'yes'.",
+  "Si NO tenés las características del ítem alertado y el único indicio de sobreprecio es un renglón vecino del mismo código más barato, NO marques 'no': marcá 'uncertain' (falta el dato de presentación/concentración que explicaría la diferencia).",
+  "SIMÉTRICO — NO INVENTES LA EXPLICACIÓN: si NO tenés características, TAMPOCO afirmes que el ítem es 'una presentación distinta / de mayor gramaje / más concentrada / caja en vez de unidad' para marcar 'yes'. Eso sería inventar un dato que no está. Sin evidencia concreta en el contexto, marcá 'uncertain', nunca 'yes' basado en una suposición. Cada punto de 'evidence' debe existir literalmente en el contexto dado.",
+  "COHERENCIA OBLIGATORIA entre explainable y category: explainable='no' va SIEMPRE y SOLO con category='sin-explicacion'. Si elegís una categoría explicativa (producto-distinto, cantidad-baja, marca-especializado, urgencia, servicio-incluido, error-carga, moneda-erronea), entonces explainable DEBE ser 'yes'. Nunca combines una categoría explicativa con 'no', ni 'sin-explicacion' con 'yes'.",
   "",
   "Sé conservador: ante una explicación legítima razonable, NO marques 'no'. No inventes datos que no están.",
   "",
@@ -159,6 +173,7 @@ function parseArgs(argv: string[]): CliOptions {
     rpm: null,
     scrapeFeatures: true,
     scrapeConcurrency: DEFAULT_SCRAPE_CONCURRENCY,
+    rescoreFeatureless: false,
   };
 
   for (const arg of argv) {
@@ -191,6 +206,8 @@ function parseArgs(argv: string[]): CliOptions {
       const n = Number.parseInt(arg.slice("--rpm=".length), 10);
       if (!Number.isInteger(n) || n < 1) throw new Error(`Invalid --rpm: ${arg}`);
       options.rpm = n;
+    } else if (arg === "--rescore-featureless") {
+      options.rescoreFeatureless = true;
     } else if (arg === "--no-scrape-features") {
       options.scrapeFeatures = false;
     } else if (arg.startsWith("--scrape-concurrency=")) {
@@ -216,6 +233,40 @@ function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/**
+ * The gov "Ítem Nº" of an OCDS award item. Its `id` is a plain integer in some extraction
+ * batches and a "<nro>-<sub>" string in others (e.g. "99-1"); BOTH carry the mismo nro as
+ * prefix, and that nro is the key into the scraped características. `num(id)` alone silently
+ * returned null for the string shape, so the características (concentración, ML, presentación)
+ * never reached the model for ~29% of triaged anomalies — the exact field that tells a
+ * same-code larger/stronger presentation from a real over-price. Parse the leading integer.
+ */
+function itemNro(id: unknown): number | null {
+  if (typeof id === "number") return Number.isFinite(id) ? id : null;
+  if (typeof id === "string") {
+    const m = /^\s*(\d+)/.exec(id);
+    if (m) return Number.parseInt(m[1]!, 10);
+  }
+  return null;
+}
+
+/**
+ * A compact, discriminating spec for a scraped item — concentración + presentación/medida.
+ * Two renglones that share a catalogue code differ ONLY here, so this is what tells them
+ * apart in the basket (e.g. "100 MG · 16,67 ML" vs "30 MG · 5 ML" for the same Paclitaxel code).
+ */
+function compactSpec(features: { name: string; value: string }[]): string | null {
+  const pick = (re: RegExp): string | null => features.find((f) => re.test(f.name))?.value ?? null;
+  const conc = pick(/concentra/i);
+  const medida = pick(/medida/i) ?? pick(/presentaci/i);
+  // The comercial name often carries the volume (ML) when no dedicated field does.
+  const commercial = pick(/nombre comercial|modelo/i);
+  const parts = [conc, medida].filter(Boolean);
+  const base = parts.join(" · ");
+  const spec = base || (commercial ?? "");
+  return spec ? truncate(spec, 70) : null;
+}
+
 /** id_compra for the official public page is derived from the OCID, never `id`. */
 function publicUrlFromOcid(ocid: unknown): string | null {
   if (typeof ocid !== "string" || !ocid) return null;
@@ -232,6 +283,8 @@ interface SiblingItem {
   unitPrice: number | null;
   currency: string | null;
   isTarget: boolean;
+  /** Concentración/presentación scraped for this line — the only thing that distinguishes same-code siblings. */
+  spec: string | null;
 }
 
 interface DocRef {
@@ -301,18 +354,28 @@ function buildContext(
   const targetPrice = anomaly.detectedValue;
 
   let targetMatched = false;
-  // The OCDS award item `id` is a plain integer and equals the características "Ítem Nº" (nro), so
-  // once we identify the flagged line we can attach EXACTLY its characteristics — never a sibling's.
+  // The gov "Ítem Nº" (nro) is the key into the scraped características. The OCDS award item `id`
+  // carries it — as a plain integer in some batches, as a "<nro>-<sub>" string in others — so it is
+  // parsed with itemNro(), never num() (which silently dropped the string shape). Once the flagged
+  // line is identified we attach EXACTLY its characteristics — never a sibling's.
   let targetNro: number | null = null;
+  const scraped = compraId ? featuresByCompra.get(compraId) : undefined;
+  const featuresByNro = new Map<number, { name: string; value: string }[]>();
+  if (scraped) for (const s of scraped) featuresByNro.set(s.nro, s.features);
+
   const siblings: SiblingItem[] = items.slice(0, MAX_SIBLING_ITEMS).map((item) => {
     const clsId = item?.classification?.id ?? null;
     const unitName = item?.unit?.name ?? null;
     const unitPrice = num(item?.unit?.value?.amount);
+    const nro = itemNro(item?.id);
     const isTarget = !targetMatched && clsId === targetClsId && unitName === targetUnit && unitPrice === targetPrice;
     if (isTarget) {
       targetMatched = true;
-      targetNro = num(item?.id);
+      targetNro = nro;
     }
+    // Attach each sibling's distinguishing spec so same-code lines are not shown identically —
+    // that indistinguishability is what made the model treat a smaller/weaker twin as a benchmark.
+    const feats = nro !== null ? featuresByNro.get(nro) : undefined;
     return {
       description: truncate(item?.description),
       classificationId: typeof clsId === "string" ? clsId : null,
@@ -321,14 +384,14 @@ function buildContext(
       unitPrice,
       currency: truncate(item?.unit?.value?.currency, 8),
       isTarget,
+      spec: feats ? compactSpec(feats) : null,
     };
   });
 
-  // Attach the flagged item's características by nro. Conservative: no nro match (or no scrape) => no
-  // characteristics, rather than risk feeding a different item's — this audits public money.
+  // Attach the flagged item's full características by nro. Conservative: no nro match (or no scrape)
+  // => no characteristics, rather than risk feeding a different item's — this audits public money.
   let features: { name: string; value: string }[] = [];
   let variation: string | null = null;
-  const scraped = compraId ? featuresByCompra.get(compraId) : undefined;
   if (scraped && targetNro !== null) {
     const hit = scraped.find((s) => s.nro === targetNro);
     if (hit) {
@@ -367,6 +430,15 @@ function buildPrompt(anomaly: AnomalyDoc, ctx: AnomalyContext): string {
   if (min !== null && max !== null) {
     lines.push(`- Rango habitual para ese código (p25–p95): ${min} – ${max} ${currency}`);
   }
+  // Upper-tail-only detector (see anomaly-stats.ts): every flag is an OVER-price.
+  // Spell out the direction and magnitude so the model cannot invert it in prose —
+  // flash-lite has called clear over-prices "significativamente más bajo".
+  const paidNum = num(anomaly.detectedValue);
+  if (paidNum !== null && max !== null && max > 0) {
+    lines.push(`- Dirección: SOBREPRECIO — lo pagado (${paidNum}) está POR ENCIMA del rango; es ≈${(paidNum / max).toFixed(1)}× el techo (p95=${max}). Nunca es "más bajo".`);
+  } else {
+    lines.push(`- Dirección: SOBREPRECIO — lo pagado está POR ENCIMA del rango habitual. Nunca es "más bajo".`);
+  }
   const baselineN = num(anomaly.metadata?.baselineN);
   if (baselineN !== null) lines.push(`- Comparables en la referencia: ${baselineN}`);
   const z = num(anomaly.metadata?.zScore);
@@ -399,6 +471,7 @@ function buildPrompt(anomaly: AnomalyDoc, ctx: AnomalyContext): string {
       const parts = [
         s.isTarget ? "»" : "-",
         s.description ?? "(sin descripción)",
+        s.spec ? `[${s.spec}]` : null,
         s.quantity !== null ? `x${s.quantity}` : null,
         s.unitName ? `/${s.unitName}` : null,
         s.unitPrice !== null ? `@ ${s.unitPrice} ${s.currency ?? currency}` : null,
@@ -417,6 +490,53 @@ function buildPrompt(anomaly: AnomalyDoc, ctx: AnomalyContext): string {
   lines.push("");
   lines.push("¿Tiene el precio de la ALERTA una explicación legítima? Devolvé veredicto, resumen (reason), análisis detallado (analysis) y evidencia (evidence) según el esquema.");
   return lines.join("\n");
+}
+
+const EXPLANATORY_CATEGORIES: ReadonlySet<Category> = new Set([
+  "cantidad-baja",
+  "producto-distinto",
+  "marca-especializado",
+  "urgencia",
+  "servicio-incluido",
+  "error-carga",
+  "moneda-erronea",
+]);
+
+/**
+ * Reconcile the two label fields so a stored verdict is never self-contradictory. Flash-Lite
+ * sometimes pairs an explanatory category with explainable='no' — it named a legitimate reason yet
+ * still flagged the price as unexplained (19 live rows, e.g. `no/producto-distinto` where the
+ * analysis says "es un producto distinto") — or buckets `sin-explicacion` with `yes` (6 rows). Both
+ * pollute the decisive "sin explicación" signal. Enforced invariant: explainable='no' ⇔
+ * category='sin-explicacion'. A contradiction is resolved to 'uncertain' (a human should look),
+ * never auto-promoted to a clean 'yes' nor left masquerading as real signal.
+ */
+function normalizeVerdict(explainable: Explainable, category: Category): { explainable: Explainable; category: Category } {
+  // 'sin-explicacion' is, by definition, the "no" bucket; with yes/uncertain it is the wrong bucket.
+  if (category === "sin-explicacion" && explainable !== "no") {
+    return { explainable, category: "otro" };
+  }
+  if (explainable === "no" && category !== "sin-explicacion") {
+    // A NAMED explanation flagged as unexplained is contradictory — defer to a human, keep the reason.
+    if (EXPLANATORY_CATEGORIES.has(category)) return { explainable: "uncertain", category };
+    // 'no/otro' just means "unexplained" — canonicalise to the 'sin-explicacion' bucket.
+    return { explainable: "no", category: "sin-explicacion" };
+  }
+  return { explainable, category };
+}
+
+/**
+ * A stored verdict is "feature-bug-affected" when it got NO características (`usedFeatures`=0 or
+ * absent) AND its release carries "<nro>-<sub>" string item ids — the shape the old `num(item.id)`
+ * parse silently dropped. These are exactly the rows the itemNro() fix repairs, so
+ * --rescore-featureless re-triages only them rather than re-charging the healthy corpus.
+ */
+function isFeatureBugAffected(anomaly: AnomalyDoc, release: ReleaseDoc | undefined): boolean {
+  if (!release) return false;
+  const usedFeatures = num(anomaly.aiVerdict?.usedFeatures) ?? 0;
+  if (usedFeatures > 0) return false;
+  const awards = Array.isArray(release.awards) ? release.awards : [];
+  return awards.some((a) => Array.isArray(a?.items) && a.items!.some((it) => typeof it?.id === "string" && /^\d+-/.test(it.id)));
 }
 
 function isValidVerdict(v: unknown): v is Verdict {
@@ -507,7 +627,9 @@ async function main(): Promise<void> {
   const filter: Record<string, unknown> = { type: "price_spike", severityRank: { $gte: options.minRank } };
   if (options.severities?.length) filter.severity = { $in: options.severities };
   // Incremental: only flags that were never triaged, or whose finding changed since the last verdict.
-  if (!options.all) {
+  // --rescore-featureless re-visits stable rows on purpose (their dataVersion is unchanged), so it
+  // must also bypass the incremental gate; it narrows to the bug-affected subset after releases load.
+  if (!options.all && !options.rescoreFeatureless) {
     filter.$expr = { $ne: ["$aiVerdict.dataVersion", "$dataVersion"] };
   }
 
@@ -515,14 +637,17 @@ async function main(): Promise<void> {
   if (options.limit) query.limit(options.limit);
   const anomalies = (await query) as unknown as AnomalyDoc[];
 
-  console.log(`   candidates in scope     : ${anomalies.length} (min-rank ${options.minRank}${options.all ? ", --all" : ", new/changed only"}${options.limit ? `, limit ${options.limit}` : ""})`);
+  const scopeLabel = options.all ? ", --all" : options.rescoreFeatureless ? ", rescore-featureless (pre-narrow)" : ", new/changed only";
+  console.log(`   candidates in scope     : ${anomalies.length} (min-rank ${options.minRank}${scopeLabel}${options.limit ? `, limit ${options.limit}` : ""})`);
 
   if (anomalies.length === 0) {
     console.log(`   nothing to triage. Exiting.`);
     return;
   }
 
-  if (options.dryRun) {
+  // --rescore-featureless narrows the set only after releases load (it needs each item's id shape),
+  // so its dry-run report is emitted there, not here.
+  if (options.dryRun && !options.rescoreFeatureless) {
     // ~500 input + ~120 output tokens per item is the measured envelope; report the estimate.
     const estUsage: GeminiUsage = { promptTokens: anomalies.length * 500, candidatesTokens: anomalies.length * 120, totalTokens: anomalies.length * 620 };
     console.log(`   🧪 --dry-run: would triage ${anomalies.length} flags.`);
@@ -544,6 +669,30 @@ async function main(): Promise<void> {
     for (const doc of docs) releaseById.set(doc.id, doc);
   }
   console.log(`   releases loaded         : ${releaseById.size}/${releaseIds.length}`);
+
+  // ---- --rescore-featureless: narrow to the flags the itemNro() fix actually repairs ----
+  // Scoped repair after the "<nro>-<sub>" id bug: re-triage ONLY stored verdicts that got no
+  // características AND whose release has string item ids. Prune releaseById so the downstream
+  // scrape + triage touch only those compras — no re-charge of the healthy corpus.
+  if (options.rescoreFeatureless) {
+    const before = anomalies.length;
+    const affected = anomalies.filter((a) => isFeatureBugAffected(a, releaseById.get(a.releaseId)));
+    console.log(`   rescore-featureless     : ${affected.length}/${before} are feature-bug-affected (string item-id + no características attached)`);
+    anomalies.length = 0;
+    anomalies.push(...affected);
+    const keep = new Set(affected.map((a) => a.releaseId));
+    for (const id of [...releaseById.keys()]) if (!keep.has(id)) releaseById.delete(id);
+
+    if (affected.length === 0) {
+      console.log(`   nothing to re-triage. Exiting.`);
+      return;
+    }
+    if (options.dryRun) {
+      const estUsage: GeminiUsage = { promptTokens: affected.length * 500, candidatesTokens: affected.length * 120, totalTokens: affected.length * 620 };
+      console.log(`   🧪 --dry-run: would re-triage ${affected.length} flags. ≈US$${estimateCostUsd(estUsage).toFixed(4)} at Flash-Lite pricing`);
+      return;
+    }
+  }
 
   // ---- Borrow the "objeto del llamado" from the tender-stage siblings ----
   // Award releases carry no tender.description/title; the descriptive object of
@@ -681,9 +830,10 @@ async function main(): Promise<void> {
         return null;
       }
 
+      const norm = normalizeVerdict(data.explainable, data.category);
       const verdict: Verdict = {
-        explainable: data.explainable,
-        category: data.category,
+        explainable: norm.explainable,
+        category: norm.category,
         reason: truncate(data.reason, 400) ?? "",
         analysis: truncate(data.analysis, 1200) ?? "",
         evidence: (Array.isArray(data.evidence) ? data.evidence : [])
@@ -834,6 +984,7 @@ interface AnomalyDoc {
   currency?: string;
   sourceYear?: number;
   dataVersion?: string;
+  aiVerdict?: { usedFeatures?: number };
   metadata?: {
     supplierName?: string;
     buyerName?: string;
@@ -849,8 +1000,9 @@ interface AnomalyDoc {
 }
 
 interface ReleaseItem {
-  /** OCDS award item id — a plain integer that equals the características "Ítem Nº". */
-  id?: number;
+  /** OCDS award item id whose leading integer equals the características "Ítem Nº". Plain
+   *  integer in some extraction batches, "<nro>-<sub>" string in others — parse with itemNro(). */
+  id?: number | string;
   description?: string;
   classification?: { id?: string; description?: string };
   unit?: { name?: string; value?: { amount?: number; currency?: string } };
@@ -891,5 +1043,5 @@ if (require.main === module) {
     });
 }
 
-export { parseArgs, buildPrompt, buildContext, isValidVerdict, publicUrlFromOcid, RESPONSE_SCHEMA, SYSTEM_INSTRUCTION };
+export { parseArgs, buildPrompt, buildContext, isValidVerdict, normalizeVerdict, publicUrlFromOcid, RESPONSE_SCHEMA, SYSTEM_INSTRUCTION };
 export type { CliOptions, Verdict };
