@@ -1,6 +1,8 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { AnomalyModel } from '../../utils/models'
+import { escapeRegex } from '../../utils/query'
+import { parseToken } from '../../../../shared/utils/rubro-tokens'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -43,6 +45,16 @@ export default defineEventHandler(async (event) => {
     // Anomalies for one contract (release) — used by the contract detail page to show the AI review.
     if (typeof releaseId === 'string' && releaseId) {
       filter.releaseId = releaseId
+    }
+
+    // SICE rubro filter: a node token (F/SF/C/SC) narrows to anomalies whose item
+    // sits under that rubro (prefix on the enriched itemClassification.rubroPath).
+    // Rows detected before the catalog enrichment have no rubroPath and so are
+    // excluded once this is set — correct, the field only exists post-enrichment.
+    const rubro = query.rubro
+    if (typeof rubro === 'string' && rubro) {
+      const { path } = parseToken(rubro)
+      if (path) filter['metadata.itemClassification.rubroPath'] = new RegExp('^' + escapeRegex(path) + '(\\.|$)')
     }
 
     // Second-stage AI triage filter (see src/jobs/score-anomalies-ai.ts). Lets the

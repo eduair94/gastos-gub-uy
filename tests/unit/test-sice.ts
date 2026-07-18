@@ -113,5 +113,18 @@ const p2 = enrichProjectionWithCatalog(
 );
 ok("uncataloged code falls through unchanged", p2.classificationSet.length === 1 && p2.classificationSet[0] === "999999");
 
+console.log("\n🧪 canonical unit folding");
+console.log("=========================");
+import { canonicalUnit } from "../../shared/utils/units";
+eq("UNIDAD folds to unidad", canonicalUnit("UNIDAD"), "unidad");
+eq("Unidad folds to unidad", canonicalUnit("Unidad"), "unidad");
+eq("u folds to unidad", canonicalUnit("u"), "unidad");
+eq("un folds to unidad", canonicalUnit("un"), "unidad");
+eq("unid folds to unidad", canonicalUnit(" unid "), "unidad");
+eq("c/u folds to unidad", canonicalUnit("C/U"), "unidad");
+eq("litro is not folded", canonicalUnit("Litro"), "litro");
+eq("caja stays caja (no over-merge)", canonicalUnit("CAJA"), "caja");
+eq("null becomes unit", canonicalUnit(null), "unit");
+
 console.log(`\n${failed === 0 ? "✅" : "❌"} ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

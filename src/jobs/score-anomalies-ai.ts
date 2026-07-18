@@ -150,6 +150,8 @@ const SYSTEM_INSTRUCTION = [
   "SIMÉTRICO — NO INVENTES LA EXPLICACIÓN: si NO tenés características, TAMPOCO afirmes que el ítem es 'una presentación distinta / de mayor gramaje / más concentrada / caja en vez de unidad' para marcar 'yes'. Eso sería inventar un dato que no está. Sin evidencia concreta en el contexto, marcá 'uncertain', nunca 'yes' basado en una suposición. Cada punto de 'evidence' debe existir literalmente en el contexto dado.",
   "COHERENCIA OBLIGATORIA entre explainable y category: explainable='no' va SIEMPRE y SOLO con category='sin-explicacion'. Si elegís una categoría explicativa (producto-distinto, cantidad-baja, marca-especializado, urgencia, servicio-incluido, error-carga, moneda-erronea), entonces explainable DEBE ser 'yes'. Nunca combines una categoría explicativa con 'no', ni 'sin-explicacion' con 'yes'.",
   "",
+  "CATÁLOGO OFICIAL (CUBS/ACCE): cuando la alerta trae 'Nombre canónico', 'Rubro' y 'Unidad oficial', son datos AUTORITATIVOS del catálogo estatal de artículos — usalos para entender qué es realmente el artículo y cuál es su unidad esperada. Si la unidad del renglón NO coincide con la unidad oficial, es muy probable un 'error-carga' de unidad (o un precio por otra presentación), no un sobreprecio genuino.",
+  "",
   "Sé conservador: ante una explicación legítima razonable, NO marques 'no'. No inventes datos que no están.",
   "",
   "Este es un producto de transparencia sobre el gasto del Estado; periodistas e investigadores usarán tu salida para reportar. Por eso, además del veredicto, devolvé:",
@@ -418,10 +420,13 @@ function buildPrompt(anomaly: AnomalyDoc, ctx: AnomalyContext): string {
   const cls = anomaly.metadata?.itemClassification;
   const lines: string[] = [];
 
+  const unit = anomaly.metadata?.itemUnit;
   lines.push("ALERTA A EVALUAR:");
-  lines.push(`- Artículo: ${truncate(cls?.description) ?? truncate(anomaly.metadata?.itemDescription) ?? cls?.id ?? "—"}`);
+  lines.push(`- Artículo: ${truncate(cls?.canonicalName) ?? truncate(cls?.description) ?? truncate(anomaly.metadata?.itemDescription) ?? cls?.id ?? "—"}`);
   if (cls?.id) lines.push(`- Código de catálogo: ${cls.id}`);
-  lines.push(`- Unidad de medida: ${anomaly.metadata?.itemUnit?.name ?? "—"}`);
+  if (cls?.rubro || cls?.subrubro) lines.push(`- Rubro (catálogo oficial): ${[cls?.rubro, cls?.subrubro].filter(Boolean).join(" › ")}`);
+  lines.push(`- Unidad de medida: ${unit?.name ?? "—"}${unit?.officialUnit ? ` (unidad oficial del catálogo: ${unit.officialUnit})` : ""}`);
+  if (unit?.mismatch) lines.push(`- ATENCIÓN: la unidad del renglón NO coincide con la unidad oficial del artículo — posible error de carga de unidad (evaluá 'error-carga').`);
   const qty = num(anomaly.metadata?.itemQuantity);
   if (qty !== null) lines.push(`- Cantidad adjudicada: ${qty}`);
   lines.push(`- Precio unitario pagado: ${anomaly.detectedValue} ${currency}`);
@@ -989,8 +994,8 @@ interface AnomalyDoc {
     supplierName?: string;
     buyerName?: string;
     itemDescription?: string;
-    itemClassification?: { id?: string; description?: string; scheme?: string };
-    itemUnit?: { id?: string; name?: string };
+    itemClassification?: { id?: string; description?: string; scheme?: string; canonicalName?: string; rubroPath?: string; rubro?: string; subrubro?: string };
+    itemUnit?: { id?: string; name?: string; officialUnit?: string; mismatch?: boolean };
     itemQuantity?: number;
     baselineN?: number;
     zScore?: number;

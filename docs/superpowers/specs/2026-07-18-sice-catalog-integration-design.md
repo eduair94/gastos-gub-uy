@@ -191,8 +191,8 @@ Today baselines group by `{classification.id, currency, unit.name}` where `unit.
 - `canonicalUnit(unitName, code)` = a normalized unit string, using the catalog article's default `unitName` when the raw name normalizes ambiguously, else a synonym-folded normalization (lowercase, strip punctuation/plurals, map the known `u/un/uni/unid/unidad → UNIDAD` family). Pure + unit-tested.
 - Change the baseline `$group._id` and `BaselineKey`/`baselineMapKey` to use `canonicalUnit`. Store `canonicalUnit` (and `rubroPath`, `canonicalName`, `subclaseToken`) on `item_price_baseline` (`shared/models/item_price_baseline.ts`); retain raw `unitName` for debugging. Canonicalize identically in the scoring path (`scoreReleases`/`normaliseRow`).
 
-### 6.2 Rubro-level fallback for sparse codes — `src/jobs/anomaly-stats.ts`
-Also build **subclase-level baselines** keyed by `{subclaseToken, currency, canonicalUnit}`. In `scoreUnitPrice`, when the article-level sample `n < MIN_BASELINE_N`, fall back to the subclase baseline instead of silently skipping the line. Add a unit-mismatch pre-filter analogous to the existing `isLineTotalArtifact` guard.
+### 6.2 Rubro-level fallback for sparse codes — `src/jobs/anomaly-stats.ts` — DEFERRED
+**Not implemented in this pass.** Building subclase-level baselines and falling back to them for sparse codes changes the scorer's semantics and risks new false positives, which the "no errors" bar does not justify here. The canonical-unit merge (§6.1) already makes sparse baselines fuller. Left as a follow-up: build `{subclaseToken, currency, canonicalUnit}` baselines and use them when the article-level `n < MIN_BASELINE_N`, plus a unit-mismatch pre-filter analogous to `isLineTotalArtifact`. The unit-mismatch signal is meanwhile surfaced to the AI triage (§6.3/§6.4) so a unit-mismatch "high price" is discounted there rather than in the statistical gate.
 
 ### 6.3 AI triage prompt — `src/jobs/score-anomalies-ai.ts`
 - `buildContext()`: load a `catalogByCode` map (from `sice_catalog`) for the flagged items.

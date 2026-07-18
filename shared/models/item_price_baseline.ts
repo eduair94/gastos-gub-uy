@@ -16,6 +16,9 @@ const ItemPriceBaselineSchema = new Schema<IItemPriceBaseline>(
   {
     classificationId: { type: String, required: true },
     currency: { type: String, required: true },
+    // Canonical unit (shared/utils/units.canonicalUnit): Unidad/UNIDAD/u/un/unid all
+    // fold to "unidad" so one unit stops fragmenting into thin baselines. Older
+    // raw-unit baselines are swept by dataVersion on each detect-anomalies run.
     unitName: { type: String, required: true },
     n: { type: Number, required: true, default: 0 },
     // Log-space location/scale. MAD has a breakdown point of 0.5, so a single

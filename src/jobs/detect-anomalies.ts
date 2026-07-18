@@ -38,9 +38,19 @@
  */
 
 import type { PipelineStage } from "mongoose";
-import { AnomalyModel, ItemPriceBaselineModel, ReleaseModel } from "../../shared/models";
+import { AnomalyModel, ItemPriceBaselineModel, ReleaseModel, SiceCatalogModel } from "../../shared/models";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
+import { canonicalUnit, canonicalUnitExpr } from "../../shared/utils/units";
 import { BaselineInput, computeBaselineStats, HistogramBin, ScoredFinding, scoreUnitPrice } from "./anomaly-stats";
+
+/** SICE catalog fields the detector attaches to each anomaly for like-for-like context + AI triage. */
+interface CatalogInfo {
+  canonicalName?: string;
+  rubroPath?: string;
+  famiName?: string;
+  subcName?: string;
+  unitName?: string;
+}
 
 /** The only anomaly type this job produces. */
 const ANOMALY_TYPE = "price_spike" as const;
@@ -244,7 +254,10 @@ class AnomalyDetector {
           _id: {
             c: { $ifNull: ["$awards.items.classification.id", "UNKNOWN"] },
             cur: { $ifNull: ["$awards.items.unit.value.currency", "UYU"] },
-            u: { $ifNull: ["$awards.items.unit.name", "unit"] },
+            // Canonical unit folds Unidad/UNIDAD/u/un/unid → "unidad" so one unit
+            // stops fragmenting into thin baselines (see shared/utils/units). Done
+            // server-side to keep the histogram grouping streaming + memory-bounded.
+            u: canonicalUnitExpr("$awards.items.unit.name"),
             p: "$awards.items.unit.value.amount",
           },
           n: { $sum: 1 },
@@ -339,10 +352,30 @@ class AnomalyDetector {
     }
     await flushOps();
 
+    // The unit key is now canonical, so raw-unit baselines from earlier runs are
+    // orphans the scorer will never look up. Sweep everything not written this run;
+    // the scorer loads baselines after this, all at the current dataVersion.
+    const swept = await ItemPriceBaselineModel.deleteMany({ dataVersion: { $ne: this.dataVersion } });
+
     console.log(`   histogram rows streamed : ${histogramRows}`);
     console.log(`   baselines written       : ${baselinesWritten}`);
     console.log(`   baselines skipped       : ${baselinesSkipped} (no usable positive prices)`);
+    console.log(`   stale baselines swept   : ${swept.deletedCount}`);
     console.log(`   largest key histogram   : ${maxBinsPerKey} distinct prices`);
+  }
+
+  /** Load a code→catalog map so anomalies carry canonical name + rubro + official unit. */
+  private catalog = new Map<string, CatalogInfo>();
+
+  private async loadCatalog(): Promise<void> {
+    const cursor = SiceCatalogModel
+      .find({}, { code: 1, canonicalName: 1, rubroPath: 1, famiName: 1, subcName: 1, unitName: 1 })
+      .lean()
+      .cursor({ batchSize: CURSOR_BATCH_SIZE });
+    for await (const d of cursor) {
+      this.catalog.set(d.code, { canonicalName: d.canonicalName, rubroPath: d.rubroPath, famiName: d.famiName, subcName: d.subcName, unitName: d.unitName });
+    }
+    console.log(`   catalog loaded          : ${this.catalog.size} articles`);
   }
 
   /** The release-side scope filter. Reused verbatim for reconciliation. */
@@ -402,6 +435,7 @@ class AnomalyDetector {
 
     const baselines = await this.loadBaselines();
     console.log(`   baselines loaded        : ${baselines.size}`);
+    await this.loadCatalog();
     if (baselines.size === 0) {
       console.warn(`   ⚠️  No baselines found. Run with --baselines-only first.`);
       return;
@@ -427,7 +461,9 @@ class AnomalyDetector {
           classificationScheme: "$awards.items.classification.scheme",
           itemDescription: "$awards.items.description",
           unitId: "$awards.items.unit.id",
-          unitName: { $ifNull: ["$awards.items.unit.name", "unit"] },
+          // Same canonical folding as the baseline group, so the scoring lookup
+          // key matches the baseline key it was built under.
+          unitName: canonicalUnitExpr("$awards.items.unit.name"),
           currency: { $ifNull: ["$awards.items.unit.value.currency", "UYU"] },
           unitPrice: "$awards.items.unit.value.amount",
           quantity: "$awards.items.quantity",
@@ -571,7 +607,13 @@ class AnomalyDetector {
   }
 
   private buildAnomalyDoc(row: ScoredRow, scored: ScoredFinding, baseline: LoadedBaseline): Record<string, unknown> {
-    const label = row.classificationDescription ?? row.itemDescription ?? row.classificationId;
+    const cat = this.catalog.get(row.classificationId);
+    // Prefer the official catalog name for the human label when we have it.
+    const label = cat?.canonicalName ?? row.classificationDescription ?? row.itemDescription ?? row.classificationId;
+    // A unit mismatch (line unit ≠ the article's official unit) is a common cause
+    // of a false "high price"; surface it so the AI triage can discount it.
+    const officialUnit = cat?.unitName ? canonicalUnit(cat.unitName) : undefined;
+    const unitMismatch = officialUnit ? officialUnit !== row.unitName : undefined;
 
     // The deviation-from-mode branch carries a representative pseudo-z, not a dispersion z, so its
     // description speaks in multiples of the dominant price rather than "robust z" — otherwise it
@@ -612,10 +654,17 @@ class AnomalyDetector {
           id: row.classificationId,
           description: row.classificationDescription,
           scheme: row.classificationScheme,
+          // SICE catalog enrichment (same source as alerts + product pages).
+          canonicalName: cat?.canonicalName,
+          rubroPath: cat?.rubroPath,
+          rubro: cat?.famiName,
+          subrubro: cat?.subcName,
         }),
         itemUnit: compact({
           id: row.unitId,
           name: row.unitName,
+          officialUnit,
+          mismatch: unitMismatch,
         }),
         itemQuantity: row.quantity,
         baselineN: baseline.n,
