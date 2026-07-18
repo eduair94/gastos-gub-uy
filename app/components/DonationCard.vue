@@ -308,7 +308,7 @@ onMounted(() => {
   outline-offset: 2px;
 }
 
-.love-chip--kofi { background: var(--celeste-deep); }
+.love-chip--kofi { background: #0070ba; }
 .love-chip--mp { background: #0a4a8f; }
 
 /* ---- Responsive ---- */
