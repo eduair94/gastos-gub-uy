@@ -30,10 +30,19 @@ const nav = computed(() => [
   { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
   { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
   { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
+  // Drill-downs of Alertas that previously had no menu entry — reachable only by
+  // first landing on the anomalies page. Kept adjacent so the overflow "Más" menu
+  // folds the whole alert family together when the bar runs out of room.
+  { key: 'unexplained', to: localePath('/analytics/unexplained'), icon: 'mdi-help-rhombus-outline' },
+  { key: 'providerAnomalies', to: localePath('/analytics/proveedores-anomalias'), icon: 'mdi-account-alert-outline' },
   { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
   { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
   { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan' },
   { key: 'llamados', to: localePath('/llamados'), icon: 'mdi-bullhorn-outline' },
+  // Developer platform front door (a real Nuxt page): quickstart + how to integrate,
+  // which then links onward to /docs. Kept next to `docs` so the overflow menu folds
+  // the API family together.
+  { key: 'developers', to: localePath('/developers'), icon: 'mdi-code-tags' },
   // The API reference is a Nitro server route (server/routes/docs.get.ts), not a Nuxt page, so it
   // must be a real anchor: vue-router resolves /docs to zero matched routes and throws its own 404
   // without ever issuing a request. It would still work when pasted into the address bar, which
@@ -631,6 +640,15 @@ watch([locale, user], () => nextTick(scheduleRecompute))
           </NuxtLink>
           <a href="/docs">{{ t('footer.api') }}</a>
           <a
+            href="https://github.com/eduair94/gastos-gub-uy"
+            rel="noopener external"
+            target="_blank"
+            class="foot__gh"
+          >
+            <v-icon size="16">mdi-github</v-icon>
+            {{ t('footer.github') }}
+          </a>
+          <a
             href="https://www.comprasestatales.gub.uy"
             rel="noopener external"
             target="_blank"
@@ -640,6 +658,10 @@ watch([locale, user], () => nextTick(scheduleRecompute))
         </nav>
       </div>
     </footer>
+
+    <!-- Floating "love" card: star on GitHub or donate. Fixed-positioned,
+         self-contained, persists its own minimized state. -->
+    <DonationCard />
   </v-app>
 </template>
 
@@ -1064,6 +1086,12 @@ watch([locale, user], () => nextTick(scheduleRecompute))
 }
 
 .foot__links a:hover { text-decoration: underline; }
+
+.foot__gh {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
 
 /* ---- Responsive ---- */
 /* Nav spacing and the search width are held constant across every width
