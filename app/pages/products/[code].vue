@@ -94,6 +94,84 @@ function buyerTo(b: { id?: string, name: string }) {
     : localePath(`/contracts?buyers=${encodeURIComponent(b.name)}`)
 }
 
+// The rank rows' PRIMARY action: this product's contracts from THIS party, i.e.
+// filtered by product AND supplier/buyer at once (the profile link stays as a
+// secondary affordance where an id exists).
+const sellerContractsTo = (s: { name: string }) => localePath(`/contracts?categoryId=${encodeURIComponent(code.value)}&suppliers=${encodeURIComponent(s.name)}`)
+const buyerContractsTo = (b: { name: string }) => localePath(`/contracts?categoryId=${encodeURIComponent(code.value)}&buyers=${encodeURIComponent(b.name)}`)
+
+// Supplier concentration bars: top suppliers by number of purchases (few = captive market).
+const supplierConcentration = computed(() =>
+  topSuppliers.value.slice(0, 8).map((s: any) => ({ label: s.name, value: s.lines, color: 'celeste' })),
+)
+
+/**
+ * "¿Varía el producto?" — the distinct característica values across this code's
+ * contracts. Precomputed in `product_variants` for the unexplained-anomaly codes;
+ * for every other code we aggregate the same shape lazily from a sample.
+ */
+const variants = computed<any | null>(() => product.value?.variants ?? null)
+const lazyVariants = ref<any | null>(null)
+const variantsData = computed(() => variants.value ?? lazyVariants.value)
+
+const stripAccents = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+const VARIANT_AXES: Array<{ label: string, match: string[], key?: boolean }> = [
+  { label: 'Marca', match: ['marca'], key: true },
+  { label: 'Nombre comercial/modelo', match: ['nombre comercial', 'modelo'], key: true },
+  { label: 'Presentación', match: ['presentacion'], key: true },
+  { label: 'Concentración', match: ['concentracion'] },
+  { label: 'Medida presentación', match: ['medida'] },
+  { label: 'Variación', match: ['__variation__'] },
+]
+
+/** Client mirror of src/jobs/variants/rollup.ts, for codes without a precomputed doc. */
+function clientRollup(matched: Array<{ features: Array<{ name: string, value: string }>, variation?: string }>) {
+  const counts = new Map<string, Map<string, number>>()
+  for (const ax of VARIANT_AXES) counts.set(ax.label, new Map())
+  for (const m of matched) {
+    for (const ax of VARIANT_AXES) {
+      let value: string | undefined
+      if (ax.match[0] === '__variation__') value = m.variation
+      else value = m.features.find(f => ax.match.some(w => stripAccents(f.name).includes(w)))?.value
+      if (!value) continue
+      const b = counts.get(ax.label)!
+      b.set(value, (b.get(value) ?? 0) + 1)
+    }
+  }
+  const attributes: Array<{ name: string, values: Array<{ value: string, count: number }>, distinct: number }> = []
+  let varies = false
+  for (const ax of VARIANT_AXES) {
+    const b = counts.get(ax.label)!
+    if (!b.size) continue
+    const values = [...b.entries()].map(([value, count]) => ({ value, count })).sort((a, z) => z.count - a.count)
+    attributes.push({ name: ax.label, values, distinct: values.length })
+    if (ax.key && values.length > 1) varies = true
+  }
+  return { attributes, varies, sampledContracts: matched.length }
+}
+
+async function loadLazyVariants() {
+  if (variants.value || lazyVariants.value) return
+  const list = await $fetch<any>('/api/contracts', {
+    query: { categoryId: code.value, tag: 'award', limit: 20, sortBy: 'date', sortOrder: 'desc' },
+  }).catch(() => null)
+  const rows = (list?.data?.contracts ?? []).filter((c: any) => c.compraId && c.ocid && c.focusItem?.nro != null)
+  if (!rows.length) return
+  const res = await $fetch<any>('/api/contracts/item-features/batch', {
+    method: 'POST',
+    body: { items: rows.map((c: any) => ({ compraId: c.compraId, ocid: c.ocid })) },
+  }).catch(() => null)
+  const matched: Array<{ features: Array<{ name: string, value: string }>, variation?: string }> = []
+  for (const c of rows) {
+    const rec = res?.data?.[c.compraId]
+    const item = rec && !('pending' in rec) ? rec.items.find((i: any) => i.nro === c.focusItem.nro) : null
+    if (item) matched.push({ features: item.features ?? [], variation: item.variation })
+  }
+  if (matched.length) lazyVariants.value = clientRollup(matched)
+}
+
+onMounted(() => { if (!variants.value) loadLazyVariants() })
+
 function unitLabel(u: any): string {
   return [u.currency, u.unitName].filter(Boolean).join(' · ')
 }
@@ -270,6 +348,39 @@ useSeo(() => ({
         </div>
       </section>
 
+      <!-- ===== Does the product vary? (flagship) ===== -->
+      <section
+        v-if="variantsData?.attributes?.length"
+        class="block"
+      >
+        <div class="block__head">
+          <h2>{{ t('products.detail.variesTitle') }}</h2>
+        </div>
+        <p class="block__help">
+          {{ variantsData.varies ? t('products.detail.variesYes') : t('products.detail.variesNo') }}
+          <span v-if="variantsData.sampledContracts"> {{ t('products.detail.variesSample', { n: variantsData.sampledContracts }) }}</span>
+        </p>
+        <div class="varies">
+          <div
+            v-for="a in variantsData.attributes"
+            :key="a.name"
+            class="varies__attr"
+          >
+            <span class="varies__name">{{ a.name }} <span class="varies__count">· {{ a.distinct }}</span></span>
+            <ul class="varies__vals">
+              <li
+                v-for="v in a.values.slice(0, 6)"
+                :key="v.value"
+                class="varies__row"
+              >
+                <span class="varies__v u-truncate">{{ v.value }}</span>
+                <span class="varies__c u-mono">{{ v.count }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <!-- ===== Who buys / who sells ===== -->
       <section
         v-if="topBuyers.length || topSuppliers.length"
@@ -292,7 +403,7 @@ useSeo(() => ({
               class="rank__row"
             >
               <NuxtLink
-                :to="buyerTo(b)"
+                :to="buyerContractsTo(b)"
                 class="rank__link"
               >
                 <span class="rank__name u-truncate">{{ b.name }}</span>
@@ -303,6 +414,11 @@ useSeo(() => ({
                   size="sm"
                 />
               </NuxtLink>
+              <NuxtLink
+                v-if="b.id"
+                :to="buyerTo(b)"
+                class="rank__profile"
+              >{{ t('products.detail.profile') }}</NuxtLink>
             </li>
           </ol>
         </div>
@@ -324,7 +440,7 @@ useSeo(() => ({
               class="rank__row"
             >
               <NuxtLink
-                :to="supplierTo(s)"
+                :to="sellerContractsTo(s)"
                 class="rank__link"
               >
                 <span class="rank__name u-truncate">{{ s.name }}</span>
@@ -335,8 +451,52 @@ useSeo(() => ({
                   size="sm"
                 />
               </NuxtLink>
+              <NuxtLink
+                v-if="s.id"
+                :to="supplierTo(s)"
+                class="rank__profile"
+              >{{ t('products.detail.profile') }}</NuxtLink>
             </li>
           </ol>
+        </div>
+      </section>
+
+      <!-- ===== Supplier concentration ===== -->
+      <section
+        v-if="supplierConcentration.length > 1"
+        class="block"
+      >
+        <div class="block__head">
+          <h2>{{ t('products.detail.concentrationTitle') }}</h2>
+        </div>
+        <p class="block__help">
+          {{ t('products.detail.concentrationHelp') }}
+        </p>
+        <div class="panel panel--pad">
+          <ClientOnly>
+            <InvHBars
+              :items="supplierConcentration"
+              format="count"
+            />
+          </ClientOnly>
+        </div>
+      </section>
+
+      <!-- ===== Price dispersion ===== -->
+      <section
+        v-if="priceUnits.length"
+        class="block"
+      >
+        <div class="block__head">
+          <h2>{{ t('products.detail.dispersionTitle') }}</h2>
+        </div>
+        <p class="block__help">
+          {{ t('products.detail.dispersionHelp') }}
+        </p>
+        <div class="panel panel--pad">
+          <ClientOnly>
+            <PriceDispersion :units="priceUnits" />
+          </ClientOnly>
         </div>
       </section>
 
@@ -517,9 +677,12 @@ useSeo(() => ({
   overflow: hidden;
 }
 
+.rank__row { display: flex; align-items: stretch; }
 .rank__row + .rank__row { border-top: 1px solid var(--rule); }
 
 .rank__link {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
@@ -532,6 +695,21 @@ useSeo(() => ({
 
 .rank__link:hover { background: var(--surface-sunken); }
 
+/* Secondary link to the party's own profile — sibling of the main row link so
+   the two anchors never nest (which the browser foster-parents and breaks). */
+.rank__profile {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s-4);
+  border-left: 1px solid var(--rule);
+  font-size: var(--t-xs);
+  color: var(--celeste-deep);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.rank__profile:hover { background: var(--surface-sunken); text-decoration: underline; }
+
 .rank__name { font-size: var(--t-sm); font-weight: 600; }
 
 .rank__meta {
@@ -540,6 +718,45 @@ useSeo(() => ({
   color: var(--text-muted);
   white-space: nowrap;
 }
+
+/* ---- Variants panel (¿varía el producto?) ---- */
+.varies {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--s-4);
+}
+
+.varies__attr {
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.varies__name {
+  display: block;
+  margin-bottom: var(--s-2);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.varies__count { color: var(--celeste-deep); }
+
+.varies__vals { margin: 0; padding: 0; list-style: none; }
+
+.varies__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: 2px 0;
+}
+
+.varies__v { font-size: var(--t-sm); }
+.varies__c { font-size: var(--t-xs); color: var(--text-muted); flex: none; }
 
 /* ---- All-contracts CTA ---- */
 .allcta {
