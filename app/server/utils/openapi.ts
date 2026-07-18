@@ -900,6 +900,59 @@ export const openApiDocument = {
         responses: { 200: { description: 'Revoked.', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' } } } } } }, 401: { $ref: '#/components/responses/Unauthorized' }, 404: { $ref: '#/components/responses/NotFound' } },
       },
     },
+
+    // ---- Integration: cursor "changes since" feeds (Zapier-style polling) ----
+    '/api/v1/tenders/changes': {
+      get: {
+        tags: ['Integration'],
+        summary: 'New/updated tenders since a cursor',
+        description: 'Keyset feed of open calls, newest first. Store `nextCursor` and pass it back as `since` next '
+          + 'poll to get only rows you have not seen — no gaps or duplicates. Without `since`, returns the most '
+          + 'recent page plus a cursor to start from. An API key is optional but recommended (higher rate limit).',
+        parameters: [
+          { name: 'since', in: 'query', description: 'Opaque cursor from a previous `nextCursor`.', schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 25 } },
+          { name: 'status', in: 'query', schema: { type: 'array', items: { type: 'string' } }, style: 'form', explode: true },
+          { name: 'category', in: 'query', schema: { type: 'array', items: { type: 'string' } }, style: 'form', explode: true },
+          { name: 'buyer', in: 'query', schema: { type: 'array', items: { type: 'string' } }, style: 'form', explode: true },
+        ],
+        responses: { 200: { description: 'A page of changes.', content: { 'application/json': { schema: { $ref: '#/components/schemas/ChangesPage' } } } } },
+      },
+    },
+    '/api/v1/anomalies/changes': {
+      get: {
+        tags: ['Integration'],
+        summary: 'New anomalies since a cursor',
+        description: 'Keyset feed of detected anomalies, newest-first by first-seen. Filter by z-score, severity and amount to '
+          + 'drive an "alert on suspicious contracts" trigger.',
+        parameters: [
+          { name: 'since', in: 'query', schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 25 } },
+          { name: 'minZ', in: 'query', description: 'Minimum |z-score| (`metadata.zScore`).', schema: { type: 'number' } },
+          { name: 'severity', in: 'query', schema: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] } },
+          { name: 'minAmount', in: 'query', description: 'Minimum `detectedValue`.', schema: { type: 'number' } },
+          { name: 'currency', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: { 200: { description: 'A page of changes.', content: { 'application/json': { schema: { $ref: '#/components/schemas/ChangesPage' } } } } },
+      },
+    },
+    '/api/v1/awards/changes': {
+      get: {
+        tags: ['Integration'],
+        summary: 'New awards since a cursor',
+        description: 'Keyset feed of award releases, newest-first by award `date`. Filter by supplier or buyer to power '
+          + '"notify when supplier Z wins". Heaviest feed — sorts on `date` alone, so awards sharing the exact same date '
+          + 'at a page boundary may be skipped; poll frequently.',
+        parameters: [
+          { name: 'since', in: 'query', schema: { type: 'string' } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 25 } },
+          { name: 'supplierId', in: 'query', schema: { type: 'string' } },
+          { name: 'buyerId', in: 'query', schema: { type: 'string' } },
+          { name: 'minAmount', in: 'query', description: 'Minimum `amount.primaryAmount` (UYU).', schema: { type: 'number' } },
+        ],
+        responses: { 200: { description: 'A page of changes.', content: { 'application/json': { schema: { $ref: '#/components/schemas/ChangesPage' } } } } },
+      },
+    },
   },
 
   components: {
@@ -1568,6 +1621,16 @@ export const openApiDocument = {
           prefix: { type: 'string' },
           scopes: { type: 'array', items: { type: 'string' } },
           token: { type: 'string', description: 'The full secret. Shown once — store it now.', example: 'gk_live_ab12cd34_Xy...' },
+        },
+      },
+      ChangesPage: {
+        type: 'object',
+        description: 'A keyset page from a `/api/v1/*/changes` feed.',
+        properties: {
+          success: { type: 'boolean', example: true },
+          data: { type: 'array', items: { type: 'object' }, description: 'The rows — shape depends on the feed (OpenCall, Anomaly, or award release).' },
+          nextCursor: { type: ['string', 'null'], description: 'Pass back as `since` on the next poll. `null` when the feed is exhausted.' },
+          hasMore: { type: 'boolean', description: 'Whether another page likely exists (page was full).' },
         },
       },
     },

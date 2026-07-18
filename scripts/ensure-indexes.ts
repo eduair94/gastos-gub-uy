@@ -378,14 +378,23 @@ async function main(): Promise<void> {
       await products.createIndex({ rubroPath: 1 }, { background: true })
       console.log('✅ product_analytics indexes ensured (code unique, rankBySpend, rankByLines, rubroPath)')
 
+      // product_variants is rebuilt (compute-then-swap) by
+      // src/jobs/refresh-product-variants.ts; the product API reads one doc per
+      // code, and the swap deletes older dataVersions.
+      const variants = client.db(DB_NAME).collection('product_variants')
+      await variants.createIndex({ code: 1 }, { unique: true, background: true })
+      await variants.createIndex({ dataVersion: 1 }, { background: true })
+      console.log('✅ product_variants indexes ensured (code unique, dataVersion)')
+
       // anomalies: the AI-triage view filters on aiVerdict.explainable and sorts
       // worst-first by severityRank (see src/jobs/score-anomalies-ai.ts + the
       // /api/analytics/anomalies `ai` filter). Declared on AnomalySchema, but
       // autoIndex is off so it is ensured here.
-      await client.db(DB_NAME)
-        .collection('anomalies')
-        .createIndex({ 'aiVerdict.explainable': 1, severityRank: -1 }, { background: true })
-      console.log('✅ anomalies.aiVerdict.explainable_1_severityRank_-1 ensured')
+      const anomaliesCol = client.db(DB_NAME).collection('anomalies')
+      await anomaliesCol.createIndex({ 'aiVerdict.explainable': 1, severityRank: -1 }, { background: true })
+      // Keyset pagination for /api/v1/anomalies/changes (newest-first by first-seen, _id tiebreak).
+      await anomaliesCol.createIndex({ firstDetectedAt: -1, _id: -1 }, { background: true })
+      console.log('✅ anomalies indexes ensured (aiVerdict.explainable+severityRank, firstDetectedAt+_id)')
 
       // provider_anomaly_stats: the unexplained-flags-by-provider cross-reference, rebuilt
       // (compute-then-swap) by src/jobs/cross-provider-anomalies.ts. `supplierName` unique is the
@@ -434,6 +443,8 @@ async function main(): Promise<void> {
       await openCalls.createIndex({ 'buyer.id': 1 }, { background: true })
       await openCalls.createIndex({ status: 1, 'tenderPeriod.endDate': 1 }, { background: true })
       await openCalls.createIndex({ firstSeenAt: -1 }, { background: true })
+      // Keyset pagination for /api/v1/tenders/changes (newest-first, _id tiebreak).
+      await openCalls.createIndex({ firstSeenAt: -1, _id: -1 }, { background: true })
       // Keyword search over the normalized concat. `default_language: 'none'`
       // disables stemming for exact/substring phrase matching, mirroring the
       // releases exact-search index. One text index per collection — this is it.
