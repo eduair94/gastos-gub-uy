@@ -46,6 +46,32 @@ So the product is buildable on the **existing pipeline + source**: ingest and su
 | Llamados browser | **Public** (SEO + signup funnel); watches/alerts/calendar/save gated |
 | Free-tier watch cap | ~10 per user (bounds matching cost) |
 
+### Spike results (2026-07-18, verified against live DB + VIG listing)
+
+Two pre-build spikes were run and **resolved**; they simplify ingestion.
+
+**Spike 1 — are `llamado-*` already in `releases`?** Yes, massively:
+
+| query | result |
+|---|---|
+| `releases` total | 2,172,657 |
+| `id ^llamado-` | ≥200,000 (counter capped) |
+| `id ^aclar_llamado-` | ≥200,000 (capped) |
+| `id ^ajuste_llamado-` | 11,360 |
+| `tag = "tender"` | ≥200,000 (capped) |
+| `tender.status` non-null | **only `active` (179,866) and `cancelled` (3,578)** — never planning/enquiry |
+| `tenderPeriod.endDate ≥ now` (any release) | 827 |
+| **`llamado-*` with `endDate ≥ now`** | **667 (currently-open llamados already in DB)** |
+
+Sample open call `llamado-1357112`: `ocid ocds-yfs5dr-1357112`, `tag:["tender"]`, `tender.status:"active"`, `tenderPeriod.endDate: 2026-07-28T12:00:00Z` (future), `procurementMethodDetails:"Compra Directa"`, 2 `tender.items[]` each with `classification.{id,description}`, 1 `tender.documents[]`. **This is exactly the `open_calls` shape — the full tender object is already inline in `releases`.**
+
+**Spike 2 — does the DB cover currently-open calls?** The public "Llamados vigentes" listing (`/consultas/`) reports **915 open calls** right now; the DB already holds **667** open llamados by deadline (~73%). The gap (recently-published not-yet-synced, calls with null/other-format `endDate`, or non-`llamado` tender variants) is modest and closeable by an optional supplement pass; not a launch blocker.
+
+**Consequences for the design (folded into §5):**
+- **Ingestion sources from `releases`, not from re-fetching RSS/record.** The existing hourly release ingest already upserts `llamado-*`/`aclar_llamado-*`/`ajuste_llamado-*` into `releases` with the full tender object. `sync-open-calls` therefore **projects** the relevant `releases` docs into the `open_calls` view — no extra network calls. `/ocds/record/{idcompra}` becomes an **optional enrichment fallback** only when the projected doc is missing items/documents.
+- **Backfill is a single query** over `releases` (`id ^llamado-` AND `tenderPeriod.endDate ≥ now`), not a K-month RSS crawl.
+- **Status derivation simplifies** (§5.2): the only `tender.status` values that occur are `active` and `cancelled`; everything else is derived from `tenderPeriod.endDate` and the presence of an award.
+
 ---
 
 ## 1. Goals & non-goals
@@ -313,35 +339,36 @@ Client sign-in (any provider)
 
 ## 5. Ingestion — `src/jobs/sync-open-calls.ts` (hourly)
 
-Reuses `ReleaseRSSFetcher` (`src/services/release-rss-fetcher.ts`) and the axios client. Runs in the cron server, chained after the existing `:05` release ingest, guarded by a `busyWith()` lock.
+**Source: project from the already-ingested `releases` collection** (spike-confirmed: `llamado-*` are already upserted there hourly with the full tender object inline). No RSS/record round-trip in the common path; `/ocds/record/{idcompra}` is an **optional enrichment fallback** only when a projected doc lacks items/documents. Runs in the cron server, chained after the existing `:05` release ingest, guarded by a `busyWith()` lock.
 
 ### 5.1 Algorithm
-1. Fetch the current month RSS (`/ocds/rss/{YYYY}/{MM}`) — and the previous month during the first days of a month — to get the recent releases (feed = 500 most recent; on high-volume days a single hourly pull may not cover a full day, so also union with the last-N-days window the existing ingest already computes).
-2. From the items, take every distinct `id_compra` whose release stream includes a `llamado-*`, `aclar_llamado-*`, or `ajuste_llamado-*` (i.e. a tender-phase event), plus any `adjudicacion-*` for a compra we already track (to set `awardRef`).
-3. For each such `id_compra`, fetch `/ocds/record/{idcompra}` → merge releases → build the `OpenCall` view:
+1. Query `releases` for tender-phase docs updated since the last sync watermark **or** still live: `id` matching `^(llamado|aclar_llamado|ajuste_llamado)-` AND (`updatedAt/date ≥ lastSyncAt` OR `tender.tenderPeriod.endDate ≥ now`). Persist the watermark in a tiny `sync_state` doc (or reuse the notifications/meta pattern). Also pull `adjudicacion-*`/`ajuste_adjudicacion-*` for `compraId`s already tracked in `open_calls` (to set `awardRef`).
+2. Group by `compraId` (= the numeric part of the id / `id_compra`). For each compra, pick the **base tender doc** (the `llamado-*` release) and overlay the **latest** `aclar_llamado-*`/`ajuste_llamado-*` tender fields (updated `tenderPeriod`, `documents`) by release date. This reproduces the record-merge cheaply from data already in Mongo.
+3. Build the `OpenCall` view from the merged tender:
    - `title/description` from the tender object; fall back to item descriptions.
    - `tenderPeriod`, `enquiryPeriod`, `procurementMethodDetails` from the tender.
-   - `items[]` → `classificationSet` (dedupe `classification.id`), `searchText` (normalized concat).
+   - `items[]` → `classificationSet` (dedupe `classification.id`), `searchText` (normalized concat of title + description + item descriptions + classification labels).
    - `documents[]` from tender documents (pliegos).
-   - `ocid` from the record (used for `govSourceUrl(ocid)` — **derive the source link from ocid, never id**, per the DESIGN.md trap).
-   - `awardRef` if an `adjudicacion-*` release is present.
+   - `ocid` from the release (used for `govSourceUrl(ocid)` — **derive the source link from ocid, never id**, per the DESIGN.md trap; the sample confirms `ajuste_llamado` ids diverge from ocid).
+   - `awardRef` if an `adjudicacion-*` release exists for the compra.
+   - **Enrichment fallback:** if `items` or `documents` are empty, fetch `/ocds/record/{compraId}` once and merge; cache-guarded, throttled.
 4. Derive `status` (§5.2). Upsert on `compraId` with `$setOnInsert: { firstSeenAt }`, `$set: { ...fields, lastSyncedAt: now }`, `$addToSet: { sourceReleaseIds }`.
-5. Emit the set of `compraId`s that were **inserted this run with status ∈ {open, clarification, amended}** → hand to the matcher (§6).
-6. Throttle exactly like existing jobs: batch fetches (≤200), concurrency ≤20, `delay(1000)` between groups, `delay(2000)` between batches; 30s timeouts; browser-like UA; handle the RSS `406` case already handled in the fetcher.
+5. Emit the set of `compraId`s that were **inserted this run (new `firstSeenAt`) with status ∈ {open, clarification, amended}** → hand to the matcher (§6). Updates to already-seen calls do not re-alert.
+6. Any network fallback throttles like existing jobs (batch ≤200, concurrency ≤20, `delay(1000)`/`delay(2000)`, 30s timeouts, browser-like UA, handle RSS `406`).
 
-### 5.2 Status derivation
-- `cancelled` if a cancellation tag/`tenderCancellation` is present.
-- `awarded` if `awardRef` set (an `adjudicacion-*` exists).
+### 5.2 Status derivation (spike-simplified — only `active`/`cancelled` occur)
+- `cancelled` if `tender.status == "cancelled"` or a `tenderCancellation` tag is present.
+- `awarded` if `awardRef` set (an `adjudicacion-*` exists for the compra).
 - `closed` if `tenderPeriod.endDate` < now.
-- `amended` if an `ajuste_llamado-*` is the latest tender event and still open.
-- `clarification` if an `aclar_llamado-*` is the latest tender event and still open.
-- else `open`.
+- `amended` if the latest tender event for the compra is an `ajuste_llamado-*` and it is still open.
+- `clarification` if the latest tender event is an `aclar_llamado-*` and still open.
+- else `open` (base case; `tender.status == "active"` with a future/absent deadline).
 Only `open|clarification|amended` are "alertable/live" and shown in the browser's default (open) filter.
 
 ### 5.3 Backfill — `src/jobs/backfill-open-calls.ts` (one-time, idempotent)
-So the browser isn't empty on day 1 and existing open calls can be matched:
-- Iterate the last **K months** (config, default 3) of the RSS, collect all `llamado-*` compras, run the same record→OpenCall build, upsert. **Suppress alerts during backfill** (do not enqueue notifications — only forward-going new calls alert). Log a summary (how many open calls loaded).
-- Optionally seed from the public "Llamados vigentes" listing (`/consultas/...VIG...`) if RSS coverage of still-open older calls proves thin — flagged as a spike (§15).
+So the browser isn't empty on day 1 and existing open calls can be matched. Spike-confirmed there are **~667 currently-open `llamado-*` already in `releases`**:
+- Single query: `releases.find({ id: /^llamado-/, "tender.tenderPeriod.endDate": { $gte: now } })` → project → upsert into `open_calls`. Also fold in the latest `aclar_llamado-*`/`ajuste_llamado-*` overlay per compra (§5.1 step 2). **Suppress alerts during backfill** (set `firstSeenAt` but do not enqueue notifications — only forward-going new calls alert). Log a summary (open calls loaded).
+- **Optional supplement** (to close the ~248-call gap vs the VIG count of 915): scrape the compra ids from `/consultas/` VIG listing pages and, for any not present in `open_calls`, fetch `/ocds/record/{compraId}` and upsert. Deferred to a follow-up within Phase 1; not launch-blocking.
 
 ### 5.4 Cron wiring (`src/cronserver.ts`)
 - New job `runSyncOpenCallsJob()`: sync → match → dispatch (instant users), under a single `busyWith('openCalls')` lock. Schedule hourly at `:20` (after the `:05` release ingest). Manual trigger `POST /cron/open-calls`.
@@ -607,8 +634,8 @@ Verification per phase uses the `verify`/`run` skills to drive the real flow (si
 ## 15. Risks & day-1 spikes
 
 1. **Firebase session cookies under Nitro/Node runtime** — verify `firebase-admin` init + `createSessionCookie`/`verifySessionCookie` + cookie handling on the deployed Node target and under SSR (no logged-out flash). *Spike before building the rest of auth.*
-2. **Currently-open backfill coverage** — the RSS is only the 500 most-recent releases; older-but-still-open calls may not appear. Confirm whether `llamado-*` are already partially in `releases`, and validate that the K-month RSS backfill (or the `/consultas/...VIG...` listing) yields a full set of live calls. *Spike: count open calls loaded vs the public "Llamados vigentes" count.*
-3. **Hourly volume vs 500-item feed** — on peak days one hourly pull may miss releases. Validate the last-N-days window union covers a full day; adjust cadence/window if needed.
+2. **Currently-open backfill coverage** — ✅ *resolved (2026-07-18).* `llamado-*` are already in `releases` (200k+); **667 open now** vs the VIG's **915** (~73% covered) — backfill is a single `releases` query, gap closeable by the optional VIG supplement (§5.3). No RSS crawl needed.
+3. **Feed volume / freshness** — ✅ *largely moot.* `sync-open-calls` projects from `releases`, so feed-volume/500-item concerns are owned by the existing hourly release ingest, not this job. Residual: a call published in the last hour is only as fresh as the last release ingest — acceptable (deadlines are days out).
 4. **Pliego PDF variability** — some documents are non-PDF, zipped, scanned images, or very large. Extraction must degrade gracefully; cap Gemini input; cache aggressively; skip-with-reason when unextractable.
 5. **Email deliverability** — Resend domain verification (SPF/DKIM/DMARC) and `ALERTS_FROM_EMAIL` on a verified domain **before** real sends; warm up gradually.
 6. **Matching cost at scale** — full active-watch scan per new call is fine at MVP scale; revisit with an inverted index (category → watch, keyword → watch) if watch count grows large.
