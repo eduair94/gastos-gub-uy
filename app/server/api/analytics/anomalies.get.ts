@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
       severity,
       ai,
       releaseId,
+      minZ,
       sortBy = 'createdAt',
       sortOrder = 'desc',
     } = query
@@ -51,6 +52,17 @@ export default defineEventHandler(async (event) => {
       filter['aiVerdict.explainable'] = AI_VERDICT[ai]
     }
 
+    // Minimum price divergence — the robust z-score of the unit price against
+    // its category baseline (`metadata.zScore`). Lets the reader isolate the
+    // most extreme overprices (e.g. ≥25× the robust deviation), which is how
+    // you find the worst flags rather than merely the most expensive. Legacy
+    // rows have no zScore and so are excluded once this is set, which is
+    // correct — this measure only exists for the current detector.
+    const minZNum = Number(minZ)
+    if (Number.isFinite(minZNum) && minZNum > 0) {
+      filter['metadata.zScore'] = { $gte: minZNum }
+    }
+
     // Build sort options.
     //
     // `severity` is a STRING, so sorting on it orders alphabetically —
@@ -65,13 +77,21 @@ export default defineEventHandler(async (event) => {
       severity: 'severityRank',
       severityRank: 'severityRank',
       detectedValue: 'detectedValue',
+      amount: 'detectedValue', // alias — the price paid
+      // Price divergence: how far above its baseline the unit price sits. This
+      // is the "worst first" ordering a reader hunting overprices actually wants.
+      divergence: 'metadata.zScore',
+      zScore: 'metadata.zScore',
     }
     const sortField = SORT_FIELDS[sortBy as string] ?? 'createdAt'
     const sortDirection = sortOrder === 'desc' ? -1 : 1
     const sortOptions: Record<string, 1 | -1> = { [sortField]: sortDirection as 1 | -1 }
 
-    // Legacy rows from the retired detector have no severityRank; keep
-    // ordering deterministic so pagination cannot repeat or skip rows.
+    // Break ties with severity then divergence, and finally a stable key, so
+    // ordering is deterministic (pagination cannot repeat or skip rows) and,
+    // within one divergence/severity, the worse flag still leads.
+    if (sortField !== 'severityRank') sortOptions.severityRank = -1
+    if (sortField !== 'metadata.zScore') sortOptions['metadata.zScore'] = -1
     if (sortField !== 'createdAt') sortOptions.createdAt = -1
 
     // Calculate pagination

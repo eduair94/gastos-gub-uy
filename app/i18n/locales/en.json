@@ -514,6 +514,21 @@
     "detected": "Paid",
     "expected": "Usual range",
     "baseline": "vs. {n} comparable",
+    "zBadge": "×{z} over normal",
+    "zHelp": "Robust deviation of the unit price from what the same catalogue code usually costs (measured against its own recent baseline, so it is not distorted by inflation between years).",
+    "sort": {
+      "label": "Sort by",
+      "divergence": "Worst price divergence",
+      "amount": "Highest amount paid",
+      "severity": "Severity",
+      "recent": "Most recent"
+    },
+    "minZ": {
+      "label": "Min. divergence",
+      "any": "Any",
+      "step": "≥ ×{z}"
+    },
+    "seeUnexplained": "See the worst unexplained ones",
     "confidence": "Confidence",
     "empty": {
       "title": "No flags for these filters",
@@ -572,6 +587,19 @@
       "body": "Wait a minute and try again."
     }
   },
+  "unexplained": {
+    "eyebrow": "Unexplained",
+    "title": "purchases the AI could not explain",
+    "lead": "Prices far above the norm for the same article that, even after AI review, have no visible legitimate explanation. These are the strongest lead to investigate. Ordered by worst price divergence.",
+    "method": "Each alert comes from a statistical detection (a unit price that departs sharply from its catalogue code's pattern) and is then reviewed by an AI against the contract's object, the basket and the official item characteristics. These are the ones left unexplained.",
+    "allAlerts": "See all alerts",
+    "verdict": "The AI found no explanation",
+    "disclaimer": "The AI triage is advisory and does not replace human judgement. An unexplained price is not proof of wrongdoing: there may be context the open data does not publish. Always verify against the official source.",
+    "empty": {
+      "title": "Nothing unexplained right now",
+      "body": "No alert is currently left without a plausible explanation after review."
+    }
+  },
   "seo": {
     "home": {
       "title": "Con la tuya, contribuyente — Uruguay's public procurement",
@@ -612,6 +640,10 @@
     "anomalies": {
       "title": "Flags in Uruguay's public procurement",
       "description": "Uruguayan state contracts that depart from the usual pattern of price, supplier, or frequency."
+    },
+    "unexplained": {
+      "title": "Unexplained overprices — Uruguay's public procurement",
+      "description": "Uruguayan state purchases paid far above the usual price that, after an AI review, have no visible legitimate explanation."
     }
   },
   "about": {

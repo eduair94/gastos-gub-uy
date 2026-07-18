@@ -514,6 +514,21 @@
     "detected": "Se pagó",
     "expected": "Rango habitual",
     "baseline": "vs. {n} comparables",
+    "zBadge": "×{z} sobre lo normal",
+    "zHelp": "Desvío robusto del precio unitario respecto de lo que se suele pagar por el mismo código de catálogo (comparado contra su propia referencia reciente, así que no lo afecta la inflación entre años).",
+    "sort": {
+      "label": "Ordenar por",
+      "divergence": "Peor divergencia de precio",
+      "amount": "Mayor monto pagado",
+      "severity": "Severidad",
+      "recent": "Más recientes"
+    },
+    "minZ": {
+      "label": "Divergencia mínima",
+      "any": "Cualquiera",
+      "step": "≥ ×{z}"
+    },
+    "seeUnexplained": "Ver las peores sin explicación",
     "confidence": "Confianza",
     "empty": {
       "title": "Sin alertas para estos filtros",
@@ -572,6 +587,19 @@
       "body": "Esperá un minuto y volvé a intentar."
     }
   },
+  "unexplained": {
+    "eyebrow": "Sin explicación",
+    "title": "compras que la IA no pudo explicar",
+    "lead": "Precios muy por encima de lo habitual para el mismo artículo, que ni siquiera tras la revisión con IA tienen una explicación legítima visible. Son la señal más fuerte para investigar. Ordenadas por peor divergencia de precio.",
+    "method": "Cada alerta la genera una detección estadística (un precio unitario que se aparta mucho del patrón de su código de catálogo) y luego una IA la revisa contra el objeto del contrato, la canasta y las características oficiales. Estas son las que quedaron sin explicación.",
+    "allAlerts": "Ver todas las alertas",
+    "verdict": "La IA no encontró explicación",
+    "disclaimer": "El triaje con IA es orientativo y no reemplaza el criterio humano. Un precio sin explicación no prueba un ilícito: puede haber contexto que los datos abiertos no publican. Verificá siempre contra la fuente oficial.",
+    "empty": {
+      "title": "Nada sin explicación por ahora",
+      "body": "Ninguna alerta en este momento quedó sin una explicación plausible tras la revisión."
+    }
+  },
   "seo": {
     "home": {
       "title": "Con la tuya, contribuyente — Compras públicas del Uruguay",
@@ -612,6 +640,10 @@
     "anomalies": {
       "title": "Alertas en compras públicas del Uruguay",
       "description": "Contratos del Estado uruguayo que se apartan del patrón habitual de precio, proveedor o frecuencia."
+    },
+    "unexplained": {
+      "title": "Sobreprecios sin explicación — compras públicas del Uruguay",
+      "description": "Compras del Estado uruguayo pagadas muy por encima del precio habitual y que, tras una revisión con IA, no tienen explicación legítima visible."
     }
   },
   "about": {

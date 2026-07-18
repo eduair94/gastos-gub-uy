@@ -7,32 +7,47 @@ const router = useRouter()
 const severity = ref((route.query.severity as string) ?? '')
 // Second-stage AI triage filter: '' | unexplained | uncertain | explainable | unscored.
 const ai = ref((route.query.ai as string) ?? '')
+// Ordering, and the minimum price divergence (robust z-score) to show. Default:
+// worst divergence first — the point of the page is the biggest overprices, and
+// divergence is relative to each item's own recent baseline, so it ranks fairly
+// across years without needing an inflation adjustment (every flag here is from
+// the detector's trailing 24-month window anyway).
+const sort = ref((route.query.sort as string) ?? 'divergence')
+const minZ = ref(Number(route.query.minZ) || 0)
 const page = ref(Number(route.query.page ?? 1))
 
-// A page number from a different filter set is meaningless.
-watch([severity, ai], () => {
+const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
+  divergence: { sortBy: 'divergence', sortOrder: 'desc' },
+  amount: { sortBy: 'amount', sortOrder: 'desc' },
+  severity: { sortBy: 'severity', sortOrder: 'desc' },
+  recent: { sortBy: 'createdAt', sortOrder: 'desc' },
+}
+/** Minimum robust deviation: any, or ≥ N× the baseline spread. */
+const MINZ_STEPS = [0, 10, 25, 50] as const
+
+// A page number from a different filter/sort set is meaningless.
+watch([severity, ai, sort, minZ], () => {
   page.value = 1
 })
 
-watch([severity, ai, page], () => {
+watch([severity, ai, sort, minZ, page], () => {
   const q: Record<string, string> = {}
   if (severity.value) q.severity = severity.value
   if (ai.value) q.ai = ai.value
+  if (sort.value !== 'divergence') q.sort = sort.value
+  if (minZ.value > 0) q.minZ = String(minZ.value)
   if (page.value > 1) q.page = String(page.value)
   router.replace({ query: q })
 })
 
-// Worst first. Sorting by recency led with whatever the detector last
-// wrote — typically "low" rows where someone paid below the usual range,
-// which is the least useful thing to show a reader on arrival.
 const { data: res, pending, error } = await useFetch<any>('/api/analytics/anomalies', {
   query: computed(() => ({
     limit: 20,
     page: page.value,
-    sortBy: 'severity',
-    sortOrder: 'desc',
+    ...(SORTS[sort.value] ?? SORTS.divergence),
     ...(severity.value ? { severity: severity.value } : {}),
     ...(ai.value ? { ai: ai.value } : {}),
+    ...(minZ.value > 0 ? { minZ: minZ.value } : {}),
   })),
 })
 
@@ -80,6 +95,12 @@ function baselineN(a: any): number | null {
 
 function unitName(a: any): string | null {
   return a?.metadata?.itemUnit?.name ?? null
+}
+
+/** Robust price divergence (z-score) — how far above its baseline the price sits. */
+function zScore(a: any): number | null {
+  const z = a?.metadata?.zScore
+  return typeof z === 'number' && Number.isFinite(z) ? z : null
 }
 
 /**
@@ -177,6 +198,12 @@ useSeo(() => ({
       <p class="u-lead">
         {{ t('anomalies.lead') }}
       </p>
+      <NuxtLink
+        :to="localePath('/analytics/unexplained')"
+        class="head__cta"
+      >
+        {{ t('anomalies.seeUnexplained') }} →
+      </NuxtLink>
     </header>
 
     <!-- The method, stated plainly. A flag that doesn't explain itself
@@ -261,6 +288,48 @@ useSeo(() => ({
       </div>
     </div>
 
+    <!-- Ordering + minimum divergence — how a reader hunts the worst overprices. -->
+    <div class="controls">
+      <label class="controls__sort">
+        <span class="controls__l u-mono">{{ t('anomalies.sort.label') }}</span>
+        <select
+          v-model="sort"
+          class="controls__select"
+        >
+          <option value="divergence">
+            {{ t('anomalies.sort.divergence') }}
+          </option>
+          <option value="amount">
+            {{ t('anomalies.sort.amount') }}
+          </option>
+          <option value="severity">
+            {{ t('anomalies.sort.severity') }}
+          </option>
+          <option value="recent">
+            {{ t('anomalies.sort.recent') }}
+          </option>
+        </select>
+      </label>
+
+      <div
+        class="controls__minz"
+        role="group"
+        :aria-label="t('anomalies.minZ.label')"
+      >
+        <span class="controls__l u-mono">{{ t('anomalies.minZ.label') }}</span>
+        <button
+          v-for="z in MINZ_STEPS"
+          :key="z"
+          class="chip chip--sm"
+          :class="{ 'chip--on': minZ === z }"
+          type="button"
+          @click="minZ = z"
+        >
+          {{ z === 0 ? t('anomalies.minZ.any') : t('anomalies.minZ.step', { z }) }}
+        </button>
+      </div>
+    </div>
+
     <PaginatedList
       v-model:page="page"
       :total-pages="pagination?.totalPages ?? 1"
@@ -319,11 +388,16 @@ useSeo(() => ({
         >
           <NuxtLink
             :to="localePath(`/contracts/${a.releaseId}`)"
-            class="flags__link"
+            class="flags__link u-splitrow"
           >
             <div class="flags__l">
               <div class="flags__tags">
                 <span class="tag tag--alerta">{{ t(`anomalies.severity.${a.severity}`) }}</span>
+                <span
+                  v-if="zScore(a)"
+                  class="flags__z u-mono"
+                  :title="t('anomalies.zHelp')"
+                >{{ t('anomalies.zBadge', { z: zScore(a)!.toFixed(0) }) }}</span>
                 <span
                   v-if="baselineN(a)"
                   class="flags__x u-mono"
@@ -466,6 +540,18 @@ useSeo(() => ({
 
 .head h1 { margin: var(--s-2) 0 var(--s-3); }
 
+.head__cta {
+  display: inline-block;
+  margin-top: var(--s-3);
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--alerta);
+  text-decoration: none;
+}
+
+.head__cta:hover { text-decoration: underline; }
+
 /* ---- Method ---- */
 .method {
   padding: var(--s-4) var(--s-5);
@@ -572,11 +658,10 @@ useSeo(() => ({
 
 .flags__row + .flags__row { border-top: 1px solid var(--rule); }
 
+/* Layout (flex, top-alignment, grow/fixed split, responsive stack) comes
+   from the shared .u-splitrow utility — see app/DESIGN.md. Only the row's
+   own skin lives here. */
 .flags__link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-5);
   padding: var(--s-4) var(--s-5);
   text-decoration: none;
   color: inherit;
@@ -590,6 +675,7 @@ useSeo(() => ({
 .flags__tags {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--s-2);
   margin-bottom: var(--s-2);
 }
@@ -598,6 +684,58 @@ useSeo(() => ({
   font-size: var(--t-xs);
   font-weight: 500;
   color: var(--text-muted);
+}
+
+.flags__z {
+  font-size: var(--t-xs);
+  font-weight: 700;
+  color: var(--alerta);
+}
+
+/* ---- Controls: sort + minimum divergence ---- */
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-4) var(--s-6);
+  margin-bottom: var(--s-5);
+}
+
+.controls__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.controls__l {
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.controls__select {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.controls__minz {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.chip--sm {
+  padding: var(--s-1) var(--s-3);
+  font-size: var(--t-xs);
 }
 
 .flags__unit {
@@ -629,7 +767,10 @@ useSeo(() => ({
 .flags__ai {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  /* Centre, not baseline: the bordered pills and the bare "95%" have
+     different box heights, and baseline-aligning them left the percent
+     sitting a few px below the pill caps. */
+  align-items: center;
   gap: var(--s-1) var(--s-2);
   margin: var(--s-2) 0 0;
   font-size: var(--t-xs);
@@ -646,6 +787,9 @@ useSeo(() => ({
 }
 
 .flags__air {
+  /* A <p>: zero the UA block margin (it was leaking ~16px above and below
+     the reason and pushing the card out) and set the gap in tokens. */
+  margin: var(--s-1) 0 0;
   color: var(--text-muted);
   min-width: 0;
 }
@@ -832,13 +976,9 @@ useSeo(() => ({
 }
 
 /* ---- Responsive ---- */
+/* The row itself stacks via .u-splitrow's own breakpoint; only the
+   figures block needs page-specific treatment once stacked. */
 @media (max-width: 760px) {
-  .flags__link {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--s-3);
-  }
-
   .flags__r {
     justify-content: space-between;
     padding-top: var(--s-3);
