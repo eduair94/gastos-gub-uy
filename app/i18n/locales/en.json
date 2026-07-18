@@ -16,6 +16,7 @@
     "intendencias": "Intendencias",
     "organismos": "Spending by body",
     "investigaciones": "Investigations",
+    "tvciudad": "TV Ciudad",
     "llamados": "Open calls",
     "more": "More",
     "login": "Sign in",
@@ -642,7 +643,15 @@
       "save": "Save",
       "cancel": "Cancel",
       "login": "Sign in to vote",
-      "error": "Couldn't save your vote. Try again."
+      "error": "Couldn't save your vote. Try again.",
+      "loginTitle": "Sign in to vote",
+      "loginBody": "Your vote helps the community separate real anomalies from false positives. You need an account for it to count.",
+      "loginError": "Couldn't sign you in. Try again.",
+      "moreOptions": "More sign-in options",
+      "yourVote": "Your vote",
+      "reasonLabel": "Reason (optional)",
+      "confirm": "Confirm vote",
+      "retract": "Remove my vote"
     }
   },
   "errors": {

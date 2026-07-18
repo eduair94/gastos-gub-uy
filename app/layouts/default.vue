@@ -38,6 +38,9 @@ const nav = computed(() => [
   { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
   { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
   { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan' },
+  // Individual investigation surfaced directly in the bar by request; other pieces stay
+  // behind the hub. startsWith-based isActive keeps the hub highlighted too, which is fine.
+  { key: 'tvciudad', to: localePath('/investigaciones/tv-ciudad'), icon: 'mdi-television-classic' },
   { key: 'llamados', to: localePath('/llamados'), icon: 'mdi-bullhorn-outline' },
   // Developer platform front door (a real Nuxt page): quickstart + how to integrate,
   // which then links onward to /docs. Kept next to `docs` so the overflow menu folds
@@ -272,6 +275,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
               </button>
             </template>
             <v-list
+              class="navmenu"
               density="compact"
               min-width="200"
             >
@@ -346,7 +350,10 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                 <span class="iconbtn__label">{{ locale.toUpperCase() }}</span>
               </button>
             </template>
-            <v-list density="compact">
+            <v-list
+              class="navmenu"
+              density="compact"
+            >
               <v-list-item
                 v-for="l in otherLocales"
                 :key="l.code"
@@ -379,6 +386,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
               </button>
             </template>
             <v-list
+              class="navmenu"
               density="compact"
               min-width="200"
             >
@@ -1123,5 +1131,28 @@ watch([locale, user], () => nextTick(scheduleRecompute))
      pushing 27px of horizontal overflow at 360px. */
   .topbar__actions .iconbtn:not(.iconbtn--menu) { display: none; }
   .topbar__inner { gap: var(--s-2); }
+}
+</style>
+
+<!-- Top-bar dropdowns (overflow "Más", account, language) teleport to the overlay
+     container, outside this component's scoped styles — so this block is global.
+     Vuetify's list default renders item text at 16px, a size jump over the 13px
+     bar links; pin them to --t-sm so an opened menu reads as one system with the
+     bar it drops from. -->
+<style>
+.navmenu .v-list-item-title {
+  font-size: var(--t-sm);
+  font-weight: 500;
+  letter-spacing: normal;
+}
+
+.navmenu .v-list-item {
+  min-height: 38px;
+}
+
+.navmenu .v-list-item__prepend > .v-icon {
+  font-size: 20px;
+  opacity: 0.85;
+  margin-inline-end: var(--s-2);
 }
 </style>

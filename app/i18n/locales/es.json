@@ -16,6 +16,7 @@
     "intendencias": "Intendencias",
     "organismos": "Gasto por organismo",
     "investigaciones": "Investigaciones",
+    "tvciudad": "TV Ciudad",
     "llamados": "Llamados",
     "more": "Más",
     "login": "Ingresar",
@@ -642,7 +643,15 @@
       "save": "Guardar",
       "cancel": "Cancelar",
       "login": "Iniciá sesión para votar",
-      "error": "No se pudo guardar tu voto. Reintentá."
+      "error": "No se pudo guardar tu voto. Reintentá.",
+      "loginTitle": "Iniciá sesión para votar",
+      "loginBody": "Tu voto ayuda a la comunidad a separar anomalías reales de falsos positivos. Necesitás una cuenta para que cuente.",
+      "loginError": "No pudimos iniciar sesión. Reintentá.",
+      "moreOptions": "Más opciones de inicio de sesión",
+      "yourVote": "Tu voto",
+      "reasonLabel": "Justificación (opcional)",
+      "confirm": "Confirmar voto",
+      "retract": "Quitar mi voto"
     }
   },
   "errors": {

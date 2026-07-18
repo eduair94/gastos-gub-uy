@@ -103,7 +103,7 @@ export const INV_CONTENT = {
       "dek": "Investigaciones de datos abiertos sobre el gasto del Estado uruguayo. Cada una arranca en un número del sistema de Compras Estatales, se verifica en la fuente oficial y termina con lo que cualquiera puede volver a chequear. Sin sesgo, con enlaces.",
       "stats": [
         {
-          "n": "3",
+          "n": "4",
           "l": "INVESTIGACIONES"
         },
         {
@@ -152,6 +152,16 @@ export const INV_CONTENT = {
           "déficit ×8",
           "$400 M discrecional",
           "cada ficha enlazada"
+        ]
+      },
+      "cardTvciudad": {
+        "eyebrow": "Intendencia de Montevideo",
+        "title": "TV Ciudad: cuánto cuesta el canal municipal",
+        "dek": "El canal de la Intendencia cuesta entre USD 8 y 10 millones al año, pero casi no deja rastro en las compras: se financia por presupuesto. Lo que sí queda registrado, más el presupuesto, la publicidad, la NBA y los recortes.",
+        "tags": [
+          "≈ USD 8–10 M/año",
+          "publicidad ×5",
+          "solo 20 registros"
         ]
       },
       "methodTag": "Método",
@@ -400,7 +410,7 @@ export const INV_CONTENT = {
       "dek": "Open-data investigations into Uruguayan state spending. Each starts from a number in the state procurement system, is verified against the official source, and ends with something anyone can re-check. No bias, with links.",
       "stats": [
         {
-          "n": "3",
+          "n": "4",
           "l": "INVESTIGATIONS"
         },
         {
@@ -449,6 +459,16 @@ export const INV_CONTENT = {
           "deficit ×8",
           "$400 M discretionary",
           "every file linked"
+        ]
+      },
+      "cardTvciudad": {
+        "eyebrow": "Intendencia de Montevideo",
+        "title": "TV Ciudad: what the municipal channel costs",
+        "dek": "The city’s TV channel costs between USD 8 and 10 million a year, yet barely shows up in procurement: it’s budget-funded. What does get recorded, plus the budget, the advertising, the NBA deal and the cuts.",
+        "tags": [
+          "≈ USD 8–10 M/yr",
+          "advertising ×5",
+          "only 20 records"
         ]
       },
       "methodTag": "Method",

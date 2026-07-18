@@ -179,6 +179,40 @@ useSeo(() => ({
               {{ c.readMore ?? t('common.viewDetail') }} →
             </div>
           </NuxtLink>
+
+          <NuxtLink
+            :to="localePath('/investigaciones/tv-ciudad')"
+            class="inv-icard"
+          >
+            <div class="inv-icard__top">
+              <div>
+                <p class="inv-icard__eyebrow">
+                  {{ c.cardTvciudad.eyebrow }}
+                </p>
+                <h3 class="inv-icard__title">
+                  {{ c.cardTvciudad.title }}
+                </h3>
+              </div>
+              <div class="inv-icard__emoji">
+                📺
+              </div>
+            </div>
+            <div class="inv-icard__body">
+              <p class="inv-icard__dek">
+                {{ c.cardTvciudad.dek }}
+              </p>
+              <div class="inv-icard__tags">
+                <span
+                  v-for="tg in c.cardTvciudad.tags"
+                  :key="tg"
+                  class="inv-tagpill"
+                >{{ tg }}</span>
+              </div>
+            </div>
+            <div class="inv-icard__cta">
+              {{ c.readMore ?? t('common.viewDetail') }} →
+            </div>
+          </NuxtLink>
         </div>
       </div>
     </section>
