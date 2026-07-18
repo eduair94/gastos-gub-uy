@@ -188,10 +188,14 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'cache-control', 'public, max-age=86400')
 
     const cached = await ContractItemFeaturesModel.findOne({ compraId }).lean()
-    if (cached) {
+    // Serve the cache only once it has been scraped for the object too — stored
+    // even as '' to record "we looked and there was none". Entries cached before
+    // buy-object was captured have `object === undefined`; those fall through and
+    // re-scrape once to backfill it, then short-circuit forever after.
+    if (cached && cached.object !== undefined) {
       return {
         success: true,
-        data: { compraId, source: cached.source, items: cached.items ?? [], object: cached.object ?? null },
+        data: { compraId, source: cached.source, items: cached.items ?? [], object: cached.object || null },
       }
     }
 
@@ -235,14 +239,25 @@ export default defineEventHandler(async (event) => {
     // view retries, instead of poisoning it with a false "no características".
     // The object is still returned when we have it — it is useful on its own.
     if (items === null || (items.length === 0 && anyTransient)) {
-      return { success: true, data: { compraId, source, items: [], object, transient: true } }
+      // Re-scrape failed. If this was a backfill of an already-cached compra,
+      // keep serving its cached items rather than blanking them.
+      return {
+        success: true,
+        data: {
+          compraId,
+          source: cached?.source ?? source,
+          items: cached?.items ?? [],
+          object: object ?? (cached?.object || null),
+          transient: true,
+        },
+      }
     }
 
-    const set: Record<string, unknown> = { compraId, items, source, fetchedAt: new Date() }
-    if (object) set.object = object
+    // Always record `object` (as '' when the page had none) so the entry is
+    // marked "looked" and never re-scraped just for the object again.
     await ContractItemFeaturesModel.updateOne(
       { compraId },
-      { $set: set },
+      { $set: { compraId, items, source, object: object ?? '', fetchedAt: new Date() } },
       { upsert: true },
     ).catch(() => {})
 

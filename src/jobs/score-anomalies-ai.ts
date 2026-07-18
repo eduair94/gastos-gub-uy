@@ -586,15 +586,23 @@ async function main(): Promise<void> {
   // características — for compras OCDS has no description for at all, it is the
   // only subject the model gets.
   const objectByCompra = new Map<string, string>();
+  // Compras whose cached entry was already scraped for the object (stored even
+  // as '' = "looked, none"). Entries cached before buy-object was captured have
+  // `object === undefined`; those are re-scraped once to backfill it.
+  const objectLooked = new Set<string>();
   const cached = (await ContractItemFeaturesModel.find({ compraId: { $in: [...compraIds] } }, { compraId: 1, items: 1, object: 1 }).lean()) as unknown as Array<{ compraId: string; items: ScrapedItem[]; object?: string }>;
   for (const c of cached) {
     featuresByCompra.set(c.compraId, c.items ?? []);
+    if (c.object !== undefined) objectLooked.add(c.compraId);
     if (c.object) objectByCompra.set(c.compraId, c.object);
   }
   console.log(`   características cached    : ${featuresByCompra.size}/${compraIds.size}`);
 
   if (options.scrapeFeatures) {
-    const missing = [...compraIds].filter((id) => !featuresByCompra.has(id));
+    // Scrape when características are missing OR the object was never captured
+    // (entries cached before buy-object existed) — the latter is a one-time
+    // backfill so the model gets the object it was missing.
+    const missing = [...compraIds].filter((id) => !featuresByCompra.has(id) || !objectLooked.has(id));
     if (missing.length) {
       // Map compraId -> a release that has awards, so scrape tries the adjudicación page first.
       const relByCompra = new Map<string, ReleaseDoc>();
@@ -612,14 +620,18 @@ async function main(): Promise<void> {
           scrapeFail++;
           return null;
         }
-        featuresByCompra.set(compraId, result.items);
         if (result.object) objectByCompra.set(compraId, result.object);
         // Cache exactly like the contract page does — but never poison the cache with an empty result
-        // that was only empty because a page failed transiently.
+        // that was only empty because a page failed transiently. `object` is stored even as ''
+        // ("looked, none") so a backfilled entry is not re-scraped for it every run.
         if (!(result.items.length === 0 && result.transient)) {
-          const set: Record<string, unknown> = { compraId, items: result.items, source: result.source, fetchedAt: new Date() };
-          if (result.object) set.object = result.object;
-          await ContractItemFeaturesModel.updateOne({ compraId }, { $set: set }, { upsert: true }).catch(() => {});
+          featuresByCompra.set(compraId, result.items);
+          objectLooked.add(compraId);
+          await ContractItemFeaturesModel.updateOne(
+            { compraId },
+            { $set: { compraId, items: result.items, source: result.source, object: result.object ?? '', fetchedAt: new Date() } },
+            { upsert: true }
+          ).catch(() => {});
         }
         scraped++;
         if (scraped % 50 === 0) console.log(`   … scraped ${scraped}/${missing.length} características`);
