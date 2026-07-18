@@ -10,3 +10,7 @@ logs
 
 # Generated AI anomaly-triage dumps (verdicts-*.json, latest.json)
 data/
+firebase.json
+
+# Playwright MCP browser artifacts
+.playwright-mcp/

@@ -30,6 +30,7 @@ const nav = computed(() => [
   { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
   { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
   { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
+  { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan' },
   { key: 'llamados', to: localePath('/llamados'), icon: 'mdi-bullhorn-outline' },
   // The API reference is a Nitro server route (server/routes/docs.get.ts), not a Nuxt page, so it
   // must be a real anchor: vue-router resolves /docs to zero matched routes and throws its own 404
@@ -91,6 +92,88 @@ async function onLogout() {
 watch(() => route.fullPath, () => {
   drawer.value = false
 })
+
+// ---- Priority overflow nav ----
+// The bar carries nine sections plus a brand, a search box and the
+// account controls; on a laptop the Spanish labels overrun the 1400px
+// container and push the whole page into horizontal scroll. Rather than
+// hide the search or fall back to the hamburger on every laptop, measure
+// what actually fits and fold the remainder into a "Más" menu. A hidden
+// rail renders every item at full size so the fit math never depends on
+// what is currently collapsed, and reading the live brand/actions widths
+// keeps it correct whether or not a login/account control is present.
+const topbarInnerEl = ref<HTMLElement | null>(null)
+const topnavEl = ref<HTMLElement | null>(null)
+const navRailEl = ref<HTMLElement | null>(null)
+const visibleCount = ref(nav.value.length)
+
+const visibleNav = computed(() => nav.value.slice(0, visibleCount.value))
+const overflowNav = computed(() => nav.value.slice(visibleCount.value))
+
+let rafId = 0
+function scheduleRecompute() {
+  if (!import.meta.client) return
+  cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(recomputeNav)
+}
+
+function recomputeNav() {
+  const inner = topbarInnerEl.value
+  const bar = topnavEl.value
+  const rail = navRailEl.value
+  if (!inner || !bar || !rail) return
+  // The drawer owns navigation below 900px, where the bar is display:none.
+  if (getComputedStyle(bar).display === 'none') return
+
+  const items = Array.from(rail.querySelectorAll<HTMLElement>('.railnav__item'))
+  const moreEl = rail.querySelector<HTMLElement>('.railnav__more')
+  if (!items.length || !moreEl) return
+
+  const brand = inner.querySelector<HTMLElement>('.brand')
+  const actions = inner.querySelector<HTMLElement>('.topbar__actions')
+  if (!brand || !actions) return
+  // The nav sits between the brand and the actions cluster. Because actions
+  // is margin-left:auto its left edge is pinned to the content's right edge
+  // regardless of how wide the nav is, so this track is a stable measure of
+  // the room the nav has — and it already nets out the container's padding,
+  // which clientWidth would have wrongly included.
+  const interGap = parseFloat(getComputedStyle(inner).columnGap) || 0
+  const marginLeft = parseFloat(getComputedStyle(bar).marginLeft) || 0
+  const track = actions.getBoundingClientRect().left - brand.getBoundingClientRect().right
+  const SAFETY = 16
+  const avail = track - interGap * 2 - marginLeft - SAFETY
+
+  const firstLeft = items[0].getBoundingClientRect().left
+  const widthOf = (k: number) =>
+    k <= 0 ? 0 : items[k - 1].getBoundingClientRect().right - firstLeft
+
+  if (widthOf(items.length) <= avail) {
+    visibleCount.value = items.length
+    return
+  }
+  const railGap = parseFloat(getComputedStyle(rail).columnGap) || 0
+  const moreW = moreEl.getBoundingClientRect().width + railGap
+  let k = items.length
+  while (k > 0 && widthOf(k) + moreW > avail) k--
+  visibleCount.value = k
+}
+
+onMounted(() => {
+  scheduleRecompute()
+  window.addEventListener('resize', scheduleRecompute, { passive: true })
+  // Labels shift width once the display/body faces finish loading.
+  if (document.fonts?.ready) document.fonts.ready.then(scheduleRecompute)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', scheduleRecompute)
+  cancelAnimationFrame(rafId)
+})
+
+// Locale swaps every label and logging in/out adds or removes the account
+// control — both change the fit, so re-measure once the DOM has settled.
+// (authEnabled is a constant per load, so the mount-time measure covers it.)
+watch([locale, user], () => nextTick(scheduleRecompute))
 </script>
 
 <template>
@@ -110,7 +193,10 @@ watch(() => route.fullPath, () => {
     >{{ t('nav.skip') }}</a>
 
     <header class="topbar">
-      <div class="topbar__inner u-container">
+      <div
+        ref="topbarInnerEl"
+        class="topbar__inner u-container"
+      >
         <!-- Leads the bar on small screens: the drawer opens from the
              left, so its trigger belongs on the left. Hidden ≥900px,
              where the horizontal nav takes over. -->
@@ -138,12 +224,13 @@ watch(() => route.fullPath, () => {
         </NuxtLink>
 
         <nav
+          ref="topnavEl"
           class="topnav"
           :aria-label="t('nav.sections')"
         >
           <component
             :is="n.external ? 'a' : NuxtLinkC"
-            v-for="n in nav"
+            v-for="n in visibleNav"
             :key="n.key"
             :to="n.external ? undefined : n.to"
             :href="n.external ? n.to : undefined"
@@ -155,6 +242,62 @@ watch(() => route.fullPath, () => {
           >
             {{ t(`nav.${n.key}`) }}
           </component>
+
+          <!-- Sections that don't fit fold in here rather than overflowing
+               the bar. Active state bubbles up so the menu is highlighted
+               when the current page lives inside it. -->
+          <v-menu v-if="overflowNav.length">
+            <template #activator="{ props }">
+              <button
+                v-bind="props"
+                type="button"
+                class="topnav__link topnav__more"
+                :class="{ 'topnav__link--active': overflowNav.some(n => !n.external && isActive(n.to)) }"
+              >
+                {{ t('nav.more') }}
+                <v-icon size="16">
+                  mdi-chevron-down
+                </v-icon>
+              </button>
+            </template>
+            <v-list
+              density="compact"
+              min-width="200"
+            >
+              <v-list-item
+                v-for="n in overflowNav"
+                :key="n.key"
+                :to="n.external ? undefined : n.to"
+                :href="n.external ? n.to : undefined"
+                :target="n.external ? '_blank' : undefined"
+                :rel="n.external ? 'noopener' : undefined"
+                :prepend-icon="n.icon"
+                :title="t(`nav.${n.key}`)"
+                :active="!n.external && isActive(n.to)"
+              />
+            </v-list>
+          </v-menu>
+        </nav>
+
+        <!-- Off-screen measuring rail: every section plus the "Más" chip at
+             full size, so the fit math stays independent of what's currently
+             collapsed. Hidden from view and from the a11y tree. -->
+        <nav
+          ref="navRailEl"
+          class="topnav railnav"
+          aria-hidden="true"
+        >
+          <span
+            v-for="n in nav"
+            :key="n.key"
+            class="topnav__link railnav__item"
+          >{{ t(`nav.${n.key}`) }}</span>
+          <span class="topnav__link topnav__more railnav__more">
+            {{ t('nav.more') }}
+            <v-icon size="16">
+              mdi-chevron-down
+            </v-icon>
+          </span>
         </nav>
 
         <div class="topbar__actions">
@@ -536,11 +679,42 @@ watch(() => route.fullPath, () => {
   align-items: center;
   gap: var(--s-1);
   margin-left: var(--s-3);
+  /* Safety net before hydration measures: clip an overrunning bar instead
+     of letting it scroll the page. JS folds the tail into the "Más" menu. */
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Same footprint as a link so it measures identically on the rail. Only the
+   button's UA font-family needs resetting — .topnav__link supplies the rest. */
+.topnav__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Measuring rail: laid out like the real nav but removed from flow and
+   from view. overflow is re-opened so nothing is clipped while measuring. */
+.railnav {
+  position: absolute;
+  top: 0;
+  /* Off to the left, never the right — a wide rail at left:0 would extend
+     past the viewport edge and scroll the page it exists to prevent. */
+  left: -99999px;
+  margin: 0;
+  overflow: visible;
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .topnav__link {
   position: relative;
-  padding: var(--s-2) var(--s-3);
+  padding: var(--s-2);
   border-radius: var(--r-md);
   font-size: var(--t-sm);
   font-weight: 500;
@@ -565,8 +739,8 @@ watch(() => route.fullPath, () => {
 .topnav__link--active::after {
   content: "";
   position: absolute;
-  left: var(--s-3);
-  right: var(--s-3);
+  left: var(--s-2);
+  right: var(--s-2);
   bottom: 2px;
   height: 2px;
   border-radius: 1px;
@@ -594,7 +768,7 @@ watch(() => route.fullPath, () => {
 }
 
 .topsearch__input {
-  width: clamp(160px, 22vw, 280px);
+  width: clamp(150px, 18vw, 200px);
   padding: 7px var(--s-3) 7px 32px;
   border: 1px solid var(--rule);
   border-radius: var(--r-full);
@@ -863,15 +1037,18 @@ watch(() => route.fullPath, () => {
 .foot__links a:hover { text-decoration: underline; }
 
 /* ---- Responsive ---- */
-@media (max-width: 1100px) {
-  .brand__tag { display: none; }
-  .topnav { gap: 0; }
-  .topnav__link { padding-inline: var(--s-2); }
-}
+/* Nav spacing and the search width are held constant across every width
+   where the horizontal bar shows (≥900px). A spacing *step* inside that
+   range would make widening the window drop a section into the "Más" menu
+   — a bigger screen showing fewer links. Uniform metrics keep the overflow
+   count strictly monotonic in width. */
 
 @media (max-width: 900px) {
   .topnav { display: none; }
   .iconbtn--menu { display: grid; }
+  /* Brand width stays constant above 900px (keeps the fit monotonic); the
+     tagline only drops once the drawer, not the bar, owns navigation. */
+  .brand__tag { display: none; }
 }
 
 @media (max-width: 620px) {
