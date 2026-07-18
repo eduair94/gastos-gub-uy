@@ -30,6 +30,7 @@ const nav = computed(() => [
   { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
   { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
   { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
+  { key: 'llamados', to: localePath('/llamados'), icon: 'mdi-bullhorn-outline' },
   // The API reference is a Nitro server route (server/routes/docs.get.ts), not a Nuxt page, so it
   // must be a real anchor: vue-router resolves /docs to zero matched routes and throws its own 404
   // without ever issuing a request. It would still work when pasted into the address bar, which
@@ -74,6 +75,14 @@ function submitSearch() {
 const otherLocales = computed(() =>
   locales.value.filter(l => l.code !== locale.value),
 )
+
+// Auth — the user menu / login control in the top bar and drawer.
+const { user, logout } = useAuth()
+async function onLogout() {
+  await logout()
+  drawer.value = false
+  await navigateTo(localePath('/'))
+}
 
 // Close the mobile panel on navigation — leaving it open over the new
 // page is the classic drawer bug.
@@ -200,6 +209,38 @@ watch(() => route.fullPath, () => {
               {{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}
             </v-icon>
           </button>
+
+          <v-menu v-if="user">
+            <template #activator="{ props }">
+              <button
+                v-bind="props"
+                class="iconbtn"
+                :aria-label="t('nav.account')"
+              >
+                <v-icon size="20">
+                  mdi-account-circle-outline
+                </v-icon>
+              </button>
+            </template>
+            <v-list
+              density="compact"
+              min-width="200"
+            >
+              <v-list-item :to="localePath('/app')" prepend-icon="mdi-view-dashboard-outline" :title="t('dashboard.title')" />
+              <v-list-item :to="localePath('/app/alertas')" prepend-icon="mdi-bell-outline" :title="t('alerts.title')" />
+              <v-list-item :to="localePath('/app/calendario')" prepend-icon="mdi-calendar-outline" :title="t('calendar.title')" />
+              <v-list-item :to="localePath('/app/cuenta')" prepend-icon="mdi-cog-outline" :title="t('accountPage.title')" />
+              <v-divider />
+              <v-list-item prepend-icon="mdi-logout" :title="t('auth.logout')" @click="onLogout" />
+            </v-list>
+          </v-menu>
+          <NuxtLink
+            v-else
+            :to="localePath('/login')"
+            class="loginbtn"
+          >
+            {{ t('nav.login') }}
+          </NuxtLink>
         </div>
       </div>
     </header>
@@ -297,6 +338,26 @@ watch(() => route.fullPath, () => {
           @click="drawer = false"
         >
           {{ t('nav.about') }}
+        </NuxtLink>
+        <template v-if="user">
+          <NuxtLink :to="localePath('/app')" class="drawer__sub" @click="drawer = false">
+            {{ t('dashboard.title') }}
+          </NuxtLink>
+          <NuxtLink :to="localePath('/app/alertas')" class="drawer__sub" @click="drawer = false">
+            {{ t('alerts.title') }}
+          </NuxtLink>
+          <NuxtLink :to="localePath('/app/calendario')" class="drawer__sub" @click="drawer = false">
+            {{ t('calendar.title') }}
+          </NuxtLink>
+          <NuxtLink :to="localePath('/app/cuenta')" class="drawer__sub" @click="drawer = false">
+            {{ t('accountPage.title') }}
+          </NuxtLink>
+          <button type="button" class="drawer__sub drawer__sub--btn" @click="onLogout">
+            {{ t('auth.logout') }}
+          </button>
+        </template>
+        <NuxtLink v-else :to="localePath('/login')" class="drawer__sub" @click="drawer = false">
+          {{ t('nav.login') }}
         </NuxtLink>
         <div class="drawer__prefs">
           <button
@@ -537,6 +598,32 @@ watch(() => route.fullPath, () => {
 }
 
 .iconbtn--menu { display: none; }
+
+.loginbtn {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--celeste-deep);
+  color: #fff;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: filter var(--dur) var(--ease);
+}
+
+.loginbtn:hover { filter: brightness(1.06); }
+
+.drawer__sub--btn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
 
 /* ---- Mobile drawer ---- */
 .drawer {

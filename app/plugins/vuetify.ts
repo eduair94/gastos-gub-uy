@@ -70,6 +70,14 @@ export default defineNuxtPlugin((nuxtApp) => {
       },
     },
     icons: { defaultSet: 'mdi', aliases, sets: { mdi } },
+    // Vuetify 4 shrank the default breakpoint thresholds (md 960→840,
+    // lg 1280→1145, xl 1920→1545). Restore the v3 values so the two
+    // dialogs that use `cols/md/lg` and ContractRawDataDialog's
+    // `useDisplay().mobile` switch at exactly the same widths as before.
+    display: {
+      mobileBreakpoint: 'lg',
+      thresholds: { xs: 0, sm: 600, md: 960, lg: 1280, xl: 1920, xxl: 2560 },
+    },
     defaults: {
       VCard: { elevation: 0, rounded: 'lg' },
       VBtn: { elevation: 0, rounded: 'md', variant: 'flat' },
