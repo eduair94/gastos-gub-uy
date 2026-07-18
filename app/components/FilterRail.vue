@@ -149,26 +149,21 @@ function optLabel(o: Option) {
       </p>
     </section>
 
-    <!-- Catalogue code, when a "ver comparables" link brought one. Same
-         reason as above: an invisible filter is a lie of omission. -->
-    <section
-      v-if="modelValue.categoryId.length"
-      class="rail__sec"
-    >
-      <span class="rail__label">{{ t('filters.categoryCode') }}</span>
-      <div class="rail__stages">
-        <v-chip
-          v-for="c in modelValue.categoryId"
-          :key="c"
-          closable
-          size="small"
-          @click:close="patch({ categoryId: modelValue.categoryId.filter(x => x !== c) })"
-        >
-          {{ c }}
-        </v-chip>
-      </div>
+    <!-- Catalogue product (code). A real typeahead over the ~46k products;
+         emits the exact classification.id the server filter matches on, and
+         still shows/removes codes that a "ver comparables" link brought in. -->
+    <section class="rail__sec">
+      <label
+        class="rail__label"
+        for="f-product"
+      >{{ t('filters.product') }}</label>
+      <ProductAutocomplete
+        id="f-product"
+        :model-value="modelValue.categoryId"
+        @update:model-value="v => patch({ categoryId: v })"
+      />
       <p class="rail__help">
-        {{ t('filters.categoryCodeHelp') }}
+        {{ t('filters.productHelp') }}
       </p>
     </section>
 
