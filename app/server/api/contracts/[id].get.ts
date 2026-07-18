@@ -151,15 +151,28 @@ export default defineEventHandler(async (event) => {
       loadRateTable(),
     ])
 
-    // The contract amount in TODAY's pesos: the native total converted to UYU at
-    // its OWN month's BCU rate, then deflated by the Unidad Indexada to today.
-    // Null when the contract's month or currency is outside the rate table (older
-    // than our window / EUR) — the page then shows only the nominal figure.
-    const amt = (contract as unknown as { amount?: { primaryCurrency?: string, totalAmounts?: Record<string, number>, primaryAmount?: number }, date?: string | Date }).amount ?? {}
-    const nativeCurrency = amt.primaryCurrency ?? 'UYU'
-    const nativeAmount = typeof amt.totalAmounts?.[nativeCurrency] === 'number'
-      ? amt.totalAmounts![nativeCurrency]!
-      : (typeof amt.primaryAmount === 'number' ? amt.primaryAmount : null)
+    // The contract amount in TODAY's pesos: the NATIVE total (in its own
+    // currency) converted to UYU at its OWN month's BCU rate, then deflated by
+    // the Unidad Indexada to today. Null when the contract's month/currency is
+    // outside the rate table (older than our window, EUR, or mixed currencies) —
+    // the page then shows only the nominal figure.
+    //
+    // Crucially, use the native currency (e.g. USD from `totalAmounts.USD`), NOT
+    // `primaryAmount`: for a foreign contract `primaryAmount` is already a UYU
+    // conversion done at the *current* rate, which is exactly the error this
+    // fixes. `primaryCurrency` is 'UYU' on foreign contracts, so it can't be
+    // trusted as the native currency; `currencies` carries the real one.
+    const amt = (contract as unknown as { amount?: { currencies?: string[], totalAmounts?: Record<string, number>, primaryAmount?: number } }).amount ?? {}
+    const currencies = Array.isArray(amt.currencies) ? amt.currencies.filter(Boolean) : []
+    let nativeCurrency = 'UYU'
+    let nativeAmount: number | null = null
+    if (currencies.length === 1 && typeof amt.totalAmounts?.[currencies[0]!] === 'number') {
+      nativeCurrency = currencies[0]!
+      nativeAmount = amt.totalAmounts![currencies[0]!]!
+    }
+    else if (typeof amt.totalAmounts?.UYU === 'number') {
+      nativeAmount = amt.totalAmounts.UYU
+    }
     const realTodayAmount = (nativeAmount && nativeAmount > 0)
       ? toTodayUyu(nativeAmount, nativeCurrency, (contract as unknown as { date?: string | Date }).date, rateTable)
       : null

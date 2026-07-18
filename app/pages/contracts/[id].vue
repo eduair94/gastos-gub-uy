@@ -58,13 +58,15 @@ const realToday = computed<number | null>(() => {
   const v = (contract.value as { realTodayAmount?: number } | null)?.realTodayAmount
   return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null
 })
-const realNativeCurrency = computed(() => (contract.value as { realNativeCurrency?: string } | null)?.realNativeCurrency ?? 'UYU')
 const showRealToday = computed(() => {
+  // `amount` is `primaryAmount` — UYU-normalised for every contract — and
+  // `realToday` is UYU too, so the ratio is a fair "does it move the figure"
+  // test for peso and foreign contracts alike. Recent contracts barely move
+  // (nominal ≈ today), so the line stays out of the way; old or foreign-and-old
+  // ones shift enough to be worth stating.
   const r = realToday.value
-  if (r === null) return false
-  if (realNativeCurrency.value !== 'UYU') return true
   const nominal = amount.value
-  if (!nominal || nominal <= 0) return false
+  if (r === null || !nominal || nominal <= 0) return false
   return Math.abs(r - nominal) / nominal >= 0.03
 })
 
