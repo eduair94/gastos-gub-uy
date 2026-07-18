@@ -8,8 +8,10 @@ import { IUser } from "../types/monitor";
 // Created/updated on session mint (upsert) in app/server/api/auth/session.
 const UserSchema = new Schema<IUser>(
   {
-    uid: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    // Uniqueness is enforced by the indexes below (built by ensure-indexes);
+    // no field-level `unique` to avoid mongoose's duplicate-index warning.
+    uid: { type: String, required: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
     emailVerified: { type: Boolean, default: false },
     displayName: { type: String },
     photoURL: { type: String },
@@ -24,7 +26,7 @@ const UserSchema = new Schema<IUser>(
     },
     // Opaque token for one-click List-Unsubscribe links. Unique so the
     // unsubscribe endpoint can resolve a user without exposing the uid.
-    unsubscribeToken: { type: String, required: true, unique: true },
+    unsubscribeToken: { type: String, required: true },
     // Denormalized count, enforced against the free-tier cap on watch create.
     watchCount: { type: Number, default: 0 },
     lastLoginAt: { type: Date },

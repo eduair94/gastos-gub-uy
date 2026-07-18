@@ -59,7 +59,7 @@ const PliegoSummarySchema = new Schema(
 
 const OpenCallSchema = new Schema<IOpenCall>(
   {
-    compraId: { type: String, required: true, unique: true },
+    compraId: { type: String, required: true },
     ocid: { type: String, required: true },
     latestReleaseId: { type: String },
     sourceReleaseIds: { type: [String], default: [] },

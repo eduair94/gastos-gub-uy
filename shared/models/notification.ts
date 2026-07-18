@@ -17,7 +17,7 @@ const NotificationSchema = new Schema<INotification>(
       categories: { type: [String], default: undefined },
       keywords: { type: [String], default: undefined },
     },
-    dedupeKey: { type: String, required: true, unique: true },
+    dedupeKey: { type: String, required: true },
     channel: { type: String, enum: ["email"], default: "email" },
     status: { type: String, required: true, enum: ["pending", "sent", "failed", "skipped"], default: "pending" },
     // Groups the calls that went out in one batched email.
