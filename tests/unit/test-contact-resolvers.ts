@@ -1,6 +1,7 @@
 // tests/unit/test-contact-resolvers.ts
 import assert from "node:assert";
 import { createDeiResolver } from "../../src/jobs/enrich/resolvers/dei";
+import { extractEmailsFromHtml, createWebsiteResolver } from "../../src/jobs/enrich/resolvers/website";
 
 // Minimal fake of the mongodb Db surface the resolver uses.
 function fakeDb(rows: any[]) {
@@ -26,4 +27,33 @@ function fakeDb(rows: any[]) {
   const empty = await createDeiResolver(fakeDb([])).resolve({ supplierId: "R/x", rut: "999", name: "x" });
   assert.deepEqual(empty.emails, []);
   console.log("ok: dei resolver");
+})();
+
+(async () => {
+  const html = `
+    <a href="mailto:Ventas@empresa.com.uy">escribinos</a>
+    <p>Contacto: gerencia@empresa.com.uy y también juan@gmail.com</p>
+    <img src="x@2x.png"> <span>soporte@otra-empresa.uy</span>`;
+  const cands = extractEmailsFromHtml(html, "empresa.com.uy");
+  const emails = cands.map(c => c.email).sort();
+  // same-domain emails ranked/higher-confidence; @2x.png is NOT an email; gmail kept but lower.
+  assert.ok(emails.includes("ventas@empresa.com.uy"));
+  assert.ok(emails.includes("gerencia@empresa.com.uy"));
+  assert.ok(!emails.some(e => e.includes("2x.png")));
+  const sameDomain = cands.find(c => c.email === "ventas@empresa.com.uy")!;
+  const offDomain = cands.find(c => c.email === "juan@gmail.com");
+  if (offDomain) assert.ok(sameDomain.confidence > offDomain.confidence);
+
+  // resolver walks home + /contacto via the injected fetcher, no network.
+  const fetcher = async (url: string) =>
+    url.includes("/contacto") ? `<a href="mailto:hola@empresa.com.uy">x</a>` : html;
+  const r = createWebsiteResolver(fetcher);
+  const out = await r.resolve({ supplierId: "R/1", rut: "1", name: "Empresa", website: "https://empresa.com.uy" });
+  assert.ok(out.emails.some(e => e.email === "hola@empresa.com.uy"));
+  assert.equal(r.name, "website");
+
+  // No website → empty, no throw.
+  const empty = await r.resolve({ supplierId: "R/1", rut: "1", name: "x", website: null });
+  assert.deepEqual(empty.emails, []);
+  console.log("ok: website resolver");
 })();
