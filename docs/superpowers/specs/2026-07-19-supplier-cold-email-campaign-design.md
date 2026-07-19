@@ -64,8 +64,9 @@ Build order: **A first**, then B. This doc specs both.
 - **R1 — Resend forbids cold email.** Resend ToS is opt-in/transactional only; a
   scraped-list complaint spike can suspend the account and take **transactional tender
   alerts down with it**. **Mitigation:** cold outreach goes through a **separate
-  provider/account** (Amazon SES with owner-controlled warmup, or Instantly/Smartlead),
-  behind the same `Mailer` interface. Resend stays purely transactional.
+  provider/account** — nodemailer SMTP → **Brevo** (a marketing-tolerant ESP), behind the
+  same `Mailer` interface. Resend stays purely transactional and is never touched by the
+  cold path.
 - **R2 — Uruguay Ley 18.331 (habeas data).** Marketing to scraped personal/company
   emails needs lawful basis, sender identity, working opt-out, and data-source
   disclosure. **Mitigation:** physical sender identity in footer, globally-honored
@@ -194,13 +195,20 @@ Locale **es**. Personalized fields:
 
 Subject: rubro-aware, e.g. `"<N> licitaciones abiertas en <rubro> — te avisamos gratis"`.
 
-### Sending provider (separate)
+### Sending provider (separate) — nodemailer SMTP → Brevo
 
-- New transport `src/services/cold-mailer.ts` implementing the existing `Mailer`
-  interface — **Amazon SES** (owner-controlled reputation + warmup) as the default
-  target; interface keeps Instantly/Smartlead swappable. Config via `COLD_*` env
-  (`COLD_MAIL_PROVIDER`, `COLD_MAIL_FROM` on the verified **subdomain**, region/keys).
-- Resend/`createMailer()` untouched — transactional only.
+- New transport `src/services/cold-mailer.ts`: a `NodemailerMailer` implementing the
+  existing `Mailer` interface via **nodemailer** over SMTP. nodemailer is the library,
+  not the provider — the code is provider-agnostic, so the SMTP backend is swappable by
+  env alone.
+- Chosen backend: **Brevo** (`smtp-relay.brevo.com:587`) — transactional **+ marketing**
+  ESP with SMTP relay, event webhooks, and native suppression, tolerant of legitimate
+  marketing. Config via `COLD_SMTP_*` env (`COLD_SMTP_HOST`, `COLD_SMTP_PORT`,
+  `COLD_SMTP_USER`, `COLD_SMTP_PASS`, `COLD_SMTP_FROM` on the verified **subdomain**).
+- Resend/`createMailer()` untouched — transactional only. The cold path never touches
+  the Resend account.
+- Deliverability regardless of provider: warmup ramp + low volume + hard opt-out; any
+  ESP suspends on high complaint rates.
 
 ### Dispatch `src/jobs/campaign/send.ts`
 
@@ -213,11 +221,15 @@ Subject: rubro-aware, e.g. `"<N> licitaciones abiertas en <rubro> — te avisamo
 
 ### Tracking & feedback
 
-- Provider webhook → `app/server/api/campaign/webhook.post.ts` (signature-verified):
-  delivery/open/click/bounce/complaint → update `campaign_sends`; **hard bounce /
-  complaint → auto-insert `email_suppressions`**.
-- Click-through via the CTA link's token (also usable if provider open/click tracking
-  is off).
+- **Brevo event webhook** → `app/server/api/campaign/webhook.post.ts`: parse Brevo's
+  event payload (`delivered`, `hard_bounce`, `soft_bounce`, `spam`, `unsubscribed`,
+  `click`, `opened`) keyed by the `messageId`/tag we set at send → update `campaign_sends`;
+  **`hard_bounce` / `spam` → auto-insert `email_suppressions`**. Verify the request with a
+  shared secret in the webhook URL/header (Brevo has no HMAC signature).
+- We also own **click-through** via the CTA link's token (works even if Brevo click
+  tracking is off) and the one-click **unsubscribe** token → suppression. So bounce/
+  complaint suppression is automatic (webhook) and opt-out is first-party — no IMAP
+  bounce-poller needed.
 
 ### Unsubscribe (extended for non-users)
 
@@ -267,6 +279,7 @@ Subject: rubro-aware, e.g. `"<N> licitaciones abiertas en <rubro> — te avisamo
 ## Open items to resolve during implementation
 
 - RUPE access viability (spike) — determines whether it's a source or a documented gap.
-- Exact cold provider (SES vs Instantly/Smartlead) + the verified subdomain name.
+- Cold provider chosen: **Brevo** via nodemailer SMTP. Still needed: the verified
+  **subdomain** name + Brevo SMTP creds + the webhook shared secret.
 - Warmup ramp numbers + complaint-rate kill-switch threshold.
 - Physical sender identity string for the Ley-18.331 footer.
