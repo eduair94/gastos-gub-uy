@@ -7,6 +7,10 @@ const router = useRouter()
 const severity = ref((route.query.severity as string) ?? '')
 // Second-stage AI triage filter: '' | unexplained | uncertain | explainable | unscored.
 const ai = ref((route.query.ai as string) ?? '')
+// The AI CATEGORY (the semantic "tipo de error"): '' | error-carga | producto-distinto |
+// sin-explicacion | moneda-erronea | ... A different axis from the `ai` explainable bucket:
+// this isolates WHY the flag exists (e.g. a data-load error vs a real, unexplained overprice).
+const category = ref((route.query.category as string) ?? '')
 // Ordering, and the minimum price divergence (robust z-score) to show. Default:
 // worst divergence first — the point of the page is the biggest overprices, and
 // divergence is relative to each item's own recent baseline, so it ranks fairly
@@ -69,16 +73,17 @@ const MINZ_STEPS = [0, 10, 25, 50] as const
 const CURRENCIES = ['UYU', 'USD'] as const
 
 // A page number from a different filter/sort set is meaningless.
-watch([severity, ai, sort, minZ, currency, supplier, buyer, rubroName, product, year], () => {
+watch([severity, ai, category, sort, minZ, currency, supplier, buyer, rubroName, product, year], () => {
   page.value = 1
 })
 
-watch([severity, ai, sort, minZ, currency, supplier, buyer, rubroName, product, year, page], () => {
+watch([severity, ai, category, sort, minZ, currency, supplier, buyer, rubroName, product, year, page], () => {
   // Arrays serialise to repeated params (?supplier=A&supplier=B), never comma-joined —
   // supplier/buyer names contain commas.
   const q: Record<string, string | string[]> = {}
   if (severity.value) q.severity = severity.value
   if (ai.value) q.ai = ai.value
+  if (category.value) q.category = category.value
   if (sort.value !== 'divergence') q.sort = sort.value
   if (minZ.value > 0) q.minZ = String(minZ.value)
   if (currency.value) q.currency = currency.value
@@ -98,6 +103,7 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/anomal
     ...(SORTS[sort.value] ?? SORTS.divergence),
     ...(severity.value ? { severity: severity.value } : {}),
     ...(ai.value ? { ai: ai.value } : {}),
+    ...(category.value ? { category: category.value } : {}),
     ...(minZ.value > 0 ? { minZ: minZ.value } : {}),
     ...(currency.value ? { currency: currency.value } : {}),
     ...(supplier.value.length ? { supplier: supplier.value } : {}),
@@ -118,6 +124,12 @@ const SEVERITIES = ['critical', 'high', 'medium', 'low'] as const
 // Second-stage AI triage buckets. 'unexplained' first — it is the point of the
 // layer: the flags no legitimate explanation covers. See score-anomalies-ai.ts.
 const AI_FILTERS = ['unexplained', 'uncertain', 'explainable', 'unscored'] as const
+
+// The AI categories, ordered by how often a reader wants them: the actionable
+// error-carga first, then the other explanations, then the raw signal. Labels are
+// reused from anomalies.ai.category.* (no new copy). error-carga has its own page
+// (/analytics/errores-carga); here it's one selectable "tipo de error".
+const CATEGORIES = ['error-carga', 'producto-distinto', 'sin-explicacion', 'moneda-erronea', 'servicio-incluido', 'urgencia', 'marca-especializado', 'cantidad-baja', 'otro'] as const
 
 /**
  * Never derive a "times over average" ratio from `expectedRange`.
@@ -372,6 +384,36 @@ useSeo(() => ({
           @click="ai = f"
         >
           {{ t(`anomalies.ai.filter.${f}`) }}
+        </button>
+      </div>
+    </div>
+
+    <!-- The "tipo de error" axis: the AI category behind each flag. error-carga is the
+         actionable one (has its own reportable page); the rest split the explanations. -->
+    <div
+      class="aibar"
+      role="group"
+      :aria-label="t('anomalies.category.label')"
+    >
+      <span class="aibar__l u-mono">{{ t('anomalies.category.label') }}</span>
+      <div class="chips">
+        <button
+          class="chip"
+          :class="{ 'chip--on': !category }"
+          type="button"
+          @click="category = ''"
+        >
+          {{ t('anomalies.category.all') }}
+        </button>
+        <button
+          v-for="c in CATEGORIES"
+          :key="c"
+          class="chip"
+          :class="[{ 'chip--on': category === c }, c === 'error-carga' ? 'chip--carga' : '']"
+          type="button"
+          @click="category = c"
+        >
+          {{ t(`anomalies.ai.category.${c}`) }}
         </button>
       </div>
     </div>
@@ -872,6 +914,13 @@ useSeo(() => ({
   background: var(--ink);
   border-color: var(--ink);
   color: #fff;
+}
+
+/* The load-error chip echoes the errores-carga page's celeste identity, so the
+   one actionable "tipo de error" reads apart from the rest (until selected). */
+.chip--carga:not(.chip--on) {
+  border-color: color-mix(in srgb, var(--celeste) 45%, var(--rule));
+  color: var(--celeste-deep);
 }
 
 .bar__n {
