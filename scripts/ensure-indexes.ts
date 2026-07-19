@@ -544,6 +544,18 @@ async function main(): Promise<void> {
       await sc.createIndex({ status: 1, priorityScore: -1 }, { background: true, name: 'status_1_priorityScore_-1' })
       await sc.createIndex({ 'rubros.classificationId': 1 }, { background: true, name: 'rubros.classificationId_1' })
       console.log('✅ supplier_contacts indexes ensured')
+
+      // --- campaign collections (Phase B) ---
+      const sup = db.collection('email_suppressions')
+      await sup.createIndex({ email: 1 }, { unique: true, background: true, name: 'email_1' })
+      const camp = db.collection('email_campaigns')
+      await camp.createIndex({ key: 1 }, { unique: true, background: true, name: 'key_1' })
+      const csend = db.collection('campaign_sends')
+      await csend.createIndex({ campaignId: 1, email: 1 }, { unique: true, background: true, name: 'campaignId_1_email_1' })
+      await csend.createIndex({ token: 1 }, { unique: true, background: true, name: 'token_1' })
+      await csend.createIndex({ status: 1, campaignId: 1 }, { background: true, name: 'status_1_campaignId_1' })
+      await csend.createIndex({ providerMessageId: 1 }, { background: true, name: 'providerMessageId_1' })
+      console.log('✅ campaign collections indexes ensured')
     }
     else {
       console.log('   plan: contract_item_features.compraId_1 (unique)')
