@@ -12,7 +12,14 @@ import {
 async function testSingleUpload() {
     console.log('🧪 Testing single upload for adjudicacion-1217812...');
     
-    const mongoUri = process.env.MONGODB_URI || "mongodb://admin:***REMOVED-CREDENTIAL***@69.166.230.55:27017/gastos_gub?authSource=admin";
+    // NEVER hardcode a connection string here: this file is committed to a PUBLIC
+    // repo, and the credential that used to live on this line leaked the production
+    // database password. Read it from the environment only.
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+        console.error("MONGODB_URI is required (set it in .env or pass it inline).");
+        process.exit(1);
+    }
     const databaseService = new DatabaseService();
     const logger = new Logger();
     
