@@ -25,11 +25,31 @@ const loginTo = computed(() => ({
   query: route.query.redirect ? { redirect: route.query.redirect } : {},
 }))
 
+// Cold-email CTA: /registro?rubro=<sice code> arrives from the campaign, so the
+// alert the email promised exists the moment the user lands. Best-effort — a
+// failure here (free-tier cap, transient) must never block the signup itself.
+async function preCreateRubroWatch() {
+  const raw = route.query.rubro
+  const label = route.query.rubroLabel
+  const payload = buildRubroWatchPayload(
+    typeof raw === 'string' ? raw : '',
+    typeof label === 'string' ? label : undefined,
+  )
+  if (!payload) return
+  try {
+    await $fetch('/api/watches', { method: 'POST', body: payload })
+  }
+  catch {
+    // Cap reached or transient — the user can still create it by hand.
+  }
+}
+
 async function doRegister() {
   error.value = ''
   loading.value = true
   try {
     await registerEmail(email.value, password.value)
+    await preCreateRubroWatch()
     await navigateTo(redirectTarget())
   }
   catch (e) {
@@ -45,6 +65,7 @@ async function doGoogle() {
   loading.value = true
   try {
     await loginGoogle()
+    await preCreateRubroWatch()
     await navigateTo(redirectTarget())
   }
   catch (e) {

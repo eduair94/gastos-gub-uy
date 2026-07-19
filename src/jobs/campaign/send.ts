@@ -225,9 +225,13 @@ export async function main(): Promise<DispatchSummary | void> {
     // at the real registered route — it lives under /api/campaign/unsubscribe
     // (unsubscribe.get.ts / .post.ts), not /campaign/unsubscribe.
     const unsubscribeUrl = `${base}/api/campaign/unsubscribe?token=${encodeURIComponent(token)}`;
-    const ctaUrl = `${base}/registro?rubro=${encodeURIComponent(send.rubroKey)}&utm_source=coldemail&utm_campaign=${encodeURIComponent(campaignKey)}`;
     const openCount = openCounts.get(send.rubroKey) ?? 0;
     const rubroLabel = labelByCode.get(send.rubroKey) || send.rubroKey;
+    // rubroLabel rides along so the watch the landing pre-creates gets a human
+    // name ("Llamados en Alcohol rectificado"), not a bare SICE code.
+    const ctaUrl = `${base}/registro?rubro=${encodeURIComponent(send.rubroKey)}`
+      + `&rubroLabel=${encodeURIComponent(rubroLabel)}`
+      + `&utm_source=coldemail&utm_campaign=${encodeURIComponent(campaignKey)}`;
 
     const { subject, html, text } = renderCampaignEmail({
       supplierName: send.name || send.supplierId,
