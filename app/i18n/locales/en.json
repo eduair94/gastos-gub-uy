@@ -35,7 +35,8 @@
     "themeLight": "Light theme",
     "themeDark": "Dark theme",
     "language": "Language",
-    "sections": "Sections"
+    "sections": "Sections",
+    "curros": "Cases"
   },
   "money": {
     "unavailable": "No amount",
@@ -910,6 +911,7 @@
     "lead": "Prices far above the norm for the same article that, even after AI review, have no visible legitimate explanation. These are the strongest lead to investigate. Ordered by worst price divergence.",
     "method": "Each alert comes from a statistical detection (a unit price that departs sharply from its catalogue code's pattern) and is then reviewed by an AI against the contract's object, the basket and the official item characteristics. These are the ones left unexplained.",
     "allAlerts": "See all alerts",
+    "pending": "{n} alerts still in AI review — the number is still updating.",
     "verdict": "The AI found no explanation",
     "disclaimer": "The AI triage is advisory and does not replace human judgement. An unexplained price is not proof of wrongdoing: there may be context the open data does not publish. Always verify against the official source.",
     "empty": {
@@ -963,6 +965,13 @@
     "captiveTag": "captive",
     "ofBuyers": "of {n} buyers",
     "seeItsFlags": "see its flags",
+    "pager": {
+      "first": "First page",
+      "prev": "Previous page",
+      "next": "Next page",
+      "last": "Last page",
+      "range": "{from}–{to} of {total}"
+    },
     "col": {
       "provider": "Provider",
       "flags": "Flags",
@@ -1196,6 +1205,13 @@
     "providerAnomalies": {
       "title": "Providers with unexplained overprices — Uruguay",
       "description": "Which providers and buyers concentrate the overprices the AI could not explain in Uruguay's public spending. Cross-reference updated every 24 hours."
+    },
+    "curros": {
+      "title": "Cases on record — corruption in Uruguayan public procurement, cross-referenced",
+      "description": "Documented corruption cases in Uruguay’s public procurement — surfaced by the press, audits and the courts — each cross-referenced with official procurement data and its sources."
+    },
+    "currosDetail": {
+      "title": "{title} — the case, cross-referenced with the data"
     }
   },
   "about": {
@@ -1587,6 +1603,62 @@
       "freqBody": "Instantly (the moment it appears) or a daily digest with everything from the day.",
       "finishTitle": "All set!",
       "finishBody": "Save the changes and you'll start getting notices. Create as many alerts as you like from «My alerts»."
+    }
+  },
+  "curros": {
+    "eyebrow": "Cases",
+    "indexTitle": "Cases on record",
+    "indexLead": "Public-procurement schemes surfaced by the press, audits or the courts — each cross-referenced with what Uruguay’s official procurement data shows.",
+    "disclaimer": "Each case cites public sources and its legal status. The figures are the cross-reference with procurement data: what the state spent with the people and companies named — not proof of a crime.",
+    "backToAll": "All cases",
+    "teaserTitle": "Cases on record",
+    "teaserBody": "Corruption cases in state procurement, each with its legal status, its sources and the contract-by-contract cross-reference with the data.",
+    "teaserCta": "See the cases",
+    "reported": "Reported by the press: {amount}",
+    "kpi": {
+      "total": "Awarded (cross-ref)",
+      "count": "Contracts",
+      "suppliers": "Suppliers"
+    },
+    "hallazgoTitle": "The finding",
+    "sourcesTitle": "Sources",
+    "readInvestigation": "Read the full investigation",
+    "suppliersTitle": "Who got paid",
+    "suppliersHelp": "Suppliers ranked by amount awarded in the cross-reference. A multi-supplier contract’s amount is counted in full for each: a ceiling, not a split.",
+    "categoriesTitle": "Where it went",
+    "categoriesHelp": "Spend by category, from each awarded item’s price times quantity, in the contract currency.",
+    "byYearTitle": "Contracts per year",
+    "ledgerTitle": "The ledger",
+    "ledgerHelp": "Each contract in the cross-reference, largest first. Tap one for its record and the link to the official purchase.",
+    "ledgerCount": "{n} contracts",
+    "ledgerNote": "Amounts in pesos, normalized. Records with impossible quantities are excluded from the total.",
+    "relatedTitle": "Other cases",
+    "card": {
+      "count": "{n} contracts",
+      "sources": "{n} sources",
+      "crossRef": "Cross-referenced"
+    },
+    "methodTitle": "How a case is built",
+    "methodBody": "Each case is a saved query over the open data — a state entity, a company, a keyword — plus its legal status and its sources. The site resolves the query live, so the figures stay current. The set of contracts is an editorial cross-reference with what the sources reported, not an accusation.",
+    "toInvestigaciones": "See the investigations",
+    "toGastos": "Explore state spending",
+    "notFound": {
+      "title": "Case not found",
+      "body": "It may have been renamed or not exist yet.",
+      "action": "See all cases"
+    },
+    "status": {
+      "denuncia": "Complaint",
+      "auditoria": "Audit finding",
+      "investigacion": "Investigation",
+      "imputacion": "Charged",
+      "formalizacion": "Indicted",
+      "procesamiento": "Prosecuted",
+      "juicio": "On trial",
+      "condena": "Conviction",
+      "absolucion": "Acquitted",
+      "archivo": "Shelved",
+      "rescision": "Contract annulled"
     }
   }
 }

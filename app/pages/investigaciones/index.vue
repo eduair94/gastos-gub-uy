@@ -217,8 +217,128 @@ useSeo(() => ({
       </div>
     </section>
 
-    <!-- How -->
+    <!-- Serie: Empresas señaladas -->
     <section class="inv-sec inv-sec--alt">
+      <div class="u-container">
+        <div class="inv-serie">
+          <span class="inv-serie__tag">{{ c.serieTag }}</span>
+          <h2>{{ c.serieEmpTitle }}</h2>
+        </div>
+        <p
+          class="inv-prose"
+          style="margin-bottom: var(--s-7); color: var(--text-muted);"
+        >
+          {{ c.serieEmpIntro }}
+        </p>
+
+        <div class="inv-cards">
+          <NuxtLink
+            :to="localePath('/investigaciones/empresas-senaladas')"
+            class="inv-icard"
+          >
+            <div class="inv-icard__top">
+              <div>
+                <p class="inv-icard__eyebrow">
+                  {{ c.cardEmpresas.eyebrow }}
+                </p>
+                <h3 class="inv-icard__title">
+                  {{ c.cardEmpresas.title }}
+                </h3>
+              </div>
+              <div class="inv-icard__emoji">
+                🏢
+              </div>
+            </div>
+            <div class="inv-icard__body">
+              <p class="inv-icard__dek">
+                {{ c.cardEmpresas.dek }}
+              </p>
+              <div class="inv-icard__tags">
+                <span
+                  v-for="tg in c.cardEmpresas.tags"
+                  :key="tg"
+                  class="inv-tagpill"
+                >{{ tg }}</span>
+              </div>
+            </div>
+            <div class="inv-icard__cta">
+              {{ c.readMore ?? t('common.viewDetail') }} →
+            </div>
+          </NuxtLink>
+
+          <NuxtLink
+            :to="localePath('/investigaciones/asse-ambulancias')"
+            class="inv-icard"
+          >
+            <div class="inv-icard__top">
+              <div>
+                <p class="inv-icard__eyebrow">
+                  {{ c.cardAsse.eyebrow }}
+                </p>
+                <h3 class="inv-icard__title">
+                  {{ c.cardAsse.title }}
+                </h3>
+              </div>
+              <div class="inv-icard__emoji">
+                🚑
+              </div>
+            </div>
+            <div class="inv-icard__body">
+              <p class="inv-icard__dek">
+                {{ c.cardAsse.dek }}
+              </p>
+              <div class="inv-icard__tags">
+                <span
+                  v-for="tg in c.cardAsse.tags"
+                  :key="tg"
+                  class="inv-tagpill"
+                >{{ tg }}</span>
+              </div>
+            </div>
+            <div class="inv-icard__cta">
+              {{ c.readMore ?? t('common.viewDetail') }} →
+            </div>
+          </NuxtLink>
+
+          <NuxtLink
+            :to="localePath('/investigaciones/frigorifico-saturno')"
+            class="inv-icard"
+          >
+            <div class="inv-icard__top">
+              <div>
+                <p class="inv-icard__eyebrow">
+                  {{ c.cardSaturno.eyebrow }}
+                </p>
+                <h3 class="inv-icard__title">
+                  {{ c.cardSaturno.title }}
+                </h3>
+              </div>
+              <div class="inv-icard__emoji">
+                🥩
+              </div>
+            </div>
+            <div class="inv-icard__body">
+              <p class="inv-icard__dek">
+                {{ c.cardSaturno.dek }}
+              </p>
+              <div class="inv-icard__tags">
+                <span
+                  v-for="tg in c.cardSaturno.tags"
+                  :key="tg"
+                  class="inv-tagpill"
+                >{{ tg }}</span>
+              </div>
+            </div>
+            <div class="inv-icard__cta">
+              {{ c.readMore ?? t('common.viewDetail') }} →
+            </div>
+          </NuxtLink>
+        </div>
+      </div>
+    </section>
+
+    <!-- How -->
+    <section class="inv-sec">
       <div class="u-container">
         <div class="inv-serie">
           <span class="inv-serie__tag">{{ c.methodTag }}</span>

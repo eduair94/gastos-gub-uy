@@ -35,7 +35,8 @@
     "themeLight": "Tema claro",
     "themeDark": "Tema oscuro",
     "language": "Idioma",
-    "sections": "Secciones"
+    "sections": "Secciones",
+    "curros": "Curros"
   },
   "money": {
     "unavailable": "Sin monto",
@@ -910,6 +911,7 @@
     "lead": "Precios muy por encima de lo habitual para el mismo artículo, que ni siquiera tras la revisión con IA tienen una explicación legítima visible. Son la señal más fuerte para investigar. Ordenadas por peor divergencia de precio.",
     "method": "Cada alerta la genera una detección estadística (un precio unitario que se aparta mucho del patrón de su código de catálogo) y luego una IA la revisa contra el objeto del contrato, la canasta y las características oficiales. Estas son las que quedaron sin explicación.",
     "allAlerts": "Ver todas las alertas",
+    "pending": "{n} alertas todavía en revisión con IA — el número aún se está actualizando.",
     "verdict": "La IA no encontró explicación",
     "disclaimer": "El triaje con IA es orientativo y no reemplaza el criterio humano. Un precio sin explicación no prueba un ilícito: puede haber contexto que los datos abiertos no publican. Verificá siempre contra la fuente oficial.",
     "empty": {
@@ -963,6 +965,13 @@
     "captiveTag": "cautivo",
     "ofBuyers": "de {n} compradores",
     "seeItsFlags": "ver sus alertas",
+    "pager": {
+      "first": "Primera página",
+      "prev": "Página anterior",
+      "next": "Página siguiente",
+      "last": "Última página",
+      "range": "{from}–{to} de {total}"
+    },
     "col": {
       "provider": "Proveedor",
       "flags": "Alertas",
@@ -1196,6 +1205,13 @@
     "providerAnomalies": {
       "title": "Proveedores con sobreprecios sin explicación — Uruguay",
       "description": "Qué proveedores y compradores concentran los sobreprecios que la IA no pudo explicar en las compras del Estado uruguayo. Cruce actualizado cada 24 horas."
+    },
+    "curros": {
+      "title": "Curros en evidencia — corrupción en compras del Estado uruguayo, cruzada con datos",
+      "description": "Casos de corrupción en compras públicas del Uruguay destapados por prensa, auditorías y la Justicia, cada uno cruzado con los datos oficiales de Compras Estatales y con sus fuentes."
+    },
+    "currosDetail": {
+      "title": "{title} — el caso, cruzado con los datos"
     }
   },
   "about": {
@@ -1587,6 +1603,62 @@
       "freqBody": "Al instante (te avisamos apenas aparece) o un resumen diario con todo lo del día.",
       "finishTitle": "¡Todo listo!",
       "finishBody": "Guardá los cambios y vas a empezar a recibir avisos. Podés crear todas las alertas que quieras desde «Mis alertas»."
+    }
+  },
+  "curros": {
+    "eyebrow": "Curros",
+    "indexTitle": "Curros en evidencia",
+    "indexLead": "Curros de compras públicas destapados por la prensa, auditorías o la Justicia — cruzados, uno por uno, con lo que muestran los datos oficiales de Compras Estatales.",
+    "disclaimer": "Cada caso cita fuentes públicas y su estado judicial. Las cifras son el cruce con los datos de compras: lo que el Estado gastó con las personas y empresas nombradas, no una prueba de delito.",
+    "backToAll": "Todos los casos",
+    "teaserTitle": "Curros en evidencia",
+    "teaserBody": "Casos de corrupción en compras del Estado, cada uno con su estado judicial, sus fuentes y el cruce contrato por contrato con los datos.",
+    "teaserCta": "Ver los casos",
+    "reported": "Reportado por la prensa: {amount}",
+    "kpi": {
+      "total": "Adjudicado (cruce)",
+      "count": "Contratos",
+      "suppliers": "Proveedores"
+    },
+    "hallazgoTitle": "El hallazgo",
+    "sourcesTitle": "Fuentes",
+    "readInvestigation": "Leer la investigación completa",
+    "suppliersTitle": "Quién cobró",
+    "suppliersHelp": "Proveedores ordenados por monto adjudicado en el cruce. El monto de un contrato con varios proveedores se cuenta entero en cada uno: es un techo, no un reparto.",
+    "categoriesTitle": "En qué se fue",
+    "categoriesHelp": "Gasto por rubro, según el precio por la cantidad de cada artículo adjudicado, en la moneda del contrato.",
+    "byYearTitle": "Contratos por año",
+    "ledgerTitle": "El detalle",
+    "ledgerHelp": "Cada contrato del cruce, del mayor al menor. Tocá uno para ver su ficha y el enlace a la compra oficial.",
+    "ledgerCount": "{n} contratos",
+    "ledgerNote": "Montos en pesos, normalizados. Se excluyen del total los registros con cantidades imposibles.",
+    "relatedTitle": "Otros casos",
+    "card": {
+      "count": "{n} contratos",
+      "sources": "{n} fuentes",
+      "crossRef": "Cruce con la base"
+    },
+    "methodTitle": "Cómo se arma un caso",
+    "methodBody": "Cada caso es una consulta guardada sobre los datos abiertos —un organismo, una empresa, un texto— más su estado judicial y sus fuentes. El sitio resuelve la consulta en vivo, así que los montos están siempre al día. El conjunto de contratos es un cruce editorial con lo que reportaron las fuentes, no una imputación.",
+    "toInvestigaciones": "Ver las investigaciones",
+    "toGastos": "Explorar el gasto del Estado",
+    "notFound": {
+      "title": "No encontramos ese caso",
+      "body": "Puede haber cambiado de nombre o todavía no existe.",
+      "action": "Ver todos los casos"
+    },
+    "status": {
+      "denuncia": "Denuncia",
+      "auditoria": "Auditoría",
+      "investigacion": "Investigación",
+      "imputacion": "Imputación",
+      "formalizacion": "Formalización",
+      "procesamiento": "Procesamiento",
+      "juicio": "En juicio",
+      "condena": "Condena",
+      "absolucion": "Absolución",
+      "archivo": "Archivada",
+      "rescision": "Rescisión"
     }
   }
 }

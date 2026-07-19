@@ -103,19 +103,19 @@ export const INV_CONTENT = {
       "dek": "Investigaciones de datos abiertos sobre el gasto del Estado uruguayo. Cada una arranca en un número del sistema de Compras Estatales, se verifica en la fuente oficial y termina con lo que cualquiera puede volver a chequear. Sin sesgo, con enlaces.",
       "stats": [
         {
-          "n": "4",
+          "n": "7",
           "l": "INVESTIGACIONES"
         },
         {
-          "n": "+$700 M",
+          "n": "+25",
+          "l": "EMPRESAS SEÑALADAS"
+        },
+        {
+          "n": "+$3.000 M",
           "l": "EN CONTRATOS ANALIZADOS"
         },
         {
-          "n": "18",
-          "l": "MÉTODOS VERIFICADOS"
-        },
-        {
-          "n": "~70",
+          "n": "~120",
           "l": "FUENTES CITADAS"
         }
       ],
@@ -162,6 +162,38 @@ export const INV_CONTENT = {
           "≈ USD 8–10 M/año",
           "publicidad ×5",
           "solo 20 registros"
+        ]
+      },
+      "serieEmpTitle": "Empresas señaladas",
+      "serieEmpIntro": "Partimos de empresas señaladas por la prensa y la Justicia por corrupción o irregularidades con el Estado, y las cruzamos contra la base para ver si el señalamiento deja rastro en los datos abiertos. Algunas aparecen de cuerpo entero; las más grandes casi no se ven.",
+      "cardEmpresas": {
+        "eyebrow": "El catálogo",
+        "title": "¿Lo confirma la base?",
+        "dek": "Más de 25 empresas señaladas por corrupción con el Estado, cruzadas una por una contra Compras Estatales. Cuáles son verificables en los datos, cuáles quedan fuera del alcance y por qué. Cada caso con su estado legal y su fuente.",
+        "tags": [
+          "Prensa + Justicia",
+          "cruzado con la base",
+          "cada dato con fuente"
+        ]
+      },
+      "cardAsse": {
+        "eyebrow": "Salud · ASSE",
+        "title": "ITHG: 5 fichas para US$ 20 millones",
+        "dek": "Una «proveedora marítima» concentró el 96% de los traslados de ASSE por compra directa. La base registra $33 M; la auditoría y el Tribunal de Cuentas, más de $2.000 M. La invisibilidad del gasto directo, medida.",
+        "tags": [
+          "96,47% de los traslados",
+          "US$ 800 mil por 1 ambulancia",
+          "denuncia penal 2026"
+        ]
+      },
+      "cardSaturno": {
+        "eyebrow": "Defensa · FF.AA.",
+        "title": "Saturno: la carne de los cuarteles",
+        "dek": "283 contratos por $1.140 M con el INDA y las tres fuerzas. En la Armada, un faltante de 57 toneladas de bondiola terminó en la Fiscalía de Delitos Económicos.",
+        "tags": [
+          "$1.140 M facturados",
+          "faltante 57 toneladas",
+          "causa penal"
         ]
       },
       "methodTag": "Método",
@@ -410,19 +442,19 @@ export const INV_CONTENT = {
       "dek": "Open-data investigations into Uruguayan state spending. Each starts from a number in the state procurement system, is verified against the official source, and ends with something anyone can re-check. No bias, with links.",
       "stats": [
         {
-          "n": "4",
+          "n": "7",
           "l": "INVESTIGATIONS"
         },
         {
-          "n": "+$700 M",
+          "n": "+25",
+          "l": "COMPANIES FLAGGED"
+        },
+        {
+          "n": "+$3,000 M",
           "l": "IN CONTRACTS ANALYZED"
         },
         {
-          "n": "18",
-          "l": "METHODS VERIFIED"
-        },
-        {
-          "n": "~70",
+          "n": "~120",
           "l": "SOURCES CITED"
         }
       ],
@@ -469,6 +501,38 @@ export const INV_CONTENT = {
           "≈ USD 8–10 M/yr",
           "advertising ×5",
           "only 20 records"
+        ]
+      },
+      "serieEmpTitle": "Flagged companies",
+      "serieEmpIntro": "We start from companies flagged by the press and the courts for corruption or irregularities with the State, and cross them against the data to see whether the flag leaves a trace in the open records. Some appear in full; the biggest barely show up.",
+      "cardEmpresas": {
+        "eyebrow": "The catalog",
+        "title": "Does the data confirm it?",
+        "dek": "Over 25 companies flagged for corruption with the State, cross-checked one by one against State procurement. Which are verifiable in the data, which fall outside its scope and why. Each case with its legal status and its source.",
+        "tags": [
+          "Press + courts",
+          "cross-checked with the data",
+          "every figure sourced"
+        ]
+      },
+      "cardAsse": {
+        "eyebrow": "Health · ASSE",
+        "title": "ITHG: 5 records for US$20 million",
+        "dek": "A “maritime supplier” concentrated 96% of ASSE’s transfers by direct purchase. The data shows $33 M; the audit and the Tribunal de Cuentas, over $2,000 M. The invisibility of direct spending, measured.",
+        "tags": [
+          "96.47% of transfers",
+          "US$800k for 1 ambulance",
+          "criminal complaint 2026"
+        ]
+      },
+      "cardSaturno": {
+        "eyebrow": "Defense · Armed forces",
+        "title": "Saturno: the barracks’ meat",
+        "dek": "283 contracts for $1,140 M with INDA and all three forces. In the Navy, a 57-tonne shortfall of pork ended up with the Economic Crimes Prosecutor.",
+        "tags": [
+          "$1,140 M billed",
+          "57-tonne shortfall",
+          "criminal case"
         ]
       },
       "methodTag": "Method",

@@ -209,6 +209,17 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 .panel__head h2 { flex: 1 1 100%; }
 .panel__head .panel__help { flex: 1 1 100%; }
 
+/* The display font (Archivo, line-height 1.06) reserves descender space the
+   title never uses, so in a centered head the caps sit top-heavy — more air
+   above the caps than below the baseline, and the title floats high of any
+   trailing badge. Trim the half-leading so the cap→baseline block is the box
+   and centres evenly. Progressive: unsupported browsers keep the taller head,
+   so a small top-inset trim gives them the same optical balance. */
+.panel__head h2 { text-box: trim-both cap alphabetic; }
+@supports not (text-box: trim-both cap alphabetic) {
+  .panel__head { padding-top: calc(var(--s-4) - 3px); }
+}
+
 @media (min-width: 720px) {
   .panel__head h2 { flex: 0 1 auto; }
   .panel__head .panel__help { flex: 0 1 auto; }
