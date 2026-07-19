@@ -4,6 +4,7 @@ import { AnomalyModel } from '../../utils/models'
 import { escapeRegex } from '../../utils/query'
 import { feedbackSummaries } from '../../utils/anomaly-feedback'
 import { parseToken } from '../../../../shared/utils/rubro-tokens'
+import { parseCategories } from '../../../../shared/utils/anomaly-categories'
 
 /**
  * Normalise a query value that may be a single string or a repeated param into a
@@ -126,6 +127,16 @@ export default defineEventHandler(async (event) => {
     else if (typeof ai === 'string' && AI_VERDICT[ai]) {
       filter['aiVerdict.explainable'] = AI_VERDICT[ai]
     }
+
+    // Filter by the second-stage AI category — the semantic "tipo de error"
+    // (error-carga, producto-distinto, sin-explicacion, moneda-erronea, …). This
+    // is the axis the /analytics/errores-carga page pins to error-carga/moneda-erronea,
+    // and the "tipo de error" chips on the alerts page. Composes with the `ai`
+    // explainable bucket above. Unknown values are dropped by parseCategories, so a
+    // garbage param is a no-op rather than an empty result.
+    const categories = parseCategories(query.category)
+    if (categories.length === 1) filter['aiVerdict.category'] = categories[0]
+    else if (categories.length > 1) filter['aiVerdict.category'] = { $in: categories }
 
     // Minimum price divergence — the robust z-score of the unit price against
     // its category baseline (`metadata.zScore`). Lets the reader isolate the

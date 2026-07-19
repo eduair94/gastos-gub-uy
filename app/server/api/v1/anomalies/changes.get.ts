@@ -4,10 +4,11 @@ import { connectToDatabase } from '../../../utils/database'
 import { AnomalyModel } from '../../../../../shared/models/anomaly'
 import { decodeCursor, encodeCursor } from '../../../utils/cursor'
 import { toInt, toNumberOrNull } from '../../../utils/query'
+import { parseCategories } from '../../../../../shared/utils/anomaly-categories'
 
 // Keyset "changes since" feed of detected anomalies, newest-first by first-seen.
 // Powers a "New anomaly over $Y / z ≥ Z" polling trigger.
-const PROJECTION = 'type severity severityRank releaseId awardId detectedValue currency confidence description metadata.supplierName metadata.buyerName metadata.zScore metadata.itemDescription aiVerdict.explainable firstDetectedAt'
+const PROJECTION = 'type severity severityRank releaseId awardId detectedValue currency confidence description metadata.supplierName metadata.buyerName metadata.zScore metadata.itemDescription aiVerdict.explainable aiVerdict.category firstDetectedAt'
 
 export default defineEventHandler(async (event) => {
   const q = getQuery(event)
@@ -21,6 +22,11 @@ export default defineEventHandler(async (event) => {
   if (minAmount !== null) filter.detectedValue = { $gte: minAmount }
   if (typeof q.severity === 'string' && q.severity) filter.severity = q.severity
   if (typeof q.currency === 'string' && q.currency) filter.currency = q.currency.toUpperCase()
+  // Scope the live feed to specific AI categories — the errores-carga page polls
+  // this with ?category=error-carga so its "N nuevos" pill only counts load errors.
+  const categories = parseCategories(q.category)
+  if (categories.length === 1) filter['aiVerdict.category'] = categories[0]
+  else if (categories.length > 1) filter['aiVerdict.category'] = { $in: categories }
 
   if (cursor) {
     const t = new Date(cursor.t)
