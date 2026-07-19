@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { createDeiResolver } from "../../src/jobs/enrich/resolvers/dei";
 import { extractEmailsFromHtml, createWebsiteResolver } from "../../src/jobs/enrich/resolvers/website";
 import { createWebSearchResolver } from "../../src/jobs/enrich/resolvers/web-search";
+import { createImpoResolver } from "../../src/jobs/enrich/resolvers/impo";
 
 // Minimal fake of the mongodb Db surface the resolver uses.
 function fakeDb(rows: any[]) {
@@ -68,4 +69,17 @@ function fakeDb(rows: any[]) {
   assert.ok(out.emails.some(e => e.email === "hola@empresa.uy"));
   assert.ok(out.emails.every(e => e.confidence <= 0.5)); // capped
   console.log("ok: web-search resolver");
+})();
+
+(async () => {
+  const searchGazette = async (_q: string) => [
+    "EDICTO ... la sociedad ANFANG SRL, RUT 217231960015, correo admin@cultocafe.uy ...",
+    "sin datos de contacto",
+  ];
+  const r = createImpoResolver(searchGazette);
+  assert.equal(r.name, "impo");
+  const out = await r.resolve({ supplierId: "R/1", rut: "217231960015", name: "ANFANG S R L" });
+  assert.ok(out.emails.some(e => e.email === "admin@cultocafe.uy"));
+  assert.ok(out.emails.every(e => e.source === "impo" && e.confidence <= 0.3));
+  console.log("ok: impo resolver");
 })();
