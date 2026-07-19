@@ -1470,7 +1470,7 @@ useSeo(() => ({
                 />
               </template>
               <template #cell:range="{ row }">
-                {{ rangeText(row) }}
+                <span class="refcell__range">{{ rangeText(row) }}</span>
               </template>
               <template #cell:n="{ row }">
                 {{ formatNumber(row.n) }}
@@ -2145,7 +2145,17 @@ a.party__name:hover { text-decoration: underline; }
 /* ---- Price reference ---- */
 .refcell__name { margin-right: var(--s-2); }
 
-.refcell__pos { vertical-align: middle; }
+/* Chip flows under the (often long) item name; inline-block lets the
+   top margin actually push it off the name line above. */
+.refcell__pos {
+  display: inline-block;
+  vertical-align: middle;
+  margin-top: var(--s-1);
+}
+
+/* "$ 213.115 – 4,5 M" — keep the compact "M" suffix on the same line
+   instead of orphaning it below; the column can take the width. */
+.refcell__range { white-space: nowrap; }
 
 /* The scraped presentación ("ENVASE · 250 G") on its own quiet line. */
 .refcell__pres {

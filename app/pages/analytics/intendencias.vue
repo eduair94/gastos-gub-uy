@@ -538,17 +538,11 @@ useSeo(() => ({
               <span class="u-mono muted">{{ item.years }}</span>
             </template>
             <template #[`item.actions`]="{ item }">
-              <v-btn
+              <CellLink
                 :to="contractsLink(item)"
                 :disabled="item.total <= 0"
-                variant="text"
-                size="small"
-                color="primary"
-                append-icon="mdi-arrow-right"
-                class="text-none"
-              >
-                {{ t('intend.viewContracts') }}
-              </v-btn>
+                :label="t('intend.viewContracts')"
+              />
             </template>
           </v-data-table>
           <p

@@ -86,6 +86,13 @@ export default defineEventHandler(async (event) => {
     const rubroNameFilter = exactOrIn(toStrArray(query.rubroName))
     if (rubroNameFilter !== null) filter['metadata.itemClassification.rubro'] = rubroNameFilter
 
+    // Product / catalogue code — the specific article a flag is on. Anomalies carry
+    // it as metadata.itemClassification.id (the same code space as /contracts'
+    // `categoryId` and the product pages); the advanced panel completes it by NAME.
+    // Multi-select, same exact-or-$in shape as the filters above.
+    const productFilter = exactOrIn(toStrArray(query.product))
+    if (productFilter !== null) filter['metadata.itemClassification.id'] = productFilter
+
     // One contract year — the drill-down from the recurrence-by-year chart. sourceYear is the
     // contract's year; legacy rows without it are excluded once this is set, which is correct.
     const yearNum = Number(query.year)

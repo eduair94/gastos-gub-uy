@@ -576,16 +576,10 @@ useSeo(() => ({
           </template>
 
           <template #[`item.actions`]="{ item }">
-            <v-btn
+            <CellLink
               :to="drillTo(item.supplierName)"
-              size="small"
-              variant="text"
-              color="primary"
-              append-icon="mdi-arrow-right"
-              class="cell-go"
-            >
-              {{ t('provAnom.seeItsFlags') }}
-            </v-btn>
+              :label="t('provAnom.seeItsFlags')"
+            />
           </template>
 
           <template #no-data>
@@ -862,7 +856,6 @@ useSeo(() => ({
 .cell-z { font-weight: 700; color: var(--alerta); white-space: nowrap; }
 .cell-buyer { display: block; }
 .cell-buyer__c { font-size: var(--t-xs); color: var(--text-muted); }
-.cell-go { text-transform: none; letter-spacing: 0; }
 
 /* Keep the long provider column from collapsing the money/z columns. */
 .tablecard :deep(td:nth-child(2)) { min-width: 220px; }

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 // Community verdict on one anomaly flag: is it a real anomaly (up) or a false
-// positive (down), with an optional justification. Counts are public; the vote
-// controls appear only for a logged-in user. Kept compact so it sits inside a
-// dense list row without dominating it.
+// positive (down), with an optional justification. Counts are public; casting a
+// vote needs an account. Two Vuetify dialogs carry the interaction so overlay,
+// focus-trap and teleport are the framework's problem, not ours:
+//   • guests get a login prompt instead of a dead disabled button;
+//   • a click opens a confirm dialog with an optional reason before it counts.
 const props = defineProps<{
   anomalyId: string
   up?: number
@@ -13,35 +15,55 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const localePath = useLocalePath()
-const { isAuthed } = useAuth()
+const route = useRoute()
+const { isAuthed, loginGoogle } = useAuth()
 // Voting needs an account; when Firebase isn't configured we still show the
-// public counts but hide the (dead) controls and the login hint entirely.
+// public counts but hide the (dead) controls and the login prompt entirely.
 const authEnabled = useAuthEnabled()
 const api = useMonitorApi()
 
+// A guest who picks "more sign-in options" leaves for /login; the intended vote
+// is parked here and applied on return (same anomaly, now authed) so the click
+// isn't lost across the round-trip. Single-slot: one pending vote at a time.
+const PENDING_VOTE_KEY = 'gg:pendingVote'
+
 // Local state seeded from props. The row is keyed by anomaly _id, so each anomaly
-// gets its own instance — no cross-id reuse to guard against. After an action the
-// counts are reconciled from the server's authoritative response.
+// gets its own instance. After a commit the counts are reconciled from the
+// server's authoritative response. `savedComment` is the justification the server
+// actually holds — the source of truth for the add-vs-edit label and for reseeding
+// the draft; props.myComment goes stale (the list isn't refetched), so read it once.
 const up = ref(props.up ?? 0)
 const down = ref(props.down ?? 0)
 const myVote = ref<1 | -1 | null>(props.myVote ?? null)
-
-// `comment` is the editable draft; `savedComment` is what the server actually holds
-// (the source of truth for the "add vs edit reason" label and for Cancel). The list
-// isn't refetched after a vote, so props.myComment goes stale — never read it back.
-const comment = ref(props.myComment ?? '')
 const savedComment = ref(props.myComment ?? '')
-const commentOpen = ref(false)
+
 const saving = ref(false)
 const err = ref('')
 
-async function apply(target: 1 | -1 | null) {
-  const prev = { up: up.value, down: down.value, myVote: myVote.value }
-  // Switching direction (up<->down) invalidates any existing justification — it was
-  // written for the opposite verdict — so drop it rather than re-attaching it.
-  const isSwitch = myVote.value !== null && target !== null && target !== myVote.value
+// Login prompt dialog (a guest clicked a vote).
+const loginOpen = ref(false)
+const googleLoading = ref(false)
+const loginErr = ref('')
+// The direction the guest intended, so login can flow straight into that vote.
+// null when they opened the generic "sign in to vote" link (no direction chosen).
+const loginPendingVote = ref<1 | -1 | null>(null)
 
-  // Optimistic: drop the old contribution, add the new one.
+// Vote + optional comment dialog (an authed user casts or edits a vote).
+const voteOpen = ref(false)
+const draftVote = ref<1 | -1>(1)
+const draftComment = ref('')
+// Same direction as the standing vote → we're editing it (offer save + retract);
+// a different direction → a fresh/switched vote (offer confirm only).
+const isEditing = computed(() => myVote.value === draftVote.value)
+
+// Commit a vote, or retract it when target === null, and reconcile counts from the
+// server. Optimistic: drop the old contribution, add the new one, roll back on error.
+// The comment is always sent as a string so the server sets it (non-empty) or clears
+// it (empty) to match exactly what the user saw in the textarea.
+async function commitVote(target: 1 | -1 | null, commentText = ''): Promise<boolean> {
+  if (saving.value) return false
+  const prev = { up: up.value, down: down.value, myVote: myVote.value, savedComment: savedComment.value }
+
   if (myVote.value === 1) up.value--
   else if (myVote.value === -1) down.value--
   if (target === 1) up.value++
@@ -54,28 +76,24 @@ async function apply(target: 1 | -1 | null) {
     let res
     if (target === null) {
       res = await api.feedback.remove(props.anomalyId)
+      savedComment.value = ''
     }
     else {
-      // On a switch, send comment: '' so the server unsets the stale justification.
-      // A fresh vote carries the committed comment (empty for a first vote).
-      res = await api.feedback.save(props.anomalyId, {
-        vote: target,
-        comment: isSwitch ? '' : (savedComment.value.trim() || undefined),
-      })
+      const c = commentText.trim()
+      res = await api.feedback.save(props.anomalyId, { vote: target, comment: c })
+      savedComment.value = c
     }
     up.value = res.data.counts.up
     down.value = res.data.counts.down
-    if (target === null || isSwitch) {
-      comment.value = ''
-      savedComment.value = ''
-      commentOpen.value = false
-    }
+    return true
   }
   catch {
     up.value = prev.up
     down.value = prev.down
     myVote.value = prev.myVote
+    savedComment.value = prev.savedComment
     err.value = t('anomalies.feedback.error')
+    return false
   }
   finally {
     saving.value = false
@@ -83,41 +101,93 @@ async function apply(target: 1 | -1 | null) {
 }
 
 function onVote(v: 1 | -1) {
-  if (!isAuthed.value || saving.value) return
-  // Clicking the active vote again retracts it.
-  apply(myVote.value === v ? null : v)
+  if (saving.value) return
+  // Guest: prompt to sign in rather than dead-ending on a disabled button. When
+  // Firebase isn't configured there's nowhere to send them, so this never fires.
+  if (!isAuthed.value) {
+    if (!authEnabled) return
+    openLogin(v)
+    return
+  }
+  openVoteDialog(v)
 }
 
-async function saveComment() {
-  if (!isAuthed.value || myVote.value === null || saving.value) return
-  saving.value = true
+function openVoteDialog(v: 1 | -1) {
+  draftVote.value = v
+  // Editing the same direction: preload the saved justification. Switching
+  // direction: start blank — the old reason argued the opposite verdict.
+  draftComment.value = myVote.value === v ? savedComment.value : ''
   err.value = ''
+  voteOpen.value = true
+}
+
+async function confirmVote() {
+  if (await commitVote(draftVote.value, draftComment.value)) voteOpen.value = false
+}
+
+async function retractVote() {
+  if (await commitVote(null)) voteOpen.value = false
+}
+
+// Editing an existing vote from the row link (myVote is guaranteed non-null by the
+// v-if that renders the link).
+function editReason() {
+  if (myVote.value !== null) openVoteDialog(myVote.value)
+}
+
+function openLogin(v: 1 | -1 | null) {
+  loginPendingVote.value = v
+  loginErr.value = ''
+  loginOpen.value = true
+}
+
+async function loginWithGoogle() {
+  googleLoading.value = true
+  loginErr.value = ''
   try {
-    const c = comment.value.trim()
-    const res = await api.feedback.save(props.anomalyId, { vote: myVote.value, comment: c || undefined })
-    up.value = res.data.counts.up
-    down.value = res.data.counts.down
-    savedComment.value = c
-    comment.value = c
-    commentOpen.value = false
+    await loginGoogle()
+    loginOpen.value = false
+    // Now authed — continue straight into the comment step for the intended vote.
+    if (loginPendingVote.value !== null) openVoteDialog(loginPendingVote.value)
   }
   catch {
-    err.value = t('anomalies.feedback.error')
+    loginErr.value = t('anomalies.feedback.loginError')
   }
   finally {
-    saving.value = false
+    googleLoading.value = false
   }
 }
 
-function openComment() {
-  comment.value = savedComment.value
-  commentOpen.value = true
+// Fall back to the full login page for email / magic-link. Park the intended vote
+// (if any) so it applies automatically when the user returns authed.
+function goToLogin() {
+  if (import.meta.client && loginPendingVote.value !== null) {
+    try {
+      localStorage.setItem(PENDING_VOTE_KEY, JSON.stringify({ anomalyId: props.anomalyId, vote: loginPendingVote.value }))
+    }
+    catch { /* private mode / quota — the link still works, just no auto-apply */ }
+  }
+  navigateTo(`${localePath('/login')}?redirect=${encodeURIComponent(route.fullPath)}`)
 }
 
-function cancelComment() {
-  commentOpen.value = false
-  comment.value = savedComment.value
-}
+// Apply a vote parked before a login round-trip. Runs once the row is mounted and
+// the user is authed; only the instance whose anomaly matches acts, and it clears
+// the slot first so sibling rows skip it.
+onMounted(() => {
+  if (!import.meta.client || !isAuthed.value) return
+  let pending: { anomalyId?: string, vote?: number } | null = null
+  try {
+    pending = JSON.parse(localStorage.getItem(PENDING_VOTE_KEY) || 'null')
+  }
+  catch {
+    pending = null
+  }
+  if (!pending || pending.anomalyId !== props.anomalyId) return
+  localStorage.removeItem(PENDING_VOTE_KEY)
+  if ((pending.vote === 1 || pending.vote === -1) && myVote.value !== pending.vote) {
+    commitVote(pending.vote)
+  }
+})
 </script>
 
 <template>
@@ -127,9 +197,9 @@ function cancelComment() {
         type="button"
         class="chip fb__up"
         :class="{ 'is-active': myVote === 1 }"
-        :disabled="!isAuthed || saving"
+        :disabled="saving || (!isAuthed && !authEnabled)"
         :aria-pressed="myVote === 1"
-        :title="isAuthed ? t('anomalies.feedback.upTitle') : undefined"
+        :title="isAuthed ? t('anomalies.feedback.upTitle') : (authEnabled ? t('anomalies.feedback.login') : undefined)"
         @click="onVote(1)"
       >
         <span
@@ -143,9 +213,9 @@ function cancelComment() {
         type="button"
         class="chip fb__down"
         :class="{ 'is-active': myVote === -1 }"
-        :disabled="!isAuthed || saving"
+        :disabled="saving || (!isAuthed && !authEnabled)"
         :aria-pressed="myVote === -1"
-        :title="isAuthed ? t('anomalies.feedback.downTitle') : undefined"
+        :title="isAuthed ? t('anomalies.feedback.downTitle') : (authEnabled ? t('anomalies.feedback.login') : undefined)"
         @click="onVote(-1)"
       >
         <span
@@ -157,66 +227,168 @@ function cancelComment() {
       </button>
 
       <button
-        v-if="isAuthed && myVote !== null && !commentOpen"
+        v-if="isAuthed && myVote !== null"
         type="button"
         class="fb__reason"
-        @click="openComment"
+        @click="editReason"
       >
         {{ savedComment.trim() ? t('anomalies.feedback.editReason') : t('anomalies.feedback.addReason') }}
       </button>
 
-      <NuxtLink
+      <button
         v-else-if="!isAuthed && authEnabled"
-        :to="localePath('/login')"
-        class="fb__login u-muted"
+        type="button"
+        class="fb__login"
+        @click="openLogin(null)"
       >
         {{ t('anomalies.feedback.login') }}
-      </NuxtLink>
-    </div>
-
-    <div
-      v-if="commentOpen"
-      class="fb__comment"
-    >
-      <textarea
-        v-model="comment"
-        class="fb__ta"
-        rows="2"
-        maxlength="1000"
-        :placeholder="t('anomalies.feedback.reasonPlaceholder')"
-      />
-      <div class="fb__actions">
-        <button
-          type="button"
-          class="fb__save"
-          :disabled="saving"
-          @click="saveComment"
-        >
-          {{ t('anomalies.feedback.save') }}
-        </button>
-        <button
-          type="button"
-          class="fb__cancel"
-          :disabled="saving"
-          @click="cancelComment"
-        >
-          {{ t('anomalies.feedback.cancel') }}
-        </button>
-      </div>
+      </button>
     </div>
 
     <p
-      v-if="err"
+      v-if="err && !voteOpen"
       class="fb__err"
     >
       {{ err }}
     </p>
+
+    <!-- Guest login prompt: sign in without leaving the page. Google is one click;
+         email / magic-link fall through to the full login page with the vote parked. -->
+    <v-dialog
+      v-model="loginOpen"
+      max-width="440"
+    >
+      <v-card class="fbd">
+        <h2 class="fbd__h">
+          {{ t('anomalies.feedback.loginTitle') }}
+        </h2>
+        <p class="fbd__p">
+          {{ t('anomalies.feedback.loginBody') }}
+        </p>
+
+        <p
+          v-if="loginErr"
+          class="fbd__err"
+        >
+          {{ loginErr }}
+        </p>
+
+        <v-btn
+          block
+          variant="outlined"
+          prepend-icon="mdi-google"
+          :loading="googleLoading"
+          @click="loginWithGoogle"
+        >
+          {{ t('auth.withGoogle') }}
+        </v-btn>
+        <v-btn
+          class="fbd__more"
+          block
+          variant="text"
+          :disabled="googleLoading"
+          @click="goToLogin"
+        >
+          {{ t('anomalies.feedback.moreOptions') }}
+        </v-btn>
+
+        <div class="fbd__actions">
+          <v-spacer />
+          <v-btn
+            variant="text"
+            :disabled="googleLoading"
+            @click="loginOpen = false"
+          >
+            {{ t('anomalies.feedback.cancel') }}
+          </v-btn>
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <!-- Cast / edit a vote with an optional justification. The chosen verdict is
+         echoed as the same pill the user clicked, so the dialog confirms which way. -->
+    <v-dialog
+      v-model="voteOpen"
+      max-width="480"
+    >
+      <v-card class="fbd">
+        <h2 class="fbd__h">
+          {{ t('anomalies.feedback.prompt') }}
+        </h2>
+
+        <div class="fbd__verdict">
+          <span class="fbd__vlabel">{{ t('anomalies.feedback.yourVote') }}</span>
+          <span
+            class="chip"
+            :class="draftVote === 1 ? 'fb__up is-active' : 'fb__down is-active'"
+          >
+            <span
+              class="chip__ic"
+              aria-hidden="true"
+            >{{ draftVote === 1 ? '▲' : '▼' }}</span>
+            <span>{{ draftVote === 1 ? t('anomalies.feedback.valid') : t('anomalies.feedback.invalid') }}</span>
+          </span>
+        </div>
+
+        <v-textarea
+          v-model="draftComment"
+          class="fbd__ta"
+          variant="outlined"
+          :label="t('anomalies.feedback.reasonLabel')"
+          :placeholder="t('anomalies.feedback.reasonPlaceholder')"
+          rows="3"
+          auto-grow
+          counter
+          maxlength="1000"
+          :disabled="saving"
+        />
+
+        <p
+          v-if="err"
+          class="fbd__err"
+        >
+          {{ err }}
+        </p>
+
+        <div class="fbd__actions">
+          <v-btn
+            v-if="isEditing"
+            variant="text"
+            color="error"
+            :disabled="saving"
+            @click="retractVote"
+          >
+            {{ t('anomalies.feedback.retract') }}
+          </v-btn>
+          <v-spacer />
+          <v-btn
+            variant="text"
+            :disabled="saving"
+            @click="voteOpen = false"
+          >
+            {{ t('anomalies.feedback.cancel') }}
+          </v-btn>
+          <v-btn
+            :color="draftVote === 1 ? 'primary' : 'error'"
+            :loading="saving"
+            @click="confirmVote"
+          >
+            {{ isEditing ? t('anomalies.feedback.save') : t('anomalies.feedback.confirm') }}
+          </v-btn>
+        </div>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <style scoped>
+/* Align the feedback zone with the rest of the anomaly card: the same s-5 inset
+   as `.flags__link` / `.aidet` (this block sits OUTSIDE the padded NuxtLink, so
+   it needs its own inset) and a dashed top rule echoing `.aidet`, so it reads as
+   the card's closing zone with real breathing room above and below. */
 .fb {
-  margin-top: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-top: 1px dashed var(--rule);
 }
 
 /* Base pill spacing/shape comes from the global .chip primitive (main.scss).
@@ -236,6 +408,22 @@ function cancelComment() {
   border-color: var(--alerta);
 }
 
+/* Even out the rating pills. The global .chip adds 4px before the count so a
+   number reads as its own token; in these compact vote chips that made the
+   label→count gap heavier than the glyph→label gap and the row looked lopsided.
+   Drop the extra pad for a single 8px rhythm, and lift the ▲/▼ glyph to the
+   text's optical centre (triangles render bottom-heavy). */
+.fb__up .chip__count,
+.fb__down .chip__count {
+  padding-left: 0;
+}
+
+.fb__up .chip__ic,
+.fb__down .chip__ic {
+  position: relative;
+  top: -0.5px;
+}
+
 .fb__reason,
 .fb__login {
   padding: 0;
@@ -253,64 +441,66 @@ function cancelComment() {
   color: var(--celeste-deep, var(--celeste));
 }
 
-.fb__comment {
-  margin-top: var(--s-2);
-  max-width: 52ch;
-}
-
-.fb__ta {
-  width: 100%;
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--t-sm);
-  line-height: 1.5;
-  resize: vertical;
-}
-
-.fb__ta:focus {
-  outline: none;
-  border-color: var(--celeste);
-}
-
-.fb__actions {
-  display: flex;
-  gap: var(--s-2);
-  margin-top: var(--s-2);
-}
-
-.fb__save,
-.fb__cancel {
-  padding: var(--s-1) var(--s-4);
-  border-radius: var(--r-full);
-  font-size: var(--t-xs);
-  cursor: pointer;
-}
-
-.fb__save {
-  border: 1px solid var(--celeste-deep, var(--celeste));
-  background: var(--celeste-deep, var(--celeste));
-  color: #fff;
-}
-
-.fb__cancel {
-  border: 1px solid var(--rule);
-  background: transparent;
-  color: var(--text-muted);
-}
-
-.fb__save:disabled,
-.fb__cancel:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 .fb__err {
   margin: var(--s-2) 0 0;
   font-size: var(--t-xs);
+  color: var(--alerta);
+}
+
+/* ---- Dialogs (login prompt + vote/comment). The v-card surface already tracks
+   the Vuetify theme; these tokens tune padding, type and the framing hairline. ---- */
+.fbd {
+  padding: var(--s-5);
+  border: 1px solid var(--rule);
+}
+
+.fbd__h {
+  margin: 0 0 var(--s-2);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--t-lg);
+  color: var(--text);
+}
+
+.fbd__p {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.fbd__more {
+  margin-top: var(--s-2);
+}
+
+.fbd__verdict {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.fbd__vlabel {
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fbd__ta {
+  margin-bottom: var(--s-1);
+}
+
+.fbd__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+
+.fbd__err {
+  margin: 0 0 var(--s-3);
+  font-size: var(--t-sm);
   color: var(--alerta);
 }
 </style>

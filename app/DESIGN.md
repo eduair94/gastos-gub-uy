@@ -70,6 +70,21 @@ and a fixed figures block that **top-align**. Reach for it instead of
 re-rolling `flex; justify-content: space-between; align-items: center` — the
 centred variant lets the figure column drift down tall rows.
 
+## Table action links — `<CellLink>`
+
+The row-level "go here" affordance ("Ver contratos →") is always `<CellLink>`,
+never a hand-rolled `<v-btn append-icon>`. One home for the size/colour and,
+the reason it exists, a trailing arrow pinned to an **integer icon box** so it
+stays optically centred on the label at every zoom / DPR (a bare
+`append-icon` box is ~15.43px and drifts ~1px off the text on fractional
+zoom). The `.cell-link` class in `main.scss` carries the fix, so it applies
+even if the class is used on a raw `v-btn`.
+
+```vue
+<CellLink :to="contractsLink(item)" :label="t('intend.viewContracts')" />
+<CellLink :to="drillTo(x)" :disabled="row.total <= 0" :label="t('...')" />
+```
+
 ## Structure is information
 
 Eyebrows name a real category of thing. **Do not use numbered markers

@@ -417,6 +417,9 @@ useSeo(() => ({
           <div class="block__head">
             <h2>{{ t('buyers.detail.concentrationTitle') }}</h2>
           </div>
+          <p class="block__help">
+            {{ t('buyers.detail.concentrationHelp') }}
+          </p>
           <div class="conc">
             <p class="conc__n">
               {{ formatNumber(Math.round(concentration)) }}<span class="conc__pct">%</span>
@@ -436,9 +439,6 @@ useSeo(() => ({
             </div>
             <p class="conc__who u-truncate">
               {{ suppliers[0]?.name }}
-            </p>
-            <p class="conc__help">
-              {{ t('buyers.detail.concentrationHelp') }}
             </p>
           </div>
         </div>
@@ -828,13 +828,6 @@ useSeo(() => ({
   font-weight: 600;
 }
 
-.conc__help {
-  margin: var(--s-3) 0 0;
-  font-size: var(--t-xs);
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
 /* ---- Table ---- */
 .ctable {
   width: 100%;
@@ -955,7 +948,7 @@ useSeo(() => ({
 
 /* ---- Responsive ---- */
 @media (max-width: 980px) {
-  .cols { grid-template-columns: 1fr; }
+  .cols { grid-template-columns: minmax(0, 1fr); }
   .block--flush + .block--flush { margin-top: var(--s-6); }
 }
 

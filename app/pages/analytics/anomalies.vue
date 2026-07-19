@@ -31,6 +31,11 @@ function toArr(v: unknown): string[] {
 const supplier = ref<string[]>(toArr(route.query.supplier))
 const buyer = ref<string[]>(toArr(route.query.buyer))
 const rubroName = ref<string[]>(toArr(route.query.rubroName))
+// One or more catalogue codes (classification.id). Anomalies carry it as
+// metadata.itemClassification.id — the same code space the /contracts product
+// filter and the product pages use — so the reader can isolate the flags for a
+// specific article. Completed by NAME via the ProductAutocomplete typeahead.
+const product = ref<string[]>(toArr(route.query.product))
 // One contract year — still a single drill-down from the recurrence-by-year chart, no in-page
 // control, so it stays a clearable chip in the banner.
 const year = ref((route.query.year as string) ?? '')
@@ -43,12 +48,13 @@ const drills = computed(() => [
 ].filter(d => d.value.value))
 
 /** How many advanced (multi-select) filter values are active — drives the panel's count + clear. */
-const advancedCount = computed(() => supplier.value.length + buyer.value.length + rubroName.value.length)
+const advancedCount = computed(() => supplier.value.length + buyer.value.length + rubroName.value.length + product.value.length)
 
 function clearAdvanced() {
   supplier.value = []
   buyer.value = []
   rubroName.value = []
+  product.value = []
 }
 
 const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
@@ -63,11 +69,11 @@ const MINZ_STEPS = [0, 10, 25, 50] as const
 const CURRENCIES = ['UYU', 'USD'] as const
 
 // A page number from a different filter/sort set is meaningless.
-watch([severity, ai, sort, minZ, currency, supplier, buyer, rubroName, year], () => {
+watch([severity, ai, sort, minZ, currency, supplier, buyer, rubroName, product, year], () => {
   page.value = 1
 })
 
-watch([severity, ai, sort, minZ, currency, supplier, buyer, rubroName, year, page], () => {
+watch([severity, ai, sort, minZ, currency, supplier, buyer, rubroName, product, year, page], () => {
   // Arrays serialise to repeated params (?supplier=A&supplier=B), never comma-joined —
   // supplier/buyer names contain commas.
   const q: Record<string, string | string[]> = {}
@@ -79,6 +85,7 @@ watch([severity, ai, sort, minZ, currency, supplier, buyer, rubroName, year, pag
   if (supplier.value.length) q.supplier = supplier.value
   if (buyer.value.length) q.buyer = buyer.value
   if (rubroName.value.length) q.rubroName = rubroName.value
+  if (product.value.length) q.product = product.value
   if (year.value) q.year = year.value
   if (page.value > 1) q.page = String(page.value)
   router.replace({ query: q })
@@ -96,6 +103,7 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/anomal
     ...(supplier.value.length ? { supplier: supplier.value } : {}),
     ...(buyer.value.length ? { buyer: buyer.value } : {}),
     ...(rubroName.value.length ? { rubroName: rubroName.value } : {}),
+    ...(product.value.length ? { product: product.value } : {}),
     ...(year.value ? { year: year.value } : {}),
   })),
 })
@@ -479,6 +487,15 @@ useSeo(() => ({
             field="rubroName"
             :placeholder="t('anomalies.filters.rubroPlaceholder')"
             @update:model-value="v => rubroName = v"
+          />
+        </div>
+        <div class="adv__field">
+          <label class="adv__l u-mono">{{ t('filters.product') }}</label>
+          <AnomalyFacetAutocomplete
+            :model-value="product"
+            field="product"
+            :placeholder="t('filters.productPlaceholder')"
+            @update:model-value="v => product = v"
           />
         </div>
       </div>

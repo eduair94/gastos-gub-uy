@@ -607,6 +607,31 @@ button.chip:disabled { cursor: default; }
   text-transform: none;
 }
 
+// Table-cell action link ("Ver contratos →") — the canonical row-level
+// affordance, used through <CellLink> (or this class on any `v-btn`). One home
+// so every table shares the same size/colour, and — the reason it exists — a
+// trailing arrow that stays optically centred on the label at any zoom / DPR.
+//
+// Vuetify already centres the icon box on the button's flex line, but the
+// default trailing-icon box is a fractional 15.43px: at non-integer browser
+// zoom the glyph lands on a half device-pixel and paints ~1px off the text —
+// the misalignment this fixes. Pinning it to a 15px integer box (same visual
+// size, now deterministic) lands the arrow dead-centre on the label at DPR 1
+// and within ~0.4px at fractional zoom — measured best of 14/15/16px. The
+// `!important` beats Vuetify's inline icon size, so a bare `append-icon`
+// button gets the fix too, not only the slot form.
+.cell-link.v-btn {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.cell-link .v-btn__append > .v-icon {
+  font-size: 15px !important;
+  width: 15px;
+  height: 15px;
+  line-height: 1;
+}
+
 .v-chip {
   font-family: var(--font-mono);
   font-size: var(--t-xs);
