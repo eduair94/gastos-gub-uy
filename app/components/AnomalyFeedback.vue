@@ -387,7 +387,7 @@ onMounted(() => {
    it needs its own inset) and a dashed top rule echoing `.aidet`, so it reads as
    the card's closing zone with real breathing room above and below. */
 .fb {
-  padding: var(--s-4) var(--s-5);
+  padding: var(--s-4) var(--s-5) var(--s-5);
   border-top: 1px dashed var(--rule);
 }
 
