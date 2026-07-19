@@ -728,16 +728,19 @@ useSeo(() => ({
                     class="ctable__obj"
                     data-primary
                   >
-                    <!-- Plain click opens the preview; the href stays real so
-                         ⌘/Ctrl/middle-click still opens the full page in a new
-                         tab, and crawlers still see the link. -->
-                    <NuxtLink
-                      :to="localePath(`/contracts/${c.id}`)"
+                    <!-- A plain anchor, not <NuxtLink>: a RouterLink navigates
+                         from its OWN click handler (router.push), so @click.prevent
+                         can't reliably stop it. On a bare <a> the default action IS
+                         the navigation, so .exact.prevent opens the preview on a
+                         plain click while ⌘/Ctrl/middle-click still follow the href
+                         to a new tab, and crawlers still see a real link. -->
+                    <a
+                      :href="localePath(`/contracts/${c.id}`)"
                       class="ctable__link"
                       @click.exact.prevent="openItems(c)"
                     >
                       {{ rowTitle(c) }}
-                    </NuxtLink>
+                    </a>
                     <span class="ctable__sub">
                       <!-- The stage is why a row may carry no supplier or
                          amount. Naming it turns "missing data" into a
