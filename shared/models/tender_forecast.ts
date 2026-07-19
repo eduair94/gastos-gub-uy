@@ -28,7 +28,12 @@ export interface ITenderForecast {
   expectedWindow: { start: Date; end: Date };
   confidence: number;         // 0..1
   incumbentSupplier?: { id?: string; name?: string };
-  expectedAmount?: { currency: string; p25: number; p50: number };
+  // p25/p50 come from an item_price_baselines bucket keyed {classificationId, currency,
+  // unitName} — they are UNIT prices. Without the unit "UYU 25" reads as a tender's
+  // expected amount when it is the price of one button battery, so the unit travels with
+  // the number and the read path must render "p50 por <unidad>". Optional: pre-fix
+  // documents and buckets with no unitName simply omit it.
+  expectedAmount?: { currency: string; p25: number; p50: number; unitName?: string };
   basis: "recurrence";        // extensible: "expiry" | "recurrence+expiry"
   dataVersion: string;
   generatedAt: Date;
@@ -59,7 +64,10 @@ const TenderForecastSchema = new Schema<ITenderForecast>(
     },
     confidence: { type: Number, required: true, default: 0 },
     incumbentSupplier: { id: { type: String }, name: { type: String } },
-    expectedAmount: { currency: { type: String }, p25: { type: Number }, p50: { type: Number } },
+    expectedAmount: {
+      currency: { type: String }, p25: { type: Number }, p50: { type: Number },
+      unitName: { type: String },
+    },
     basis: { type: String, required: true, default: "recurrence" },
     dataVersion: { type: String, required: true },
     generatedAt: { type: Date, required: true, default: Date.now },

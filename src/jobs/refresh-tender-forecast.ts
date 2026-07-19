@@ -36,6 +36,7 @@ import type { ReleaseKind } from "./open-calls/project";
 import { computeCadence, expectedWindow, confidenceScore } from "../../shared/forecast/recurrence";
 import { pickRubroNode, ancestorsForLeaf } from "../../shared/forecast/rubro-node";
 import type { CatalogNodeFields } from "../../shared/forecast/rubro-node";
+import { compraIdFromOcid } from "../../shared/utils/ocid";
 import {
   MIN_EVENTS, RUBRO_LEVEL, EVIDENCE_TOP, DISPLAY_THRESHOLD,
 } from "../../shared/forecast/constants";
@@ -64,10 +65,15 @@ for (const k of [...TENDER_KINDS, ...AWARD_KINDS]) {
 const TENDER_RE = `^(${TENDER_KINDS.join("|")})-`;
 const AWARD_RE = `^(${AWARD_KINDS.join("|")})-`;
 
-/** ocid "ocds-yfs5dr-100001" → 100001; falls back to the raw string when non-numeric. */
-function compraKey(ocid: string): number | string {
-  const n = Number(ocid.slice(ocid.lastIndexOf("-") + 1));
-  return Number.isFinite(n) ? n : ocid;
+/**
+ * Dedupe key for a compra. `compraIdFromOcid` is the shared, null-safe derivation
+ * (shared/utils/ocid.ts) — a hand-rolled "everything after the last dash" version
+ * throws on an undefined ocid at the very end of a 15-minute cursor, maps an ocid
+ * ending in "-" to 0, and collides for any compra id that itself contains a dash.
+ * Falls back to the raw ocid when the prefix does not match.
+ */
+function compraKey(ocid: string | null | undefined): string {
+  return compraIdFromOcid(ocid) ?? String(ocid ?? "");
 }
 
 /**
@@ -104,16 +110,22 @@ async function run(): Promise<void> {
   interface Group {
     buyerId: string; buyerName: string;
     rubroNodeId: string; rubroLabel: string; rubroLevel: number;
-    dates: Date[]; compras: Set<number | string>;
+    // One entry per distinct compra of this (buyer, rubro node). The date is the MIN
+    // across every leaf of that compra, so the result cannot depend on cursor order —
+    // pipeline E computes `d: {$min: "$d"}` per (b, leaf, compra), and an ajuste_llamado
+    // that adds items with a later tenderPeriod.startDate leaves two leaves of the SAME
+    // compra carrying different minima. Taking whichever the cursor yielded first could
+    // land on a different UTC day and move medianDays / lastEventDate between runs.
+    compras: Map<string, { d: Date; m: string | null }>;
     leafCounts: Map<string, number>; leafLabels: Map<string, string>;
-    ancestors: Set<string>; methods: { tender: number; total: number };
+    ancestors: Set<string>;
   }
   const groups = new Map<string, Group>();
 
   // ---- E. events: tender-phase releases → per (buyer, leaf) event list ----
   // Event date = tender.tenderPeriod.startDate, fallback release-level date.
   // Pre-grouped by compra so aclaraciones/ajustes of the same llamado collapse to one
-  // event server-side (keeps the driver-side payload and the MIN_EVENTS prune honest).
+  // event server-side (keeps the driver-side payload bounded).
   console.log("[tender-forecast] E: events…");
   let eventRows = 0;
   const eventCursor = ReleaseModel.aggregate<EventRow>([
@@ -149,7 +161,13 @@ async function run(): Promise<void> {
         events: { $push: { d: "$d", compra: "$_id.compra", m: "$m" } },
       },
     },
-    { $match: { $expr: { $gte: [{ $size: "$events" }, MIN_EVENTS] } } },
+    // Payload floor ONLY. The MIN_EVENTS gate deliberately does NOT live here: the
+    // forecast unit is (buyer, rubro NODE), and a node spanning leaf A (5 compras) and
+    // leaf B (2) would lose B entirely — thinning the interval series medianDays is
+    // computed over, understating eventCount, moving lastEventDate whenever the node's
+    // most recent llamado sat in a sub-threshold leaf, and dropping B from evidenceItems.
+    // The gate is applied after the fold, on cadence.eventCount (see "Build docs").
+    { $match: { $expr: { $gte: [{ $size: "$events" }, 1] } } },
   ]).option({ allowDiskUse: true }).cursor();
 
   for await (const e of eventCursor) {
@@ -163,8 +181,8 @@ async function run(): Promise<void> {
       g = {
         buyerId: e._id.b, buyerName: e.bn ?? "",
         rubroNodeId: node.nodeId, rubroLabel: node.label, rubroLevel: node.level,
-        dates: [], compras: new Set(), leafCounts: new Map(), leafLabels: new Map(),
-        ancestors: new Set(), methods: { tender: 0, total: 0 },
+        compras: new Map(), leafCounts: new Map(), leafLabels: new Map(),
+        ancestors: new Set(),
       };
       groups.set(key, g);
     }
@@ -184,11 +202,15 @@ async function run(): Promise<void> {
       // that included this article".
       g.leafCounts.set(e._id.leaf, (g.leafCounts.get(e._id.leaf) ?? 0) + 1);
       const ck = compraKey(ev.compra);
-      if (g.compras.has(ck)) continue; // one llamado is one cadence event per group
-      g.compras.add(ck);
-      g.dates.push(toUtcDay(ev.d instanceof Date ? ev.d : new Date(ev.d)));
-      g.methods.total++;
-      if (typeof ev.m === "string" && /licitaci/i.test(ev.m)) g.methods.tender++;
+      const d = ev.d instanceof Date ? ev.d : new Date(ev.d);
+      if (!Number.isFinite(d.getTime())) continue;
+      const cur = g.compras.get(ck);
+      // One llamado is one cadence event per group. Fold across leaves ORDER-INDEPENDENTLY:
+      // earliest date wins, and the method is the lowest non-null string, so neither the
+      // cadence nor tenderShare can move with cursor order.
+      if (!cur) { g.compras.set(ck, { d, m: ev.m ?? null }); continue; }
+      if (d.getTime() < cur.d.getTime()) cur.d = d;
+      if (typeof ev.m === "string" && (cur.m === null || ev.m < cur.m)) cur.m = ev.m;
     }
   }
   console.log(`[tender-forecast] E: ${eventRows} (buyer,leaf) rows → ${groups.size} (buyer,rubro) groups`);
@@ -248,20 +270,28 @@ async function run(): Promise<void> {
   console.log(`[tender-forecast] W: ${awardRows} (buyer,leaf) award rows → ${incByGroup.size} incumbents`);
 
   // ---- Expected amount: item_price_baselines (41k docs; load whole, keep best-n per code) ----
-  const baselineByLeaf = new Map<string, { currency: string; p25: number; p50: number; n: number }>();
-  for await (const b of ItemPriceBaselineModel.find({}).select("classificationId currency p25 p50 n").lean().cursor()) {
+  // A baseline bucket is keyed {classificationId, currency, unitName} and p25/p50 are the
+  // percentiles of the UNIT price. Dropping unitName would store "UYU 25" as a tender's
+  // expected amount when 25 is the price of one button battery — the unit is what makes
+  // the number readable, so it is carried through to expectedAmount.unitName.
+  const baselineByLeaf = new Map<string, { currency: string; unitName: string | null; p25: number; p50: number; n: number }>();
+  for await (const b of ItemPriceBaselineModel.find({}).select("classificationId currency unitName p25 p50 n").lean().cursor()) {
     const cur = baselineByLeaf.get(b.classificationId);
-    if (!cur || b.n > cur.n) baselineByLeaf.set(b.classificationId, { currency: b.currency, p25: b.p25, p50: b.p50, n: b.n });
+    if (!cur || b.n > cur.n) baselineByLeaf.set(b.classificationId, { currency: b.currency, unitName: b.unitName ?? null, p25: b.p25, p50: b.p50, n: b.n });
   }
   console.log(`[tender-forecast] baselines: ${baselineByLeaf.size} classification codes`);
 
   // ---- Build docs ----
   const docs: ITenderForecast[] = [];
   for (const g of groups.values()) {
-    const cadence = computeCadence(g.dates);
+    // Dates are snapped to UTC days only now, AFTER the per-compra min-fold above.
+    const dates = [...g.compras.values()].map(c => toUtcDay(c.d));
+    const cadence = computeCadence(dates);
+    // THE MIN_EVENTS gate. It lives here, on the folded node, not on the leaf rows —
+    // eventCount is "distinct UTC days on which this buyer opened a llamado of this rubro".
     if (!cadence || cadence.eventCount < MIN_EVENTS) continue;
     if (cadence.medianDays < 1) continue; // degenerate: day-granular events are >=1 day apart
-    const lastEventDate = new Date(Math.max(...g.dates.map(d => d.getTime())));
+    const lastEventDate = new Date(Math.max(...dates.map(d => d.getTime())));
     const raw = expectedWindow(lastEventDate, cadence.medianDays, cadence.cvDays);
     // MIN_DISP_DAYS (15) is a floor on the window half-width, and cv>1 makes the
     // half-width exceed the interval itself, so for short or erratic cadences the raw
@@ -270,8 +300,15 @@ async function run(): Promise<void> {
     // last observed event. The end — the informative edge — is never moved.
     const minStart = lastEventDate.getTime() + 86_400_000;
     const window = { start: new Date(Math.max(raw.start.getTime(), minStart)), end: raw.end };
-    if (window.end.getTime() <= window.start.getTime()) continue; // fully-elapsed window
-    const tenderShare = g.methods.total ? g.methods.tender / g.methods.total : 0;
+    // Defensive invariant only — NOT an "already elapsed" filter (an elapsed window has
+    // end < now but still end > start, and passes straight through). Unreachable given
+    // medianDays >= 1 and MIN_DISP_DAYS = 15, which put `end` at least 16 days after
+    // lastEventDate while `start` is capped at lastEventDate + 1 day. Kept as a cheap
+    // guard so an inverted window could never reach the collection.
+    if (window.end.getTime() <= window.start.getTime()) continue;
+    let tenderTotal = 0;
+    for (const c of g.compras.values()) if (typeof c.m === "string" && /licitaci/i.test(c.m)) tenderTotal++;
+    const tenderShare = g.compras.size ? tenderTotal / g.compras.size : 0;
     const confidence = confidenceScore({ cvDays: cadence.cvDays, eventCount: cadence.eventCount, tenderShare });
     if (confidence < DISPLAY_THRESHOLD) continue;
 
@@ -294,7 +331,16 @@ async function run(): Promise<void> {
       expectedWindow: window,
       confidence,
       ...(inc?.name ? { incumbentSupplier: { name: inc.name, ...(inc.id ? { id: inc.id } : {}) } } : {}),
-      ...(amount ? { expectedAmount: { currency: amount.currency, p25: amount.p25, p50: amount.p50 } } : {}),
+      ...(amount
+        ? {
+            expectedAmount: {
+              currency: amount.currency,
+              p25: amount.p25,
+              p50: amount.p50,
+              ...(amount.unitName ? { unitName: amount.unitName } : {}),
+            },
+          }
+        : {}),
       basis: "recurrence",
       dataVersion,
       generatedAt: new Date(),
@@ -313,8 +359,13 @@ async function run(): Promise<void> {
     if (!bid) continue;
     for (const code of (c.classificationSet ?? [])) openKeys.add(`${bid}|${code}`);
   }
-  // If any ancestor/leaf of this group is already live for this buyer, suppress.
-  const kept = docs.filter(d => !d.rubroAncestors.some(a => openKeys.has(`${d.buyerId}|${a}`)));
+  // Suppress ONLY when this buyer already has a live open call at the forecast's OWN rubro
+  // node. Matching every element of rubroAncestors was far too broad: that array holds the
+  // leaf codes plus F…/SF…/C…/SC… ancestors, and open_calls.classificationSet is enriched
+  // with the same tokens — so one live call anywhere in familia F2 suppressed EVERY
+  // alimentos-clase forecast for that buyer. classificationSet contains the clase token of
+  // each of its items, so `buyerId|rubroNodeId` is an exact same-node match.
+  const kept = docs.filter(d => !openKeys.has(`${d.buyerId}|${d.rubroNodeId}`));
 
   // Compute-then-swap deletes everything not carrying this run's dataVersion, so an empty
   // result set would silently EMPTY the collection. Zero forecasts is always a bug here
