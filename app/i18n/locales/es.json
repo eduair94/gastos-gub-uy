@@ -36,7 +36,17 @@
     "themeDark": "Tema oscuro",
     "language": "Idioma",
     "sections": "Secciones",
-    "curros": "Curros"
+    "curros": "Curros",
+    "notifications": "Notificaciones",
+    "analisis": "Análisis",
+    "erroresCarga": "Errores de carga",
+    "comoReportar": "Cómo reportar",
+    "invCasinos": "Casinos del Estado",
+    "invCasinosCortesia": "Casino: cortesía",
+    "invIm": "Intendencia de Montevideo",
+    "invEmpresas": "Empresas señaladas",
+    "invAsse": "ASSE: ambulancias",
+    "invSaturno": "Frigorífico Saturno"
   },
   "money": {
     "unavailable": "Sin monto",
@@ -766,6 +776,10 @@
     "title": "Alertas de precio",
     "lead": "Contratos donde el precio unitario se aparta mucho del que suele pagarse por el mismo artículo. Una alerta no es una acusación: marca algo que vale la pena mirar.",
     "disclaimer": "Hay explicaciones legítimas: compras urgentes, especificaciones distintas bajo el mismo código de catálogo, o artículos mal clasificados en el origen.",
+    "category": {
+      "label": "Tipo de error",
+      "all": "Todos"
+    },
     "method": {
       "title": "Cómo se calcula",
       "body": "Para cada combinación de artículo, moneda y unidad de medida se arma una referencia de precios con los últimos 36 meses. Después se compara el precio de cada adjudicación contra esa referencia usando una medida robusta en escala logarítmica: usa la mediana en lugar del promedio, así un contrato gigante no puede tapar su propia anomalía.",
@@ -919,6 +933,74 @@
       "body": "Ninguna alerta en este momento quedó sin una explicación plausible tras la revisión."
     }
   },
+  "erroresCarga": {
+    "eyebrow": "Errores de carga",
+    "title": "errores de carga en los datos oficiales",
+    "lead": "Precios que la IA identificó como errores al cargar el dato — no sobreprecios reales: una cantidad de 10.000 donde iba 1, el total del renglón cargado como precio unitario, o una cifra en otra moneda. Se listan para que puedan reportarse y corregirse en la fuente.",
+    "banner": "Esto son errores de datos, no necesariamente corrupción. Corregirlos mejora las cifras de todo el sitio.",
+    "bannerLink": "Cómo reportar un error",
+    "newFlags": "{n} nuevos errores de carga detectados",
+    "newFlagsAction": "Ver",
+    "report": "Reportar",
+    "reason": "Por qué parece un error de carga",
+    "live": "En vivo",
+    "empty": {
+      "title": "Sin errores de carga por ahora",
+      "body": "Ninguna alerta quedó clasificada como error de carga en este momento."
+    },
+    "disclaimer": "La clasificación con IA es orientativa. Un posible error de carga no prueba nada por sí solo: verificá contra el contrato oficial antes de reportar."
+  },
+  "comoReportar": {
+    "eyebrow": "Guía",
+    "title": "Cómo reportar un error en los datos",
+    "dek": "Los datos de compras públicas los carga cada organismo comprador y los publica ACCE en Compras Estatales. Cuando ves un error de carga —una cantidad o un precio claramente equivocado— el arreglo lo hace la fuente. Esta guía explica a quién avisar y cómo.",
+    "whoTitle": "Quién carga y corrige los datos",
+    "whoBody": "Cada organismo del Estado carga sus compras en el sistema SICE. La Agencia de Compras y Contrataciones del Estado (ACCE) opera la plataforma comprasestatales.gub.uy y publica los datos abiertos que usa este sitio. Un error en un contrato lo corrige el organismo que lo cargó; ACCE es el canal de la plataforma.",
+    "stepsTitle": "Pasos para reportar",
+    "step1": "Abrí el contrato en Compras Estatales desde el botón «Reportar» de la alerta y confirmá el dato (cantidad, precio unitario, moneda).",
+    "step2": "Identificá el organismo comprador: es quien cargó el dato y quien puede corregirlo.",
+    "step3": "Escribí al organismo (su mesa de entrada o su área de compras) describiendo el error, con el número de contrato y el enlace oficial.",
+    "step4": "Si no hay respuesta o no encontrás el contacto, escribí a la mesa de ayuda de ACCE indicando el mismo detalle.",
+    "step5": "Guardá el texto pre-armado del botón «Reportar»: ya trae el contrato, el organismo y la descripción del error listos para pegar.",
+    "attachTitle": "Qué incluir",
+    "attachBody": "Número o enlace del contrato, el renglón afectado, el valor cargado y el valor que correspondería, y una captura si podés. Cuanto más concreto, más rápido se corrige.",
+    "contactsTitle": "Contactos",
+    "contactsBody": "Organismo comprador: su mesa de entrada o área de compras (figura en la ficha del organismo). ACCE / Compras Estatales: canal de contacto y mesa de ayuda en comprasestatales.gub.uy.",
+    "officialLink": "Ir a Compras Estatales",
+    "disclaimer": "Este sitio no corrige los datos oficiales ni reenvía reportes: solo detecta posibles errores y te muestra a dónde llevarlos. La corrección la hace la fuente."
+  },
+  "analyticsHub": {
+    "kicker": "Análisis y alertas",
+    "title": "El estado del gasto, mirado de cerca",
+    "dek": "Todas las herramientas de detección y análisis en un solo lugar: alertas de precio, lo que no tiene explicación, errores de carga para reportar, proveedores señalados y el gasto por organismo.",
+    "cards": {
+      "alertas": { "title": "Alertas de precio", "dek": "Contratos con un precio unitario muy por encima del habitual para el mismo artículo." },
+      "unexplained": { "title": "Sin explicación", "dek": "Las alertas que ni la revisión con IA pudo justificar. La señal más fuerte." },
+      "erroresCarga": { "title": "Errores de carga", "dek": "Errores de datos (cantidades, moneda, precio) para reportar y corregir en la fuente." },
+      "providerAnomalies": { "title": "Proveedores señalados", "dek": "Qué proveedores y compradores concentran las alertas sin explicación." },
+      "intendencias": { "title": "Intendencias", "dek": "El gasto de los gobiernos departamentales, comparado por habitante." },
+      "organismos": { "title": "Gasto por organismo", "dek": "Cuánto gasta cada tipo de organismo del Estado." },
+      "mapa": { "title": "Mapa del gasto", "dek": "Un treemap de todo el gasto, cada organismo dimensionado por lo que gasta." },
+      "estadisticas": { "title": "Estadísticas", "dek": "Las cifras del gasto: cuánto, en qué, a quién." },
+      "comoReportar": { "title": "Cómo reportar", "dek": "La guía para llevar un error de carga a quien puede corregirlo." }
+    }
+  },
+  "reportDialog": {
+    "title": "Reportar este error de carga",
+    "intro": "Este dato parece un error al cargarlo, no un sobreprecio real. Reportalo al organismo que lo cargó para que lo corrija en la fuente.",
+    "contractLabel": "Contrato",
+    "organismLabel": "Organismo comprador",
+    "detectedLabel": "Valor cargado",
+    "expectedLabel": "Rango habitual",
+    "copyTitle": "Texto para reportar (copiá y pegá)",
+    "copyText": "Asunto: Posible error de carga en un contrato de Compras Estatales\n\nContrato: {ref}\nOrganismo comprador: {organism}\nArtículo: {item}\nValor cargado: {detected}\nValor habitual para ese artículo: {expected}\n\nParece un error de carga (por ejemplo, una cantidad, una moneda o un precio unitario equivocados). ¿Podrían revisarlo y corregirlo si corresponde? Gracias.",
+    "copy": "Copiar texto",
+    "copied": "¡Copiado!",
+    "openOfficial": "Abrir en Compras Estatales",
+    "openContract": "Ver el contrato en el sitio",
+    "guideLink": "Guía: cómo reportar",
+    "close": "Cerrar"
+  },
   "provAnom": {
     "title": "Proveedores detrás de las alertas sin explicación",
     "lead": "Cruzamos las alertas de sobreprecio que la IA no pudo justificar contra los proveedores que las reciben, para ver si un proveedor o un comprador concentra muchas anomalías. No es una acusación: es por dónde empezar a mirar.",
@@ -1002,6 +1084,23 @@
     "empty": {
       "title": "Sin proveedores para estos filtros",
       "body": "Probá bajar el mínimo de alertas o quitar el filtro de rubro."
+    }
+  },
+  "mandate": {
+    "role": {
+      "president": "Presidencia",
+      "intendente": "Intendencia"
+    },
+    "coalition": "Coalición: {name}",
+    "transition": "Año de transición: hubo cambio de gobierno; se muestra la administración que gobernó la mayor parte del año.",
+    "boardSplit": "Directorio de integración compartida (coparticipación): la oposición suele ocupar 1–2 cargos. Se indica el gobierno nacional de turno, no la conducción del organismo.",
+    "singleSource": "Dato del período 2005–2010 de fuente única; sujeto a verificación.",
+    "selfGoverned": "Órgano autónomo — sin mandato ejecutivo",
+    "source": "Fuente: {source}.",
+    "disclaimer": "Contexto histórico (registro público electoral); no implica responsabilidad sobre el gasto.",
+    "timeline": {
+      "title": "Gobiernos por período",
+      "note": "Quién condujo el organismo en cada período. Registro público electoral, como contexto."
     }
   },
   "intend": {
@@ -1127,6 +1226,18 @@
     }
   },
   "seo": {
+    "erroresCarga": {
+      "title": "Errores de carga en las compras públicas del Uruguay",
+      "description": "Precios y cantidades que parecen errores al cargar los datos oficiales de Compras Estatales, detectados con IA y listados para reportar y corregir en la fuente."
+    },
+    "comoReportar": {
+      "title": "Cómo reportar un error en los datos de compras públicas",
+      "description": "Guía para reportar un error de carga en Compras Estatales: quién corrige los datos, a quién avisar y qué incluir."
+    },
+    "analyticsHub": {
+      "title": "Análisis y alertas del gasto público del Uruguay",
+      "description": "Alertas de precio, compras sin explicación, errores de carga, proveedores señalados y gasto por organismo. Datos abiertos oficiales de Compras Estatales."
+    },
     "gastos": {
       "title": "A dónde va tu plata — el gasto del Estado uruguayo",
       "description": "Las compras públicas del Uruguay agrupadas como crítica: quién cobra, quién gasta, qué compra el Estado y qué no cierra. Con datos abiertos oficiales de Compras Estatales."
@@ -1431,7 +1542,30 @@
     "language": "Idioma",
     "save": "Guardar cambios",
     "saved": "Cambios guardados",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "channelsTitle": "Cómo querés recibir las alertas",
+    "channelEmail": "Email",
+    "channelPush": "Notificaciones push",
+    "channelTelegram": "Telegram",
+    "channelInapp": "En la app",
+    "channelEmailHint": "Un resumen a tu casilla de correo.",
+    "channelPushHint": "Avisos instantáneos en este dispositivo.",
+    "channelTelegramHint": "Mensaje directo por Telegram.",
+    "channelInappHint": "Siempre disponible en la campana.",
+    "pushEnable": "Activar en este dispositivo",
+    "pushDisable": "Desactivar en este dispositivo",
+    "pushUnsupported": "Tu navegador no soporta notificaciones push.",
+    "pushBlocked": "Bloqueaste las notificaciones. Habilitalas en los permisos del navegador.",
+    "pushDevices": "Dispositivos activos: {count}",
+    "telegramLink": "Vincular Telegram",
+    "telegramUnlink": "Desvincular Telegram",
+    "telegramLinked": "Vinculado como @{username}",
+    "telegramLinkedNoUser": "Cuenta de Telegram vinculada",
+    "telegramNotConfigured": "Telegram no está disponible por ahora.",
+    "telegramOpenHint": "Se abrirá Telegram para confirmar la vinculación.",
+    "installApp": "Instalar app",
+    "installHint": "Agregá la app a tu pantalla de inicio.",
+    "installed": "App instalada"
   },
   "apiKeys": {
     "title": "API keys",
@@ -1660,5 +1794,18 @@
       "archivo": "Archivada",
       "rescision": "Rescisión"
     }
+  },
+  "inbox": {
+    "title": "Notificaciones",
+    "lead": "Los llamados que coincidieron con tus alertas.",
+    "empty": "Todavía no hay notificaciones.",
+    "markAllRead": "Marcar todo como leído",
+    "viewAll": "Ver todas",
+    "newCount": "Sin leer",
+    "closes": "Cierra",
+    "budget": "Presupuesto",
+    "loadMore": "Cargar más",
+    "matched": "Coincide con",
+    "openCall": "Ver llamado"
   }
 }

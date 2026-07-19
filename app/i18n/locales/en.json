@@ -36,7 +36,17 @@
     "themeDark": "Dark theme",
     "language": "Language",
     "sections": "Sections",
-    "curros": "Cases"
+    "curros": "Cases",
+    "notifications": "Notifications",
+    "analisis": "Analysis",
+    "erroresCarga": "Data-load errors",
+    "comoReportar": "How to report",
+    "invCasinos": "State casinos",
+    "invCasinosCortesia": "Casino: comps",
+    "invIm": "Montevideo City Hall",
+    "invEmpresas": "Flagged companies",
+    "invAsse": "ASSE: ambulances",
+    "invSaturno": "Saturno meatpacker"
   },
   "money": {
     "unavailable": "No amount",
@@ -766,6 +776,10 @@
     "title": "Price flags",
     "lead": "Contracts where the unit price departs sharply from what the state usually pays for the same item. A flag is not an accusation: it marks something worth a look.",
     "disclaimer": "There are legitimate explanations: urgent purchases, different specifications under the same catalogue code, or items misclassified at the source.",
+    "category": {
+      "label": "Error type",
+      "all": "All"
+    },
     "method": {
       "title": "How it is calculated",
       "body": "For each combination of item, currency and unit of measure, a price baseline is built from the last 36 months. Each award's unit price is then scored against that baseline using a robust measure in log space: it uses the median rather than the mean, so a huge contract cannot mask its own anomaly.",
@@ -919,6 +933,74 @@
       "body": "No alert is currently left without a plausible explanation after review."
     }
   },
+  "erroresCarga": {
+    "eyebrow": "Data-load errors",
+    "title": "data-load errors in the official records",
+    "lead": "Prices the AI identified as data-entry mistakes — not real overpricing: a quantity of 10,000 where it should be 1, a line total loaded as the unit price, or a figure in the wrong currency. Listed here so they can be reported and fixed at the source.",
+    "banner": "These are data errors, not necessarily corruption. Fixing them improves the figures across the whole site.",
+    "bannerLink": "How to report an error",
+    "newFlags": "{n} new data-load errors detected",
+    "newFlagsAction": "View",
+    "report": "Report",
+    "reason": "Why it looks like a load error",
+    "live": "Live",
+    "empty": {
+      "title": "No data-load errors right now",
+      "body": "No flag is currently classified as a data-load error."
+    },
+    "disclaimer": "The AI classification is indicative. A possible load error proves nothing on its own: verify against the official contract before reporting."
+  },
+  "comoReportar": {
+    "eyebrow": "Guide",
+    "title": "How to report a data error",
+    "dek": "Public-procurement data is entered by each buying agency and published by ACCE on Compras Estatales. When you spot a load error — a quantity or price that is clearly wrong — the fix is made at the source. This guide explains who to notify and how.",
+    "whoTitle": "Who enters and corrects the data",
+    "whoBody": "Each state agency enters its purchases into the SICE system. The Agency for Public Procurement (ACCE) runs the comprasestatales.gub.uy platform and publishes the open data this site uses. An error in a contract is corrected by the agency that entered it; ACCE is the platform's channel.",
+    "stepsTitle": "Steps to report",
+    "step1": "Open the contract on Compras Estatales from the flag's «Report» button and confirm the value (quantity, unit price, currency).",
+    "step2": "Identify the buying agency: it entered the data and is the one that can correct it.",
+    "step3": "Write to the agency (its front desk or procurement area) describing the error, with the contract number and the official link.",
+    "step4": "If there is no reply or you can't find the contact, write to ACCE's help desk with the same detail.",
+    "step5": "Use the pre-filled text from the «Report» button: it already includes the contract, the agency and a description of the error, ready to paste.",
+    "attachTitle": "What to include",
+    "attachBody": "Contract number or link, the affected line, the value entered and the value that should apply, and a screenshot if you can. The more concrete, the faster it gets fixed.",
+    "contactsTitle": "Contacts",
+    "contactsBody": "Buying agency: its front desk or procurement area (shown on the agency's page). ACCE / Compras Estatales: contact channel and help desk at comprasestatales.gub.uy.",
+    "officialLink": "Go to Compras Estatales",
+    "disclaimer": "This site does not correct the official data or forward reports: it only detects possible errors and shows you where to take them. The correction is made at the source."
+  },
+  "analyticsHub": {
+    "kicker": "Analysis & flags",
+    "title": "The state of spending, up close",
+    "dek": "Every detection and analysis tool in one place: price flags, what has no explanation, load errors to report, flagged providers and spending by agency.",
+    "cards": {
+      "alertas": { "title": "Price flags", "dek": "Contracts with a unit price far above the usual for the same item." },
+      "unexplained": { "title": "Unexplained", "dek": "The flags not even the AI review could justify. The strongest signal." },
+      "erroresCarga": { "title": "Data-load errors", "dek": "Data mistakes (quantities, currency, price) to report and fix at the source." },
+      "providerAnomalies": { "title": "Flagged providers", "dek": "Which providers and buyers concentrate the unexplained flags." },
+      "intendencias": { "title": "Departmental governments", "dek": "Spending by the departmental governments, compared per capita." },
+      "organismos": { "title": "Spending by agency", "dek": "How much each type of state agency spends." },
+      "mapa": { "title": "Spending map", "dek": "A treemap of all spending, each agency sized by what it spends." },
+      "estadisticas": { "title": "Statistics", "dek": "The spending figures: how much, on what, to whom." },
+      "comoReportar": { "title": "How to report", "dek": "The guide to take a load error to whoever can correct it." }
+    }
+  },
+  "reportDialog": {
+    "title": "Report this data-load error",
+    "intro": "This value looks like a data-entry mistake, not real overpricing. Report it to the agency that entered it so it gets corrected at the source.",
+    "contractLabel": "Contract",
+    "organismLabel": "Buying agency",
+    "detectedLabel": "Value entered",
+    "expectedLabel": "Usual range",
+    "copyTitle": "Text to report (copy and paste)",
+    "copyText": "Subject: Possible data-load error in a Compras Estatales contract\n\nContract: {ref}\nBuying agency: {organism}\nItem: {item}\nValue entered: {detected}\nUsual value for that item: {expected}\n\nThis looks like a data-load error (for example, a wrong quantity, currency or unit price). Could you review and correct it if applicable? Thank you.",
+    "copy": "Copy text",
+    "copied": "Copied!",
+    "openOfficial": "Open on Compras Estatales",
+    "openContract": "View the contract on the site",
+    "guideLink": "Guide: how to report",
+    "close": "Close"
+  },
   "provAnom": {
     "title": "Providers behind the unexplained flags",
     "lead": "We cross-reference the overprice flags the AI could not justify against the providers that receive them, to see whether one provider or one buyer concentrates many anomalies. Not an accusation — a place to start looking.",
@@ -1002,6 +1084,23 @@
     "empty": {
       "title": "No providers for these filters",
       "body": "Try lowering the minimum flags or clearing the category filter."
+    }
+  },
+  "mandate": {
+    "role": {
+      "president": "Presidency",
+      "intendente": "Mayoralty"
+    },
+    "coalition": "Coalition: {name}",
+    "transition": "Transition year: the government changed mid-year; the administration that governed most of the year is shown.",
+    "boardSplit": "Board seats are shared (coparticipación): the opposition typically holds 1–2 seats. This shows the national government of the day, not who runs the body.",
+    "singleSource": "The 2005–2010 term is single-source; subject to verification.",
+    "selfGoverned": "Autonomous body — no executive mandate",
+    "source": "Source: {source}.",
+    "disclaimer": "Historical context (public electoral record); it does not imply responsibility for the spending.",
+    "timeline": {
+      "title": "Administrations by term",
+      "note": "Who led the body in each term. Public electoral record, shown as context."
     }
   },
   "intend": {
@@ -1127,6 +1226,18 @@
     }
   },
   "seo": {
+    "erroresCarga": {
+      "title": "Data-load errors in Uruguay's public procurement",
+      "description": "Prices and quantities that look like mistakes when loading the official Compras Estatales data, detected with AI and listed to report and fix at the source."
+    },
+    "comoReportar": {
+      "title": "How to report an error in public-procurement data",
+      "description": "A guide to reporting a data-load error on Compras Estatales: who corrects the data, who to notify and what to include."
+    },
+    "analyticsHub": {
+      "title": "Analysis & flags of Uruguay's public spending",
+      "description": "Price flags, unexplained purchases, data-load errors, flagged providers and spending by agency. Official open data from Compras Estatales."
+    },
     "gastos": {
       "title": "Where your money goes — Uruguay's state spending",
       "description": "Uruguay's public spending grouped as critique: who gets paid, who spends, what the state buys and what doesn't add up. With official open data from Compras Estatales."
@@ -1431,7 +1542,30 @@
     "language": "Language",
     "save": "Save changes",
     "saved": "Changes saved",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "channelsTitle": "How you want to get alerts",
+    "channelEmail": "Email",
+    "channelPush": "Push notifications",
+    "channelTelegram": "Telegram",
+    "channelInapp": "In the app",
+    "channelEmailHint": "A summary to your inbox.",
+    "channelPushHint": "Instant alerts on this device.",
+    "channelTelegramHint": "Direct message on Telegram.",
+    "channelInappHint": "Always available in the bell.",
+    "pushEnable": "Enable on this device",
+    "pushDisable": "Disable on this device",
+    "pushUnsupported": "Your browser does not support push notifications.",
+    "pushBlocked": "You blocked notifications. Enable them in your browser settings.",
+    "pushDevices": "Active devices: {count}",
+    "telegramLink": "Link Telegram",
+    "telegramUnlink": "Unlink Telegram",
+    "telegramLinked": "Linked as @{username}",
+    "telegramLinkedNoUser": "Telegram account linked",
+    "telegramNotConfigured": "Telegram is not available right now.",
+    "telegramOpenHint": "Telegram will open to confirm the link.",
+    "installApp": "Install app",
+    "installHint": "Add the app to your home screen.",
+    "installed": "App installed"
   },
   "apiKeys": {
     "title": "API keys",
@@ -1660,5 +1794,18 @@
       "archivo": "Shelved",
       "rescision": "Contract annulled"
     }
+  },
+  "inbox": {
+    "title": "Notifications",
+    "lead": "The tenders that matched your alerts.",
+    "empty": "No notifications yet.",
+    "markAllRead": "Mark all as read",
+    "viewAll": "View all",
+    "newCount": "Unread",
+    "closes": "Closes",
+    "budget": "Budget",
+    "loadMore": "Load more",
+    "matched": "Matches",
+    "openCall": "View tender"
   }
 }
