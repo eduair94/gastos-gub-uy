@@ -17,6 +17,7 @@
 import { config } from 'dotenv'
 import { MongoClient } from 'mongodb'
 import type { Db, IndexDirection } from 'mongodb'
+import { TenderForecastModel } from '../shared/models'
 
 config()
 
@@ -556,6 +557,19 @@ async function main(): Promise<void> {
       await csend.createIndex({ status: 1, campaignId: 1 }, { background: true, name: 'status_1_campaignId_1' })
       await csend.createIndex({ providerMessageId: 1 }, { background: true, name: 'providerMessageId_1' })
       console.log('✅ campaign collections indexes ensured')
+
+      // tender_forecast: precomputed recurrence forecast per (buyer.id × SICE rubro node),
+      // rebuilt monthly (compute-then-swap by dataVersion) by
+      // src/jobs/refresh-tender-forecast.ts. buyerId+rubroNodeId unique is the upsert/read
+      // key; the rest back the read endpoint's sorts/filters. Collection name sourced from
+      // the schema (shared/models/tender_forecast.ts) to avoid string drift.
+      const forecast = db.collection(TenderForecastModel.collection.collectionName)
+      await forecast.createIndex({ buyerId: 1, rubroNodeId: 1 }, { unique: true, background: true, name: 'buyerId_1_rubroNodeId_1' })
+      await forecast.createIndex({ dataVersion: 1 }, { background: true, name: 'dataVersion_1' })
+      await forecast.createIndex({ 'expectedWindow.start': 1 }, { background: true, name: 'expectedWindow.start_1' })
+      await forecast.createIndex({ rubroAncestors: 1 }, { background: true, name: 'rubroAncestors_1' })
+      await forecast.createIndex({ confidence: -1 }, { background: true, name: 'confidence_-1' })
+      console.log('✅ tender_forecast indexes ensured (buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, rubroAncestors, confidence)')
     }
     else {
       console.log('   plan: contract_item_features.compraId_1 (unique)')
@@ -576,6 +590,7 @@ async function main(): Promise<void> {
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
       console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId}')
+      console.log('   plan: tender_forecast.{buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, rubroAncestors, confidence}')
     }
 
     if (failed > 0) {
