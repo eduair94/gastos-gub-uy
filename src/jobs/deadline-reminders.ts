@@ -14,7 +14,7 @@ import type { IOpenCall, IUser, OpenCallStatus } from "../../shared/types/monito
 import { createMailer } from "../services/mailer";
 import { renderReminderEmail } from "../emails/templates";
 import type { Locale } from "../emails/templates";
-import { appBaseUrl, listUnsubHeaders, toEmailCall, unsubscribeUrl } from "./alerts/dispatch";
+import { appBaseUrl, EMAIL_CALL_SELECT, listUnsubHeaders, toEmailCall, unsubscribeUrl } from "./alerts/dispatch";
 
 const DAY_MS = 86_400_000;
 const LIVE: OpenCallStatus[] = ["open", "clarification", "amended"];
@@ -37,7 +37,7 @@ async function main(): Promise<void> {
 
   const compraIds = [...new Set(saved.map(s => s.compraId))];
   const calls = await OpenCallModel.find({ compraId: { $in: compraIds } })
-    .select("compraId title buyer procurementMethodDetails tenderPeriod status")
+    .select(`${EMAIL_CALL_SELECT} status`)
     .lean();
   const callMap = new Map(calls.map(c => [c.compraId, c as unknown as IOpenCall]));
 

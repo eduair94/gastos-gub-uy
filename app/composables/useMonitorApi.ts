@@ -65,7 +65,44 @@ export function useMonitorApi() {
 
   const account = {
     getPrefs: () => $fetch<{ data: unknown }>('/api/account/preferences'),
-    updatePrefs: (body: { enabled?: boolean, frequency?: string, locale?: string }) => $fetch<{ data: unknown }>('/api/account/preferences', { method: 'PUT', body }),
+    updatePrefs: (body: {
+      enabled?: boolean
+      frequency?: string
+      locale?: string
+      channels?: Partial<Record<'email' | 'push' | 'telegram' | 'inapp', boolean>>
+    }) => $fetch<{ data: unknown }>('/api/account/preferences', { method: 'PUT', body }),
+  }
+
+  interface InboxItem {
+    id: string
+    compraId: string
+    matchedOn: { categories?: string[], keywords?: string[] } | null
+    readAt: string | null
+    createdAt: string
+    call: {
+      compraId: string
+      ocid: string
+      title: string
+      buyer?: { id?: string, name?: string }
+      status: string
+      tenderPeriod?: { endDate?: string }
+      procurementMethodDetails?: string
+      estimatedValue?: number
+      currency?: string
+      sourceUrl?: string
+    } | null
+  }
+
+  const notifications = {
+    list: (params?: { limit?: number, skip?: number }) =>
+      $fetch<{ data: { items: InboxItem[], unread: number, total: number, hasMore: boolean } }>('/api/notifications', { params }),
+    read: (id: string) => $fetch<{ data: { updated: number } }>(`/api/notifications/${id}/read`, { method: 'POST' }),
+    readAll: () => $fetch<{ data: { updated: number } }>('/api/notifications/read-all', { method: 'POST' }),
+  }
+
+  const telegram = {
+    link: () => $fetch<{ data: { url: string, botUsername: string } }>('/api/telegram/link', { method: 'POST' }),
+    unlink: () => $fetch<{ success: boolean }>('/api/telegram/unlink', { method: 'POST' }),
   }
 
   const categories = {
@@ -87,5 +124,5 @@ export function useMonitorApi() {
     test: (id: string) => $fetch<{ success: boolean, data: { ok: boolean, status?: number, error?: string } }>(`/api/v1/webhooks/${id}/test`, { method: 'POST' }),
   }
 
-  return { watches, openCalls, savedCalls, calendar, feedback, account, categories, apiKeys, webhooks }
+  return { watches, openCalls, savedCalls, calendar, feedback, account, notifications, telegram, categories, apiKeys, webhooks }
 }

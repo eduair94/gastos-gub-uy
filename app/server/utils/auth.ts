@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 import { createError, getRequestHeader } from 'h3'
-import type { ApiKeyScope } from '../../../shared/types/monitor'
+import type { ApiKeyScope, INotificationChannels, ITelegramLink } from '../../../shared/types/monitor'
 
 // The request-scoped user is attached by server/middleware/auth.ts. It is a lean
 // Mongo `users` doc (or null). Kept as a loose shape here so route handlers do not
@@ -15,7 +15,8 @@ export interface SessionUser {
   role: 'user' | 'admin'
   locale: 'es' | 'en'
   status: 'active' | 'disabled'
-  notificationPrefs: { enabled: boolean, frequency: 'instant' | 'daily' }
+  notificationPrefs: { enabled: boolean, frequency: 'instant' | 'daily', channels?: INotificationChannels | undefined }
+  telegram?: ITelegramLink | undefined
   unsubscribeToken: string
   watchCount: number
   createdAt?: Date

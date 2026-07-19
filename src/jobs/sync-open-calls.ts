@@ -10,6 +10,8 @@ import { connectToDatabase, disconnectFromDatabase } from "../../shared/connecti
 import { syncOpenCalls } from "./open-calls/sync";
 import { runMatching } from "./matching/run";
 import { dispatchAlerts } from "./alerts/dispatch";
+import { dispatchPush } from "./alerts/dispatch-push";
+import { dispatchTelegram } from "./alerts/dispatch-telegram";
 import { summarizeOpenCall } from "./pliego/summarize";
 
 function sleep(ms: number): Promise<void> {
@@ -43,10 +45,21 @@ async function main(): Promise<void> {
   if (sync.newlyOpenedCompraIds.length) {
     await runMatching(sync.newlyOpenedCompraIds, log);
   }
+  // Instant fan-out across every channel. Each is independent and degrades to a
+  // no-op when its transport is unconfigured; a failure in one never blocks the
+  // others. (The daily digest job handles frequency:'daily' email separately.)
   const disp = await dispatchAlerts({ frequency: "instant", log });
+  const push = await dispatchPush({ log }).catch((e) => {
+    log(`push dispatch failed: ${e instanceof Error ? e.message : String(e)}`);
+    return { pushed: 0 };
+  });
+  const tg = await dispatchTelegram({ log }).catch((e) => {
+    log(`telegram dispatch failed: ${e instanceof Error ? e.message : String(e)}`);
+    return { sent: 0 };
+  });
   await eagerSummaries(sync.newlyOpenedCompraIds, log);
 
-  log(`done: ${sync.inserted} new calls, ${disp.notificationsSent} alert notifications sent`);
+  log(`done: ${sync.inserted} new calls — ${disp.notificationsSent} email, ${push.pushed} push, ${tg.sent} telegram sent`);
 }
 
 main()

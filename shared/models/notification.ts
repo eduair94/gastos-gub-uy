@@ -18,7 +18,9 @@ const NotificationSchema = new Schema<INotification>(
       keywords: { type: [String], default: undefined },
     },
     dedupeKey: { type: String, required: true },
-    channel: { type: String, enum: ["email"], default: "email" },
+    // Per-channel fan-out: one row per (channel, user, call). `inapp` is the
+    // persistent inbox item; the rest are external delivery outbox rows.
+    channel: { type: String, enum: ["email", "push", "telegram", "inapp"], default: "email" },
     status: { type: String, required: true, enum: ["pending", "sent", "failed", "skipped"], default: "pending" },
     // Groups the calls that went out in one batched email.
     batchId: { type: String },
@@ -27,6 +29,8 @@ const NotificationSchema = new Schema<INotification>(
     // Reminders: the day the reminder should fire.
     scheduledFor: { type: Date },
     sentAt: { type: Date },
+    // Inbox read-state (inapp rows). Absent/null = unread.
+    readAt: { type: Date },
   },
   { timestamps: true, collection: "notifications" }
 );
@@ -35,6 +39,10 @@ NotificationSchema.index({ dedupeKey: 1 }, { unique: true });
 NotificationSchema.index({ status: 1, type: 1 });
 NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ status: 1, scheduledFor: 1 });
+// Inbox list + unread badge: a user's rows for one channel, newest first.
+NotificationSchema.index({ userId: 1, channel: 1, createdAt: -1 });
+// Per-channel drain query for the dispatchers (status + channel).
+NotificationSchema.index({ status: 1, channel: 1 });
 
 export const NotificationModel: Model<INotification> =
   (mongoose.models.Notification as Model<INotification>)

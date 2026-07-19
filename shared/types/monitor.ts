@@ -9,6 +9,27 @@ import type { Document } from 'mongoose'
 
 export type NotificationFrequency = 'instant' | 'daily'
 
+// Delivery channels for a matched llamado. `inapp` is the persistent inbox
+// (always on); the rest are external and opt-in per user + connection state.
+export type NotificationChannel = 'email' | 'push' | 'telegram' | 'inapp'
+
+// Per-channel opt-in. Absent on legacy users → treat as the DEFAULT_CHANNELS
+// below (email + inapp on), gated by the master `enabled`.
+export interface INotificationChannels {
+  email: boolean
+  push: boolean
+  telegram: boolean
+  inapp: boolean
+}
+
+// A linked Telegram chat. Set by the bot webhook after a valid /start <token>.
+export interface ITelegramLink {
+  chatId: string
+  username?: string | undefined
+  linkedAt: Date
+  active: boolean
+}
+
 export interface IUser extends Document {
   uid: string
   email: string
@@ -22,10 +43,28 @@ export interface IUser extends Document {
   notificationPrefs: {
     enabled: boolean
     frequency: NotificationFrequency
+    // Optional for backward compat — see resolveChannels() in shared/alerts.
+    channels?: INotificationChannels | undefined
   }
+  // Present only once the user links a Telegram chat.
+  telegram?: ITelegramLink | undefined
   unsubscribeToken: string
   watchCount: number
   lastLoginAt?: Date | undefined
+  createdAt: Date
+  updatedAt: Date
+}
+
+// One browser/device push endpoint. A user may have several (multi-device).
+// Deactivated (active:false) on a 404/410 from the push service.
+export interface IPushSubscription extends Document {
+  userId: string
+  endpoint: string
+  keys: { p256dh: string, auth: string }
+  userAgent?: string | undefined
+  active: boolean
+  failureCount: number
+  lastSuccessAt?: Date | undefined
   createdAt: Date
   updatedAt: Date
 }
@@ -131,14 +170,17 @@ export interface INotification extends Document {
   watchIds: string[]
   matchedOn?: { categories?: string[] | undefined, keywords?: string[] | undefined } | undefined
   // Unique — makes enqueue idempotent so a resync never double-notifies.
+  // Format: `alert:{channel}:{uid}:{compraId}` (per-channel fan-out).
   dedupeKey: string
-  channel: 'email'
+  channel: NotificationChannel
   status: NotificationStatus
   batchId?: string | undefined
   attempts: number
   lastError?: string | undefined
   scheduledFor?: Date | undefined
   sentAt?: Date | undefined
+  // Inbox read-state — only meaningful on `channel:'inapp'` rows. Null = unread.
+  readAt?: Date | undefined
   createdAt: Date
   updatedAt: Date
 }

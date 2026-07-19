@@ -1,7 +1,11 @@
 /**
  * Email templates for the Monitor de Llamados. Plain, DESIGN.md-toned HTML with
- * inline styles (email clients ignore <style>). Gold is reserved for money, so it
- * is deliberately absent here — these emails carry no peso figures.
+ * inline styles (email clients ignore <style>).
+ *
+ * The budget figure is now included: it is the single strongest "should I bid?"
+ * signal, so an alert that omits it forces the reader to click through just to
+ * triage. It is rendered as plain bold ink (not gold) — email clients strip the
+ * design system, and gold-on-white reads as spam decoration rather than money.
  *
  * Every email includes a one-click unsubscribe (footer link + the caller adds the
  * List-Unsubscribe headers).
@@ -16,6 +20,10 @@ export interface EmailCall {
   procurementMethodDetails?: string | undefined;
   endDate?: Date | undefined;
   url: string;
+  // Enriched decide-to-bid fields (from the shared AlertCard).
+  closesInDays?: number | null | undefined;
+  budget?: string | null | undefined;
+  rubros?: string[] | undefined;
   matchedOn?: { categories?: string[] | undefined; keywords?: string[] | undefined } | undefined;
 }
 
@@ -64,24 +72,38 @@ function layout(innerHtml: string, opts: { unsubscribeUrl: string; appBaseUrl: s
 </table></td></tr></table></body></html>`;
 }
 
+function countdown(days: number | null | undefined, locale: Locale): string | null {
+  if (days == null) return null;
+  if (locale === "en") return days === 0 ? "closes today" : days === 1 ? "closes tomorrow" : `closes in ${days} days`;
+  return days === 0 ? "cierra hoy" : days === 1 ? "cierra mañana" : `cierra en ${days} días`;
+}
+
 function callBlock(call: EmailCall, locale: Locale): string {
   const meta: string[] = [];
   if (call.buyerName) meta.push(esc(call.buyerName));
   if (call.procurementMethodDetails) meta.push(esc(call.procurementMethodDetails));
   const deadlineLabel = locale === "en" ? "Closes" : "Cierra";
+  const budgetLabel = locale === "en" ? "Budget" : "Presupuesto";
+  const cd = countdown(call.closesInDays, locale);
+  const rubros = (call.rubros ?? []).filter(Boolean);
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px">
 <tr><td style="padding:14px 16px;border:1px solid ${RULE};border-radius:10px">
 <a href="${esc(call.url)}" style="color:${INK};text-decoration:none;font-weight:700;font-size:15px;line-height:1.35">${esc(call.title)}</a>
 ${meta.length ? `<div style="color:${MUTED};font-size:13px;margin-top:4px">${meta.join(" · ")}</div>` : ""}
-<div style="font-size:13px;margin-top:6px"><strong>${deadlineLabel}:</strong> ${esc(fmtDate(call.endDate, locale))}</div>
+${call.budget ? `<div style="font-size:13px;margin-top:6px"><strong>${budgetLabel}:</strong> ${esc(call.budget)}</div>` : ""}
+<div style="font-size:13px;margin-top:6px"><strong>${deadlineLabel}:</strong> ${esc(fmtDate(call.endDate, locale))}${cd ? ` <span style="color:${MUTED}">(${esc(cd)})</span>` : ""}</div>
+${rubros.length ? `<div style="color:${MUTED};font-size:12px;margin-top:6px">${esc(rubros.join(" · "))}</div>` : ""}
 </td></tr></table>`;
 }
 
 function callText(call: EmailCall, locale: Locale): string {
   const deadlineLabel = locale === "en" ? "Closes" : "Cierra";
+  const budgetLabel = locale === "en" ? "Budget" : "Presupuesto";
   const lines = [`• ${call.title}`];
   if (call.buyerName) lines.push(`  ${call.buyerName}`);
-  lines.push(`  ${deadlineLabel}: ${fmtDate(call.endDate, locale)}`);
+  if (call.budget) lines.push(`  ${budgetLabel}: ${call.budget}`);
+  const cd = countdown(call.closesInDays, locale);
+  lines.push(`  ${deadlineLabel}: ${fmtDate(call.endDate, locale)}${cd ? ` (${cd})` : ""}`);
   lines.push(`  ${call.url}`);
   return lines.join("\n");
 }

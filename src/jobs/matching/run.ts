@@ -1,12 +1,17 @@
 /**
  * Matching driver: evaluate newly-opened calls against active watches and enqueue
- * one idempotent `alert` notification per (user, call). No email is sent here.
+ * idempotent `alert` notifications per (user, call). One row PER ENABLED CHANNEL
+ * (email / push / telegram / inapp) — the per-channel dispatchers drain the
+ * external ones; the `inapp` row is the persistent inbox item and is created
+ * already-delivered. No message is sent here.
  */
 import { OpenCallModel } from "../../../shared/models/open_call";
 import { WatchModel } from "../../../shared/models/watch";
 import { UserModel } from "../../../shared/models/user";
 import { NotificationModel } from "../../../shared/models/notification";
-import type { OpenCallStatus } from "../../../shared/types/monitor";
+import { PushSubscriptionModel } from "../../../shared/models/push_subscription";
+import type { NotificationChannel, OpenCallStatus } from "../../../shared/types/monitor";
+import { resolveChannels } from "../../../shared/alerts/channels";
 import { watchMatchesCall } from "./match";
 import type { WatchInput } from "./match";
 
@@ -64,39 +69,65 @@ export async function runMatching(compraIds: string[], log: (m: string) => void 
 
   if (!pairs.size) return { calls: calls.length, watches: watches.length, matchedPairs: 0, enqueued: 0 };
 
-  // Only deliverable users get a pending notification: active, opted-in, verified.
+  // Only deliverable users get notifications: active + master switch on. The
+  // per-channel gates (verified email / push subscription / linked chat) are
+  // applied below.
   const userIds = Array.from(new Set([...pairs.values()].map(p => p.userId)));
   const users = await UserModel.find({ uid: { $in: userIds } }).lean();
   const userMap = new Map(users.map(u => [u.uid, u]));
 
+  // Which of these users have at least one active push subscription (one query).
+  const pushUserIds = new Set(
+    await PushSubscriptionModel.distinct("userId", { userId: { $in: userIds }, active: true }),
+  );
+
   const ops: Parameters<typeof NotificationModel.bulkWrite>[0] = [];
   const matchedWatchIds = new Set<string>();
+  const now = new Date();
 
   for (const p of pairs.values()) {
     const u = userMap.get(p.userId);
-    if (!u || u.status !== "active" || !u.notificationPrefs?.enabled || !u.emailVerified) continue;
+    if (!u || u.status !== "active" || !u.notificationPrefs?.enabled) continue;
 
-    const dedupeKey = `alert:${p.userId}:${p.compraId}`;
-    ops.push({
-      updateOne: {
-        filter: { dedupeKey },
-        update: {
-          $setOnInsert: {
-            type: "alert",
-            userId: p.userId,
-            compraId: p.compraId,
-            watchIds: [...p.watchIds],
-            matchedOn: { categories: [...p.categories], keywords: [...p.keywords] },
-            dedupeKey,
-            channel: "email",
-            status: "pending",
-            attempts: 0,
+    const prefs = resolveChannels(u);
+    // Effective per-channel delivery: preference AND an actual connection.
+    const deliver: Record<NotificationChannel, boolean> = {
+      inapp: prefs.inapp,
+      email: prefs.email && !!u.emailVerified,
+      push: prefs.push && pushUserIds.has(p.userId),
+      telegram: prefs.telegram && !!u.telegram?.active,
+    };
+
+    let anyChannel = false;
+    for (const channel of ["inapp", "email", "push", "telegram"] as NotificationChannel[]) {
+      if (!deliver[channel]) continue;
+      anyChannel = true;
+      const dedupeKey = `alert:${channel}:${p.userId}:${p.compraId}`;
+      // The inbox row is created already-delivered (it IS the delivery); external
+      // channels start pending for their dispatcher to drain.
+      const delivered = channel === "inapp";
+      ops.push({
+        updateOne: {
+          filter: { dedupeKey },
+          update: {
+            $setOnInsert: {
+              type: "alert",
+              userId: p.userId,
+              compraId: p.compraId,
+              watchIds: [...p.watchIds],
+              matchedOn: { categories: [...p.categories], keywords: [...p.keywords] },
+              dedupeKey,
+              channel,
+              status: delivered ? "sent" : "pending",
+              attempts: 0,
+              ...(delivered ? { sentAt: now } : {}),
+            },
           },
+          upsert: true,
         },
-        upsert: true,
-      },
-    });
-    p.watchIds.forEach(id => matchedWatchIds.add(id));
+      });
+    }
+    if (anyChannel) p.watchIds.forEach(id => matchedWatchIds.add(id));
   }
 
   let enqueued = 0;
@@ -108,6 +139,6 @@ export async function runMatching(compraIds: string[], log: (m: string) => void 
     await WatchModel.updateMany({ _id: { $in: [...matchedWatchIds] } }, { $set: { lastMatchedAt: new Date() } });
   }
 
-  log(`matching: ${calls.length} calls × ${watches.length} watches → ${pairs.size} pairs, ${enqueued} enqueued`);
+  log(`matching: ${calls.length} calls × ${watches.length} watches → ${pairs.size} pairs, ${enqueued} rows enqueued`);
   return { calls: calls.length, watches: watches.length, matchedPairs: pairs.size, enqueued };
 }

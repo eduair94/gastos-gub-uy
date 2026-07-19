@@ -23,6 +23,27 @@ const UserSchema = new Schema<IUser>(
     notificationPrefs: {
       enabled: { type: Boolean, default: true },
       frequency: { type: String, enum: ["instant", "daily"], default: "instant" },
+      // Per-channel opt-in. Absent on legacy users → resolveChannels() in
+      // shared/alerts applies the default (email + inapp on).
+      channels: {
+        type: {
+          email: { type: Boolean, default: true },
+          push: { type: Boolean, default: false },
+          telegram: { type: Boolean, default: false },
+          inapp: { type: Boolean, default: true },
+        },
+        default: undefined,
+      },
+    },
+    // Linked Telegram chat — written by the bot webhook on a valid /start token.
+    telegram: {
+      type: {
+        chatId: { type: String, required: true },
+        username: { type: String },
+        linkedAt: { type: Date, required: true },
+        active: { type: Boolean, default: true },
+      },
+      default: undefined,
     },
     // Opaque token for one-click List-Unsubscribe links. Unique so the
     // unsubscribe endpoint can resolve a user without exposing the uid.

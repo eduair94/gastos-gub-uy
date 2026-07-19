@@ -7,6 +7,7 @@ import { NotificationModel } from "../../../shared/models/notification";
 import { OpenCallModel } from "../../../shared/models/open_call";
 import { UserModel } from "../../../shared/models/user";
 import type { IOpenCall, IUser, NotificationFrequency } from "../../../shared/types/monitor";
+import { buildAlertCard } from "../../../shared/alerts/build-alert-content";
 import { createMailer } from "../../services/mailer";
 import { renderAlertEmail } from "../../emails/templates";
 import type { EmailCall, Locale } from "../../emails/templates";
@@ -30,14 +31,25 @@ export function callUrl(compraId: string): string {
   return `${appBaseUrl()}/llamados/${encodeURIComponent(compraId)}`;
 }
 
-export function toEmailCall(call: Pick<IOpenCall, "compraId" | "title" | "buyer" | "procurementMethodDetails" | "tenderPeriod">): EmailCall {
+/** Fields the alert card + email need from an open call. */
+export const EMAIL_CALL_SELECT = "compraId title buyer procurementMethodDetails tenderPeriod estimatedValue currency items classificationSet aiSummary documents";
+
+export function toEmailCall(
+  call: IOpenCall,
+  matchedOn?: { categories?: string[] | undefined, keywords?: string[] | undefined } | undefined,
+): EmailCall {
+  const card = buildAlertCard(call, { appBaseUrl: appBaseUrl(), matchedOn });
   return {
-    compraId: call.compraId,
-    title: call.title,
-    buyerName: call.buyer?.name,
-    procurementMethodDetails: call.procurementMethodDetails,
+    compraId: card.compraId,
+    title: card.objeto,
+    buyerName: card.organismo ?? undefined,
+    procurementMethodDetails: card.modalidad ?? undefined,
     endDate: call.tenderPeriod?.endDate,
-    url: callUrl(call.compraId),
+    closesInDays: card.deadline.closesInDays,
+    budget: card.presupuesto.formatted,
+    rubros: card.rubros,
+    url: card.url,
+    matchedOn: card.matchedOn,
   };
 }
 
@@ -70,7 +82,7 @@ export async function dispatchAlerts(options: DispatchOptions): Promise<Dispatch
   const log = options.log ?? (() => {});
   const mailer = createMailer();
 
-  const pending = await NotificationModel.find({ type: "alert", status: "pending" }).lean();
+  const pending = await NotificationModel.find({ type: "alert", channel: "email", status: "pending" }).lean();
   if (!pending.length) return { users: 0, emailsSent: 0, notificationsSent: 0, failed: 0 };
 
   // Group notifications by user.
@@ -96,11 +108,13 @@ export async function dispatchAlerts(options: DispatchOptions): Promise<Dispatch
 
     const compraIds = notifs.map(n => n.compraId);
     const calls = await OpenCallModel.find({ compraId: { $in: compraIds } })
-      .select("compraId title buyer procurementMethodDetails tenderPeriod")
+      .select(EMAIL_CALL_SELECT)
       .lean();
     if (!calls.length) continue;
 
-    const emailCalls = calls.map(c => toEmailCall(c as unknown as IOpenCall));
+    // Map compraId → why-it-matched so each call block can show its trigger.
+    const matchedByCompra = new Map(notifs.map(n => [n.compraId, n.matchedOn]));
+    const emailCalls = calls.map(c => toEmailCall(c as unknown as IOpenCall, matchedByCompra.get(c.compraId)));
     const email = renderAlertEmail({
       calls: emailCalls,
       appBaseUrl: appBaseUrl(),
