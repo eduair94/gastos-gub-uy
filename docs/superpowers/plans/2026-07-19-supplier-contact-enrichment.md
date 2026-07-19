@@ -689,15 +689,18 @@ export function createWebsiteResolver(
       try { base = new URL(input.website); } catch { return { emails: [] }; }
       const siteDomain = base.hostname;
       const seen = new Map<string, ContactCandidate>();
-      for (const path of CONTACT_PATHS) {
-        const url = new URL(path, base.origin).toString();
+      for (let i = 0; i < CONTACT_PATHS.length; i++) {
+        const url = new URL(CONTACT_PATHS[i], base.origin).toString();
         const html = await fetchHtml(url).catch(() => null);
         if (!html) continue;
         for (const c of extractEmailsFromHtml(html, siteDomain)) {
           const prev = seen.get(c.email);
           if (!prev || c.confidence > prev.confidence) seen.set(c.email, c);
         }
-        if ([...seen.values()].some(c => c.confidence >= 0.75)) break; // enough signal
+        // Always sample home ("") + first contact path before short-circuiting —
+        // the home page alone often already carries a same-domain (0.75) match,
+        // but the best address usually lives on /contacto.
+        if (i >= 1 && [...seen.values()].some(c => c.confidence >= 0.75)) break; // enough signal
       }
       return { emails: [...seen.values()], website: input.website };
     },
