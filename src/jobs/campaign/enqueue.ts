@@ -38,6 +38,7 @@ export async function enqueueCampaign(db: Db, campaignKey: string, opts?: BuildR
           supplierId: r.supplierId,
           email: r.email,
           rubroKey: r.rubroCode,
+          name: r.name,
           token: makeToken(r.supplierId, campaignKey),
           status: "queued",
           queuedAt: new Date(),

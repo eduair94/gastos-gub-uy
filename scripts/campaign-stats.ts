@@ -11,6 +11,7 @@
 
 import { connectToDatabase, disconnectFromDatabase } from "../shared/connection/database";
 import { CampaignSendModel, type SendStatus } from "../shared/models/campaign_send";
+import { EmailCampaignModel } from "../shared/models/email_campaign";
 import { UserModel } from "../shared/models/user";
 
 const STATUSES: SendStatus[] = [
@@ -95,11 +96,18 @@ async function main() {
     }
   }
 
-  // --- Signups (best-effort): users whose email received a send in this campaign. ---
+  // --- Signups (best-effort): users whose email received a send in this
+  // campaign AND signed up on/after the campaign started — otherwise a
+  // recipient who was already a user before the campaign existed (or a
+  // same-email signup from an unrelated, earlier source) would be counted
+  // as a campaign conversion. ---
+  const campaign = await EmailCampaignModel.findOne({ key: campaignId }).lean();
   const emails = await CampaignSendModel.distinct("email", { campaignId });
-  const signups = emails.length > 0 ? await UserModel.countDocuments({ email: { $in: emails } }) : 0;
+  const signups = emails.length > 0 && campaign
+    ? await UserModel.countDocuments({ email: { $in: emails }, createdAt: { $gte: campaign.createdAt } })
+    : 0;
 
-  console.log(`\nSIGNUPS (best-effort, email match against ${emails.length} recipient(s)): ${signups}`);
+  console.log(`\nSIGNUPS (best-effort, email match against ${emails.length} recipient(s), created on/after campaign start ${campaign?.createdAt?.toISOString() ?? "unknown"}): ${signups}`);
 
   await disconnectFromDatabase();
 }

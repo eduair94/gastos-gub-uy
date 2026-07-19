@@ -71,20 +71,26 @@ export function dayIndexSince(createdAt: Date, now: Date): number {
 export interface KillSwitchCounts {
   sent: number;
   delivered: number;
+  opened: number;
+  clicked: number;
   complained: number;
   bounced: number;
+  unsubscribed: number;
+  failed: number;
 }
 
 /**
  * PURE. Whether the campaign's cumulative funnel counts breach the
- * complaint/bounce kill-switch. Denominator follows the brief literally:
- * delivered+sent (the population that actually left the pipe, complaints and
- * bounces are measured against how many were attempted-and-not-yet-failed).
+ * complaint/bounce kill-switch. Denominator is every row that has left
+ * `queued` (sent+delivered+opened+clicked+bounced+complained+unsubscribed+
+ * failed) — NOT just sent+delivered, which would shrink (and inflate the
+ * rate) as engaged sends move on to opened/clicked.
  * Bounce rate only applies once there is a meaningful sample (>=100 sent),
  * so one early bounce out of three test sends can't trip the switch.
  */
 export function shouldPause(counts: KillSwitchCounts): boolean {
-  const denom = counts.sent + counts.delivered;
+  const denom = counts.sent + counts.delivered + counts.opened + counts.clicked
+    + counts.bounced + counts.complained + counts.unsubscribed + counts.failed;
   if (denom <= 0) return false;
   if (counts.complained / denom > COMPLAINT_RATE_THRESHOLD) return true;
   if (denom >= BOUNCE_MIN_SAMPLE && counts.bounced / denom > BOUNCE_RATE_THRESHOLD) return true;
@@ -133,6 +139,10 @@ export interface DispatchSummary {
 /**
  * Runs one dispatch batch for `campaignKey`. Connects/disconnects the DB
  * itself so it can be invoked standalone via the CLI entrypoint below.
+ *
+ * NOTE: `queued` rows are not claimed atomically (no scheduler yet) — do not
+ * run two instances of this job concurrently for the same campaign, or both
+ * could pick up and send the same row.
  */
 export async function main(): Promise<DispatchSummary | void> {
   const log = (m: string) => console.log(`[campaign-send] ${m}`);
@@ -211,22 +221,27 @@ export async function main(): Promise<DispatchSummary | void> {
     }
 
     const token = send.token;
-    const humanUnsubscribeUrl = `${base}/campaign/unsubscribe?token=${encodeURIComponent(token)}`;
-    const apiUnsubscribeUrl = `${base}/api/campaign/unsubscribe?token=${encodeURIComponent(token)}`;
+    // Both the visible footer link and the List-Unsubscribe header must point
+    // at the real registered route — it lives under /api/campaign/unsubscribe
+    // (unsubscribe.get.ts / .post.ts), not /campaign/unsubscribe.
+    const unsubscribeUrl = `${base}/api/campaign/unsubscribe?token=${encodeURIComponent(token)}`;
     const ctaUrl = `${base}/registro?rubro=${encodeURIComponent(send.rubroKey)}&utm_source=coldemail&utm_campaign=${encodeURIComponent(campaignKey)}`;
     const openCount = openCounts.get(send.rubroKey) ?? 0;
     const rubroLabel = labelByCode.get(send.rubroKey) || send.rubroKey;
 
     const { subject, html, text } = renderCampaignEmail({
-      supplierName: send.supplierId,
+      supplierName: send.name || send.supplierId,
       rubroLabel,
       rubroCode: send.rubroKey,
       openCount,
-      unsubscribeUrl: humanUnsubscribeUrl,
+      unsubscribeUrl,
       ctaUrl,
       senderIdentity: identity,
     });
-    const headers = campaignHeaders(apiUnsubscribeUrl, mailto);
+    // X-Mailin-Custom round-trips on Brevo webhook events (nodemailer's local
+    // info.messageId does not), so status updates + the kill-switch match on
+    // this token, not on providerMessageId.
+    const headers = { ...campaignHeaders(unsubscribeUrl, mailto), "X-Mailin-Custom": token };
 
     if (dryRun) {
       log(`[dry-run] would send to ${send.email}: "${subject}"`);
@@ -254,13 +269,20 @@ export async function main(): Promise<DispatchSummary | void> {
 
   let paused = false;
   if (!dryRun) {
-    const [sentCount, deliveredCount, complainedCount, bouncedCount] = await Promise.all([
+    const [sentCount, deliveredCount, openedCount, clickedCount, complainedCount, bouncedCount, unsubscribedCount, failedCount] = await Promise.all([
       CampaignSendModel.countDocuments({ campaignId: campaignKey, status: "sent" }),
       CampaignSendModel.countDocuments({ campaignId: campaignKey, status: "delivered" }),
+      CampaignSendModel.countDocuments({ campaignId: campaignKey, status: "opened" }),
+      CampaignSendModel.countDocuments({ campaignId: campaignKey, status: "clicked" }),
       CampaignSendModel.countDocuments({ campaignId: campaignKey, status: "complained" }),
       CampaignSendModel.countDocuments({ campaignId: campaignKey, status: "bounced" }),
+      CampaignSendModel.countDocuments({ campaignId: campaignKey, status: "unsubscribed" }),
+      CampaignSendModel.countDocuments({ campaignId: campaignKey, status: "failed" }),
     ]);
-    const counts: KillSwitchCounts = { sent: sentCount, delivered: deliveredCount, complained: complainedCount, bounced: bouncedCount };
+    const counts: KillSwitchCounts = {
+      sent: sentCount, delivered: deliveredCount, opened: openedCount, clicked: clickedCount,
+      complained: complainedCount, bounced: bouncedCount, unsubscribed: unsubscribedCount, failed: failedCount,
+    };
     if (shouldPause(counts)) {
       await EmailCampaignModel.updateOne({ key: campaignKey }, { $set: { status: "paused" } });
       paused = true;

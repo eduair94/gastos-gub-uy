@@ -13,6 +13,9 @@ interface BrevoWebhookEvent {
   messageId?: string
   'message-id'?: string
   email?: string
+  'X-Mailin-Custom'?: string
+  'X-Mailin-custom'?: string
+  tag?: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -32,10 +35,16 @@ export default defineEventHandler(async (event) => {
   for (const ev of events) {
     const m = mapBrevoEvent({ event: ev.event ?? '', messageId: ev.messageId, email: ev.email })
     if (m.status) {
-      const providerMessageId = ev['message-id'] || ev.messageId
-      const filter = providerMessageId ? { providerMessageId } : ev.email ? { email: ev.email } : null
-      if (filter) {
-        await CampaignSendModel.updateOne(filter, { $set: { status: m.status } })
+      // nodemailer's local info.messageId (stored as providerMessageId) is
+      // NOT what Brevo reports back on webhook events, so matching on it
+      // never hits. Brevo DOES round-trip the X-Mailin-Custom header set at
+      // send time — that per-send token is the reliable join key. No token
+      // -> skip the status write (never fall back to an email-scoped update:
+      // that's unscoped by campaign and could overwrite the wrong row for a
+      // recipient enrolled in more than one campaign).
+      const token = ev['X-Mailin-Custom'] ?? ev['X-Mailin-custom'] ?? ev.tag
+      if (token) {
+        await CampaignSendModel.updateOne({ token }, { $set: { status: m.status } })
       }
     }
     if (m.suppress && ev.email) {
