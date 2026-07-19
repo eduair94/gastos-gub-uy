@@ -3,6 +3,23 @@ import { mongoUri } from '../config'
 
 let connectionPromise: Promise<typeof mongoose> | null = null
 
+/**
+ * Redact the password from a connection string before logging it.
+ * `mongodb://user:secret@host/db` → `mongodb://user:***@host/db`.
+ *
+ * This log line runs on every job spawn and every server boot, and pm2 keeps the
+ * output on disk — printing the raw URI wrote the production DB password into
+ * `logs/cronserver-out.log` in plaintext on every run. The host/user/db are kept
+ * because they are what makes the line useful for debugging.
+ */
+export function maskMongoUri(uri: string): string {
+  if (!uri) return uri
+  return uri.replace(
+    /^(mongodb(?:\+srv)?:\/\/)([^:@/?]+)(?::[^@]*)?@/i,
+    (_match, scheme: string, user: string) => `${scheme}${user}:***@`,
+  )
+}
+
 export async function connectToDatabase() {
   // If already connected and healthy, return immediately
   if (mongoose.connection.readyState === 1) {
@@ -18,7 +35,7 @@ export async function connectToDatabase() {
 
   try {
     console.log('🔌 Initiating database connection...')
-    console.log('Using MongoDB URI:', mongoUri)
+    console.log('Using MongoDB URI:', maskMongoUri(mongoUri))
     console.log('Current connection state:', mongoose.connection.readyState)
 
     // If mongoose is mid-(re)connect (2) or disconnecting (3) — e.g. its own auto-reconnect

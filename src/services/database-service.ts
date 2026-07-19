@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { maskMongoUri } from "../../shared/connection/database";
 
 export interface IDatabaseService {
   connect(uri: string): Promise<void>;
@@ -8,7 +9,8 @@ export interface IDatabaseService {
 
 export class DatabaseService implements IDatabaseService {
   async connect(uri: string): Promise<void> {
-    console.log("Connect", uri);
+    // Password redacted — this runs on cronserver boot and pm2 persists the log.
+    console.log("Connect", maskMongoUri(uri));
     await mongoose.connect(uri);
   }
 
