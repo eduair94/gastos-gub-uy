@@ -13,6 +13,7 @@
     "refresh-product-analytics": "tsx src/jobs/refresh-product-analytics.ts",
     "refresh-product-variants": "tsx src/jobs/refresh-product-variants.ts",
     "detect-anomalies": "tsx src/jobs/detect-anomalies.ts",
+    "reconcile-amendments": "tsx src/jobs/reconcile-award-amendments.ts",
     "score-anomalies-ai": "tsx src/jobs/score-anomalies-ai.ts",
     "cross-provider-anomalies": "tsx src/jobs/cross-provider-anomalies.ts",
     "refresh-organism-groups": "tsx src/jobs/refresh-organism-groups.ts",

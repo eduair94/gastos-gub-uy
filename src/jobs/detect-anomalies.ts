@@ -77,6 +77,14 @@ interface CliOptions {
   all: boolean;
   year: number | null;
   since: Date | null;
+  // Targeted re-score: restrict scoring to these exact release ids. Set by the
+  // amendment-reconcile job to re-evaluate only the releases it just corrected,
+  // so a contract whose inflated quantity was fixed stops showing as an anomaly.
+  // Overrides all/year/since when present.
+  ids: string[] | null;
+  // Skip the (expensive) baseline rebuild and score against the baselines already
+  // in `item_price_baselines`. Only meaningful alongside a narrow scope (--ids).
+  scoreOnly: boolean;
 }
 
 interface BaselineKey {
@@ -131,6 +139,8 @@ function parseArgs(argv: string[]): CliOptions {
     all: false,
     year: null,
     since: null,
+    ids: null,
+    scoreOnly: false,
   };
 
   for (const arg of argv) {
@@ -138,8 +148,17 @@ function parseArgs(argv: string[]): CliOptions {
       options.baselinesOnly = true;
     } else if (arg === "--dry-run") {
       options.dryRun = true;
+    } else if (arg === "--score-only") {
+      options.scoreOnly = true;
     } else if (arg === "--all") {
       options.all = true;
+    } else if (arg.startsWith("--ids=")) {
+      const ids = arg
+        .slice("--ids=".length)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      options.ids = ids.length ? ids : null;
     } else if (arg.startsWith("--year=")) {
       const year = Number.parseInt(arg.slice("--year=".length), 10);
       if (!Number.isInteger(year) || year < 1900 || year > 2200) {
@@ -382,6 +401,11 @@ class AnomalyDetector {
   private buildScopeFilter(options: CliOptions): Record<string, unknown> {
     const filter: Record<string, unknown> = { tag: "award" };
 
+    if (options.ids && options.ids.length) {
+      filter.id = { $in: options.ids };
+      console.log(`   scope: ${options.ids.length} explicit release id(s)`);
+      return filter;
+    }
     if (options.all) {
       console.log(`   scope: ALL releases tagged 'award'`);
       return filter;
@@ -765,7 +789,10 @@ class AnomalyDetector {
     const inScope = new Set<string>();
     for (let i = 0; i < candidateReleaseIds.length; i += BULK_BATCH_SIZE) {
       const batch = candidateReleaseIds.slice(i, i + BULK_BATCH_SIZE);
-      const matched = await ReleaseModel.find({ ...scopeFilter, id: { $in: batch } }, { id: 1 }).lean();
+      // $and, not spread: a targeted rescore's scopeFilter already carries `id: {$in: ids}`,
+      // and spreading would let this batch's `id` OVERWRITE it — unbounding the delete to
+      // every not-reproduced anomaly in the DB instead of just the rescanned releases.
+      const matched = await ReleaseModel.find({ $and: [scopeFilter, { id: { $in: batch } }] }, { id: 1 }).lean();
       for (const release of matched) {
         inScope.add(release.id);
       }
@@ -798,6 +825,9 @@ class AnomalyDetector {
 
     if (options.dryRun) {
       await this.buildBaselinesDryRunNotice();
+    } else if (options.scoreOnly) {
+      const count = await ItemPriceBaselineModel.estimatedDocumentCount();
+      console.log(`⏭️  --score-only: reusing the ${count} existing baselines (no rebuild).`);
     } else {
       await this.buildBaselines();
     }
@@ -806,7 +836,9 @@ class AnomalyDetector {
       console.log(`ℹ️  --baselines-only: skipping scoring stage.`);
     } else {
       await this.scoreReleases(options);
-      if (!options.dryRun) {
+      // The legacy purge / firstDetectedAt backfill are global one-time cleanups;
+      // a targeted --score-only re-score must not touch anomalies outside its scope.
+      if (!options.dryRun && !options.scoreOnly) {
         await this.purgeLegacyAnomalies();
         await this.backfillFirstDetectedAt();
       }
@@ -859,6 +891,31 @@ class AnomalyDetector {
   }
 }
 
+/**
+ * Re-score a specific set of release ids against the EXISTING baselines and
+ * self-heal their anomalies. Used by the amendment-reconcile job so a release
+ * whose corrupt quantity/price was just corrected is re-evaluated immediately:
+ * if the correction removed what made it anomalous, `scoreReleases` -> `reconcile`
+ * deletes the stale flag (bounded to exactly these ids); if it still reproduces,
+ * the finding is updated in place. The caller must hold an open DB connection.
+ */
+async function rescoreReleaseIds(ids: string[]): Promise<void> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) {
+    return;
+  }
+  const detector = new AnomalyDetector();
+  await detector.scoreReleases({
+    ids: unique,
+    scoreOnly: true,
+    baselinesOnly: false,
+    dryRun: false,
+    all: false,
+    year: null,
+    since: null,
+  });
+}
+
 /** Sort comparator: most severe first, then most extreme. */
 function compareFindings(a: Finding, b: Finding): number {
   if (b.severityRank !== a.severityRank) {
@@ -892,5 +949,5 @@ if (require.main === module) {
     });
 }
 
-export { AnomalyDetector, parseArgs };
+export { AnomalyDetector, parseArgs, rescoreReleaseIds };
 export type { CliOptions };

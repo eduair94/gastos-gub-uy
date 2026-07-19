@@ -799,6 +799,18 @@ class CronServer {
       // Run the upload process for last 7 days only
       await uploader.uploadLastSevenDaysFromWeb();
 
+      // Fold in award corrections (ajuste_adjudicacion / awardUpdate) published for the
+      // contracts we just ingested. The government never rewrites the original award
+      // release when it corrects a data-entry error (e.g. qty 10000 -> 1); it publishes a
+      // separate awardUpdate release. Since every money consumer filters tag:'award', that
+      // correction is otherwise invisible and the inflated original is what gets summed.
+      // Incremental (last 10 days of amendments) so this stays a few-hundred-doc pass.
+      try {
+        await this.runJobProcess("jobs/reconcile-award-amendments", ["--since-days=10"]);
+      } catch (error) {
+        this.logger.warn(`Amendment reconcile (incremental) failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
       this.jobStatus.status = "idle";
       this.jobStatus.successfulRuns++;
       this.logger.info("Ingest job completed successfully");
@@ -833,6 +845,15 @@ class CronServer {
 
       const uploader = new ReleaseUploaderNew(this.databaseService, this.logger, this.mongoUri);
       const result = await uploader.reconcileNonFinalReleases(this.reconcileMonthsBack);
+
+      // The reconcile above can re-fetch a base award back to its raw upstream (pre-
+      // correction) state, so re-apply every amendment correction afterwards. The job is
+      // idempotent — records already correct are skipped — so a full pass is cheap here.
+      try {
+        await this.runJobProcess("jobs/reconcile-award-amendments", []);
+      } catch (error) {
+        this.logger.warn(`Amendment reconcile (full) failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
 
       this.reconcileStatus.status = "idle";
       this.reconcileStatus.successfulRuns++;
