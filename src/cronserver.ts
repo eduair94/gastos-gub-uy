@@ -134,7 +134,7 @@ class CronServer {
    * or take the ingest scheduler down with them. A child gets its own, larger heap and its failure
    * is just a non-zero exit code here.
    */
-  private runJobProcess(script: string, args: string[] = []): Promise<void> {
+  private runJobProcess(script: string, args: string[] = []): Promise<string> {
     // Under pm2 this file is dist/src/cronserver.js and siblings are compiled; under `tsx` it is
     // still TypeScript. Pick the interpreter that matches whichever one is executing.
     //
@@ -147,7 +147,7 @@ class CronServer {
       ? ["tsx", jobPath, ...args]
       : ["--max-old-space-size=2048", jobPath, ...args];
 
-    return new Promise((resolve, reject) => {
+    return new Promise<string>((resolve, reject) => {
       this.logger.info(`Spawning job: ${script} ${args.join(" ")}`);
       const child = spawn(command, argv, {
         cwd: path.resolve(__dirname, isTs ? ".." : "../.."),
@@ -155,15 +155,51 @@ class CronServer {
         stdio: ["ignore", "pipe", "pipe"],
       });
 
-      child.stdout?.on("data", (d) => this.logger.info(`[${script}] ${String(d).trimEnd()}`));
+      // Accumulate stdout so a caller can inspect a job's machine-readable summary line
+      // (e.g. reconcile's `RECONCILE_SUMMARY corrected=<n>`), while still streaming to the log.
+      let stdout = "";
+      child.stdout?.on("data", (d) => {
+        const s = String(d);
+        stdout += s;
+        this.logger.info(`[${script}] ${s.trimEnd()}`);
+      });
       child.stderr?.on("data", (d) => this.logger.warn(`[${script}] ${String(d).trimEnd()}`));
 
       child.on("error", reject);
       child.on("close", (code) => {
-        if (code === 0) resolve();
+        if (code === 0) resolve(stdout);
         else reject(new Error(`${script} exited with code ${code}`));
       });
     });
+  }
+
+  /**
+   * After an amendment reconcile, refresh the precomputed rollups whose own cron would
+   * otherwise leave them stale until it next fires.
+   *
+   * The reconcile rewrites base award `amount`s in place, so every consumer that filters
+   * `tag:'award'` immediately sees the corrected figure — including the live-aggregation
+   * endpoints and the 6-hourly analytics rebuild (dashboard_metrics / spending_trends /
+   * top_entities / category_distribution / product_analytics), which self-heal within one
+   * cycle. The one exception is `organism_group_stats` (feeds /analytics/intendencias +
+   * /analytics/organismos): its refresh runs MONTHLY, so a correction to an Intendencia
+   * award would sit uncorrected on that flagship page for weeks. Nudge it here, but only
+   * when corrections were actually applied — a no-op reconcile must not trigger an ~75s
+   * full-collection aggregation every hour.
+   */
+  private async refreshRollupsAfterReconcile(reconcileStdout: string): Promise<void> {
+    const match = reconcileStdout.match(/RECONCILE_SUMMARY corrected=(\d+)/);
+    const corrected = match ? parseInt(match[1], 10) : 0;
+    if (!corrected) {
+      this.logger.info("Amendment reconcile applied no corrections; precomputed rollups already current.");
+      return;
+    }
+    this.logger.info(
+      `Amendment reconcile corrected ${corrected} release(s) — refreshing organism-group rollups so /analytics/intendencias + /analytics/organismos reflect the adjusted amounts (their own cron is monthly).`
+    );
+    await this.runOrganismGroupJob().catch((error) =>
+      this.logger.error("Post-reconcile organism-group refresh failed (correction still applied):", error)
+    );
   }
 
   private setupMiddleware(): void {
@@ -806,7 +842,8 @@ class CronServer {
       // correction is otherwise invisible and the inflated original is what gets summed.
       // Incremental (last 10 days of amendments) so this stays a few-hundred-doc pass.
       try {
-        await this.runJobProcess("jobs/reconcile-award-amendments", ["--since-days=10"]);
+        const out = await this.runJobProcess("jobs/reconcile-award-amendments", ["--since-days=10"]);
+        await this.refreshRollupsAfterReconcile(out);
       } catch (error) {
         this.logger.warn(`Amendment reconcile (incremental) failed: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -850,7 +887,8 @@ class CronServer {
       // correction) state, so re-apply every amendment correction afterwards. The job is
       // idempotent — records already correct are skipped — so a full pass is cheap here.
       try {
-        await this.runJobProcess("jobs/reconcile-award-amendments", []);
+        const out = await this.runJobProcess("jobs/reconcile-award-amendments", []);
+        await this.refreshRollupsAfterReconcile(out);
       } catch (error) {
         this.logger.warn(`Amendment reconcile (full) failed: ${error instanceof Error ? error.message : String(error)}`);
       }

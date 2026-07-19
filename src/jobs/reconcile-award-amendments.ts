@@ -435,6 +435,13 @@ async function main(): Promise<void> {
     }
   }
 
+  // Machine-readable summary line for the cronserver orchestrator. When corrected>0 the base
+  // award amounts changed, so every downstream precompute that summed the old figures is now
+  // stale; the parent parses this to decide whether to refresh the monthly organism rollup
+  // (its own cron would otherwise leave it wrong for weeks). Keep the `corrected=<n>` token
+  // stable — cronserver.ts greps for it.
+  console.log(`RECONCILE_SUMMARY corrected=${corrected} skipped=${skippedAmbiguous} removedUYU=${Math.round(removedOvercount)} basesChecked=${basesChecked}`);
+
   if (!opts.dryRun && opts.rescore && correctedIds.length) {
     console.log(`\n🔁 re-scoring ${correctedIds.length} corrected release(s) against existing anomaly baselines…`);
     try {
