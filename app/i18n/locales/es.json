@@ -19,6 +19,7 @@
     "intendencias": "Intendencias",
     "organismos": "Gasto por organismo",
     "mapa": "Mapa del gasto",
+    "estadisticas": "Estadísticas",
     "investigaciones": "Investigaciones",
     "tvciudad": "TV Ciudad",
     "llamados": "Llamados",
@@ -263,10 +264,33 @@
       "organismo-publico": "Organismo",
       "empresa": "Empresa",
       "cooperativa": "Cooperativa",
-      "persona": "Persona"
+      "persona": "Persona",
+      "otro": "Otro"
     },
     "aiNote": "La categoría de cada proveedor la genera una IA (Gemini) a partir del nombre: es orientativa, puede equivocarse, verificá contra la fuente.",
     "aiTitle": "Categoría generada por IA"
+  },
+  "estad": {
+    "eyebrow": "Estadísticas",
+    "title": "Las cifras del gasto público",
+    "lead": "El gasto del Estado uruguayo en números: cuánto, en qué, a quién y —lo que ningún explorador te da— por qué tipo de proveedor.",
+    "kpi": {
+      "contracts": "Compras registradas",
+      "median": "Compra típica (mediana)",
+      "suppliers": "Proveedores",
+      "buyers": "Organismos compradores"
+    },
+    "typesTitle": "Gasto por tipo de proveedor",
+    "typesHelp": "A qué clase de proveedor va la plata: empresas, organismos, medios, agencias, cooperativas o personas. La categoría la infiere una IA a partir del nombre.",
+    "typesLink": "Ver la pauta a medios",
+    "typesNote": "Sobre los {n} proveedores más grandes por gasto, ya categorizados. No cubre la cola de miles de proveedores chicos.",
+    "suppliersWord": "proveedores",
+    "volumeTitle": "Compras por año",
+    "volumeHelp": "Cantidad de compras registradas cada año.",
+    "catsTitle": "En qué se gasta",
+    "buyersTitle": "Quién más gasta",
+    "suppliersTitle": "Quién más cobra",
+    "sourceNote": "Fuente: datos abiertos de Compras Estatales (OCDS). La mediana reemplaza al total (unos pocos registros con cantidades imposibles rompen cualquier suma). El gasto por tipo cubre los proveedores ya categorizados por IA."
   },
   "mapa": {
     "title": "El mapa del gasto público",
@@ -1060,6 +1084,10 @@
       "title": "El mapa del gasto público del Uruguay",
       "description": "Un treemap del gasto del Estado uruguayo: cada organismo dimensionado por lo que gasta, agrupado por tipo de organismo. Datos oficiales de Compras Estatales."
     },
+    "estad": {
+      "title": "Estadísticas del gasto público del Uruguay",
+      "description": "Las cifras del gasto del Estado uruguayo: cuánto, en qué, a quién y por tipo de proveedor. Datos abiertos oficiales de Compras Estatales."
+    },
     "organismos": {
       "title": "El gasto del Estado uruguayo por organismo",
       "description": "Compras públicas agrupadas por tipo de organismo: intendencias, ministerios, salud, entes y educación. Quién gasta más, con datos oficiales de Compras Estatales."
@@ -1217,12 +1245,21 @@
     "summaryMonto": "Monto de referencia",
     "summaryObservaciones": "Observaciones",
     "summarySoon": "Próximamente: resumen del pliego con IA.",
-    "benchmarksTitle": "Precios históricos de adjudicación",
-    "benchmarksLead": "A cuánto se adjudicaron históricamente estos rubros.",
+    "benchmarksTitle": "Precios históricos y quién ganó",
+    "benchmarksLead": "A cuánto adjudicó el Estado estos rubros, qué empresas ganaron antes y dónde ver el detalle — para preparar tu oferta.",
     "benchmarksEmpty": "No hay historial de precios para estos rubros.",
     "benchContracts": "contratos",
     "benchSuppliers": "proveedores",
+    "benchBuyers": "compradores",
     "benchMedian": "Mediana",
+    "benchComparables": "{n} comparables",
+    "benchWinnersTitle": "Ganaron antes",
+    "benchBuyersTitle": "Quién lo compra",
+    "benchPurchases": "{n} compras",
+    "benchProfile": "Perfil",
+    "benchViewProduct": "Ver ficha del rubro",
+    "benchViewContracts": "Ver todos los contratos",
+    "benchDisclaimer": "Precios de referencia calculados sobre adjudicaciones históricas del rubro. La cifra de cada proveedor es el total que le adjudicó el Estado en este rubro. Verificá siempre el pliego oficial.",
     "statusOpen": "Abierto",
     "statusClarification": "Con aclaraciones",
     "statusAmended": "Modificado",

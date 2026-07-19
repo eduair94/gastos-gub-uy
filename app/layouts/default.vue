@@ -41,6 +41,7 @@ const nav = computed(() => [
   { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
   { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
   { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
+  { key: 'estadisticas', to: localePath('/estadisticas'), icon: 'mdi-chart-box-outline' },
   { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan' },
   // Individual investigation surfaced directly in the bar by request; other pieces stay
   // behind the hub. startsWith-based isActive keeps the hub highlighted too, which is fine.

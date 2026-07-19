@@ -19,6 +19,7 @@
     "intendencias": "Intendencias",
     "organismos": "Spending by body",
     "mapa": "Spending map",
+    "estadisticas": "Statistics",
     "investigaciones": "Investigations",
     "tvciudad": "TV Ciudad",
     "llamados": "Open calls",
@@ -263,10 +264,33 @@
       "organismo-publico": "Public body",
       "empresa": "Company",
       "cooperativa": "Co-op",
-      "persona": "Person"
+      "persona": "Person",
+      "otro": "Other"
     },
     "aiNote": "Each supplier's category is AI-generated (Gemini) from the name: it's indicative, can be wrong, verify against the source.",
     "aiTitle": "AI-generated category"
+  },
+  "estad": {
+    "eyebrow": "Statistics",
+    "title": "Public spending by the numbers",
+    "lead": "Uruguay's state spending in figures: how much, on what, to whom and —what no explorer gives you— by type of supplier.",
+    "kpi": {
+      "contracts": "Purchases on record",
+      "median": "Typical purchase (median)",
+      "suppliers": "Suppliers",
+      "buyers": "Buying bodies"
+    },
+    "typesTitle": "Spending by supplier type",
+    "typesHelp": "What kind of supplier the money goes to: companies, public bodies, media, agencies, co-ops or individuals. The category is inferred by AI from the name.",
+    "typesLink": "See advertising to media",
+    "typesNote": "Across the {n} biggest suppliers by spend, already categorized. It does not cover the tail of thousands of small suppliers.",
+    "suppliersWord": "suppliers",
+    "volumeTitle": "Purchases by year",
+    "volumeHelp": "Number of purchases recorded each year.",
+    "catsTitle": "What it's spent on",
+    "buyersTitle": "Who spends most",
+    "suppliersTitle": "Who earns most",
+    "sourceNote": "Source: Compras Estatales open data (OCDS). The median replaces the total (a few records with impossible quantities break any sum). Spending by type covers the AI-categorized suppliers."
   },
   "mapa": {
     "title": "The public spending map",
@@ -1060,6 +1084,10 @@
       "title": "Uruguay's public spending map",
       "description": "A treemap of Uruguayan state spending: each public body dimensioned by what it spends, grouped by type. Official data from Compras Estatales."
     },
+    "estad": {
+      "title": "Uruguay's public spending statistics",
+      "description": "Uruguay's state spending in figures: how much, on what, to whom and by supplier type. Official open data from Compras Estatales."
+    },
     "organismos": {
       "title": "Uruguay's state spending by public body",
       "description": "Public procurement grouped by type of body: departmental governments, ministries, health, state enterprises and education. Who spends most, with official Compras Estatales data."
@@ -1217,12 +1245,21 @@
     "summaryMonto": "Reference amount",
     "summaryObservaciones": "Notes",
     "summarySoon": "Coming soon: AI bidding-document summary.",
-    "benchmarksTitle": "Historical award prices",
-    "benchmarksLead": "What these categories were historically awarded for.",
+    "benchmarksTitle": "Historical prices and who won",
+    "benchmarksLead": "What the State awarded these categories for, which firms won before, and where to see the detail — to prepare your bid.",
     "benchmarksEmpty": "No price history for these categories.",
     "benchContracts": "contracts",
     "benchSuppliers": "suppliers",
+    "benchBuyers": "buyers",
     "benchMedian": "Median",
+    "benchComparables": "{n} comparable",
+    "benchWinnersTitle": "Past winners",
+    "benchBuyersTitle": "Who buys it",
+    "benchPurchases": "{n} purchases",
+    "benchProfile": "Profile",
+    "benchViewProduct": "View category detail",
+    "benchViewContracts": "View all contracts",
+    "benchDisclaimer": "Reference prices computed from the category's historical awards. Each supplier's figure is the total the State awarded them in this category. Always verify the official bidding document.",
     "statusOpen": "Open",
     "statusClarification": "With clarifications",
     "statusAmended": "Amended",
