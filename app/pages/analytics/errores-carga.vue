@@ -37,6 +37,24 @@ const flags = computed<any[]>(() => res.value?.data?.anomalies ?? [])
 const pagination = computed(() => res.value?.data?.pagination ?? null)
 const total = computed<number | null>(() => pagination.value?.total ?? null)
 
+// "Dónde se concentran" — a read-only aggregation (top organisms/suppliers/years)
+// so a reporter can see whom to contact first. Lazy: it must not block the list.
+const { data: statsRes } = await useFetch<any>('/api/analytics/anomalies/load-error-stats', { lazy: true })
+const stats = computed(() => statsRes.value?.data ?? null)
+const byOrganism = computed<any[]>(() => stats.value?.byOrganism ?? [])
+const bySupplier = computed<any[]>(() => stats.value?.bySupplier ?? [])
+const byYear = computed<any[]>(() => stats.value?.byYear ?? [])
+const orgMax = computed(() => Math.max(1, ...byOrganism.value.map(o => o.count)))
+const yearMax = computed(() => Math.max(1, ...byYear.value.map(y => y.count)))
+// Each organism links to the alerts page pre-filtered to ITS load errors (the alerts
+// page carries the buyer + category filters; the list page here has no buyer filter).
+function orgLink(name: string) {
+  return localePath({ path: '/analytics/anomalies', query: { ai: 'explainable', category: 'error-carga', buyer: name } })
+}
+function pct(n: number, max: number): string {
+  return `${Math.max(6, Math.round((n / max) * 100))}%`
+}
+
 function cur(a: any): string {
   return a?.currency ?? a?.metadata?.currency ?? 'UYU'
 }
@@ -183,6 +201,97 @@ useSeo(() => ({
       >
         {{ t('erroresCarga.bannerLink') }} →
       </NuxtLink>
+    </section>
+
+    <!-- Dónde se concentran: whom to report to first. Read-only aggregation. -->
+    <section
+      v-if="stats && stats.total"
+      class="conc"
+    >
+      <div class="conc__head">
+        <h2 class="conc__t">
+          {{ t('erroresCarga.concentration.title') }}
+        </h2>
+        <p class="conc__note">
+          {{ t('erroresCarga.concentration.note') }}
+        </p>
+      </div>
+
+      <div class="conc__grid">
+        <!-- Organismos: the actionable column — each links to its filtered alerts. -->
+        <div class="conc__col conc__col--wide">
+          <h3 class="conc__ct u-mono">
+            {{ t('erroresCarga.concentration.orgTitle') }}
+          </h3>
+          <ol class="bars">
+            <li
+              v-for="o in byOrganism"
+              :key="o.name"
+              class="bar"
+            >
+              <NuxtLink
+                :to="orgLink(o.name)"
+                class="bar__link"
+              >
+                <span class="bar__name">{{ o.name }}</span>
+                <span class="bar__n u-mono">{{ formatNumber(o.count) }}</span>
+              </NuxtLink>
+              <span
+                class="bar__track"
+                aria-hidden="true"
+              >
+                <span
+                  class="bar__fill"
+                  :style="{ width: pct(o.count, orgMax) }"
+                />
+              </span>
+            </li>
+          </ol>
+        </div>
+
+        <!-- Proveedores: who recurs across the errors. -->
+        <div class="conc__col">
+          <h3 class="conc__ct u-mono">
+            {{ t('erroresCarga.concentration.supTitle') }}
+          </h3>
+          <ol class="rows">
+            <li
+              v-for="s in bySupplier"
+              :key="s.name"
+              class="row"
+            >
+              <span class="row__name">{{ s.name }}</span>
+              <span class="row__n u-mono">{{ formatNumber(s.count) }}</span>
+            </li>
+          </ol>
+        </div>
+
+        <!-- Por año: when the bad data was loaded. -->
+        <div class="conc__col conc__col--year">
+          <h3 class="conc__ct u-mono">
+            {{ t('erroresCarga.concentration.yearTitle') }}
+          </h3>
+          <ol class="years">
+            <li
+              v-for="y in byYear"
+              :key="y.year"
+              class="year"
+            >
+              <span class="year__l u-mono">{{ y.year }}</span>
+              <span
+                class="year__track"
+                aria-hidden="true"
+              >
+                <span
+                  class="year__fill"
+                  :style="{ width: pct(y.count, yearMax) }"
+                />
+              </span>
+              <span class="year__n u-mono">{{ formatNumber(y.count) }}</span>
+            </li>
+          </ol>
+        </div>
+      </div>
     </section>
 
     <PaginatedList
@@ -450,6 +559,131 @@ useSeo(() => ({
 }
 
 .note__link:hover { text-decoration: underline; }
+
+/* ---- Concentration strip ---- */
+.conc {
+  margin: 0 0 var(--s-6);
+  padding: var(--s-5);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.conc__head { margin-bottom: var(--s-4); }
+
+.conc__t {
+  margin: 0 0 2px;
+  font-size: var(--t-lg);
+}
+
+.conc__note {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+.conc__grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.9fr;
+  gap: var(--s-5) var(--s-6);
+}
+
+.conc__ct {
+  margin: 0 0 var(--s-3);
+  font-size: var(--t-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--celeste-deep);
+}
+
+.bars, .rows, .years {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.bar__link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  text-decoration: none;
+  color: inherit;
+}
+
+.bar__name {
+  font-size: var(--t-sm);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar__link:hover .bar__name { color: var(--celeste-deep); text-decoration: underline; }
+
+.bar__n {
+  font-size: var(--t-sm);
+  font-weight: 700;
+  color: var(--celeste-deep);
+  flex: none;
+}
+
+.bar__track,
+.year__track {
+  display: block;
+  height: 6px;
+  margin-top: 5px;
+  border-radius: var(--r-full);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.bar__fill,
+.year__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--celeste);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.row__name {
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__n {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  flex: none;
+}
+
+.year {
+  display: grid;
+  grid-template-columns: 3.5ch 1fr auto;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.year__l { font-size: var(--t-xs); color: var(--text-muted); }
+.year__track { margin-top: 0; }
+.year__n { font-size: var(--t-xs); font-weight: 600; }
+
+@media (max-width: 780px) {
+  .conc__grid { grid-template-columns: 1fr; gap: var(--s-5); }
+}
 
 /* ---- The list ---- */
 .flags {

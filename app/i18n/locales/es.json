@@ -17,6 +17,7 @@
     "unexplained": "Sin explicación",
     "providerAnomalies": "Proveedores señalados",
     "intendencias": "Intendencias",
+    "partidos": "Compras por partido",
     "organismos": "Gasto por organismo",
     "mapa": "Mapa del gasto",
     "estadisticas": "Estadísticas",
@@ -945,6 +946,14 @@
     "report": "Reportar",
     "reason": "Por qué parece un error de carga",
     "live": "En vivo",
+    "concentration": {
+      "title": "Dónde se concentran",
+      "note": "Los organismos que cargaron más errores — por dónde conviene empezar a reportar.",
+      "orgTitle": "Organismos",
+      "supTitle": "Proveedores",
+      "yearTitle": "Por año",
+      "unit": "errores"
+    },
     "empty": {
       "title": "Sin errores de carga por ahora",
       "body": "Ninguna alerta quedó clasificada como error de carga en este momento."
@@ -1113,6 +1122,58 @@
       "title": "Sin proveedores para estos filtros",
       "body": "Probá bajar el mínimo de alertas o quitar el filtro de rubro."
     }
+  },
+  "partidos": {
+    "title": "Compras públicas por partido",
+    "lead": "Cómo se ven las compras de cada departamento, agrupadas por el partido que gobernaba. Es una comparación descriptiva sobre datos abiertos —no un puntaje de gestión—: los datos no permiten atribuir causas a un partido.",
+    "method": {
+      "title": "Cómo leer esto",
+      "body": "Cada indicador se muestra en dos lentes: la mediana de los departamentos (cada departamento cuenta igual, neutral al tamaño) y el agregado ponderado por tamaño. El partido es registro público electoral —quién gobernaba ese año—, nunca una atribución del gasto.",
+      "percapita": "Población: {source} ({year}), para el gasto por habitante."
+    },
+    "notReady": "Los indicadores por departamento todavía no se calcularon. Corré el job refresh-dept-indicators.",
+    "mode": { "party": "Partido", "metric": "Indicador" },
+    "metricLabel": "Indicador",
+    "yearLabel": "Año",
+    "mapAria": "Mapa de los 19 departamentos de Uruguay",
+    "metric": {
+      "perCapita": "Gasto por habitante",
+      "directShare": "% compra directa",
+      "priceCoverage": "% con precio",
+      "methodCoverage": "% con método declarado",
+      "top5": "Concentración top-5",
+      "anomalyDensity": "Alertas por mil contratos",
+      "total": "Gasto total"
+    },
+    "metricHelp": {
+      "perCapita": "Gasto en compras dividido por la población del departamento.",
+      "directShare": "Compras directas y por excepción, sobre los registros con método declarado. Ojo: un valor bajo suele reflejar compras directas SIN método declarado (no menos uso de compra directa) —mirá la cobertura.",
+      "priceCoverage": "Registros que publican un importe, sobre el total. Bajo = sub-reporte, no ahorro.",
+      "top5": "Parte del gasto que se llevan los 5 mayores proveedores (cota superior).",
+      "anomalyDensity": "Alertas estadísticas de severidad alta por cada mil contratos con precio."
+    },
+    "year": { "partialOpt": "{year} (parcial)", "partialNote": "{year} en curso: datos parciales." },
+    "legend": { "party": "Partido gobernante", "nDepts": "{n} deptos." },
+    "coverage": "cobertura {n}%",
+    "viewContracts": "Ver contratos",
+    "hoverHint": "Pasá el mouse (o tocá) un departamento para ver sus indicadores.",
+    "anomalyCaveat": "Las alertas son señales estadísticas, no corrupción probada. Descriptivo.",
+    "cmp": {
+      "title": "Comparación por partido: {metric}",
+      "note": "Mediana (neutral al tamaño) vs. agregado (ponderado). La diferencia entre ambas es informativa.",
+      "median": "Mediana",
+      "aggregate": "Agregado"
+    },
+    "conf": {
+      "title": "Cómo NO leer esto (confounders)",
+      "size": "Montevideo es el 37% del país y siempre lo gobernó el FA: infla cualquier agregado.",
+      "geography": "El FA gobierna lo urbano y el PN el interior rural: líneas base distintas.",
+      "terms": "Los períodos departamentales no coinciden con los presidenciales.",
+      "reporting": "La completitud del reporte varía mucho entre departamentos.",
+      "causation": "Correlación no es causa: el partido en el cargo no explica por sí solo el gasto."
+    },
+    "col": { "dept": "Departamento", "party": "Partido", "contracts": "Contratos" },
+    "updated": "Actualizado {date}"
   },
   "mandate": {
     "role": {
@@ -1296,6 +1357,10 @@
     "intendencias": {
       "title": "Gasto de las Intendencias del Uruguay, por habitante",
       "description": "Cuánto gasta cada gobierno departamental en compras públicas y cuánto es por habitante. Comparación de los 19 departamentos con datos oficiales de Compras Estatales."
+    },
+    "partidos": {
+      "title": "Compras públicas por partido — comparación departamental",
+      "description": "Comparación descriptiva de las compras públicas de los 19 departamentos de Uruguay, agrupadas por el partido gobernante. Mapa y datos abiertos, sin juicio de gestión."
     },
     "home": {
       "title": "Con la tuya, contribuyente — Compras públicas del Uruguay",

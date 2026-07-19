@@ -17,6 +17,7 @@
     "unexplained": "Unexplained",
     "providerAnomalies": "Flagged suppliers",
     "intendencias": "Intendencias",
+    "partidos": "Procurement by party",
     "organismos": "Spending by body",
     "mapa": "Spending map",
     "estadisticas": "Statistics",
@@ -945,6 +946,14 @@
     "report": "Report",
     "reason": "Why it looks like a load error",
     "live": "Live",
+    "concentration": {
+      "title": "Where they concentrate",
+      "note": "The agencies that entered the most errors — where to start reporting.",
+      "orgTitle": "Agencies",
+      "supTitle": "Providers",
+      "yearTitle": "By year",
+      "unit": "errors"
+    },
     "empty": {
       "title": "No data-load errors right now",
       "body": "No flag is currently classified as a data-load error."
@@ -1113,6 +1122,58 @@
       "title": "No providers for these filters",
       "body": "Try lowering the minimum flags or clearing the category filter."
     }
+  },
+  "partidos": {
+    "title": "Public procurement by party",
+    "lead": "How each department's procurement looks, grouped by the party in office. A descriptive comparison over open data — not a management score: the data cannot attribute causes to a party.",
+    "method": {
+      "title": "How to read this",
+      "body": "Each indicator is shown two ways: the median of departments (every department counts once, size-neutral) and the size-weighted aggregate. Party is public electoral record — who governed that year — never an attribution of the spending.",
+      "percapita": "Population: {source} ({year}), for spend per resident."
+    },
+    "notReady": "Per-department indicators haven't been computed yet. Run the refresh-dept-indicators job.",
+    "mode": { "party": "Party", "metric": "Indicator" },
+    "metricLabel": "Indicator",
+    "yearLabel": "Year",
+    "mapAria": "Map of Uruguay's 19 departments",
+    "metric": {
+      "perCapita": "Spend per resident",
+      "directShare": "% direct award",
+      "priceCoverage": "% with a price",
+      "methodCoverage": "% with declared method",
+      "top5": "Top-5 concentration",
+      "anomalyDensity": "Alerts per 1,000 contracts",
+      "total": "Total spend"
+    },
+    "metricHelp": {
+      "perCapita": "Procurement spend divided by the department's population.",
+      "directShare": "Direct and exception purchases, over records with a declared method. Note: a low value usually means direct purchases went unlabelled (not that fewer happened) — check the coverage.",
+      "priceCoverage": "Records that publish an amount, over the total. Low = under-reporting, not thrift.",
+      "top5": "Share of spend taken by the 5 largest suppliers (upper bound).",
+      "anomalyDensity": "High-severity statistical alerts per 1,000 priced contracts."
+    },
+    "year": { "partialOpt": "{year} (partial)", "partialNote": "{year} in progress: partial data." },
+    "legend": { "party": "Governing party", "nDepts": "{n} depts" },
+    "coverage": "coverage {n}%",
+    "viewContracts": "View contracts",
+    "hoverHint": "Hover (or tap) a department to see its indicators.",
+    "anomalyCaveat": "Alerts are statistical signals, not proven corruption. Descriptive.",
+    "cmp": {
+      "title": "By party: {metric}",
+      "note": "Median (size-neutral) vs. aggregate (weighted). The gap between them is informative.",
+      "median": "Median",
+      "aggregate": "Aggregate"
+    },
+    "conf": {
+      "title": "How NOT to read this (confounders)",
+      "size": "Montevideo is 37% of the country and always FA-governed: it inflates any aggregate.",
+      "geography": "FA governs the urban areas, PN the rural interior: different baselines.",
+      "terms": "Departmental terms don't line up with presidential ones.",
+      "reporting": "Reporting completeness varies widely across departments.",
+      "causation": "Correlation isn't cause: the party in office doesn't by itself explain the spending."
+    },
+    "col": { "dept": "Department", "party": "Party", "contracts": "Contracts" },
+    "updated": "Updated {date}"
   },
   "mandate": {
     "role": {
@@ -1296,6 +1357,10 @@
     "intendencias": {
       "title": "Uruguay's Intendencias spending, per resident",
       "description": "How much each departmental government spends on public procurement, and how much per resident. All 19 departments compared with official Compras Estatales data."
+    },
+    "partidos": {
+      "title": "Public procurement by party — departmental comparison",
+      "description": "A descriptive comparison of the 19 Uruguayan departments' public procurement, grouped by the governing party. Map and open data, with no management judgement."
     },
     "home": {
       "title": "Con la tuya, contribuyente — Uruguay's public procurement",
