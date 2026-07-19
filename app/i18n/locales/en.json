@@ -39,6 +39,7 @@
     "curros": "Cases",
     "notifications": "Notifications",
     "analisis": "Analysis",
+    "viewAll": "View all",
     "erroresCarga": "Data-load errors",
     "comoReportar": "How to report",
     "invCasinos": "State casinos",
@@ -974,15 +975,42 @@
     "title": "The state of spending, up close",
     "dek": "Every detection and analysis tool in one place: price flags, what has no explanation, load errors to report, flagged providers and spending by agency.",
     "cards": {
-      "alertas": { "title": "Price flags", "dek": "Contracts with a unit price far above the usual for the same item." },
-      "unexplained": { "title": "Unexplained", "dek": "The flags not even the AI review could justify. The strongest signal." },
-      "erroresCarga": { "title": "Data-load errors", "dek": "Data mistakes (quantities, currency, price) to report and fix at the source." },
-      "providerAnomalies": { "title": "Flagged providers", "dek": "Which providers and buyers concentrate the unexplained flags." },
-      "intendencias": { "title": "Departmental governments", "dek": "Spending by the departmental governments, compared per capita." },
-      "organismos": { "title": "Spending by agency", "dek": "How much each type of state agency spends." },
-      "mapa": { "title": "Spending map", "dek": "A treemap of all spending, each agency sized by what it spends." },
-      "estadisticas": { "title": "Statistics", "dek": "The spending figures: how much, on what, to whom." },
-      "comoReportar": { "title": "How to report", "dek": "The guide to take a load error to whoever can correct it." }
+      "alertas": {
+        "title": "Price flags",
+        "dek": "Contracts with a unit price far above the usual for the same item."
+      },
+      "unexplained": {
+        "title": "Unexplained",
+        "dek": "The flags not even the AI review could justify. The strongest signal."
+      },
+      "erroresCarga": {
+        "title": "Data-load errors",
+        "dek": "Data mistakes (quantities, currency, price) to report and fix at the source."
+      },
+      "providerAnomalies": {
+        "title": "Flagged providers",
+        "dek": "Which providers and buyers concentrate the unexplained flags."
+      },
+      "intendencias": {
+        "title": "Departmental governments",
+        "dek": "Spending by the departmental governments, compared per capita."
+      },
+      "organismos": {
+        "title": "Spending by agency",
+        "dek": "How much each type of state agency spends."
+      },
+      "mapa": {
+        "title": "Spending map",
+        "dek": "A treemap of all spending, each agency sized by what it spends."
+      },
+      "estadisticas": {
+        "title": "Statistics",
+        "dek": "The spending figures: how much, on what, to whom."
+      },
+      "comoReportar": {
+        "title": "How to report",
+        "dek": "The guide to take a load error to whoever can correct it."
+      }
     }
   },
   "reportDialog": {
@@ -1559,7 +1587,7 @@
     "pushDevices": "Active devices: {count}",
     "telegramLink": "Link Telegram",
     "telegramUnlink": "Unlink Telegram",
-    "telegramLinked": "Linked as @{username}",
+    "telegramLinked": "Linked as {'@'}{username}",
     "telegramLinkedNoUser": "Telegram account linked",
     "telegramNotConfigured": "Telegram is not available right now.",
     "telegramOpenHint": "Telegram will open to confirm the link.",

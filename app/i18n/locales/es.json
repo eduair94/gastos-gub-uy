@@ -39,6 +39,7 @@
     "curros": "Curros",
     "notifications": "Notificaciones",
     "analisis": "Análisis",
+    "viewAll": "Ver todo",
     "erroresCarga": "Errores de carga",
     "comoReportar": "Cómo reportar",
     "invCasinos": "Casinos del Estado",
@@ -974,15 +975,42 @@
     "title": "El estado del gasto, mirado de cerca",
     "dek": "Todas las herramientas de detección y análisis en un solo lugar: alertas de precio, lo que no tiene explicación, errores de carga para reportar, proveedores señalados y el gasto por organismo.",
     "cards": {
-      "alertas": { "title": "Alertas de precio", "dek": "Contratos con un precio unitario muy por encima del habitual para el mismo artículo." },
-      "unexplained": { "title": "Sin explicación", "dek": "Las alertas que ni la revisión con IA pudo justificar. La señal más fuerte." },
-      "erroresCarga": { "title": "Errores de carga", "dek": "Errores de datos (cantidades, moneda, precio) para reportar y corregir en la fuente." },
-      "providerAnomalies": { "title": "Proveedores señalados", "dek": "Qué proveedores y compradores concentran las alertas sin explicación." },
-      "intendencias": { "title": "Intendencias", "dek": "El gasto de los gobiernos departamentales, comparado por habitante." },
-      "organismos": { "title": "Gasto por organismo", "dek": "Cuánto gasta cada tipo de organismo del Estado." },
-      "mapa": { "title": "Mapa del gasto", "dek": "Un treemap de todo el gasto, cada organismo dimensionado por lo que gasta." },
-      "estadisticas": { "title": "Estadísticas", "dek": "Las cifras del gasto: cuánto, en qué, a quién." },
-      "comoReportar": { "title": "Cómo reportar", "dek": "La guía para llevar un error de carga a quien puede corregirlo." }
+      "alertas": {
+        "title": "Alertas de precio",
+        "dek": "Contratos con un precio unitario muy por encima del habitual para el mismo artículo."
+      },
+      "unexplained": {
+        "title": "Sin explicación",
+        "dek": "Las alertas que ni la revisión con IA pudo justificar. La señal más fuerte."
+      },
+      "erroresCarga": {
+        "title": "Errores de carga",
+        "dek": "Errores de datos (cantidades, moneda, precio) para reportar y corregir en la fuente."
+      },
+      "providerAnomalies": {
+        "title": "Proveedores señalados",
+        "dek": "Qué proveedores y compradores concentran las alertas sin explicación."
+      },
+      "intendencias": {
+        "title": "Intendencias",
+        "dek": "El gasto de los gobiernos departamentales, comparado por habitante."
+      },
+      "organismos": {
+        "title": "Gasto por organismo",
+        "dek": "Cuánto gasta cada tipo de organismo del Estado."
+      },
+      "mapa": {
+        "title": "Mapa del gasto",
+        "dek": "Un treemap de todo el gasto, cada organismo dimensionado por lo que gasta."
+      },
+      "estadisticas": {
+        "title": "Estadísticas",
+        "dek": "Las cifras del gasto: cuánto, en qué, a quién."
+      },
+      "comoReportar": {
+        "title": "Cómo reportar",
+        "dek": "La guía para llevar un error de carga a quien puede corregirlo."
+      }
     }
   },
   "reportDialog": {
@@ -1559,7 +1587,7 @@
     "pushDevices": "Dispositivos activos: {count}",
     "telegramLink": "Vincular Telegram",
     "telegramUnlink": "Desvincular Telegram",
-    "telegramLinked": "Vinculado como @{username}",
+    "telegramLinked": "Vinculado como {'@'}{username}",
     "telegramLinkedNoUser": "Cuenta de Telegram vinculada",
     "telegramNotConfigured": "Telegram no está disponible por ahora.",
     "telegramOpenHint": "Se abrirá Telegram para confirmar la vinculación.",

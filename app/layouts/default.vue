@@ -32,21 +32,31 @@ const nav = computed(() => [
   { key: 'products', to: localePath('/products'), icon: 'mdi-package-variant-closed' },
   { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
   { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
-  { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
-  // Drill-downs of Alertas that previously had no menu entry — reachable only by
-  // first landing on the anomalies page. Kept adjacent so the overflow "Más" menu
-  // folds the whole alert family together when the bar runs out of room.
-  { key: 'unexplained', to: localePath('/analytics/unexplained'), icon: 'mdi-help-rhombus-outline' },
-  { key: 'providerAnomalies', to: localePath('/analytics/proveedores-anomalias'), icon: 'mdi-account-alert-outline' },
-  { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
-  { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
-  { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
+  // The whole alert/analysis family under one dropdown (parent → the /analytics hub).
+  // Collapsing these six flat entries is what stops the bar overflowing and buries
+  // fewer sections in "Más". startsWith isActive highlights the parent on any child.
+  { key: 'analisis', to: localePath('/analytics'), icon: 'mdi-chart-box-outline', children: [
+    { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
+    { key: 'unexplained', to: localePath('/analytics/unexplained'), icon: 'mdi-help-rhombus-outline' },
+    { key: 'erroresCarga', to: localePath('/analytics/errores-carga'), icon: 'mdi-database-alert-outline' },
+    { key: 'providerAnomalies', to: localePath('/analytics/proveedores-anomalias'), icon: 'mdi-account-alert-outline' },
+    { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
+    { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
+    { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
+  ] },
   { key: 'estadisticas', to: localePath('/estadisticas'), icon: 'mdi-chart-box-outline' },
-  { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan' },
+  // Every investigation reachable directly, without first visiting the hub — TV Ciudad
+  // no longer folds into the "Más" overflow. Parent → the /investigaciones hub.
+  { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan', children: [
+    { key: 'tvciudad', to: localePath('/investigaciones/tv-ciudad'), icon: 'mdi-television-classic' },
+    { key: 'invCasinos', to: localePath('/investigaciones/casinos'), icon: 'mdi-slot-machine-outline' },
+    { key: 'invCasinosCortesia', to: localePath('/investigaciones/casinos-cortesia'), icon: 'mdi-cards-playing-outline' },
+    { key: 'invIm', to: localePath('/investigaciones/intendencia-montevideo'), icon: 'mdi-city-variant-outline' },
+    { key: 'invEmpresas', to: localePath('/investigaciones/empresas-senaladas'), icon: 'mdi-domain-off' },
+    { key: 'invAsse', to: localePath('/investigaciones/asse-ambulancias'), icon: 'mdi-ambulance' },
+    { key: 'invSaturno', to: localePath('/investigaciones/frigorifico-saturno'), icon: 'mdi-cow' },
+  ] },
   { key: 'curros', to: localePath('/curros'), icon: 'mdi-scale-balance' },
-  // Individual investigation surfaced directly in the bar by request; other pieces stay
-  // behind the hub. startsWith-based isActive keeps the hub highlighted too, which is fine.
-  { key: 'tvciudad', to: localePath('/investigaciones/tv-ciudad'), icon: 'mdi-television-classic' },
   { key: 'llamados', to: localePath('/llamados'), icon: 'mdi-bullhorn-outline' },
   // Developer platform front door (a real Nuxt page): quickstart + how to integrate,
   // which then links onward to /docs. Kept next to `docs` so the overflow menu folds
@@ -62,6 +72,17 @@ const nav = computed(() => [
 function isActive(to: string) {
   if (to === localePath('/')) return route.path === to
   return route.path.startsWith(to)
+}
+
+// A dropdown parent (Análisis, Investigaciones). Its children live under the parent
+// route (/analytics/*, /investigaciones/*), so startsWith isActive already reports
+// the group as active on any child — no need to scan the children.
+interface NavItem { key: string, to: string, icon: string, external?: boolean, children?: NavItem[] }
+function hasChildren(n: NavItem): boolean {
+  return Array.isArray(n.children) && n.children.length > 0
+}
+function groupActive(n: NavItem): boolean {
+  return isActive(n.to) || (n.children?.some(c => isActive(c.to)) ?? false)
 }
 
 // Theme is a preference, so it survives reloads. First visit follows the
@@ -248,20 +269,67 @@ watch([locale, user], () => nextTick(scheduleRecompute))
           class="topnav"
           :aria-label="t('nav.sections')"
         >
-          <component
-            :is="n.external ? 'a' : NuxtLinkC"
+          <template
             v-for="n in visibleNav"
             :key="n.key"
-            :to="n.external ? undefined : n.to"
-            :href="n.external ? n.to : undefined"
-            :target="n.external ? '_blank' : undefined"
-            :rel="n.external ? 'noopener' : undefined"
-            class="topnav__link"
-            :class="{ 'topnav__link--active': !n.external && isActive(n.to) }"
-            :aria-current="!n.external && isActive(n.to) ? 'page' : undefined"
           >
-            {{ t(`nav.${n.key}`) }}
-          </component>
+            <!-- Grouped section (Análisis, Investigaciones): a hover/click dropdown.
+                 The parent's own route (the hub) leads the list, then the children. -->
+            <v-menu
+              v-if="hasChildren(n)"
+              open-on-hover
+            >
+              <template #activator="{ props }">
+                <button
+                  v-bind="props"
+                  type="button"
+                  class="topnav__link topnav__more"
+                  :class="{ 'topnav__link--active': groupActive(n) }"
+                >
+                  {{ t(`nav.${n.key}`) }}
+                  <v-icon size="16">
+                    mdi-chevron-down
+                  </v-icon>
+                </button>
+              </template>
+              <v-list
+                class="navmenu"
+                density="compact"
+                min-width="230"
+              >
+                <v-list-item
+                  :to="n.to"
+                  :prepend-icon="n.icon"
+                  :title="t('nav.viewAll')"
+                  :active="isActive(n.to)"
+                />
+                <v-divider />
+                <v-list-item
+                  v-for="c in n.children"
+                  :key="c.key"
+                  :to="c.to"
+                  :prepend-icon="c.icon"
+                  :title="t(`nav.${c.key}`)"
+                  :active="isActive(c.to)"
+                />
+              </v-list>
+            </v-menu>
+
+            <!-- Plain section link -->
+            <component
+              :is="n.external ? 'a' : NuxtLinkC"
+              v-else
+              :to="n.external ? undefined : n.to"
+              :href="n.external ? n.to : undefined"
+              :target="n.external ? '_blank' : undefined"
+              :rel="n.external ? 'noopener' : undefined"
+              class="topnav__link"
+              :class="{ 'topnav__link--active': !n.external && isActive(n.to) }"
+              :aria-current="!n.external && isActive(n.to) ? 'page' : undefined"
+            >
+              {{ t(`nav.${n.key}`) }}
+            </component>
+          </template>
 
           <!-- Sections that don't fit fold in here rather than overflowing
                the bar. Active state bubbles up so the menu is highlighted
@@ -283,19 +351,50 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             <v-list
               class="navmenu"
               density="compact"
-              min-width="200"
+              min-width="220"
             >
-              <v-list-item
+              <template
                 v-for="n in overflowNav"
                 :key="n.key"
-                :to="n.external ? undefined : n.to"
-                :href="n.external ? n.to : undefined"
-                :target="n.external ? '_blank' : undefined"
-                :rel="n.external ? 'noopener' : undefined"
-                :prepend-icon="n.icon"
-                :title="t(`nav.${n.key}`)"
-                :active="!n.external && isActive(n.to)"
-              />
+              >
+                <!-- A grouped section that folded into "Más": an expandable sub-list. -->
+                <v-list-group
+                  v-if="hasChildren(n)"
+                  :value="n.key"
+                >
+                  <template #activator="{ props }">
+                    <v-list-item
+                      v-bind="props"
+                      :prepend-icon="n.icon"
+                      :title="t(`nav.${n.key}`)"
+                    />
+                  </template>
+                  <v-list-item
+                    :to="n.to"
+                    :title="t('nav.viewAll')"
+                    :active="isActive(n.to)"
+                  />
+                  <v-list-item
+                    v-for="c in n.children"
+                    :key="c.key"
+                    :to="c.to"
+                    :prepend-icon="c.icon"
+                    :title="t(`nav.${c.key}`)"
+                    :active="isActive(c.to)"
+                  />
+                </v-list-group>
+
+                <v-list-item
+                  v-else
+                  :to="n.external ? undefined : n.to"
+                  :href="n.external ? n.to : undefined"
+                  :target="n.external ? '_blank' : undefined"
+                  :rel="n.external ? 'noopener' : undefined"
+                  :prepend-icon="n.icon"
+                  :title="t(`nav.${n.key}`)"
+                  :active="!n.external && isActive(n.to)"
+                />
+              </template>
             </v-list>
           </v-menu>
         </nav>
@@ -312,7 +411,11 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             v-for="n in nav"
             :key="n.key"
             class="topnav__link railnav__item"
-          >{{ t(`nav.${n.key}`) }}</span>
+            :class="{ 'topnav__more': hasChildren(n) }"
+          >{{ t(`nav.${n.key}`) }}<v-icon
+            v-if="hasChildren(n)"
+            size="16"
+          >mdi-chevron-down</v-icon></span>
           <span class="topnav__link topnav__more railnav__more">
             {{ t('nav.more') }}
             <v-icon size="16">
@@ -382,6 +485,10 @@ watch([locale, user], () => nextTick(scheduleRecompute))
           <TourLauncher variant="icon" />
           <DonationLauncher variant="icon" />
 
+          <ClientOnly>
+            <NotificationBell v-if="user" />
+          </ClientOnly>
+
           <v-menu v-if="user">
             <template #activator="{ props }">
               <button
@@ -408,6 +515,11 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                 :to="localePath('/app/alertas')"
                 prepend-icon="mdi-bell-outline"
                 :title="t('alerts.title')"
+              />
+              <v-list-item
+                :to="localePath('/app/notificaciones')"
+                prepend-icon="mdi-bell-ring-outline"
+                :title="t('inbox.title')"
               />
               <v-list-item
                 :to="localePath('/app/calendario')"
@@ -522,30 +634,82 @@ watch([locale, user], () => nextTick(scheduleRecompute))
         class="drawer__nav"
         :aria-label="t('nav.sections')"
       >
-        <component
-          :is="n.external ? 'a' : NuxtLinkC"
+        <template
           v-for="n in nav"
           :key="n.key"
-          :to="n.external ? undefined : n.to"
-          :href="n.external ? n.to : undefined"
-          :target="n.external ? '_blank' : undefined"
-          :rel="n.external ? 'noopener' : undefined"
-          class="drawer__link"
-          :class="{ 'drawer__link--active': !n.external && isActive(n.to) }"
-          @click="drawer = false"
         >
-          <v-icon size="20">
-            {{ n.icon }}
-          </v-icon>
-          <span>{{ t(`nav.${n.key}`) }}</span>
-          <v-icon
-            v-if="n.external"
-            size="14"
-            class="drawer__ext"
+          <!-- Grouped section: a native disclosure so the children are one tap away
+               without leaving the drawer. Open by default when a child is active. -->
+          <details
+            v-if="hasChildren(n)"
+            class="drawer__group"
+            :open="groupActive(n)"
           >
-            mdi-open-in-new
-          </v-icon>
-        </component>
+            <summary class="drawer__link drawer__summary">
+              <v-icon size="20">
+                {{ n.icon }}
+              </v-icon>
+              <span>{{ t(`nav.${n.key}`) }}</span>
+              <v-icon
+                size="18"
+                class="drawer__caret"
+              >
+                mdi-chevron-down
+              </v-icon>
+            </summary>
+            <div class="drawer__children">
+              <NuxtLink
+                :to="n.to"
+                class="drawer__link drawer__child"
+                :class="{ 'drawer__link--active': isActive(n.to) }"
+                @click="drawer = false"
+              >
+                <v-icon size="18">
+                  mdi-dots-horizontal
+                </v-icon>
+                <span>{{ t('nav.viewAll') }}</span>
+              </NuxtLink>
+              <NuxtLink
+                v-for="c in n.children"
+                :key="c.key"
+                :to="c.to"
+                class="drawer__link drawer__child"
+                :class="{ 'drawer__link--active': isActive(c.to) }"
+                @click="drawer = false"
+              >
+                <v-icon size="18">
+                  {{ c.icon }}
+                </v-icon>
+                <span>{{ t(`nav.${c.key}`) }}</span>
+              </NuxtLink>
+            </div>
+          </details>
+
+          <!-- Plain section link -->
+          <component
+            :is="n.external ? 'a' : NuxtLinkC"
+            v-else
+            :to="n.external ? undefined : n.to"
+            :href="n.external ? n.to : undefined"
+            :target="n.external ? '_blank' : undefined"
+            :rel="n.external ? 'noopener' : undefined"
+            class="drawer__link"
+            :class="{ 'drawer__link--active': !n.external && isActive(n.to) }"
+            @click="drawer = false"
+          >
+            <v-icon size="20">
+              {{ n.icon }}
+            </v-icon>
+            <span>{{ t(`nav.${n.key}`) }}</span>
+            <v-icon
+              v-if="n.external"
+              size="14"
+              class="drawer__ext"
+            >
+              mdi-open-in-new
+            </v-icon>
+          </component>
+        </template>
       </nav>
 
       <div class="drawer__foot">
@@ -570,6 +734,13 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             @click="drawer = false"
           >
             {{ t('alerts.title') }}
+          </NuxtLink>
+          <NuxtLink
+            :to="localePath('/app/notificaciones')"
+            class="drawer__sub"
+            @click="drawer = false"
+          >
+            {{ t('inbox.title') }}
           </NuxtLink>
           <NuxtLink
             :to="localePath('/app/calendario')"
@@ -1038,6 +1209,36 @@ watch([locale, user], () => nextTick(scheduleRecompute))
 }
 
 .drawer__ext { margin-left: auto; opacity: 0.6; }
+
+/* Grouped sections in the drawer: a native <details> disclosure. */
+.drawer__group { border-radius: var(--r-md); }
+
+.drawer__summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.drawer__summary::-webkit-details-marker { display: none; }
+
+.drawer__caret {
+  margin-left: auto;
+  color: var(--text-muted);
+  transition: transform var(--dur) var(--ease);
+}
+
+.drawer__group[open] > .drawer__summary .drawer__caret { transform: rotate(180deg); }
+
+.drawer__children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 var(--s-2) var(--s-4);
+  padding-left: var(--s-2);
+  border-left: 1px solid var(--rule);
+}
+
+.drawer__child { font-size: var(--t-sm); }
 
 .drawer__foot {
   margin-top: auto;
