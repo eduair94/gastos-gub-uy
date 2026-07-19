@@ -2,6 +2,15 @@
 import type { Db } from "mongodb";
 import type { ContactResolver, ResolverInput, ResolverResult } from "../types";
 
+// row.sitioWeb frequently has no http(s):// scheme, which makes `new URL(...)`
+// in the website resolver throw and silently drop the domain.
+function normalizeSiteUrl(raw: unknown): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+}
+
 /** DEI is official open data → highest confidence, and it's already in Mongo. */
 export function createDeiResolver(db: Db): ContactResolver {
   return {
@@ -14,7 +23,7 @@ export function createDeiResolver(db: Db): ContactResolver {
       const emails = row.email ? [{ email: String(row.email), source: "dei" as const, confidence: 0.9 }] : [];
       return {
         emails,
-        website: row.sitioWeb ? String(row.sitioWeb) : null,
+        website: normalizeSiteUrl(row.sitioWeb),
         phone: row.telefono ? String(row.telefono) : null,
       };
     },

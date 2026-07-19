@@ -25,8 +25,9 @@ function fakeDb(rows: any[]) {
   assert.ok(out.emails[0].confidence >= 0.85);
   assert.equal(out.website, "https://murry.uy");
 
-  // No DEI row → empty result, no throw.
-  const empty = await createDeiResolver(fakeDb([])).resolve({ supplierId: "R/x", rut: "999", name: "x" });
+  // No DEI row → empty result, no throw. rut must be length >= 8 so this
+  // genuinely exercises the findOne → null branch (not the length guard).
+  const empty = await createDeiResolver(fakeDb([])).resolve({ supplierId: "R/x", rut: "99999999", name: "x" });
   assert.deepEqual(empty.emails, []);
   console.log("ok: dei resolver");
 })();

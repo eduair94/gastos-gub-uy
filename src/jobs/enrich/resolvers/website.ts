@@ -1,8 +1,8 @@
 // src/jobs/enrich/resolvers/website.ts
 import type { ContactResolver, ResolverInput, ResolverResult, ContactCandidate } from "../types";
+import { RAW_EMAIL_RE } from "../email-regex";
 
 // Emails embedded in HTML text or mailto: hrefs. Excludes image-suffix false positives.
-const RAW_EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const IMG_SUFFIX = /\.(png|jpe?g|gif|webp|svg)$/i;
 
 export function registrableDomain(host: string): string {

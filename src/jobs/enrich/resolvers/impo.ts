@@ -1,7 +1,6 @@
 // src/jobs/enrich/resolvers/impo.ts
 import type { ContactResolver, ResolverInput, ResolverResult, ContactCandidate } from "../types";
-
-const RAW_EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+import { RAW_EMAIL_RE } from "../email-regex";
 
 /**
  * impo.com.uy is the Diario Oficial: company legal notices occasionally embed a

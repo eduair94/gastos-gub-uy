@@ -42,18 +42,37 @@ export function isJunkEmail(email: string): boolean {
   return false;
 }
 
+// DNS error codes that mean "couldn't reach a resolver at all" — as opposed to
+// a definitive "this domain has no records" (ENOTFOUND/ENODATA/NXDOMAIN-class).
+// Shared with the orchestrator's startup canary (see enrich-supplier-contacts.ts).
+export const CONNECTIVITY_DNS_ERROR_CODES = new Set([
+  "ECONNREFUSED", "ETIMEOUT", "ESERVFAIL", "EAI_AGAIN",
+]);
+
 const mxCache = new Map<string, boolean>();
 export async function mxValid(domain: string): Promise<boolean> {
   if (mxCache.has(domain)) return mxCache.get(domain)!;
   let ok = false;
+  let definitive = true;
   try {
     const mx = await dns.resolveMx(domain);
     ok = mx.length > 0;
-  } catch {
-    // No MX → try an A record as a weak fallback (some small UY hosts).
-    try { ok = (await dns.resolve(domain)).length > 0; } catch { ok = false; }
+  } catch (e: any) {
+    if (CONNECTIVITY_DNS_ERROR_CODES.has(e?.code)) {
+      definitive = false;
+    } else {
+      // No MX → try an A record as a weak fallback (some small UY hosts).
+      try {
+        ok = (await dns.resolve(domain)).length > 0;
+      } catch (e2: any) {
+        if (CONNECTIVITY_DNS_ERROR_CODES.has(e2?.code)) definitive = false;
+        else ok = false;
+      }
+    }
   }
-  mxCache.set(domain, ok);
+  // Only cache a definitive result — a connectivity blip during a long run
+  // must not permanently poison the cache with a false negative.
+  if (definitive) mxCache.set(domain, ok);
   return ok;
 }
 
@@ -87,6 +106,11 @@ export async function mergeCandidates(
 export function pickPrimary(entries: IEmailEntry[]): string | null {
   const valid = entries.filter(e => e.mxValid);
   if (!valid.length) return null;
-  const rank = (e: IEmailEntry) => (e.isRoleAccount ? 0 : 1) * 10 + e.confidence;
-  return valid.sort((a, b) => rank(b) - rank(a))[0].email;
+  // Two-key comparator: non-role accounts first, then confidence desc. Unlike
+  // the old (isRoleAccount ? 0 : 1) * 10 + confidence packing, this is robust
+  // to any confidence value (the old formula broke once confidence >= 10).
+  return valid.sort((a, b) => {
+    if (a.isRoleAccount !== b.isRoleAccount) return a.isRoleAccount ? 1 : -1;
+    return b.confidence - a.confidence;
+  })[0].email;
 }
