@@ -37,6 +37,7 @@
  *   npx tsx src/jobs/detect-anomalies.ts --dry-run         # score, write nothing
  */
 
+import { createHash } from "crypto";
 import type { PipelineStage } from "mongoose";
 import { AnomalyModel, ItemPriceBaselineModel, ReleaseModel, SiceCatalogModel } from "../../shared/models";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
@@ -104,6 +105,18 @@ interface LoadedBaseline extends BaselineInput {
 
 /** Below this many observations a per-unit-total reconstruction is not worth trusting. */
 const LINE_TOTAL_MIN_QUANTITY = 2;
+
+/**
+ * Classification ids that are NOT a real catalogue article and must never seed a price baseline
+ * nor be scored. "" / "0" / missing (→ "UNKNOWN") are the pre-catalogue / free-text buckets (see the
+ * SICE-catalog notes): they pool wholly unrelated items under one key, so their baseline is
+ * meaningless and every "spike" against it is just a different product. A price-outlier test on a
+ * bag that mixes "productos para tratamiento de agua" with everything else cannot say anything.
+ * Real short legacy codes (1, 5, 19, …) are LEGITIMATE articles and are deliberately NOT excluded —
+ * their over-broad baselines are handled by the contamination guard, not by dropping them.
+ */
+const NON_PRODUCT_CLASSIFICATION_IDS: ReadonlyArray<string> = ["", "0", "UNKNOWN"];
+const nonProductIdSet = new Set(NON_PRODUCT_CLASSIFICATION_IDS);
 
 interface ScoredRow {
   releaseId: string;
@@ -197,6 +210,43 @@ function anomalyDedupeKey(releaseId: string, awardId: string | null): string {
   return `${releaseId}\u0000${awardId ?? ""}`;
 }
 
+/**
+ * Content-derived `dataVersion` for one anomaly, so re-detecting an UNCHANGED flag keeps the same
+ * version run-to-run. The AI-triage gate (score-anomalies-ai.ts) re-scores only flags whose
+ * `dataVersion` moved. The old run-scoped `v<epoch>` was stamped on EVERY surviving flag every run,
+ * so the gate saw the whole corpus as "changed" and re-triaged all of it at ~18 rpm (~6h) every
+ * night — during which /analytics/unexplained under-reported, since the "sin explicación" count is
+ * computed over triaged flags only. Keying on the contract's immutable identity + the flagged unit
+ * price makes the version stable, so only a genuinely new or changed flag is re-triaged.
+ *
+ * Deliberately NOT hashed: baseline bounds, severity, zScore. Those are recomputed from a sliding
+ * 36-month window and drift continuously, so folding them in would re-introduce the churn. A flag
+ * that is no longer an outlier is simply not emitted, so the doc's mere presence already means
+ * "still an outlier" — the verdict does not turn on the exact bound. `--rescore-featureless` /
+ * `--only-unexplained` remain the manual levers for re-triaging after a triage-LOGIC change.
+ *
+ * The `c` prefix marks the content scheme, so the first run after deploy (legacy `v<ts>` verdicts
+ * vs new `c<hash>` findings) cleanly forces exactly one full re-triage, then stays stable.
+ */
+export function anomalyContentVersion(input: {
+  releaseId: string;
+  awardId: string | null;
+  classificationId: string;
+  currency: string;
+  unitName: string;
+  unitPrice: number;
+}): string {
+  const canonical = [
+    input.releaseId,
+    input.awardId ?? "",
+    input.classificationId,
+    input.currency,
+    input.unitName,
+    input.unitPrice.toFixed(2),
+  ].join(" ");
+  return "c" + createHash("sha1").update(canonical).digest("hex").slice(0, 24);
+}
+
 /** Drop undefined values so mongoose does not persist empty keys. */
 function compact(input: Record<string, unknown>): Record<string, unknown> {
   const output: Record<string, unknown> = {};
@@ -268,6 +318,9 @@ class AnomalyDetector {
       // Replaces the old `> 100000` prefilter, which silently restricted the whole
       // detector to high-value items and destroyed the baseline for everything else.
       { $match: { "awards.items.unit.value.amount": { $gt: 0 } } },
+      // Drop the pre-catalogue / free-text buckets ("" / "0" / missing): they pool unrelated items,
+      // so a baseline under them is meaningless. See NON_PRODUCT_CLASSIFICATION_IDS.
+      { $match: { "awards.items.classification.id": { $nin: [null, ...NON_PRODUCT_CLASSIFICATION_IDS] } } },
       {
         $group: {
           _id: {
@@ -470,6 +523,9 @@ class AnomalyDetector {
       { $unwind: { path: "$awards", preserveNullAndEmptyArrays: false } },
       { $unwind: { path: "$awards.items", preserveNullAndEmptyArrays: false } },
       { $match: { "awards.items.unit.value.amount": { $gt: 0 } } },
+      // Same non-product exclusion as the baseline stage — these have no baseline to score against
+      // anyway, but filtering here keeps the two pipelines symmetric and the row counts honest.
+      { $match: { "awards.items.classification.id": { $nin: [null, ...NON_PRODUCT_CLASSIFICATION_IDS] } } },
       {
         $project: {
           _id: 0,
@@ -523,6 +579,11 @@ class AnomalyDetector {
       itemsScored++;
       const row = this.normaliseRow(raw);
       if (!row) {
+        continue;
+      }
+
+      // Never score against a non-product bucket, even if an older baseline for it still exists.
+      if (nonProductIdSet.has(row.classificationId)) {
         continue;
       }
 
@@ -668,7 +729,17 @@ class AnomalyDetector {
       confidence: scored.confidence,
       currency: row.currency,
       sourceYear: row.sourceYear,
-      dataVersion: this.dataVersion,
+      // Content-derived, NOT the run timestamp: an unchanged flag keeps its version across runs so
+      // the AI-triage gate skips it (see anomalyContentVersion). `this.dataVersion` stays the
+      // run-scoped version for the baseline compute-then-swap only.
+      dataVersion: anomalyContentVersion({
+        releaseId: row.releaseId,
+        awardId: row.awardId,
+        classificationId: row.classificationId,
+        currency: row.currency,
+        unitName: row.unitName,
+        unitPrice: row.unitPrice,
+      }),
       detectedAt: this.runStart,
       metadata: compact({
         supplierName: row.supplierName,

@@ -172,14 +172,25 @@ export default defineEventHandler(async (event) => {
     // Calculate pagination
     const skip = (Number(page) - 1) * Number(limit)
 
+    // How many in-scope flags are not yet AI-triaged. The verdict-typed views (unexplained /
+    // explainable / uncertain / scored) are computed over TRIAGED flags only, so when a fresh
+    // detector run adds flags faster than the ~18 rpm triage clears them, those views under-report
+    // until the backlog drains. Surfacing this count lets the UI say the number is still settling
+    // rather than present a partial figure as final. Same non-ai scope as the main query; only
+    // price_spike is triaged. `unscored` is skipped — there it would just equal `total`.
+    const VERDICT_VIEWS = new Set(['unexplained', 'explainable', 'uncertain', 'scored'])
+    const wantPending = typeof ai === 'string' && VERDICT_VIEWS.has(ai)
+    const pendingFilter: Record<string, unknown> = { ...filter, 'type': 'price_spike', 'aiVerdict.explainable': { $exists: false } }
+
     // Execute query
-    const [anomalies, total] = await Promise.all([
+    const [anomalies, total, pendingTriage] = await Promise.all([
       AnomalyModel.find(filter)
         .sort(sortOptions)
         .skip(skip)
         .limit(Number(limit))
         .lean(),
       AnomalyModel.countDocuments(filter),
+      wantPending ? AnomalyModel.countDocuments(pendingFilter) : Promise.resolve(0),
     ])
 
     // Attach community feedback (public up/down counts + the requesting user's own
@@ -201,6 +212,9 @@ export default defineEventHandler(async (event) => {
           total,
           totalPages: Math.ceil(total / Number(limit)),
         },
+        // Flags still awaiting AI triage within the same scope (0 unless a verdict-typed view).
+        // The UI uses it to signal the count is still settling; see the pendingFilter note above.
+        triage: { pending: pendingTriage },
       },
     }
   }

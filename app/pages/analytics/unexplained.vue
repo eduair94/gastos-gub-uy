@@ -33,6 +33,10 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/anomal
 const flags = computed<any[]>(() => res.value?.data?.anomalies ?? [])
 const pagination = computed(() => res.value?.data?.pagination ?? null)
 const total = computed<number | null>(() => pagination.value?.total ?? null)
+// Flags still awaiting AI triage. While this is > 0 the "sin explicación" count is computed over
+// the triaged subset only, so it is still settling — surfaced so the figure never reads as final
+// when the pipeline is mid-run (see /api/analytics/anomalies `triage.pending`).
+const pendingTriage = computed<number>(() => res.value?.data?.triage?.pending ?? 0)
 
 function cur(a: any): string {
   return a?.currency ?? a?.metadata?.currency ?? 'UYU'
@@ -97,6 +101,13 @@ useSeo(() => ({
       </div>
       <p class="u-lead hero__lead">
         {{ t('unexplained.lead') }}
+      </p>
+      <p
+        v-if="pendingTriage > 0"
+        class="hero__pending"
+      >
+        <span class="hero__pending-dot" />
+        {{ t('unexplained.pending', { n: formatNumber(pendingTriage) }) }}
       </p>
     </header>
 
@@ -276,6 +287,35 @@ useSeo(() => ({
 }
 
 .hero__lead { color: var(--text-muted); }
+
+/* "N still awaiting triage" — the count is settling, not final. Muted, with a soft pulse so it
+   reads as live/in-progress rather than an error. */
+.hero__pending {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: var(--s-3) 0 0;
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
+
+.hero__pending-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sol, var(--money));
+  flex: none;
+  animation: pending-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pending-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__pending-dot { animation: none; opacity: 0.8; }
+}
 
 /* ---- Method note ---- */
 .method {

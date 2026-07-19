@@ -42,6 +42,7 @@ import fs from "fs";
 import path from "path";
 import { AnomalyModel, ContractItemFeaturesModel, ReleaseModel } from "../../shared/models";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
+import { canonicalUnit } from "../../shared/utils/units";
 import { callGeminiStructured, estimateCostUsd, FLASH_LITE_PRICING, GeminiSchema, GeminiUsage } from "./ai/gemini-client";
 import { adjudicacionUrl, compraIdFromOcid, llamadoUrl, ScrapedItem, scrapeCompraFeatures } from "./ai/item-features";
 
@@ -102,6 +103,12 @@ interface CliOptions {
    * incremental dataVersion gate (those rows are unchanged) without re-charging the whole corpus.
    */
   rescoreFeatureless: boolean;
+  /**
+   * Re-triage ONLY the current `explainable:'no'` (sin-explicación) set. Bypasses the incremental
+   * gate — the surgical way to re-check the decisive signal after a triage-logic change (the
+   * case-insensitive feature match, the total-as-unit context) without re-charging the whole corpus.
+   */
+  onlyUnexplained: boolean;
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -148,6 +155,10 @@ const SYSTEM_INSTRUCTION = [
   "REGLA — RENGLONES VECINOS DEL MISMO CÓDIGO: bajo un mismo código de catálogo conviven presentaciones y concentraciones DISTINTAS. Dos renglones con el mismo código pero distinto precio unitario son, casi siempre, productos distintos (p. ej. una ampolla de 100 MG / 16,67 ML frente a otra de 30 MG / 5 ML del mismo código), NO el mismo producto a dos precios. Por eso: NUNCA uses el precio de un renglón vecino del mismo código como referencia para afirmar sobreprecio. La ÚNICA referencia válida es el rango estadístico (p25–p95). Antes de marcar 'no', mirá las CARACTERÍSTICAS del ítem alertado (concentración, presentación, medida, volumen/ML, unidades por envase): si es una presentación mayor, más concentrada o de más volumen que lo habitual, es 'producto-distinto' y corresponde 'yes'.",
   "Si NO tenés las características del ítem alertado y el único indicio de sobreprecio es un renglón vecino del mismo código más barato, NO marques 'no': marcá 'uncertain' (falta el dato de presentación/concentración que explicaría la diferencia).",
   "SIMÉTRICO — NO INVENTES LA EXPLICACIÓN: si NO tenés características, TAMPOCO afirmes que el ítem es 'una presentación distinta / de mayor gramaje / más concentrada / caja en vez de unidad' para marcar 'yes'. Eso sería inventar un dato que no está. Sin evidencia concreta en el contexto, marcá 'uncertain', nunca 'yes' basado en una suposición. Cada punto de 'evidence' debe existir literalmente en el contexto dado.",
+  "",
+  "REGLA — TOTAL CARGADO COMO UNITARIO (error-carga): mirá 'Total del renglón' y 'Total de la adjudicación'. Si el precio unitario alertado es un número redondo/grande que coincide con el total del renglón o de toda la adjudicación, y la cantidad es 1 (o el artículo es un bien común normalmente barato: calzado, papel, tijera, herramienta, alimento, material de construcción, licencia/servicio con unidad 'hora'/'mensual'), lo más probable es que hayan cargado el TOTAL del contrato en el campo de precio unitario. Eso es 'error-carga' (yes), NO 'sin-explicacion'. Un unitario 50×, 100× o 1000× el rango en un commodity barato es casi siempre esto, no un sobreprecio real.",
+  "REGLA — PREFERÍ 'uncertain' ANTES QUE 'no' CUANDO ESTÁS A CIEGAS: si NO se adjuntaron características del ítem alertado (no aparece la sección 'CARACTERÍSTICAS DEL ÍTEM ALERTADO') y el precio de ese artículo depende fuertemente de presentación/marca/especificación —medicamentos y sus comprimidos/ampollas, reactivos y determinaciones de laboratorio, insumos y dispositivos médicos, repuestos e insumos de vehículos/maquinaria, materiales técnicos con variantes—, NO marques 'no': marcá 'uncertain'. Falta justo el dato (concentración, presentación, marca, modelo) que suele explicar la diferencia, y su ausencia no es evidencia de sobreprecio. Además, si la DESCRIPCIÓN oficial del artículo NO condice con el OBJETO del contrato o los renglones vecinos (p. ej. 'fijador para sonda nasogástrica' dentro de una compra de 'fijador circular ortopédico', o un 'brazalete de identificación' con características de repuesto de vehículo), es una CLASIFICACIÓN ERRÓNEA: es 'producto-distinto' (yes), no 'sin-explicacion'.",
+  "Reservá 'no'/'sin-explicacion' para cuando el contexto SÍ alcanza — hay características o es un commodity homogéneo donde la presentación no puede explicar el múltiplo, la clasificación es coherente con el objeto, no hay señal de total-cargado-como-unitario — y AÚN ASÍ el sobreprecio queda sin justificación. Esa es la señal real y debe ser sólida.",
   "COHERENCIA OBLIGATORIA entre explainable y category: explainable='no' va SIEMPRE y SOLO con category='sin-explicacion'. Si elegís una categoría explicativa (producto-distinto, cantidad-baja, marca-especializado, urgencia, servicio-incluido, error-carga, moneda-erronea), entonces explainable DEBE ser 'yes'. Nunca combines una categoría explicativa con 'no', ni 'sin-explicacion' con 'yes'.",
   "",
   "CATÁLOGO OFICIAL (CUBS/ACCE): cuando la alerta trae 'Nombre canónico', 'Rubro' y 'Unidad oficial', son datos AUTORITATIVOS del catálogo estatal de artículos — usalos para entender qué es realmente el artículo y cuál es su unidad esperada. Si la unidad del renglón NO coincide con la unidad oficial, es muy probable un 'error-carga' de unidad (o un precio por otra presentación), no un sobreprecio genuino.",
@@ -176,6 +187,7 @@ function parseArgs(argv: string[]): CliOptions {
     scrapeFeatures: true,
     scrapeConcurrency: DEFAULT_SCRAPE_CONCURRENCY,
     rescoreFeatureless: false,
+    onlyUnexplained: false,
   };
 
   for (const arg of argv) {
@@ -210,6 +222,8 @@ function parseArgs(argv: string[]): CliOptions {
       options.rpm = n;
     } else if (arg === "--rescore-featureless") {
       options.rescoreFeatureless = true;
+    } else if (arg === "--only-unexplained") {
+      options.onlyUnexplained = true;
     } else if (arg === "--no-scrape-features") {
       options.scrapeFeatures = false;
     } else if (arg.startsWith("--scrape-concurrency=")) {
@@ -269,6 +283,45 @@ function compactSpec(features: { name: string; value: string }[]): string | null
   return spec ? truncate(spec, 70) : null;
 }
 
+/** Minimal award-item shape findTargetItemIndex reads. */
+interface MatchableItem {
+  classification?: { id?: string } | undefined;
+  unit?: { name?: string; value?: { amount?: number } } | undefined;
+}
+
+/**
+ * Locate the flagged line inside an award's items.
+ *
+ * The anomaly's `metadata.itemUnit.name` is CANONICAL — the detector folds it through
+ * `canonicalUnit()` (lowercase + trim + unidad-family) when it builds the baseline key — while the
+ * raw award item keeps its original casing ("PAR", "UNIDAD"). The old match compared
+ * `item.unit.name === targetUnit` case-SENSITIVELY, so "PAR" !== "par" and it silently matched
+ * NOTHING: `usedFeatures` was 0 for the ENTIRE high+critical corpus, i.e. every verdict (yes/no)
+ * was made blind to the item's scraped características (concentración, presentación, medida, marca)
+ * — the exact context that tells a legitimate larger/branded presentation, or an outright
+ * mis-classification, from a real over-price. Match on the CANONICAL unit instead.
+ *
+ * Fallback: when no line has the exact price (a reconciled amendment can move detectedValue off the
+ * raw award amount) but exactly ONE line shares the (code, canonical-unit), that line is
+ * unambiguously the target. Never guess when two+ lines share code+unit — attaching the wrong line's
+ * características would corrupt an audit of public money.
+ */
+export function findTargetItemIndex(items: MatchableItem[], targetClsId: string | null, targetUnit: string | null, targetPrice: number): number {
+  let exact = -1;
+  const sameCodeUnit: number[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i]!;
+    const clsId = it?.classification?.id ?? null;
+    if (clsId !== targetClsId) continue;
+    if (canonicalUnit(it?.unit?.name ?? null) !== (targetUnit ?? canonicalUnit(null))) continue;
+    sameCodeUnit.push(i);
+    const price = it?.unit?.value?.amount;
+    if (exact === -1 && typeof price === "number" && price === targetPrice) exact = i;
+  }
+  if (exact !== -1) return exact;
+  return sameCodeUnit.length === 1 ? sameCodeUnit[0]! : -1;
+}
+
 /** id_compra for the official public page is derived from the OCID, never `id`. */
 function publicUrlFromOcid(ocid: unknown): string | null {
   if (typeof ocid !== "string" || !ocid) return null;
@@ -305,6 +358,12 @@ interface AnomalyContext {
   variation: string | null;
   /** Attached contract documents (resolutions, pliegos) — links, for the model and for journalists. */
   documents: DocRef[];
+  /** detectedValue × cantidad — what the flagged LINE cost in total. */
+  lineTotal: number | null;
+  /** Σ over the award's lines of price × quantity — what the whole adjudicación cost. */
+  awardTotal: number | null;
+  /** The flagged line's total is ~all of the award: a strong "total cargado como unitario" tell. */
+  lineIsWholeAward: boolean;
   compraId: string | null;
   llamadoUrl: string | null;
   adjudicacionUrl: string | null;
@@ -332,7 +391,7 @@ function buildContext(
   tenderSubjectByOcid: Map<string, { description?: string | undefined; title?: string | undefined }>,
   objectByCompra: Map<string, string>,
 ): AnomalyContext {
-  const empty: AnomalyContext = { subject: null, procedure: null, siblings: [], features: [], variation: null, documents: [], compraId: null, llamadoUrl: null, adjudicacionUrl: null };
+  const empty: AnomalyContext = { subject: null, procedure: null, siblings: [], features: [], variation: null, documents: [], lineTotal: null, awardTotal: null, lineIsWholeAward: false, compraId: null, llamadoUrl: null, adjudicacionUrl: null };
   if (!release) return empty;
 
   const compraId = compraIdFromOcid(release.ocid);
@@ -352,43 +411,60 @@ function buildContext(
   const items = Array.isArray(award?.items) ? award!.items : [];
 
   const targetClsId = anomaly.metadata?.itemClassification?.id ?? null;
-  const targetUnit = anomaly.metadata?.itemUnit?.name ?? null;
+  const targetUnit = anomaly.metadata?.itemUnit?.name ?? null; // CANONICAL (lowercased/folded), see findTargetItemIndex
   const targetPrice = anomaly.detectedValue;
 
-  let targetMatched = false;
   // The gov "Ítem Nº" (nro) is the key into the scraped características. The OCDS award item `id`
   // carries it — as a plain integer in some batches, as a "<nro>-<sub>" string in others — so it is
   // parsed with itemNro(), never num() (which silently dropped the string shape). Once the flagged
   // line is identified we attach EXACTLY its characteristics — never a sibling's.
-  let targetNro: number | null = null;
   const scraped = compraId ? featuresByCompra.get(compraId) : undefined;
   const featuresByNro = new Map<number, { name: string; value: string }[]>();
   if (scraped) for (const s of scraped) featuresByNro.set(s.nro, s.features);
 
-  const siblings: SiblingItem[] = items.slice(0, MAX_SIBLING_ITEMS).map((item) => {
-    const clsId = item?.classification?.id ?? null;
-    const unitName = item?.unit?.name ?? null;
-    const unitPrice = num(item?.unit?.value?.amount);
-    const nro = itemNro(item?.id);
-    const isTarget = !targetMatched && clsId === targetClsId && unitName === targetUnit && unitPrice === targetPrice;
-    if (isTarget) {
-      targetMatched = true;
-      targetNro = nro;
+  // Match the flagged line CASE-INSENSITIVELY over the FULL item list (the old `unit.name === unit`
+  // compare was case-sensitive and matched nothing corpus-wide). awardTotal is summed over every
+  // line, so it must also scan the full list, not the display-capped slice.
+  const targetIndex = findTargetItemIndex(items, targetClsId, targetUnit, targetPrice);
+  const targetNro: number | null = targetIndex >= 0 ? itemNro(items[targetIndex]?.id) : null;
+
+  let awardTotal = 0;
+  let awardTotalOk = false;
+  for (const item of items) {
+    const p = num(item?.unit?.value?.amount);
+    const q = num(item?.quantity);
+    if (p !== null && q !== null) {
+      awardTotal += p * q;
+      awardTotalOk = true;
     }
+  }
+
+  // Show the first N lines, but always include the flagged one even if it sits past the window.
+  const displayIdx = new Set<number>();
+  for (let i = 0; i < Math.min(items.length, MAX_SIBLING_ITEMS); i++) displayIdx.add(i);
+  if (targetIndex >= 0) displayIdx.add(targetIndex);
+  const siblings: SiblingItem[] = [...displayIdx].sort((a, b) => a - b).map((i) => {
+    const item = items[i]!;
+    const clsId = item?.classification?.id ?? null;
+    const nro = itemNro(item?.id);
     // Attach each sibling's distinguishing spec so same-code lines are not shown identically —
     // that indistinguishability is what made the model treat a smaller/weaker twin as a benchmark.
     const feats = nro !== null ? featuresByNro.get(nro) : undefined;
     return {
       description: truncate(item?.description),
       classificationId: typeof clsId === "string" ? clsId : null,
-      unitName: truncate(unitName, 40),
+      unitName: truncate(item?.unit?.name ?? null, 40),
       quantity: num(item?.quantity),
-      unitPrice,
+      unitPrice: num(item?.unit?.value?.amount),
       currency: truncate(item?.unit?.value?.currency, 8),
-      isTarget,
+      isTarget: i === targetIndex,
       spec: feats ? compactSpec(feats) : null,
     };
   });
+
+  const qtyForLine = num(anomaly.metadata?.itemQuantity);
+  const lineTotal = qtyForLine !== null ? targetPrice * qtyForLine : null;
+  const lineIsWholeAward = lineTotal !== null && awardTotalOk && awardTotal > 0 ? Math.abs(lineTotal - awardTotal) / awardTotal < 0.02 : false;
 
   // Attach the flagged item's full características by nro. Conservative: no nro match (or no scrape)
   // => no characteristics, rather than risk feeding a different item's — this audits public money.
@@ -409,6 +485,9 @@ function buildContext(
     features,
     variation,
     documents: collectDocuments(release, award),
+    lineTotal,
+    awardTotal: awardTotalOk ? awardTotal : null,
+    lineIsWholeAward,
     compraId,
     llamadoUrl: llamadoUrl(release.ocid),
     adjudicacionUrl: adjudicacionUrl(release.ocid),
@@ -430,6 +509,12 @@ function buildPrompt(anomaly: AnomalyDoc, ctx: AnomalyContext): string {
   const qty = num(anomaly.metadata?.itemQuantity);
   if (qty !== null) lines.push(`- Cantidad adjudicada: ${qty}`);
   lines.push(`- Precio unitario pagado: ${anomaly.detectedValue} ${currency}`);
+  // Totals expose the "total cargado como unitario" artifact: when the flagged UNIT price already
+  // equals ~the whole line/award total (typically with cantidad = 1), the number in the unit-price
+  // field is almost certainly the LINE TOTAL, not a unit price — an error-carga, not a sobreprecio.
+  if (ctx.lineTotal !== null) lines.push(`- Total del renglón (precio × cantidad): ${Math.round(ctx.lineTotal)} ${currency}`);
+  if (ctx.awardTotal !== null) lines.push(`- Total de la adjudicación (todos los renglones): ${Math.round(ctx.awardTotal)} ${currency}`);
+  if (ctx.lineIsWholeAward) lines.push(`- ATENCIÓN: el total de este renglón es prácticamente TODA la adjudicación — si además la cantidad es 1 (o el unitario es un número redondo grande para un artículo normalmente barato), el "precio unitario" puede ser en realidad el TOTAL cargado como unitario (evaluá 'error-carga').`);
   const min = num(anomaly.expectedRange?.min);
   const max = num(anomaly.expectedRange?.max);
   if (min !== null && max !== null) {
@@ -631,10 +716,12 @@ async function main(): Promise<void> {
   // ---- Selection ----
   const filter: Record<string, unknown> = { type: "price_spike", severityRank: { $gte: options.minRank } };
   if (options.severities?.length) filter.severity = { $in: options.severities };
+  // --only-unexplained: re-check just the decisive 'no' set after a triage-logic change.
+  if (options.onlyUnexplained) filter["aiVerdict.explainable"] = "no";
   // Incremental: only flags that were never triaged, or whose finding changed since the last verdict.
-  // --rescore-featureless re-visits stable rows on purpose (their dataVersion is unchanged), so it
-  // must also bypass the incremental gate; it narrows to the bug-affected subset after releases load.
-  if (!options.all && !options.rescoreFeatureless) {
+  // --rescore-featureless and --only-unexplained re-visit stable rows on purpose (their dataVersion
+  // is unchanged), so they must also bypass the incremental gate.
+  if (!options.all && !options.rescoreFeatureless && !options.onlyUnexplained) {
     filter.$expr = { $ne: ["$aiVerdict.dataVersion", "$dataVersion"] };
   }
 
@@ -642,7 +729,7 @@ async function main(): Promise<void> {
   if (options.limit) query.limit(options.limit);
   const anomalies = (await query) as unknown as AnomalyDoc[];
 
-  const scopeLabel = options.all ? ", --all" : options.rescoreFeatureless ? ", rescore-featureless (pre-narrow)" : ", new/changed only";
+  const scopeLabel = options.all ? ", --all" : options.rescoreFeatureless ? ", rescore-featureless (pre-narrow)" : options.onlyUnexplained ? ", only-unexplained (re-check 'no')" : ", new/changed only";
   console.log(`   candidates in scope     : ${anomalies.length} (min-rank ${options.minRank}${scopeLabel}${options.limit ? `, limit ${options.limit}` : ""})`);
 
   if (anomalies.length === 0) {
