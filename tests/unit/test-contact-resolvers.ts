@@ -2,6 +2,7 @@
 import assert from "node:assert";
 import { createDeiResolver } from "../../src/jobs/enrich/resolvers/dei";
 import { extractEmailsFromHtml, createWebsiteResolver } from "../../src/jobs/enrich/resolvers/website";
+import { createWebSearchResolver } from "../../src/jobs/enrich/resolvers/web-search";
 
 // Minimal fake of the mongodb Db surface the resolver uses.
 function fakeDb(rows: any[]) {
@@ -56,4 +57,15 @@ function fakeDb(rows: any[]) {
   const empty = await r.resolve({ supplierId: "R/1", rut: "1", name: "x", website: null });
   assert.deepEqual(empty.emails, []);
   console.log("ok: website resolver");
+})();
+
+(async () => {
+  const search = async (_q: string) => [{ url: "https://empresa.uy/contacto", title: "Empresa", snippet: "escribinos a hola@empresa.uy" }];
+  const fetchHtml = async (_u: string) => `<a href="mailto:hola@empresa.uy">x</a>`;
+  const r = createWebSearchResolver({ search, fetchHtml });
+  assert.equal(r.name, "webSearch");
+  const out = await r.resolve({ supplierId: "R/1", rut: "217231960015", name: "ANFANG S R L" });
+  assert.ok(out.emails.some(e => e.email === "hola@empresa.uy"));
+  assert.ok(out.emails.every(e => e.confidence <= 0.5)); // capped
+  console.log("ok: web-search resolver");
 })();
