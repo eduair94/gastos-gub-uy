@@ -26,15 +26,13 @@ watch(() => route.query.search, (q) => {
 const nav = computed(() => [
   { key: 'home', to: localePath('/'), icon: 'mdi-view-dashboard-outline' },
   { key: 'gastos', to: localePath('/gastos'), icon: 'mdi-cash-multiple' },
-  { key: 'recopilatorios', to: localePath('/recopilatorios'), icon: 'mdi-folder-star-outline' },
-  { key: 'pauta', to: localePath('/pauta'), icon: 'mdi-bullhorn-variant-outline' },
-  { key: 'contracts', to: localePath('/contracts'), icon: 'mdi-file-document-outline' },
-  { key: 'products', to: localePath('/products'), icon: 'mdi-package-variant-closed' },
-  { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
-  { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
-  // The whole alert/analysis family under one dropdown (parent → the /analytics hub).
-  // Collapsing these six flat entries is what stops the bar overflowing and buries
-  // fewer sections in "Más". startsWith isActive highlights the parent on any child.
+  // The two dropdowns lead the bar (right after Panel/Gastos) so they stay visible
+  // rather than folding into "Más": this site's whole point is the anomaly detection
+  // and the investigations, and a dropdown hidden in the overflow defeats its purpose.
+  //
+  // Análisis: the whole alert/analysis family under one dropdown (parent → /analytics
+  // hub). Collapsing these six flat entries is what stops the bar overflowing.
+  // startsWith isActive highlights the parent on any child.
   { key: 'analisis', to: localePath('/analytics'), icon: 'mdi-chart-box-outline', children: [
     { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
     { key: 'unexplained', to: localePath('/analytics/unexplained'), icon: 'mdi-help-rhombus-outline' },
@@ -44,9 +42,8 @@ const nav = computed(() => [
     { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
     { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
   ] },
-  { key: 'estadisticas', to: localePath('/estadisticas'), icon: 'mdi-chart-box-outline' },
-  // Every investigation reachable directly, without first visiting the hub — TV Ciudad
-  // no longer folds into the "Más" overflow. Parent → the /investigaciones hub.
+  // Investigaciones: every investigation reachable directly, without first visiting
+  // the hub — TV Ciudad no longer folds into the overflow. Parent → /investigaciones.
   { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan', children: [
     { key: 'tvciudad', to: localePath('/investigaciones/tv-ciudad'), icon: 'mdi-television-classic' },
     { key: 'invCasinos', to: localePath('/investigaciones/casinos'), icon: 'mdi-slot-machine-outline' },
@@ -56,6 +53,13 @@ const nav = computed(() => [
     { key: 'invAsse', to: localePath('/investigaciones/asse-ambulancias'), icon: 'mdi-ambulance' },
     { key: 'invSaturno', to: localePath('/investigaciones/frigorifico-saturno'), icon: 'mdi-cow' },
   ] },
+  { key: 'contracts', to: localePath('/contracts'), icon: 'mdi-file-document-outline' },
+  { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
+  { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
+  { key: 'products', to: localePath('/products'), icon: 'mdi-package-variant-closed' },
+  { key: 'recopilatorios', to: localePath('/recopilatorios'), icon: 'mdi-folder-star-outline' },
+  { key: 'pauta', to: localePath('/pauta'), icon: 'mdi-bullhorn-variant-outline' },
+  { key: 'estadisticas', to: localePath('/estadisticas'), icon: 'mdi-chart-box-outline' },
   { key: 'curros', to: localePath('/curros'), icon: 'mdi-scale-balance' },
   { key: 'llamados', to: localePath('/llamados'), icon: 'mdi-bullhorn-outline' },
   // Developer platform front door (a real Nuxt page): quickstart + how to integrate,
