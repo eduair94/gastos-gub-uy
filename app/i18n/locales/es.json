@@ -42,6 +42,11 @@
     "today": "a valores de hoy",
     "todayHelp": "El monto llevado a pesos de hoy: la moneda extranjera se convierte al tipo de cambio BCU del mes del contrato y luego se ajusta por inflación con la Unidad Indexada. Permite comparar precios de años distintos."
   },
+  "preview": {
+    "eyebrow": "Vista previa",
+    "atBcu": "cotización BCU · {month}",
+    "viewContract": "Ver contrato completo"
+  },
   "common": {
     "search": "Buscar",
     "searchPlaceholder": "Buscar por objeto, proveedor u organismo",

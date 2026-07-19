@@ -206,6 +206,11 @@ watch(() => filters.value.search, (s) => {
 const { data: optionsRes, pending: optionsPending } = await useFetch<any>('/api/contracts/filters')
 const options = computed(() => optionsRes.value?.data ?? null)
 
+// The monthly BCU rate table, loaded once, so the preview popup can restate an
+// amount in UYU at the contract's own month and in today's pesos client-side.
+const { data: rateRes } = await useFetch<any>('/api/rates')
+const rateTable = computed(() => rateRes.value?.data ?? null)
+
 const { data: listRes, pending, error } = await useFetch<any>('/api/contracts', { query: listQuery })
 const { data: statsRes, pending: statsPending } = await useFetch<any>('/api/contracts/stats', { query: apiQuery })
 
@@ -397,41 +402,15 @@ function itemPreview(c: ContractLike) {
 // ---- Full item list, in place ---------------------------------------
 const itemsDialog = ref(false)
 const itemsFor = ref<ContractLike | null>(null)
-const dialogQuery = ref('')
 
+// Opens the preview popup for a row (from the object link or the "+N items"
+// button). The dialog component owns the item table, its in-dialog filter, the
+// total and the amount conversions — it just needs the contract and the rate
+// table.
 function openItems(c: ContractLike) {
   itemsFor.value = c
-  dialogQuery.value = ''
   itemsDialog.value = true
 }
-
-// Every line of the open contract, search-matched first. A big contract
-// (some carry hundreds of lines) then gets its own in-dialog filter.
-const dialogAllItems = computed(() => (itemsFor.value ? orderByMatch(contractItems(itemsFor.value), filters.value.search) : []))
-const dialogItems = computed(() => {
-  const tokens = dialogQuery.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
-  if (!tokens.length) return dialogAllItems.value
-  return dialogAllItems.value.filter((r) => {
-    const hay = `${r.description} ${r.code} ${r.codeDescription} ${r.unitName}`.toLowerCase()
-    return tokens.every(tk => hay.includes(tk))
-  })
-})
-const dialogTitle = computed(() => (itemsFor.value ? rowTitle(itemsFor.value) : ''))
-
-/**
- * The sum of the lines, so the dialog answers "does this add up?" without
- * the reader doing the arithmetic. Computed over ALL lines (not the filtered
- * view) so it stays the contract's real total while the reader searches
- * within it. Only meaningful when every line shares one currency — the
- * source mixes them, and adding pesos to dollars would be worse than nothing.
- */
-const dialogTotal = computed(() => {
-  const rows = dialogAllItems.value.filter(r => typeof r.total === 'number' && r.total > 0)
-  if (!rows.length) return null
-  const currencies = new Set(rows.map(r => r.currency))
-  if (currencies.size !== 1) return null
-  return { amount: rows.reduce((s, r) => s + (r.total ?? 0), 0), currency: [...currencies][0] }
-})
 
 useSeo(() => ({
   title: t('seo.contracts.title'),
@@ -749,9 +728,13 @@ useSeo(() => ({
                     class="ctable__obj"
                     data-primary
                   >
+                    <!-- Plain click opens the preview; the href stays real so
+                         ⌘/Ctrl/middle-click still opens the full page in a new
+                         tab, and crawlers still see the link. -->
                     <NuxtLink
                       :to="localePath(`/contracts/${c.id}`)"
                       class="ctable__link"
+                      @click.exact.prevent="openItems(c)"
                     >
                       {{ rowTitle(c) }}
                     </NuxtLink>
@@ -893,166 +876,13 @@ useSeo(() => ({
       </div>
     </div>
 
-    <!-- Every line of a contract, without leaving the results. -->
-    <v-dialog
+    <!-- Click-to-preview: who / what / how much, without leaving the results. -->
+    <ContractPreviewDialog
       v-model="itemsDialog"
-      max-width="820"
-      scrollable
-    >
-      <div class="idlg">
-        <div class="idlg__head">
-          <div class="idlg__headtext">
-            <p class="u-eyebrow">
-              {{ t('contract.sections.items') }}
-            </p>
-            <h2 class="idlg__title">
-              {{ dialogTitle }}
-            </h2>
-          </div>
-          <button
-            class="idlg__x"
-            type="button"
-            :aria-label="t('nav.close')"
-            @click="itemsDialog = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </button>
-        </div>
-
-        <!-- In-dialog search: a big contract can list hundreds of lines,
-             so let the reader narrow to the one they came for. -->
-        <div
-          v-if="dialogAllItems.length > 6"
-          class="idlg__filter"
-        >
-          <v-icon
-            size="16"
-            class="idlg__filtericon"
-          >
-            mdi-magnify
-          </v-icon>
-          <input
-            v-model="dialogQuery"
-            type="search"
-            class="idlg__filterinput"
-            :placeholder="t('contracts.itemFilter')"
-          >
-          <span class="idlg__filtercount u-mono">{{ dialogItems.length }}/{{ dialogAllItems.length }}</span>
-        </div>
-
-        <div class="idlg__body u-scroll-x">
-          <table class="itable dtable">
-            <thead>
-              <tr>
-                <th scope="col">
-                  {{ t('common.description') }}
-                </th>
-                <th
-                  scope="col"
-                  class="itable__num"
-                >
-                  {{ t('common.quantity') }}
-                </th>
-                <th
-                  scope="col"
-                  class="itable__num"
-                >
-                  {{ t('common.unitPrice') }}
-                </th>
-                <th
-                  scope="col"
-                  class="itable__num"
-                >
-                  {{ t('common.total') }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="!dialogItems.length">
-                <td
-                  :colspan="4"
-                  class="idlg__empty u-muted"
-                >
-                  {{ t('contracts.itemFilterNoMatch') }}
-                </td>
-              </tr>
-              <tr
-                v-for="(it, i) in dialogItems"
-                :key="i"
-              >
-                <td data-primary>
-                  <span class="idlg__desc">{{ it.description || '—' }}</span>
-                  <!-- The catalogue code links to the product's full profile:
-                       who else buys it, from whom, at what price. -->
-                  <NuxtLink
-                    v-if="it.code"
-                    :to="localePath(`/products/${encodeURIComponent(it.code)}`)"
-                    class="idlg__code u-mono"
-                    :title="t('contract.reference.viewProduct')"
-                  >{{ t('products.codeLabel', { code: it.code }) }}</NuxtLink>
-                </td>
-                <td
-                  class="itable__num"
-                  :data-label="t('common.quantity')"
-                >
-                  {{ qtyLabel(it) }}
-                </td>
-                <td
-                  class="itable__num"
-                  :data-label="t('common.unitPrice')"
-                >
-                  <MoneyAmount
-                    :amount="it.unitAmount"
-                    :currency="it.currency"
-                    :rule="false"
-                    size="sm"
-                    decimals
-                  />
-                </td>
-                <td
-                  class="itable__num"
-                  :data-label="t('common.total')"
-                >
-                  <MoneyAmount
-                    :amount="it.total"
-                    :currency="it.currency"
-                    size="sm"
-                  />
-                </td>
-              </tr>
-            </tbody>
-            <tfoot v-if="dialogTotal">
-              <tr>
-                <td :colspan="3">
-                  {{ t('common.total') }}
-                </td>
-                <td class="itable__num">
-                  <MoneyAmount
-                    :amount="dialogTotal.amount"
-                    :currency="dialogTotal.currency"
-                    size="sm"
-                    decimals
-                  />
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div class="idlg__foot">
-          <NuxtLink
-            v-if="itemsFor"
-            :to="localePath(`/contracts/${itemsFor.id}`)"
-            class="idlg__go"
-          >
-            {{ t('common.viewDetail') }}
-            <v-icon size="16">
-              mdi-arrow-right
-            </v-icon>
-          </NuxtLink>
-        </div>
-      </div>
-    </v-dialog>
+      :contract="itemsFor"
+      :rate-table="rateTable"
+      :search-phrase="filters.search"
+    />
   </div>
 </template>
 
