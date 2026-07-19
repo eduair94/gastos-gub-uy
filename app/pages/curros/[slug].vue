@@ -65,14 +65,11 @@ useSeo(() => ({
             {{ text?.dek }}
           </p>
           <div class="chero__tags">
-            <span
-              class="chip"
-              :class="`is-${data.status}`"
-            >{{ statusLabel(data.status) }}</span>
-            <span
-              v-if="data.amountReported"
-              class="chip chip--ghost"
-            >{{ t('curros.reported', { amount: data.amountReported }) }}</span>
+            <StatusChip
+              :status="data.status"
+              :label="statusLabel(data.status)"
+              on="ink"
+            />
           </div>
         </div>
       </section>
@@ -95,6 +92,15 @@ useSeo(() => ({
           <span class="kpi__n">{{ formatNumber(kpis.suppliers) }}</span>
           <span class="kpi__l">{{ t('curros.kpi.suppliers') }}</span>
         </div>
+        <!-- The press figure closes the band rather than sitting in the hero:
+             the point of the page is the distance between it and the computed
+             total two cells up, and that comparison is made by adjacency. -->
+        <ReportedFigure
+          v-if="data.amountReported"
+          class="kpis__reported"
+          :label="t('curros.reportedLabel')"
+          :claim="data.amountReported"
+        />
       </section>
 
       <!-- Hallazgo + status -->
@@ -107,10 +113,10 @@ useSeo(() => ({
             {{ text?.hallazgo }}
           </p>
           <div class="statusbox">
-            <span
-              class="chip"
-              :class="`is-${data.status}`"
-            >{{ statusLabel(data.status) }}</span>
+            <StatusChip
+              :status="data.status"
+              :label="statusLabel(data.status)"
+            />
             <p class="statusbox__note">
               {{ text?.statusNote }}
             </p>
@@ -160,65 +166,44 @@ useSeo(() => ({
 
       <!-- Breakdown charts -->
       <section class="u-container cols">
-        <div
+        <ChartBlock
           v-if="supplierBars.length"
-          class="block"
+          :title="t('curros.suppliersTitle')"
+          :help="t('curros.suppliersHelp')"
         >
-          <div class="block__head">
-            <h2>{{ t('curros.suppliersTitle') }}</h2>
-          </div>
-          <p class="block__help">
-            {{ t('curros.suppliersHelp') }}
-          </p>
-          <div class="panel panel--pad">
-            <div class="u-scroll-x">
-              <InvHBars
-                :items="supplierBars"
-                format="money"
-                :row-height="30"
-              />
-            </div>
-          </div>
-        </div>
+          <InvHBars
+            :items="supplierBars"
+            format="money"
+            :row-height="30"
+          />
+        </ChartBlock>
 
-        <div
+        <ChartBlock
           v-if="categoryBars.length"
-          class="block"
+          :title="t('curros.categoriesTitle')"
+          :help="t('curros.categoriesHelp')"
         >
-          <div class="block__head">
-            <h2>{{ t('curros.categoriesTitle') }}</h2>
-          </div>
-          <p class="block__help">
-            {{ t('curros.categoriesHelp') }}
-          </p>
-          <div class="panel panel--pad">
-            <div class="u-scroll-x">
-              <InvHBars
-                :items="categoryBars"
-                format="money"
-                :row-height="30"
-              />
-            </div>
-          </div>
-        </div>
+          <InvHBars
+            :items="categoryBars"
+            format="money"
+            :row-height="30"
+          />
+        </ChartBlock>
       </section>
 
       <!-- Year trend -->
-      <section
+      <ChartBlock
         v-if="byYear.length > 1"
         class="u-container block"
+        :title="t('curros.byYearTitle')"
+        :scroll="false"
       >
-        <div class="block__head">
-          <h2>{{ t('curros.byYearTitle') }}</h2>
-        </div>
-        <div class="panel panel--pad">
-          <YearBars
-            :data="byYear"
-            unit="count"
-            :height="150"
-          />
-        </div>
-      </section>
+        <YearBars
+          :data="byYear"
+          unit="count"
+          :height="150"
+        />
+      </ChartBlock>
 
       <!-- Ledger -->
       <section class="u-container block">
@@ -280,10 +265,11 @@ useSeo(() => ({
           >
             <span class="relcard__emoji">{{ r.emoji }}</span>
             <span class="relcard__t">{{ (locale === 'en' ? r.en : r.es).title }}</span>
-            <span
-              class="relcard__status"
-              :class="`is-${r.status}`"
-            >{{ statusLabel(r.status) }}</span>
+            <StatusChip
+              :status="r.status"
+              :label="statusLabel(r.status)"
+              variant="micro"
+            />
           </NuxtLink>
         </div>
       </section>
@@ -315,9 +301,9 @@ useSeo(() => ({
 
 .chero {
   background:
-    radial-gradient(1000px 340px at 88% -20%, color-mix(in srgb, var(--danger, #c0392b) 20%, transparent), transparent 70%),
+    radial-gradient(1000px 340px at 88% -20%, color-mix(in srgb, var(--ink-alerta) 20%, transparent), transparent 70%),
     var(--ink);
-  color: #eaf1f6;
+  color: var(--ink-fg);
   border-bottom: 1px solid var(--rule);
 }
 .chero__in { padding-block: clamp(var(--s-6), 5vw, var(--s-8)); }
@@ -326,7 +312,7 @@ useSeo(() => ({
   align-items: center;
   gap: var(--s-1);
   margin-bottom: var(--s-4);
-  color: #b9c8d4;
+  color: var(--ink-fg-dim);
   font-size: var(--t-sm);
   font-weight: 600;
   text-decoration: none;
@@ -350,29 +336,9 @@ useSeo(() => ({
   max-width: 62ch;
   font-size: var(--t-md);
   line-height: 1.55;
-  color: #b9c8d4;
+  color: var(--ink-fg-dim);
 }
 .chero__tags { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-5); }
-
-/* Status chip — shared with the narrative + related cards. */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 12px;
-  border-radius: var(--r-full);
-  font-size: var(--t-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  background: color-mix(in srgb, #fff 90%, transparent);
-  color: var(--ink);
-  white-space: nowrap;
-}
-.chip--ghost { background: transparent; color: #cdd9e2; border: 1px solid color-mix(in srgb, #fff 22%, transparent); text-transform: none; font-weight: 600; letter-spacing: 0; }
-.chip.is-condena { background: var(--danger, #c0392b); color: #fff; }
-.chip.is-procesamiento, .chip.is-formalizacion, .chip.is-juicio, .chip.is-imputacion { background: #e67e22; color: #fff; }
-.chip.is-investigacion, .chip.is-auditoria, .chip.is-denuncia, .chip.is-rescision { background: var(--sol); color: var(--ink); }
-.chip.is-absolucion, .chip.is-archivo { background: #7f8c8d; color: #fff; }
 
 /* KPIs */
 .kpis {
@@ -402,6 +368,8 @@ useSeo(() => ({
   letter-spacing: -0.03em;
 }
 .kpi__l { font-size: var(--t-sm); color: var(--text-muted); }
+/* Spans the band: it annotates all three figures, it is not a fourth one. */
+.kpis__reported { grid-column: 1 / -1; }
 
 /* Narrative + sources */
 .narrative {
@@ -414,6 +382,7 @@ useSeo(() => ({
 .narrative__p { margin: 0 0 var(--s-5); font-size: var(--t-md); line-height: 1.6; color: var(--text); max-width: 70ch; }
 .statusbox {
   display: flex;
+  align-items: flex-start;
   gap: var(--s-3);
   padding: var(--s-4);
   background: var(--surface-sunken);
@@ -458,9 +427,12 @@ useSeo(() => ({
 .block__help { margin: 0 0 var(--s-4); max-width: 70ch; font-size: var(--t-sm); color: var(--text-muted); }
 .block__all { font-size: var(--t-sm); font-weight: 600; color: var(--celeste-deep); text-decoration: none; }
 .block__all:hover { text-decoration: underline; }
-.panel--pad { padding: var(--s-5); }
 .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-6); margin-top: var(--s-8); }
-.cols .block { margin-top: 0; }
+/* min-width:0 on the items, not just minmax(0,…) on the tracks: a grid item
+   defaults to `min-width: auto`, so it adopts the chart's floor as its own
+   minimum and drags the track past the viewport no matter which media query
+   is live. Belt and braces, because this is the bug that shipped. */
+.cols > * { min-width: 0; margin-top: 0; }
 
 /* Ledger */
 .ledger { margin: 0; padding: 0; list-style: none; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
@@ -477,7 +449,6 @@ useSeo(() => ({
 .relcard { display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-4); border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--surface); color: var(--text); font-size: var(--t-sm); font-weight: 600; text-decoration: none; transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
 .relcard:hover { border-color: var(--celeste); background: var(--surface-sunken); }
 .relcard__emoji { font-size: 1.2em; }
-.relcard__status { padding: 1px 8px; border-radius: var(--r-full); font-size: 10px; font-weight: 700; text-transform: uppercase; background: var(--surface-sunken); color: var(--text-muted); border: 1px solid var(--rule); }
 
 /* Buttons + not found */
 .btn { display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-5); border-radius: var(--r-full); font-size: var(--t-sm); font-weight: 600; text-decoration: none; }
@@ -488,10 +459,13 @@ useSeo(() => ({
 .notfound__b { color: var(--text-muted); margin: 0 0 var(--s-5); }
 
 @media (max-width: 900px) {
-  .narrative { grid-template-columns: 1fr; }
-  .cols { grid-template-columns: 1fr; gap: var(--s-8); }
+  .narrative { grid-template-columns: minmax(0, 1fr); }
+  /* `1fr` here is `minmax(auto, 1fr)`, whose auto floor is the chart's
+     min-width — which is what made this page scroll sideways on a phone
+     despite the chart having its own scroller. Always minmax(0, …). */
+  .cols { grid-template-columns: minmax(0, 1fr); gap: var(--s-8); }
 }
 @media (max-width: 640px) {
-  .kpis { grid-template-columns: 1fr; margin-top: var(--s-5); }
+  .kpis { grid-template-columns: minmax(0, 1fr); margin-top: var(--s-5); }
 }
 </style>

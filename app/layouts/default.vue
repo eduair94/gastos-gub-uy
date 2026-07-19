@@ -39,6 +39,7 @@ const nav = computed(() => [
     { key: 'erroresCarga', to: localePath('/analytics/errores-carga'), icon: 'mdi-database-alert-outline' },
     { key: 'providerAnomalies', to: localePath('/analytics/proveedores-anomalias'), icon: 'mdi-account-alert-outline' },
     { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
+    { key: 'partidos', to: localePath('/analytics/partidos'), icon: 'mdi-vote-outline' },
     { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
     { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
   ] },

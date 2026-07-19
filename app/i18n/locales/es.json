@@ -296,7 +296,8 @@
         "ubicacion": "Ubicación",
         "estado": "Certificación",
         "vence": "Vence el {date}",
-        "contacto": "Contacto"
+        "contacto": "Contacto",
+        "mapLink": "Ver en Google Maps"
       },
       "size": {
         "micro": "Micro",
@@ -505,6 +506,7 @@
     "docTypes": {
       "label": "Tipo de documento",
       "awardNotice": "Acta de adjudicación",
+      "reiteracionGasto": "Reiteración del gasto",
       "tenderNotice": "Llamado",
       "biddingDocuments": "Pliego",
       "contractSigned": "Contrato firmado",
@@ -1842,6 +1844,7 @@
     "teaserBody": "Casos de corrupción en compras del Estado, cada uno con su estado judicial, sus fuentes y el cruce contrato por contrato con los datos.",
     "teaserCta": "Ver los casos",
     "reported": "Reportado por la prensa: {amount}",
+    "reportedLabel": "Reportado por la prensa",
     "kpi": {
       "total": "Adjudicado (cruce)",
       "count": "Contratos",

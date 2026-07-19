@@ -313,7 +313,9 @@ function fmtDate(iso: string | null): string {
 .keys__toolbar { display: flex; justify-content: flex-end; margin-bottom: var(--s-3); }
 .keys__empty { text-align: center; color: var(--text-muted); padding: var(--s-5); }
 .keys__scopelabel { margin: var(--s-4) 0 var(--s-1); font-size: var(--t-sm); color: var(--text-muted); }
-.keys__err { color: var(--rojo, #c0392b); font-size: var(--t-sm); margin-top: var(--s-2); }
+/* --rojo is not a token in this system; it fell back to a hex that ignores the
+   theme, so error text stayed dark red on the dark surface. --alerta is the signal. */
+.keys__err { color: var(--alerta); font-size: var(--t-sm); margin-top: var(--s-2); }
 .keys__token { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
 .keys__tokencode { flex: 1 1 260px; padding: var(--s-3); border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--surface-sunken); font-family: var(--font-mono); font-size: var(--t-sm); word-break: break-all; }
 .mr-1 { margin-right: 4px; }

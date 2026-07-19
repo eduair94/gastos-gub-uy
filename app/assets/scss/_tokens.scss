@@ -25,6 +25,10 @@
   --sol-wash: #f6ecd7;     // magnitude rule track
   --alerta: #b2423b;       // anomalies — the watchdog signal
   --alerta-wash: #f6e3e1;
+  // Label on a filled `--alerta` surface. Same contract as --cta-fg:
+  // --alerta INVERTS to a light salmon in dark mode, so a hardcoded
+  // white label washes out. Always pair the fill with this.
+  --alerta-fg: #ffffff;
   --grafito: #64757f;      // secondary text
   --verde: #3f7d62;        // completed / active status
 
@@ -47,6 +51,19 @@
   // hand-rolled filled button uses this pair, never `--celeste-deep + #fff`.
   --cta-fill: var(--celeste-deep);
   --cta-fg: #fff;
+
+  // --- On the ink hero ------------------------------------
+  // `--ink` is a dark surface in BOTH themes (it has no dark-mode
+  // override), so anything sitting on it must NOT use the paper
+  // tokens — they invert underneath it and go dark-on-dark. These
+  // five are declared once here and never overridden. Pages were
+  // hardcoding #eaf1f6 / #b9c8d4 and a phantom `var(--danger, #c0392b)`;
+  // that fallback is now a real token that reads the same in both themes.
+  --ink-fg: #eaf1f6;
+  --ink-fg-dim: #b9c8d4;
+  --ink-rule: rgb(255 255 255 / 22%);
+  --ink-alerta: #c0392b;
+  --ink-alerta-fg: #ffffff;
 
   // Money is the one thing that is gold. `--money` is the text
   // colour (contrast-safe per theme); `--money-rule` is the
@@ -131,6 +148,8 @@
   --sol-wash: #33280f;
   --alerta: #e0736a;
   --alerta-wash: #3a1e1c;
+  // alerta flips light here, so the label on a filled alerta flips dark.
+  --alerta-fg: #2a1210;
   --verde: #5fa584;
   --focus: #6ea8ff;
 

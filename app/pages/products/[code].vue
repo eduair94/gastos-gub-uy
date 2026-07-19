@@ -462,43 +462,31 @@ useSeo(() => ({
       </section>
 
       <!-- ===== Supplier concentration ===== -->
-      <section
+      <ChartBlock
         v-if="supplierConcentration.length > 1"
         class="block"
+        :title="t('products.detail.concentrationTitle')"
+        :help="t('products.detail.concentrationHelp')"
       >
-        <div class="block__head">
-          <h2>{{ t('products.detail.concentrationTitle') }}</h2>
-        </div>
-        <p class="block__help">
-          {{ t('products.detail.concentrationHelp') }}
-        </p>
-        <div class="panel panel--pad">
-          <ClientOnly>
-            <InvHBars
-              :items="supplierConcentration"
-              format="count"
-            />
-          </ClientOnly>
-        </div>
-      </section>
+        <ClientOnly>
+          <InvHBars
+            :items="supplierConcentration"
+            format="count"
+          />
+        </ClientOnly>
+      </ChartBlock>
 
       <!-- ===== Price dispersion ===== -->
-      <section
+      <ChartBlock
         v-if="priceUnits.length"
         class="block"
+        :title="t('products.detail.dispersionTitle')"
+        :help="t('products.detail.dispersionHelp')"
       >
-        <div class="block__head">
-          <h2>{{ t('products.detail.dispersionTitle') }}</h2>
-        </div>
-        <p class="block__help">
-          {{ t('products.detail.dispersionHelp') }}
-        </p>
-        <div class="panel panel--pad">
-          <ClientOnly>
-            <PriceDispersion :units="priceUnits" />
-          </ClientOnly>
-        </div>
-      </section>
+        <ClientOnly>
+          <PriceDispersion :units="priceUnits" />
+        </ClientOnly>
+      </ChartBlock>
 
       <!-- ===== Price reference ===== -->
       <section
@@ -807,7 +795,7 @@ useSeo(() => ({
 
 /* ---- Responsive ---- */
 @media (max-width: 980px) {
-  .cols { grid-template-columns: 1fr; }
+  .cols { grid-template-columns: minmax(0, 1fr); }
   .block--flush + .block--flush { margin-top: var(--s-6); }
 }
 
@@ -823,6 +811,6 @@ useSeo(() => ({
 }
 
 @media (max-width: 380px) {
-  .stats { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

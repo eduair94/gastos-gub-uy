@@ -771,6 +771,25 @@ class CronServer {
     );
     this.logger.info(`Organism-group refresh scheduled with expression: ${organismGroupExpression} (Uruguay timezone)`);
 
+    // Departmental procurement indicators for the party comparison page, monthly at 04:00 on the
+    // 1st — an hour after the organism-group rollup. Same full-collection scan cost (~170s), rarely
+    // changing month-to-month; writes its own dept_indicators collection, independent of busyWith.
+    const deptIndicatorsExpression = "0 4 1 * *";
+    cron.schedule(
+      deptIndicatorsExpression,
+      async () => {
+        try {
+          this.logger.info("Starting dept-indicators refresh...");
+          await this.runJobProcess("jobs/refresh-dept-indicators");
+          this.logger.info("Dept-indicators refresh completed successfully");
+        } catch (error) {
+          this.logger.error("Dept-indicators refresh failed:", error);
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Dept-indicators refresh scheduled with expression: ${deptIndicatorsExpression} (Uruguay timezone)`);
+
     // Product-variant distributions, weekly on Sunday at 07:00 — after the daily detector +
     // AI triage, so it scopes the current unexplained set. Heavier than the others (it scrapes
     // gov característica pages for uncached compras), hence weekly; independent of busyWith

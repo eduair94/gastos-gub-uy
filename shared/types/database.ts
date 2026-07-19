@@ -376,6 +376,8 @@ export interface IRelease extends Document {
   // Metadata fields for tracking data source
   sourceFileName?: string
   sourceYear?: number
+  // One-shot marker for the "reiteración del gasto" probe (see src/jobs/releases/reiteracion-probe.ts)
+  reiteracionProbedAt?: Date
   // Calculated amount field with multicurrency support
   amount?: {
     totalAmounts: Record<string, number> // e.g., { "UYU": 15000, "USD": 500 }

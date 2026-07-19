@@ -65,6 +65,7 @@ useSeo(() => ({
             :amount="i.total"
             compact
             size="md"
+            align="start"
           />
           <span class="card__count u-mono">{{ t('recop.card.count', { n: formatNumber(i.count) }) }}</span>
         </div>
@@ -183,6 +184,12 @@ useSeo(() => ({
   padding-top: var(--s-4);
   border-top: 1px solid var(--rule);
 }
+
+/* Pin the money rule to a fixed track width so its length is
+   comparable card-to-card — otherwise it shrink-wraps the figure
+   text and a 2-digit amount gets a shorter bar than a 3-digit one
+   for no magnitude reason. */
+.card__foot :deep(.money) { width: 84px; }
 
 .card__count { font-size: var(--t-xs); color: var(--text-muted); }
 

@@ -40,6 +40,17 @@ const webHref = computed(() => {
   return /^https?:\/\//i.test(w) ? w : `https://${w}`
 })
 
+/** tel: needs bare digits (+ allowed); strip the formatting the source data carries. */
+const telHref = computed(() => (props.dei.telefono ?? '').replace(/[^\d+]/g, ''))
+
+/** Coordinates win when present (exact establishment); else fall back to the address text. */
+const mapsHref = computed(() => {
+  const { lat, lng, direccion, localidad, departamento } = props.dei
+  if (lat != null && lng != null) return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+  const q = [direccion, localidad, departamento].filter(Boolean).join(', ')
+  return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null
+})
+
 /** Show the trade name only when it adds something over the legal name. */
 const showTrade = computed(() => {
   const n = props.dei.nombreComercial?.trim()
@@ -122,6 +133,16 @@ const mapPoints = computed<DeiMapPoint[]>(() => {
               v-if="dei.direccion"
               class="dei__sub"
             >{{ dei.direccion }}</span>
+            <a
+              v-if="mapsHref"
+              :href="mapsHref"
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              class="dei__link dei__maplink"
+            >
+              <v-icon size="14">mdi-map-marker-outline</v-icon>
+              {{ t('sup.dei.f.mapLink') }}
+            </a>
           </dd>
         </div>
         <div
@@ -155,10 +176,11 @@ const mapPoints = computed<DeiMapPoint[]>(() => {
               :href="`mailto:${dei.email}`"
               class="dei__link"
             >{{ dei.email }}</a>
-            <span
+            <a
               v-if="dei.telefono"
-              class="u-mono"
-            >{{ dei.telefono }}</span>
+              :href="`tel:${telHref}`"
+              class="dei__link u-mono"
+            >{{ dei.telefono }}</a>
           </dd>
         </div>
       </dl>
@@ -180,6 +202,19 @@ const mapPoints = computed<DeiMapPoint[]>(() => {
 </template>
 
 <style scoped>
+/* This page's other section headers get `.block__head` from the page's own
+   <style>, which scoped CSS can't reach across into this component — so this
+   card needs its own copy. `align-items: center` (not the sitewide `baseline`)
+   because it pairs a heading with a chip, not two text baselines. */
+.block__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+
 .dei { padding: var(--s-5); }
 
 .dei__grid {
@@ -242,6 +277,16 @@ const mapPoints = computed<DeiMapPoint[]>(() => {
 }
 
 .dei__link:hover { text-decoration: underline; }
+
+.dei__maplink {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
 
 .dei__map { margin-top: var(--s-5); }
 

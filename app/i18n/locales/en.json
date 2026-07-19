@@ -296,7 +296,8 @@
         "ubicacion": "Location",
         "estado": "Certification",
         "vence": "Expires {date}",
-        "contacto": "Contact"
+        "contacto": "Contact",
+        "mapLink": "View on Google Maps"
       },
       "size": {
         "micro": "Micro",
@@ -505,6 +506,7 @@
     "docTypes": {
       "label": "Document type",
       "awardNotice": "Award notice",
+      "reiteracionGasto": "Expense reiteration",
       "tenderNotice": "Tender notice",
       "biddingDocuments": "Bidding documents",
       "contractSigned": "Signed contract",
@@ -1842,6 +1844,7 @@
     "teaserBody": "Corruption cases in state procurement, each with its legal status, its sources and the contract-by-contract cross-reference with the data.",
     "teaserCta": "See the cases",
     "reported": "Reported by the press: {amount}",
+    "reportedLabel": "Reported by the press",
     "kpi": {
       "total": "Awarded (cross-ref)",
       "count": "Contracts",

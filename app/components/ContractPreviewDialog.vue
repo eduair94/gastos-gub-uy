@@ -39,16 +39,9 @@ watch(() => props.contract, () => {
   filterQuery.value = ''
 })
 
-// `rowTitle` inlined (it lives in the page, not utils): the explicit subject,
-// else the stage-named fallback — same as the row heading.
-const title = computed(() => {
-  const c = props.contract
-  if (!c) return ''
-  const explicit = contractTitle(c)
-  if (explicit) return explicit
-  const fb = contractTitleFallback(c)
-  return t(fb.key, fb.params)
-})
+// The explicit subject, else the stage-named fallback — same as the row heading.
+const contractName = useContractTitle()
+const title = computed(() => contractName(props.contract))
 const stage = computed(() => primaryTag(props.contract))
 const buyer = computed(() => props.contract?.buyer ?? null)
 const suppliers = computed(() => contractSuppliers(props.contract))

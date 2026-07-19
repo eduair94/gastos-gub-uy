@@ -21,20 +21,11 @@ const rateTable = computed(() => rateRes.value?.data ?? null)
 const itemDate = computed(() => contractDate(contract.value))
 const notFound = computed(() => !!error.value || !contract.value)
 
-/**
- * Names the page.
- *
- * A clarification or an amendment has no subject of its own, so
- * `contractTitle` returns ''. Naming the stage and the tender it belongs
- * to says what the release actually is, where a bare "Contrato" read as
- * missing data.
- */
-const title = computed(() => {
-  const explicit = contractTitle(contract.value)
-  if (explicit) return explicit
-  const fb = contractTitleFallback(contract.value)
-  return t(fb.key, fb.params)
-})
+// Names the page, and every related row below it: the explicit subject,
+// else the stage-named fallback.
+const contractName = useContractTitle()
+
+const title = computed(() => contractName(contract.value))
 
 /**
  * What is actually being bought, when the title doesn't say.
@@ -350,6 +341,8 @@ interface ContactPoint {
 
 interface PartyRow {
   key: string
+  id?: string
+  isBuyer: boolean
   name: string
   roles: string[]
   to: string | null
@@ -422,6 +415,8 @@ const partyRoster = computed<PartyRow[]>(() => {
 
     return {
       key: `${p.id ?? p.name}-${i}`,
+      id: p.id,
+      isBuyer: p.roles.includes('buyer') || p.roles.includes('procuringEntity'),
       name: p.name,
       roles: p.roles,
       to: partyPath(p.id, p.roles),
@@ -738,16 +733,73 @@ const rawOpen = ref(false)
 // "What else does this agency buy?" is the most common next question.
 // `contract` is already resolved here, so the query is a plain value.
 const buyerName = contract.value?.buyer?.name ?? ''
+
+/**
+ * The agency's other purchases.
+ *
+ * `tag: 'award'` is load-bearing. Sorted by date alone, a busy organismo's
+ * newest releases are all `tenderUpdate` aclaraciones — no title, no
+ * supplier, no amount — so every row rendered as "Contrato / today / $ 0",
+ * and three of them were clarifications of the SAME llamado. Only the
+ * award stage is a purchase with a subject and a price. `awardUpdate` is
+ * excluded too: the `ajuste_adjudicacion` records carry the correction on
+ * the parent ocid and have no items or suppliers of their own.
+ *
+ * `count=false` because this list never paginates, and counting a
+ * tag-filtered match costs more than the twelve rows do. `slim=true`
+ * drops the award line detail no row displays.
+ */
 const { data: relatedRes } = await useFetch<any>('/api/contracts', {
-  query: { buyers: buyerName, limit: 5, sortBy: 'date', sortOrder: 'desc' },
+  query: {
+    buyers: buyerName,
+    tag: 'award',
+    limit: 12,
+    slim: 'true',
+    count: 'false',
+    sortBy: 'date',
+    sortOrder: 'desc',
+  },
   immediate: !!buyerName,
 })
 
-const related = computed<ContractLike[]>(() =>
-  (relatedRes.value?.data?.contracts ?? [])
-    .filter((c: any) => c.id !== contract.value?.id)
-    .slice(0, 4),
-)
+const RELATED_ROWS = 4
+
+/**
+ * One row per purchase, not per release.
+ *
+ * Filtering on release `id` was not enough: several releases share an
+ * ocid, so the contract you are reading could reappear under a different
+ * id, and two adjustments of one purchase read as two contracts.
+ */
+const related = computed<ContractLike[]>(() => {
+  const rows = (relatedRes.value?.data?.contracts ?? []) as ContractLike[]
+  const seen = new Set<string>()
+  const out: ContractLike[] = []
+
+  for (const r of rows) {
+    if (r.id === contract.value?.id) continue
+    const key = r.ocid || r.id || ''
+    if (!key || key === contract.value?.ocid || seen.has(key)) continue
+    seen.add(key)
+    out.push(r)
+    if (out.length === RELATED_ROWS) break
+  }
+  return out
+})
+
+/** The supplier that won it — what tells two rows of the same agency apart. */
+function relatedSupplier(c: ContractLike): string {
+  return contractSuppliers(c)[0]?.name ?? ''
+}
+
+/**
+ * `primaryAmount` is 0 both for "free" and for "the source reported no
+ * money". Only the first is a fact, so a release with no reported amount
+ * says so rather than showing a confident $ 0.
+ */
+function relatedAmount(c: ContractLike): number | null {
+  return c.amount?.hasAmounts ? contractAmount(c) : null
+}
 
 useSeo(() => ({
   title: contract.value
@@ -1057,6 +1109,18 @@ useSeo(() => ({
                   v-else
                   class="party__name party__name--plain"
                 >{{ p.name || '—' }}</span>
+
+                <!-- Which administration held office the year this was recorded —
+                     public record, context only. Silent for organisms with no
+                     executive mandate (judiciary, university) and undated releases. -->
+                <MandateChip
+                  v-if="p.isBuyer && p.id"
+                  :buyer-id="p.id"
+                  :year="contract?.sourceYear"
+                  show-self-governed
+                  class="party__mandate"
+                />
+
                 <span
                   v-if="p.legalName"
                   class="party__sub"
@@ -1574,10 +1638,16 @@ useSeo(() => ({
                   :to="localePath(`/contracts/${r.id}`)"
                   class="rank__link"
                 >
-                  <span class="rank__name u-truncate">{{ contractTitle(r) || t('common.contract') }}</span>
+                  <span class="rank__main">
+                    <span class="rank__name u-truncate">{{ contractName(r) }}</span>
+                    <span
+                      v-if="relatedSupplier(r)"
+                      class="rank__sub u-truncate"
+                    >{{ relatedSupplier(r) }}</span>
+                  </span>
                   <span class="rank__meta">{{ formatDate(contractDate(r)) }}</span>
                   <MoneyAmount
-                    :amount="contractAmount(r)"
+                    :amount="relatedAmount(r)"
                     :currency="contractCurrency(r)"
                     compact
                     size="sm"
@@ -2105,6 +2175,8 @@ a.party__name:hover { text-decoration: underline; }
   overflow-wrap: anywhere;
 }
 
+.party__mandate { align-self: flex-start; margin-top: 2px; }
+
 /* ---- Submission conditions ---- */
 .subm__part {
   display: block;
@@ -2426,9 +2498,24 @@ a.itable__code:hover { text-decoration: underline; }
 
 .rank__link:hover { background: var(--surface-sunken); }
 
+/* Two lines in the first column. `min-width: 0` is what lets the
+   truncation inside it work — the `minmax(0, 1fr)` on the column only
+   protects a direct child. */
+.rank__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .rank__name {
   font-size: var(--t-sm);
   font-weight: 600;
+}
+
+.rank__sub {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
 }
 
 .rank__meta {

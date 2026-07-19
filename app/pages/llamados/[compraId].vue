@@ -294,8 +294,8 @@ async function setReminder(days: number) {
 .calldetail__source:hover { text-decoration: underline; }
 .calldetail__remind { max-width: 120px; }
 .calldetail__loginhint { font-size: var(--t-sm); text-decoration: none; }
-.calldetail__grid { display: grid; grid-template-columns: 1fr; gap: var(--s-4); }
-@media (min-width: 900px) { .calldetail__grid { grid-template-columns: 2fr 1fr; } }
+.calldetail__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+@media (min-width: 900px) { .calldetail__grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
 .calldetail__main, .calldetail__aside { display: flex; flex-direction: column; gap: var(--s-4); }
 .calldetail__section { padding: var(--s-5); }
 .calldetail__section h2 { margin: 0 0 var(--s-3); }

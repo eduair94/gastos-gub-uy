@@ -401,6 +401,12 @@ const priceUnitLabel = (pb: PriceBaseline) => [pb.currency, pb.unitName].filter(
 
 @media (max-width: 700px) {
   .rb__cols { grid-template-columns: 1fr; }
+  /* Price band: stack the currency cards full-width and let p25·mediana·p95
+     wrap inside the box instead of spilling out of it. */
+  .rb__prices { flex-direction: column; }
+  .rb__price { width: 100%; }
+  .rb__band { flex-wrap: wrap; gap: var(--s-3) var(--s-4); }
+  .rb__pcell--mid { padding: 0; border-inline: 0; }
 }
 @media (max-width: 480px) {
   .rb__ranklink { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }

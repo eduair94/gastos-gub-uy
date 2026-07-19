@@ -356,6 +356,16 @@ useSeo(() => ({
         {{ t('buyers.detail.recordHelp', { year: firstPricedYear }) }}
       </p>
 
+      <!-- ===== Political mandate timeline ===== -->
+      <!-- Renders itself only for organisms with an executive mandate (departmental
+           or executive-controlled); silent for the judiciary, university, etc. -->
+      <MandateTimeline
+        class="block"
+        :buyer-id="buyer?.buyerId"
+        :first-year="firstYear"
+        :last-year="lastYear"
+      />
+
       <!-- ===== Spending by year ===== -->
       <section
         v-if="byYear.length"

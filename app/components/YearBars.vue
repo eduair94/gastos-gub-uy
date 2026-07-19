@@ -66,6 +66,25 @@ onMounted(() => {
   onBeforeUnmount(() => mo.disconnect())
 })
 
+/**
+ * Chart.js lays out into the size cached by its last resize, and it defers a
+ * resize while its entry animation is running (`_resizeBeforeDraw`). A viewport
+ * change during those 420ms therefore leaves the canvas at its OLD width — a
+ * 1151px canvas inside a 706px box, i.e. a chart that renders mostly off its own
+ * panel and reads as blank. Watch the wrapper and re-measure explicitly.
+ */
+const wrap = ref<HTMLElement | null>(null)
+const barRef = ref<any>(null)
+let ro: ResizeObserver | undefined
+
+onMounted(() => {
+  if (!wrap.value || typeof ResizeObserver === 'undefined') return
+  ro = new ResizeObserver(() => barRef.value?.chart?.resize())
+  ro.observe(wrap.value)
+})
+
+onBeforeUnmount(() => ro?.disconnect())
+
 const sorted = computed(() => [...props.data].sort((a, b) => a.year - b.year))
 
 const chartData = computed(() => ({
@@ -135,6 +154,12 @@ const chartOptions = computed(() => ({
         color: theme.value.text,
         font: { family: 'IBM Plex Mono, monospace', size: 11 },
         maxTicksLimit: 5,
+        // Counts are integers. Without this a 0..1 range (two years with one
+        // contract each — every small curro/recopilatorio) yields 0 / 0,5 / 1,
+        // and half a contract is not a thing. Chart.js ceils the tick spacing
+        // to this many decimals; a callback returning '' would leave the slot
+        // allocated and put a gap in the gridline labels instead.
+        precision: props.unit === 'count' ? 0 : undefined,
         padding: 6,
         callback: (v: number | string) => fmt(Number(v)),
       },
@@ -154,11 +179,13 @@ const chartOptions = computed(() => ({
 
 <template>
   <div
+    ref="wrap"
     class="yb"
     :style="{ height: `${height}px` }"
   >
     <ClientOnly>
       <Bar
+        ref="barRef"
         :data="chartData"
         :options="chartOptions"
       />

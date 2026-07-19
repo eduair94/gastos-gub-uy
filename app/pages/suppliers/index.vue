@@ -369,17 +369,19 @@ useSeo(() => ({
                 class="ctable__obj"
                 data-primary
               >
-                <NuxtLink
-                  :to="supplierPath(s.supplierId)"
-                  class="ctable__link"
-                >
-                  {{ s.name }}
-                </NuxtLink>
-                <SupplierChip :category="s.category" />
-                <DeiChip
-                  v-if="s.dei"
-                  :estado="s.dei.estado"
-                />
+                <div class="ctable__namerow d-flex align-center flex-wrap ga-2">
+                  <NuxtLink
+                    :to="supplierPath(s.supplierId)"
+                    class="ctable__link"
+                  >
+                    {{ s.name }}
+                  </NuxtLink>
+                  <SupplierChip :category="s.category" />
+                  <DeiChip
+                    v-if="s.dei"
+                    :estado="s.dei.estado"
+                  />
+                </div>
                 <span class="ctable__id">{{ s.supplierId }}</span>
               </td>
               <td

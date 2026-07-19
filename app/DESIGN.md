@@ -85,6 +85,43 @@ even if the class is used on a raw `v-btn`.
 <CellLink :to="drillTo(x)" :disabled="row.total <= 0" :label="t('...')" />
 ```
 
+## Charts live in `<ChartBlock>`
+
+Never hand-roll a chart section. `<ChartBlock>` owns the heading, the help
+line, the panel and — the reason it exists — the overflow:
+
+```vue
+<ChartBlock :title="t('x.title')" :help="t('x.help')">
+  <InvHBars :items="bars" format="money" />
+</ChartBlock>
+<ChartBlock :title="t('y.title')" :scroll="false">  <!-- already-fluid charts -->
+  <YearBars :data="byYear" unit="count" />
+</ChartBlock>
+```
+
+It carries `min-width: 0` at every level, keeps the sideways scroll **inside**
+the chart body, and signals it (edge fade + a `⇄` on the heading) so data behind
+a gesture is never silently hidden. `InvHBars` additionally switches to a
+label-above-the-bar layout under 640px, so phones usually need no gesture at all.
+
+**Never write a bare `1fr` grid track around a chart.** `1fr` means
+`minmax(auto, 1fr)`, whose auto floor is the chart's own min-width, so the track
+widens past the viewport and the whole page scrolls sideways — even though the
+chart has its own scroller. Always `minmax(0, 1fr)`, plus `min-width: 0` on the
+grid items. This shipped as a real bug on `/curros/[slug]`.
+
+## Status is `<StatusChip>`, prose is not a chip
+
+Legal/case status uses `<StatusChip :status="slug" :label="t(...)" />` — one
+vocabulary, one colour map, `on="ink"` for the dark hero (`--ink` does not flip
+per theme, so paper tokens go dark-on-dark there). It never stretches in a flex
+row and never widens the page.
+
+A chip is a token from a fixed vocabulary. A sentence is not: an attributed
+claim goes in `<ReportedFigure>` (mono caption + prose), never a `nowrap` pill.
+Quoted source prose keeps its figures as plain ink — `<MoneyAmount>` gold means
+"a figure this site derived from the data", and a press claim has not earned it.
+
 ## Structure is information
 
 Eyebrows name a real category of thing. **Do not use numbered markers

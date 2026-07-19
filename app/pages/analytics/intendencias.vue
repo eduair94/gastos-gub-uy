@@ -500,6 +500,16 @@ useSeo(() => ({
                 v-if="item.population"
                 class="dept__pop u-mono"
               >{{ t('intend.hab', { n: formatCount(item.population) }) }}</span>
+              <!-- Intendente governing the selected year. Year view only: in the
+                   acumulado (all-time) view a single administration would misrepresent
+                   the span — the full succession lives on the department profile. -->
+              <MandateChip
+                v-if="!isAll && yr"
+                :buyer-id="item.buyerId"
+                :year="yr"
+                size="x-small"
+                class="dept__mandate"
+              />
             </template>
             <template #[`item.total`]="{ item }">
               <MoneyAmount
@@ -798,6 +808,7 @@ useSeo(() => ({
 .dept__link:hover { color: var(--celeste-deep); text-decoration: underline; }
 .dept--mvd { font-weight: 700; color: var(--celeste-deep); }
 .dept__pop { display: block; font-size: var(--t-xs); color: var(--text-muted); }
+.dept__mandate { margin-top: 4px; }
 .muted { color: var(--text-muted); }
 
 .yoy { font-weight: 700; font-size: var(--t-sm); }

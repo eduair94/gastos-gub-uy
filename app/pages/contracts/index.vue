@@ -315,23 +315,24 @@ function clearAll() {
 
 const railOpen = ref(false)
 
-/**
- * Names every row.
- *
- * A clarification or an amendment has no subject of its own, so
- * `contractTitle` returns ''. Printing a bare "Contrato" there made the
- * row look like broken data; naming the stage and the tender it belongs
- * to says what it actually is.
- */
-function rowTitle(c: ContractLike): string {
-  const title = contractTitle(c)
-  if (title) return title
-  const fb = contractTitleFallback(c)
-  return t(fb.key, fb.params)
-}
+/** Names every row: the explicit subject, else the stage-named fallback. */
+const rowTitle = useContractTitle()
 
 function itemCount(c: ContractLike): number {
   return (c.awards ?? []).reduce((n, a) => n + (a.items?.length ?? 0), 0)
+}
+
+// The buyer/supplier cells are the two other entities a reader wants to pivot
+// on from a result row ("what else did this organismo buy?"), so each links to
+// its profile. `/suppliers/[...id]` is a catch-all: supplier ids can contain a
+// slash, so encode segment-by-segment instead of collapsing it into `%2F`.
+function buyerLink(c: ContractLike): string | null {
+  const id = c.buyer?.id
+  return id ? localePath(`/buyers/${encodeURIComponent(id)}`) : null
+}
+
+function supplierLink(id?: string): string | null {
+  return id ? localePath(`/suppliers/${id.split('/').map(encodeURIComponent).join('/')}`) : null
 }
 
 /** How many item lines a row previews before collapsing to a count. */
@@ -853,13 +854,29 @@ useSeo(() => ({
                     class="ctable__c-buyer"
                     :data-label="t('contracts.table.buyer')"
                   >
-                    <span class="u-clamp-2">{{ c.buyer?.name || '—' }}</span>
+                    <NuxtLink
+                      v-if="buyerLink(c)"
+                      :to="buyerLink(c) || ''"
+                      class="ctable__elink u-clamp-2"
+                    >{{ c.buyer?.name || c.buyer?.id }}</NuxtLink>
+                    <span
+                      v-else
+                      class="u-clamp-2"
+                    >{{ c.buyer?.name || '—' }}</span>
                   </td>
                   <td
                     class="ctable__c-sup"
                     :data-label="t('contracts.table.supplier')"
                   >
-                    <span class="u-clamp-2">{{ contractSuppliers(c)[0]?.name || '—' }}</span>
+                    <NuxtLink
+                      v-if="supplierLink(contractSuppliers(c)[0]?.id)"
+                      :to="supplierLink(contractSuppliers(c)[0]?.id) || ''"
+                      class="ctable__elink u-clamp-2"
+                    >{{ contractSuppliers(c)[0]?.name }}</NuxtLink>
+                    <span
+                      v-else
+                      class="u-clamp-2"
+                    >{{ contractSuppliers(c)[0]?.name || '—' }}</span>
                   </td>
                   <td
                     class="ctable__c-date u-mono"
@@ -1360,6 +1377,20 @@ useSeo(() => ({
 .ctable__c-sup {
   max-width: 190px;
   color: var(--text-muted);
+}
+
+/* Secondary links: they must not out-shout the row title, so they stay muted
+   and only reveal themselves (celeste + underline) on hover/focus. */
+.ctable__elink {
+  color: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.ctable__elink:hover,
+.ctable__elink:focus-visible {
+  color: var(--celeste-deep);
+  text-decoration: underline;
 }
 
 .ctable__c-date {

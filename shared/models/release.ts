@@ -131,6 +131,8 @@ const ReleaseSchema = new Schema<IRelease>(
     // Metadata fields for tracking data source
     sourceFileName: { type: String },
     sourceYear: { type: Number },
+    // One-shot marker for the "reiteración del gasto" probe (see src/jobs/releases/reiteracion-probe.ts)
+    reiteracionProbedAt: { type: Date },
     // Calculated amount field with multicurrency support
     amount: {
       version: {type: Number, default: 0},

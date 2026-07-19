@@ -282,7 +282,14 @@ export function toMatchDocument(filters: ContractFilters): Record<string, unknow
 async function countContracts(
   filters: ContractFilters,
   match: Record<string, unknown>,
+  skip = false,
 ): Promise<{ total: number | null, totalIsCapped: boolean }> {
+  // `count=false` — for callers that render a fixed-size teaser and never
+  // paginate. With a non-selective filter like `tag` in the match, the
+  // count stops being an index-only COUNT_SCAN and starts fetching up to
+  // 10001 whole releases, which is more work than the rows themselves.
+  if (skip) return { total: null, totalIsCapped: false }
+
   try {
     if (!filters.hasFilters) {
       return { total: await ReleaseModel.estimatedDocumentCount(), totalIsCapped: false }
@@ -440,6 +447,44 @@ export default defineEventHandler(async (event) => {
     pipeline.push({ $skip: skip })
     pipeline.push({ $limit: limit })
 
+    // `slim=true` — the fields a compact contract row needs, and nothing
+    // else. A release carries every award line with its unit, quantity and
+    // classification; a related-contracts teaser shows a title, a date, a
+    // supplier and an amount. Without this the whole payload is serialised
+    // into the SSR page for rows that never display it.
+    if (query.slim === 'true') {
+      pipeline.push({
+        $project: {
+          'id': 1,
+          'ocid': 1,
+          'date': 1,
+          'sourceYear': 1,
+          'tag': 1,
+          'buyer.id': 1,
+          'buyer.name': 1,
+          'tender.id': 1,
+          'tender.title': 1,
+          'tender.description': 1,
+          'tender.procurementMethodDetails': 1,
+          'awards.suppliers.id': 1,
+          'awards.suppliers.name': 1,
+          // `contractTitle` falls back through the item descriptions when
+          // the tender has no title of its own, so the row would be
+          // unnamed without these two.
+          'awards.items.description': 1,
+          'awards.items.classification.description': 1,
+          'amount.primaryAmount': 1,
+          'amount.primaryCurrency': 1,
+          'amount.currencies': 1,
+          'amount.hasAmounts': 1,
+          'amount.totalItems': 1,
+          // No-ops unless single-product focus mode added them above.
+          'compraId': 1,
+          'focusItem': 1,
+        },
+      })
+    }
+
     const aggregationOptions: Record<string, unknown> = {
       allowDiskUse: false, // Keep queries in memory; fail fast rather than thrash.
       maxTimeMS: filters.text ? 8000 : 15000,
@@ -460,7 +505,7 @@ export default defineEventHandler(async (event) => {
 
     const [rawContracts, { total, totalIsCapped }] = await Promise.all([
       ReleaseModel.aggregate(pipeline, aggregationOptions),
-      countContracts(filters, match),
+      countContracts(filters, match, query.count === 'false'),
     ])
 
     // `sourceUrl` is derived, not stored — see server/utils/query.ts.

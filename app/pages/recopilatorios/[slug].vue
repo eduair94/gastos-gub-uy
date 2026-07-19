@@ -90,62 +90,43 @@ useSeo(() => ({
 
       <!-- Breakdown charts -->
       <section class="u-container cols">
-        <div class="block">
-          <div class="block__head">
-            <h2>{{ t('recop.suppliersTitle') }}</h2>
-          </div>
-          <p class="block__help">
-            {{ t('recop.suppliersHelp') }}
-          </p>
-          <div class="panel panel--pad">
-            <div class="u-scroll-x">
-              <InvHBars
-                :items="supplierBars"
-                format="money"
-                :row-height="30"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div
-          v-if="categoryBars.length"
-          class="block"
+        <ChartBlock
+          :title="t('recop.suppliersTitle')"
+          :help="t('recop.suppliersHelp')"
         >
-          <div class="block__head">
-            <h2>{{ t('recop.categoriesTitle') }}</h2>
-          </div>
-          <p class="block__help">
-            {{ t('recop.categoriesHelp') }}
-          </p>
-          <div class="panel panel--pad">
-            <div class="u-scroll-x">
-              <InvHBars
-                :items="categoryBars"
-                format="money"
-                :row-height="30"
-              />
-            </div>
-          </div>
-        </div>
+          <InvHBars
+            :items="supplierBars"
+            format="money"
+            :row-height="30"
+          />
+        </ChartBlock>
+
+        <ChartBlock
+          v-if="categoryBars.length"
+          :title="t('recop.categoriesTitle')"
+          :help="t('recop.categoriesHelp')"
+        >
+          <InvHBars
+            :items="categoryBars"
+            format="money"
+            :row-height="30"
+          />
+        </ChartBlock>
       </section>
 
       <!-- Year trend -->
-      <section
+      <ChartBlock
         v-if="byYear.length > 1"
         class="u-container block"
+        :title="t('recop.byYearTitle')"
+        :scroll="false"
       >
-        <div class="block__head">
-          <h2>{{ t('recop.byYearTitle') }}</h2>
-        </div>
-        <div class="panel panel--pad">
-          <YearBars
-            :data="byYear"
-            unit="count"
-            :height="150"
-          />
-        </div>
-      </section>
+        <YearBars
+          :data="byYear"
+          unit="count"
+          :height="150"
+        />
+      </ChartBlock>
 
       <!-- Ledger -->
       <section class="u-container block">
@@ -355,8 +336,6 @@ useSeo(() => ({
 
 .block__all:hover { text-decoration: underline; }
 
-.panel--pad { padding: var(--s-5); }
-
 .cols {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -364,7 +343,10 @@ useSeo(() => ({
   margin-top: var(--s-8);
 }
 
-.cols .block { margin-top: 0; }
+/* min-width:0 on the items, not just minmax(0,…) on the tracks: a grid item
+   defaults to `min-width: auto` and would adopt the chart's floor as its own
+   minimum, widening the track past the viewport whichever media query is live. */
+.cols > * { min-width: 0; margin-top: 0; }
 
 /* Ledger */
 .ledger {
@@ -446,10 +428,12 @@ useSeo(() => ({
 .notfound__b { color: var(--text-muted); margin: 0 0 var(--s-5); }
 
 @media (max-width: 900px) {
-  .cols { grid-template-columns: 1fr; gap: var(--s-8); }
+  /* Never bare `1fr` around a chart: that is `minmax(auto, 1fr)`, and the auto
+     floor is the chart's own min-width, which scrolls the whole page sideways. */
+  .cols { grid-template-columns: minmax(0, 1fr); gap: var(--s-8); }
 }
 
 @media (max-width: 640px) {
-  .kpis { grid-template-columns: 1fr; margin-top: var(--s-5); }
+  .kpis { grid-template-columns: minmax(0, 1fr); margin-top: var(--s-5); }
 }
 </style>

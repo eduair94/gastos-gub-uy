@@ -59,10 +59,10 @@ useSeo(() => ({
       >
         <div class="card__top">
           <span class="card__emoji">{{ i.emoji }}</span>
-          <span
-            class="card__status"
-            :class="`is-${i.status}`"
-          >{{ statusLabel(i.status) }}</span>
+          <StatusChip
+            :status="i.status"
+            :label="statusLabel(i.status)"
+          />
         </div>
         <h2 class="card__title">
           {{ itemText(i).title }}
@@ -131,9 +131,9 @@ useSeo(() => ({
 
 .chero {
   background:
-    radial-gradient(1000px 340px at 88% -20%, color-mix(in srgb, var(--danger, #c0392b) 22%, transparent), transparent 70%),
+    radial-gradient(1000px 340px at 88% -20%, color-mix(in srgb, var(--ink-alerta) 22%, transparent), transparent 70%),
     var(--ink);
-  color: #eaf1f6;
+  color: var(--ink-fg);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -157,7 +157,7 @@ useSeo(() => ({
   max-width: 60ch;
   font-size: var(--t-md);
   line-height: 1.55;
-  color: #b9c8d4;
+  color: var(--ink-fg-dim);
 }
 
 .chero__disclaimer {
@@ -209,31 +209,6 @@ useSeo(() => ({
 }
 
 .card__emoji { font-size: 2rem; line-height: 1; }
-
-.card__status {
-  padding: 2px 10px;
-  border-radius: var(--r-full);
-  font-size: var(--t-2xs, 11px);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  background: var(--surface-sunken);
-  color: var(--text-muted);
-  border: 1px solid var(--rule);
-  white-space: nowrap;
-}
-/* Severity tint: darker for court stages, lighter for early/closed ones. */
-.card__status.is-condena { background: color-mix(in srgb, var(--danger, #c0392b) 16%, transparent); color: var(--danger, #c0392b); border-color: color-mix(in srgb, var(--danger, #c0392b) 35%, transparent); }
-.card__status.is-procesamiento,
-.card__status.is-formalizacion,
-.card__status.is-juicio,
-.card__status.is-imputacion { background: color-mix(in srgb, #e67e22 16%, transparent); color: #b9651a; border-color: color-mix(in srgb, #e67e22 32%, transparent); }
-.card__status.is-investigacion,
-.card__status.is-auditoria,
-.card__status.is-denuncia,
-.card__status.is-rescision { background: color-mix(in srgb, var(--sol) 18%, transparent); color: var(--sol-deep, #8a6d00); border-color: color-mix(in srgb, var(--sol) 34%, transparent); }
-.card__status.is-absolucion,
-.card__status.is-archivo { background: var(--surface-sunken); color: var(--text-muted); }
 
 .card__title { margin: 0 0 var(--s-2); font-size: var(--t-lg); line-height: 1.2; }
 .card__dek {

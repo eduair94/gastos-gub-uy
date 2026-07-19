@@ -314,7 +314,8 @@ function supplierHref(k: EmpCase) {
 </template>
 
 <style scoped>
-.emp-good { color: var(--money, #1a7f4b); }
+/* A count of companies found in the data — presence, not pesos. Not gold. */
+.emp-good { color: var(--verde); }
 .emp-warn { color: var(--alerta); }
 .emp-cond { color: var(--alerta); }
 
@@ -338,11 +339,16 @@ function supplierHref(k: EmpCase) {
 }
 .emp-flag--condena { border-color: var(--alerta); color: var(--alerta); font-weight: 700; }
 .emp-flag--procesamiento, .emp-flag--imputacion { border-color: color-mix(in srgb, var(--alerta) 60%, transparent); color: var(--alerta); }
-.emp-flag--denuncia { border-color: color-mix(in srgb, var(--sol) 60%, transparent); color: var(--money); }
+/* Preliminary signal — celeste, like `observacion`. It used --sol/--money:
+   gold is money and nothing else, and a denuncia is not a peso figure. */
+.emp-flag--denuncia { border-color: color-mix(in srgb, var(--celeste) 55%, transparent); color: var(--celeste-deep); }
 .emp-flag--investigacion { border-color: var(--rule-strong); color: var(--text); }
 .emp-flag--observacion { border-color: color-mix(in srgb, var(--celeste) 55%, transparent); color: var(--celeste-deep); }
 .emp-flag--periodistica { border-color: var(--rule); color: var(--text-muted); }
-.emp-db--in { border-color: color-mix(in srgb, var(--money, #1a7f4b) 45%, transparent); color: var(--money, #1a7f4b); }
+/* "Is it in the data" is coverage, not money — --verde is the presence token.
+   (It was painting `var(--money, #1a7f4b)`: gold for a non-money badge, against
+   an undefined token, so it fell back to a hex that ignores the theme.) */
+.emp-db--in { border-color: color-mix(in srgb, var(--verde) 45%, transparent); color: var(--verde); }
 .emp-db--out { border-color: color-mix(in srgb, var(--alerta) 35%, transparent); color: var(--text-muted); }
 
 .emp-card__alleg { margin: 0 0 var(--s-3); font-size: var(--t-base); line-height: 1.6; }

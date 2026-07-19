@@ -73,6 +73,29 @@ const summary = computed<any>(() => res.value?.data?.summary ?? null)
 const pagination = computed<any>(() => res.value?.data?.pagination ?? null)
 const total = computed<number>(() => pagination.value?.total ?? 0)
 
+// ---- Pagination: a custom sticky pager (the table's default footer is hidden). It drives both the
+// desktop table and the mobile cards, and every page change scrolls back to the top of the list. ---
+const pageCount = computed(() => Math.max(1, Math.ceil(total.value / ITEMS_PER_PAGE)))
+const rangeStart = computed(() => (total.value === 0 ? 0 : (page.value - 1) * ITEMS_PER_PAGE + 1))
+const rangeEnd = computed(() => Math.min(page.value * ITEMS_PER_PAGE, total.value))
+
+// The table card is the scroll anchor: land its top just under the 62px app bar so the sticky pager
+// sits right below the header and row 1 of the new page is the first thing in view.
+const tableCard = ref<any>(null)
+function scrollToTableTop() {
+  if (!import.meta.client) return
+  const el = (tableCard.value?.$el ?? tableCard.value) as HTMLElement | undefined
+  if (!el) return
+  const top = el.getBoundingClientRect().top + window.scrollY - 62
+  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+}
+function goToPage(n: number) {
+  const next = Math.min(Math.max(1, n), pageCount.value)
+  if (next === page.value) return
+  page.value = next
+  nextTick(scrollToTableTop)
+}
+
 // ---- Freshness: the job rebuilds this every 24h; make that visible and keep a long-open tab live. --
 const calculatedAt = computed<Date | null>(() => {
   const s = summary.value?.calculatedAt
@@ -496,113 +519,250 @@ useSeo(() => ({
 
       <v-card
         v-else
+        ref="tableCard"
         border
         class="tablecard"
       >
-        <v-data-table-server
-          :headers="headers"
-          :items="providers"
-          :items-length="total"
-          :loading="pending"
-          :page="page"
-          :items-per-page="ITEMS_PER_PAGE"
-          :items-per-page-options="[{ value: ITEMS_PER_PAGE, title: String(ITEMS_PER_PAGE) }]"
-          :sort-by="sortBy"
-          item-value="_id"
-          :mobile-breakpoint="760"
-          hover
-          density="comfortable"
-          @update:page="page = $event"
-          @update:sort-by="onSortBy"
-        >
-          <template #[`item.index`]="{ index }">
-            <span class="u-mono t-muted">{{ (page - 1) * ITEMS_PER_PAGE + index + 1 }}</span>
-          </template>
+        <!-- Sticky pager: reachable at the top on any screen (the table's own footer is hidden).
+             Both the desktop table and the mobile cards page through this one control. -->
+        <div class="tablepager">
+          <span class="tablepager__range u-mono">
+            {{ t('provAnom.pager.range', { from: rangeStart, to: rangeEnd, total }) }}
+          </span>
+          <div class="tablepager__nav">
+            <v-btn
+              icon="mdi-page-first"
+              size="small"
+              variant="text"
+              density="comfortable"
+              :disabled="pending || page <= 1"
+              :aria-label="t('provAnom.pager.first')"
+              @click="goToPage(1)"
+            />
+            <v-btn
+              icon="mdi-chevron-left"
+              size="small"
+              variant="text"
+              density="comfortable"
+              :disabled="pending || page <= 1"
+              :aria-label="t('provAnom.pager.prev')"
+              @click="goToPage(page - 1)"
+            />
+            <span class="tablepager__page u-mono">{{ page }} / {{ pageCount }}</span>
+            <v-btn
+              icon="mdi-chevron-right"
+              size="small"
+              variant="text"
+              density="comfortable"
+              :disabled="pending || page >= pageCount"
+              :aria-label="t('provAnom.pager.next')"
+              @click="goToPage(page + 1)"
+            />
+            <v-btn
+              icon="mdi-page-last"
+              size="small"
+              variant="text"
+              density="comfortable"
+              :disabled="pending || page >= pageCount"
+              :aria-label="t('provAnom.pager.last')"
+              @click="goToPage(pageCount)"
+            />
+          </div>
+          <v-progress-linear
+            :active="pending"
+            indeterminate
+            color="primary"
+            height="2"
+            class="tablepager__load"
+          />
+        </div>
 
-          <template #[`item.supplierName`]="{ item }">
-            <NuxtLink
-              :to="drillTo(item.supplierName)"
-              class="cell-prov"
-            >
-              {{ item.supplierName }}
-            </NuxtLink>
-            <div class="cell-tags">
-              <v-chip
-                v-if="item.captive"
-                color="error"
-                size="x-small"
-                variant="tonal"
-                :title="t('provAnom.captiveHelp')"
+        <template v-if="providers.length || pending">
+          <!-- Desktop: the real Vuetify data table. Hidden below 760px (CSS), where the cards take
+               over — so its own mobile-stacking is switched off (mobile-breakpoint 0). -->
+          <v-data-table-server
+            class="provtable-desktop"
+            :headers="headers"
+            :items="providers"
+            :items-length="total"
+            :loading="pending"
+            :page="page"
+            :items-per-page="ITEMS_PER_PAGE"
+            :sort-by="sortBy"
+            item-value="_id"
+            :mobile-breakpoint="0"
+            hide-default-footer
+            hover
+            density="comfortable"
+            @update:sort-by="onSortBy"
+          >
+            <template #[`item.index`]="{ index }">
+              <span class="u-mono t-muted">{{ (page - 1) * ITEMS_PER_PAGE + index + 1 }}</span>
+            </template>
+
+            <template #[`item.supplierName`]="{ item }">
+              <NuxtLink
+                :to="drillTo(item.supplierName)"
+                class="cell-prov"
               >
-                {{ t('provAnom.captiveBadge', { n: item.topBuyerCount }) }}
-              </v-chip>
-              <v-chip
-                size="x-small"
-                variant="tonal"
-              >
-                {{ topRubroOf(item) }}
-              </v-chip>
+                {{ item.supplierName }}
+              </NuxtLink>
+              <div class="cell-tags">
+                <v-chip
+                  v-if="item.captive"
+                  color="error"
+                  size="x-small"
+                  variant="tonal"
+                  :title="t('provAnom.captiveHelp')"
+                >
+                  {{ t('provAnom.captiveBadge', { n: item.topBuyerCount }) }}
+                </v-chip>
+                <v-chip
+                  size="x-small"
+                  variant="tonal"
+                >
+                  {{ topRubroOf(item) }}
+                </v-chip>
+                <span
+                  v-if="yearsLabel(item)"
+                  class="cell-years u-mono"
+                >{{ yearsLabel(item) }}</span>
+              </div>
+            </template>
+
+            <template #[`item.flags`]="{ item }">
+              <span class="cell-flags">
+                <span class="cell-flags__stripe" />
+                <span class="u-mono cell-flags__n">{{ item.flagCount }}</span>
+              </span>
+            </template>
+
+            <template #[`item.overprice`]="{ item }">
+              <MoneyAmount
+                :amount="item.overpriceUyuToday"
+                currency="UYU"
+                compact
+              />
+            </template>
+
+            <template #[`item.worstZ`]="{ item }">
+              <span class="u-mono cell-z">{{ zBadge(item.worstZ) }}</span>
+            </template>
+
+            <template #[`item.topBuyer`]="{ item }">
+              <span class="cell-buyer">{{ item.topBuyer }}</span>
               <span
-                v-if="yearsLabel(item)"
-                class="cell-years u-mono"
-              >{{ yearsLabel(item) }}</span>
-            </div>
-          </template>
+                v-if="item.buyerCount > 1"
+                class="cell-buyer__c u-mono"
+              >{{ t('provAnom.ofBuyers', { n: item.buyerCount }) }}</span>
+            </template>
 
-          <template #[`item.flags`]="{ item }">
-            <span class="cell-flags">
-              <span class="cell-flags__stripe" />
-              <span class="u-mono cell-flags__n">{{ item.flagCount }}</span>
-            </span>
-          </template>
+            <template #[`item.actions`]="{ item }">
+              <CellLink
+                :to="drillTo(item.supplierName)"
+                :label="t('provAnom.seeItsFlags')"
+              />
+            </template>
+          </v-data-table-server>
 
-          <template #[`item.overprice`]="{ item }">
-            <MoneyAmount
-              :amount="item.overpriceUyuToday"
-              currency="UYU"
-              compact
-            />
-          </template>
-
-          <template #[`item.worstZ`]="{ item }">
-            <span class="u-mono cell-z">{{ zBadge(item.worstZ) }}</span>
-          </template>
-
-          <template #[`item.topBuyer`]="{ item }">
-            <span class="cell-buyer">{{ item.topBuyer }}</span>
-            <span
-              v-if="item.buyerCount > 1"
-              class="cell-buyer__c u-mono"
-            >{{ t('provAnom.ofBuyers', { n: item.buyerCount }) }}</span>
-          </template>
-
-          <template #[`item.actions`]="{ item }">
-            <CellLink
-              :to="drillTo(item.supplierName)"
-              :label="t('provAnom.seeItsFlags')"
-            />
-          </template>
-
-          <template #no-data>
-            <div class="empty">
-              <p class="empty__t">
-                {{ t('provAnom.empty.title') }}
-              </p>
-              <p class="empty__b">
-                {{ t('provAnom.empty.body') }}
-              </p>
-              <v-btn
-                v-if="hasActiveFilters()"
-                color="primary"
-                variant="tonal"
-                size="small"
-                @click="clearFilters"
+          <!-- Mobile (<760px): adapted cards. The whole card drills into the provider's flags,
+               giving a full-width tap target instead of Vuetify's cramped stacked rows. -->
+          <ol class="provcards">
+            <li
+              v-for="(item, i) in providers"
+              :key="item._id"
+              class="provcards__li"
+            >
+              <NuxtLink
+                :to="drillTo(item.supplierName)"
+                class="provcard"
               >
-                {{ t('common.clearAll') }}
-              </v-btn>
-            </div>
-          </template>
-        </v-data-table-server>
+                <span class="provcard__rank u-mono">{{ (page - 1) * ITEMS_PER_PAGE + i + 1 }}</span>
+                <div class="provcard__main">
+                  <span class="provcard__name">{{ item.supplierName }}</span>
+                  <div class="cell-tags">
+                    <v-chip
+                      v-if="item.captive"
+                      color="error"
+                      size="x-small"
+                      variant="tonal"
+                    >
+                      {{ t('provAnom.captiveBadge', { n: item.topBuyerCount }) }}
+                    </v-chip>
+                    <v-chip
+                      size="x-small"
+                      variant="tonal"
+                    >
+                      {{ topRubroOf(item) }}
+                    </v-chip>
+                    <span
+                      v-if="yearsLabel(item)"
+                      class="cell-years u-mono"
+                    >{{ yearsLabel(item) }}</span>
+                  </div>
+                  <dl class="provcard__stats">
+                    <div class="provcard__stat">
+                      <dt>{{ t('provAnom.col.flags') }}</dt>
+                      <dd class="provcard__flags">
+                        <span class="cell-flags__stripe" />
+                        <span class="u-mono cell-flags__n">{{ item.flagCount }}</span>
+                      </dd>
+                    </div>
+                    <div class="provcard__stat">
+                      <dt>{{ t('provAnom.col.overprice') }}</dt>
+                      <dd>
+                        <MoneyAmount
+                          :amount="item.overpriceUyuToday"
+                          currency="UYU"
+                          compact
+                        />
+                      </dd>
+                    </div>
+                    <div class="provcard__stat">
+                      <dt>{{ t('provAnom.col.worstZ') }}</dt>
+                      <dd><span class="u-mono cell-z">{{ zBadge(item.worstZ) }}</span></dd>
+                    </div>
+                  </dl>
+                  <div class="provcard__buyer">
+                    <span class="provcard__buyerlbl u-mono">{{ t('provAnom.col.topBuyer') }}</span>
+                    <span class="cell-buyer">{{ item.topBuyer }}</span>
+                    <span
+                      v-if="item.buyerCount > 1"
+                      class="cell-buyer__c u-mono"
+                    >{{ t('provAnom.ofBuyers', { n: item.buyerCount }) }}</span>
+                  </div>
+                </div>
+                <v-icon
+                  icon="mdi-arrow-right"
+                  size="18"
+                  class="provcard__go"
+                />
+              </NuxtLink>
+            </li>
+          </ol>
+        </template>
+
+        <!-- Shared empty state (one for both layouts). -->
+        <div
+          v-else
+          class="empty"
+        >
+          <p class="empty__t">
+            {{ t('provAnom.empty.title') }}
+          </p>
+          <p class="empty__b">
+            {{ t('provAnom.empty.body') }}
+          </p>
+          <v-btn
+            v-if="hasActiveFilters()"
+            color="primary"
+            variant="tonal"
+            size="small"
+            @click="clearFilters"
+          >
+            {{ t('common.clearAll') }}
+          </v-btn>
+        </div>
       </v-card>
 
       <!-- Pattern panels -->
@@ -844,8 +1004,100 @@ useSeo(() => ({
 }
 .controls__captive { text-transform: none; letter-spacing: 0; }
 
-/* ---- Table cells ---- */
-.tablecard { overflow: hidden; }
+/* ---- Table shell + sticky pager ----
+   v-card ships `overflow: hidden`, which would make the card the sticky pager's scroll container
+   (so it scrolls away instead of pinning to the viewport). Force it visible; the pager carries the
+   card's top radius itself, and the ~1px square corners at the bottom read as nothing on a
+   same-coloured surface. */
+.tablecard { position: relative; overflow: visible; }
+
+.tablepager {
+  position: sticky;
+  top: 62px; /* just under the 62px sticky app bar */
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+.tablepager__range { font-size: var(--t-xs); color: var(--text-muted); }
+.tablepager__nav { display: flex; align-items: center; gap: 2px; }
+.tablepager__page {
+  min-width: 4ch;
+  padding-inline: var(--s-1);
+  font-size: var(--t-xs);
+  color: var(--text);
+  text-align: center;
+  white-space: nowrap;
+}
+/* Rides the pager's bottom edge so it stays visible while the pager is stuck. */
+.tablepager__load { position: absolute; left: 0; right: 0; bottom: -1px; }
+
+/* Desktop table vs. mobile cards — one 760px switch (matches the old mobile-breakpoint). */
+.provtable-desktop { display: none; }
+.provcards { display: block; }
+@media (min-width: 760px) {
+  .provtable-desktop { display: block; }
+  .provcards { display: none; }
+}
+
+/* ---- Mobile cards ---- */
+.provcards { list-style: none; margin: 0; padding: 0; }
+.provcards__li { border-top: 1px solid var(--rule); }
+.provcards__li:first-child { border-top: 0; }
+.provcard {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-3);
+  color: inherit;
+  text-decoration: none;
+}
+.provcard:active { background: var(--surface-sunken); }
+.provcard__rank {
+  flex: none;
+  min-width: 2ch;
+  padding-top: 2px;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  text-align: right;
+}
+.provcard__main { flex: 1 1 auto; min-width: 0; }
+.provcard__name { display: block; font-weight: 600; line-height: 1.3; }
+.provcard__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin: var(--s-3) 0 0;
+}
+.provcard__stat { display: flex; flex-direction: column; gap: 2px; margin: 0; }
+.provcard__stat dt {
+  font-family: var(--font-mono);
+  font-size: var(--t-2xs, 0.6875rem);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.provcard__stat dd { margin: 0; }
+.provcard__flags { display: inline-flex; align-items: center; gap: var(--s-2); }
+.provcard__buyer { margin-top: var(--s-3); font-size: var(--t-sm); }
+.provcard__buyerlbl {
+  display: block;
+  margin-bottom: 1px;
+  font-size: var(--t-2xs, 0.6875rem);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.provcard__go { flex: none; align-self: center; color: var(--text-muted); }
+.provcard:active .provcard__go,
+.provcard:hover .provcard__go { color: var(--alerta); }
+
 .t-muted { color: var(--text-muted); }
 .cell-prov { font-weight: 600; color: inherit; text-decoration: none; }
 .cell-prov:hover { color: var(--alerta); }

@@ -4,6 +4,13 @@ import { IDatabaseService } from "../services/database-service";
 import { ILogger } from "../services/logger-service";
 import { ReleaseRSSFetcher } from "../services/release-rss-fetcher";
 import { calculateTotalAmounts, fetchCurrencyRates, fetchUYIRate, type CurrencyResponse } from "../utils/amount-calculator";
+import { attachProbedReiteraciones, type ReiteracionBudget } from "../jobs/releases/reiteracion-probe";
+
+// Per-run cap on reiteración-del-gasto HEAD-probes against the government site. Steady
+// state is small (only releases with a fresh awardNotice and no prior probe); this mainly
+// bounds a full historical catch-up run. Backfilling the existing backlog is the dedicated
+// job (src/jobs/backfill-reiteracion-docs.ts).
+const REITER_PROBE_MAX_PER_RUN = Number(process.env.REITER_PROBE_MAX_PER_RUN ?? 500);
 
 export interface IReleaseUploaderNew {
   uploadReleasesFromWeb(): Promise<void>;
@@ -65,6 +72,8 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
       let totalUploaded = 0;
       let totalSkipped = 0;
       let totalProcessed = 0;
+      // Shared across every month in this run so the whole backfill respects one probe budget.
+      const reiterBudget: ReiteracionBudget = { remaining: REITER_PROBE_MAX_PER_RUN };
 
       // Process each month
       for (const month of monthsToScrape) {
@@ -74,7 +83,7 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
         try {
           // Process releases with batch uploading (fetch and upload in batches)
           this.logger.info(`Processing 2025-${monthStr} with batch uploading (200 per batch)...`);
-          const result = await this.processReleasesInBatches(2025, month, currencyRates, uyiRate, monthStr);
+          const result = await this.processReleasesInBatches(2025, month, currencyRates, uyiRate, monthStr, reiterBudget);
 
           totalUploaded += result.uploaded;
           totalSkipped += result.skipped;
@@ -126,11 +135,12 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
       this.logger.info(`Starting current month upload for ${currentYear}-${currentMonth.toString().padStart(2, "0")}`);
 
       const monthStr = currentMonth.toString().padStart(2, "0");
+      const reiterBudget: ReiteracionBudget = { remaining: REITER_PROBE_MAX_PER_RUN };
 
       try {
         // Process releases with batch uploading (fetch and upload in batches)
         this.logger.info(`Processing ${currentYear}-${monthStr} with batch uploading (200 per batch)...`);
-        const result = await this.processReleasesInBatches(currentYear, currentMonth, currencyRates, uyiRate, monthStr);
+        const result = await this.processReleasesInBatches(currentYear, currentMonth, currencyRates, uyiRate, monthStr, reiterBudget);
 
         this.logger.info(`${currentYear}-${monthStr} complete: ${result.uploaded} uploaded, ${result.skipped} skipped, ${result.totalProcessed} total processed`);
       } catch (error) {
@@ -190,6 +200,8 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
       let totalUploaded = 0;
       let totalSkipped = 0;
       let totalProcessed = 0;
+      // Shared across every month in this run so the whole daily ingest respects one probe budget.
+      const reiterBudget: ReiteracionBudget = { remaining: REITER_PROBE_MAX_PER_RUN };
 
       // Process each month
       for (const monthInfo of monthsToCheck) {
@@ -198,7 +210,7 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
 
         try {
           // Get releases for this month and filter by date
-          const result = await this.processLastSevenDaysInMonth(monthInfo.year, monthInfo.month, sevenDaysAgo, currentDate, currencyRates, uyiRate, monthStr);
+          const result = await this.processLastSevenDaysInMonth(monthInfo.year, monthInfo.month, sevenDaysAgo, currentDate, currencyRates, uyiRate, monthStr, reiterBudget);
 
           totalUploaded += result.uploaded;
           totalSkipped += result.skipped;
@@ -224,7 +236,7 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
     }
   }
 
-  private async processReleasesInBatches(year: number, month: number, currencyRates: CurrencyResponse | null, uyiRate: number | null, monthStr: string): Promise<{ uploaded: number; skipped: number; totalProcessed: number }> {
+  private async processReleasesInBatches(year: number, month: number, currencyRates: CurrencyResponse | null, uyiRate: number | null, monthStr: string, reiterBudget: ReiteracionBudget): Promise<{ uploaded: number; skipped: number; totalProcessed: number }> {
     // First get the list of release IDs for this month
     const releaseIds = await this.rssFetcher.fetchReleaseIds(year, month);
 
@@ -296,7 +308,7 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
         this.logger.info(`Fetched data for batch ${batchNumber}, processing...`);
 
         // Process and upload this batch immediately
-        const batchResult = await this.processReleasesFromWeb(batchResults, currencyRates, uyiRate, year, monthStr);
+        const batchResult = await this.processReleasesFromWeb(batchResults, currencyRates, uyiRate, year, monthStr, reiterBudget);
 
         totalUploaded += batchResult.uploaded;
         totalSkipped += batchResult.skipped;
@@ -324,13 +336,15 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
     return { uploaded: totalUploaded, skipped: totalSkipped, totalProcessed };
   }
 
-  private async processReleasesFromWeb(releasesWithData: any[], currencyRates: CurrencyResponse | null, uyiRate: number | null, year: number, month: string): Promise<{ uploaded: number; skipped: number }> {
+  private async processReleasesFromWeb(releasesWithData: any[], currencyRates: CurrencyResponse | null, uyiRate: number | null, year: number, month: string, reiterBudget: ReiteracionBudget): Promise<{ uploaded: number; skipped: number }> {
     let skipped = 0;
     let processed = 0;
     const bulkOps: any[] = [];
     const BATCH_SIZE = 500; // Smaller database batch size for more frequent uploads
 
     this.logger.info(`Processing ${releasesWithData.length} releases for ${year}-${month}...`);
+
+    const prepared: Array<{ release: IRelease; releaseData: any }> = [];
 
     for (const releaseData of releasesWithData) {
       try {
@@ -380,6 +394,24 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
           if (supplier) release.supplier = supplier;
         }
 
+        prepared.push({ release, releaseData });
+      } catch (err) {
+        this.logger.error(`Error preparing release ${releaseData.id}:`, err as Error);
+        skipped++;
+      }
+    }
+
+    // Fill the "reiteración del gasto" gap for releases whose feed carried an
+    // awardNotice — the OCDS feed never includes this document itself (see
+    // src/jobs/releases/reiteracion-probe.ts). Mutates `release.awards` in place,
+    // bounded by reiterBudget across the whole upload run.
+    const reiterAttach = await attachProbedReiteraciones(prepared.map((p) => p.release), reiterBudget, new Date());
+    if (reiterAttach.found || reiterAttach.probed) {
+      this.logger.info(`  reiteración-del-gasto probe: +${reiterAttach.found} found (${reiterAttach.probed} probed, ${reiterAttach.carried} carried, budget left ${reiterBudget.remaining})`);
+    }
+
+    for (const { release, releaseData } of prepared) {
+      try {
         // Calculate total amounts from awards (multicurrency support with conversion)
         const amountData = calculateTotalAmounts(release.awards || [], currencyRates, uyiRate, {
           includeVersionInfo: true,
@@ -412,7 +444,7 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
 
         processed++;
       } catch (err) {
-        this.logger.error(`Error preparing release ${releaseData.id}:`, err as Error);
+        this.logger.error(`Error preparing release ${release.id}:`, err as Error);
         skipped++;
       }
     }
@@ -457,7 +489,7 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
     return { uploaded, skipped };
   }
 
-  private async processLastSevenDaysInMonth(year: number, month: number, startDate: Date, endDate: Date, currencyRates: CurrencyResponse | null, uyiRate: number | null, monthStr: string): Promise<{ uploaded: number; skipped: number; totalProcessed: number }> {
+  private async processLastSevenDaysInMonth(year: number, month: number, startDate: Date, endDate: Date, currencyRates: CurrencyResponse | null, uyiRate: number | null, monthStr: string, reiterBudget: ReiteracionBudget): Promise<{ uploaded: number; skipped: number; totalProcessed: number }> {
     // First get all release IDs for this month
     const releaseIds = await this.rssFetcher.fetchReleaseIds(year, month);
 
@@ -542,7 +574,7 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
         this.logger.info(`Fetched data for batch ${batchNumber}, processing...`);
 
         // Process and upload this batch immediately
-        const batchResult = await this.processReleasesFromWeb(batchResults, currencyRates, uyiRate, year, monthStr);
+        const batchResult = await this.processReleasesFromWeb(batchResults, currencyRates, uyiRate, year, monthStr, reiterBudget);
 
         totalUploaded += batchResult.uploaded;
 
