@@ -97,10 +97,10 @@ async function pautaOutlets(limit: number): Promise<string[]> {
   return rows.map((r) => r._id as string).filter(Boolean);
 }
 
-/** The N biggest suppliers overall, from supplier_patterns. */
+/** The N biggest suppliers overall, from supplier_patterns (spend is `totalValue`). */
 async function topSuppliers(limit: number): Promise<string[]> {
   const col = mongoose.connection.db!.collection("supplier_patterns");
-  const rows = await col.find({}, { projection: { name: 1 } }).sort({ totalAmount: -1 }).limit(limit).toArray();
+  const rows = await col.find({}, { projection: { name: 1 } }).sort({ totalValue: -1 }).limit(limit).toArray();
   return rows.map((r) => (r as { name?: string }).name ?? "").filter(Boolean);
 }
 
