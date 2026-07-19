@@ -208,7 +208,7 @@ const ledger = computed(() =>
             <tbody>
               <tr
                 v-for="row in ledger"
-                :key="row.ocid"
+                :key="row.recordId"
               >
                 <td class="u-mono nowrap">
                   {{ formatDate(row.date) }}
@@ -237,12 +237,10 @@ const ledger = computed(() =>
                   >{{ c.ledger.sinMonto }}</span>
                 </td>
                 <td class="num">
-                  <a
-                    :href="row.url"
-                    target="_blank"
-                    rel="noopener"
+                  <NuxtLink
+                    :to="localePath(`/contracts/${row.recordId}`)"
                     class="im-ficha u-mono"
-                  >{{ c.ledger.ficha }} →</a>
+                  >{{ c.ledger.ficha }} →</NuxtLink>
                 </td>
               </tr>
             </tbody>

@@ -18,20 +18,25 @@
  */
 
 export interface TvcLedgerRow {
-  /** `compra` = adjudicación con monto en el registro; `llamado` = llamado, el monto vive en otro expediente. */
+  /** `compra` = adjudicación con monto y proveedor; `llamado` = llamado aún sin adjudicación registrada en la base. */
   kind: 'compra' | 'llamado'
   cat: 'equipamiento' | 'insumos' | 'obra' | 'vehiculo'
-  ocid: string
-  id: string
+  /**
+   * Release id de la base para enlazar a la ficha interna de conlatuya (/contracts/<recordId>).
+   * En las compras es el registro de adjudicación (`adjudicacion-iNNN`, donde vive el monto y el
+   * proveedor); en los llamados, el registro del llamado (`llamado-iNNN` / `aclar_llamado-iNNN-k`).
+   * El texto "TV Ciudad" aparece en el llamado; el monto, en el registro hermano de adjudicación —
+   * por eso ambos se cruzan por el número de compra (iNNN).
+   */
+  recordId: string
   date: string
   year: number
-  /** Vacío en los llamados (aún sin adjudicatario en este registro). */
+  /** Vacío en los llamados sin adjudicación registrada. */
   supplier: string
-  /** classification.description (compras) o tender.description (llamados) — lo que se compró para el canal. */
+  /** Lo que se compró para el canal (classification.description del ítem, o el objeto del llamado). */
   desc: string
-  /** UYU. 0 en los llamados: el monto adjudicado no está en este registro. */
+  /** UYU adjudicados. 0 en los llamados sin adjudicación en la base. */
   amount: number
-  url: string
 }
 export interface TvcBudgetLine { key: string, spend: number }
 export interface TvcNewsCase { key: string, amountText: string, source: string, url: string, date: string }
@@ -53,9 +58,12 @@ export const TVC_STATS = {
   /** $15,4 M (publicidad 2024) sobre el costo anual $304 M (2023) ≈ 5%. El Observador citó ~3% para 2023 ($10,6 M); acá se usa la razón consistente con las cifras mostradas. */
   publicidadSharedPct: 5,
   recorte2025Pct: 10,
+  /** Registros de la base que nombran a TV Ciudad (búsqueda de texto). */
   dbRecords: 20,
-  dbPriced: 2,
-  dbTotalUYU: 347250,
+  /** De esos, cuántos resolvieron a una adjudicación con monto (cruzando el llamado con su registro hermano). */
+  dbPriced: 5,
+  /** Suma adjudicada de esos 5 (280.400 + 82.314,54 + 66.850 + 12.352,56 + 11.220). */
+  dbTotalUYU: 453137.1,
   yearSpan: '2009–2025',
 }
 
@@ -71,26 +79,26 @@ export const TVC_BUDGET: TvcBudgetLine[] = [
 ]
 export const TVC_BUDGET_TOTAL = TVC_BUDGET.reduce((s, b) => s + b.spend, 0)
 
-const ficha = (id: string) => `https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/${id}`
-
 /**
- * Registros de la base (comprador 98-1) cuyo texto nombra a "TV Ciudad", verificados
- * ficha por ficha. Dos son adjudicaciones con monto (imprenta); el resto son llamados
- * de equipamiento/vehículos/obra sin monto adjudicado en el propio registro. Ilustra
- * qué compra el canal, no cuánto cuesta: su costo es presupuestal.
+ * Registros de la base (comprador 98-1) que nombran a "TV Ciudad", verificados contra
+ * MongoDB uno por uno. Cinco resolvieron a una adjudicación con monto y proveedor
+ * (cruzando el llamado con su registro hermano `adjudicacion-iNNN`); el resto son
+ * llamados aún sin adjudicación registrada en la base. `recordId` enlaza a la ficha
+ * interna del sitio (/contracts/<recordId>). Ilustra qué compra el canal — su costo
+ * operativo es presupuestal, no de licitación.
  */
 export const TVC_LEDGER: TvcLedgerRow[] = [
-  { kind: 'compra', cat: 'insumos', ocid: 'ocds-yfs5dr-i436702', id: 'i436702', date: '2024-07-15', year: 2024, supplier: 'MERALIR S A', desc: 'Libro «Cocinemos» de TV Ciudad (impresión)', amount: 280400, url: ficha('i436702') },
-  { kind: 'compra', cat: 'insumos', ocid: 'ocds-yfs5dr-i430434', id: 'i430434', date: '2024-05-22', year: 2024, supplier: 'PITTAMIGLIO SCARCHELLI SANTIAGO J.', desc: 'Recetario del programa de TV Ciudad (impresión)', amount: 66850, url: ficha('i430434') },
-  { kind: 'llamado', cat: 'equipamiento', ocid: 'ocds-yfs5dr-i395511', id: 'i395511', date: '2023-06-06', year: 2023, supplier: '', desc: 'Sistema de gestión de medios audiovisuales para TV Ciudad', amount: 0, url: ficha('i395511') },
-  { kind: 'llamado', cat: 'equipamiento', ocid: 'ocds-yfs5dr-i341563', id: 'i341563', date: '2021-10-13', year: 2021, supplier: '', desc: 'Switcher de producción para el estudio de TV Ciudad', amount: 0, url: ficha('i341563') },
-  { kind: 'llamado', cat: 'vehiculo', ocid: 'ocds-yfs5dr-i453064', id: 'i453064', date: '2025-10-23', year: 2025, supplier: '', desc: 'Camión doble cabina, destino TV Ciudad', amount: 0, url: ficha('i453064') },
-  { kind: 'llamado', cat: 'vehiculo', ocid: 'ocds-yfs5dr-i453068', id: 'i453068', date: '2025-02-26', year: 2025, supplier: '', desc: 'Camión cabina simple, destino TV Ciudad', amount: 0, url: ficha('i453068') },
-  { kind: 'llamado', cat: 'equipamiento', ocid: 'ocds-yfs5dr-i480983', id: 'i480983', date: '2025-11-25', year: 2025, supplier: '', desc: '3 computadores de escritorio especiales, destino TV Ciudad', amount: 0, url: ficha('i480983') },
-  { kind: 'llamado', cat: 'equipamiento', ocid: 'ocds-yfs5dr-i480609', id: 'i480609', date: '2025-11-20', year: 2025, supplier: '', desc: 'Discos duros para NAS Synology para TV Ciudad', amount: 0, url: ficha('i480609') },
-  { kind: 'llamado', cat: 'equipamiento', ocid: 'ocds-yfs5dr-i194179', id: 'i194179', date: '2012-11-29', year: 2012, supplier: '', desc: '2 editores no lineales (filmación) para TV Ciudad', amount: 0, url: ficha('i194179') },
-  { kind: 'llamado', cat: 'equipamiento', ocid: 'ocds-yfs5dr-i142639', id: 'i142639', date: '2009-06-12', year: 2009, supplier: '', desc: '4 editores no lineales (filmación) para TV Ciudad de la I.M.M.', amount: 0, url: ficha('i142639') },
-  { kind: 'llamado', cat: 'obra', ocid: 'ocds-yfs5dr-i189078', id: 'i189078', date: '2012-05-29', year: 2012, supplier: '', desc: 'Reforma de los accesos a TV Ciudad', amount: 0, url: ficha('i189078') },
+  { kind: 'compra', cat: 'insumos', recordId: 'adjudicacion-i436702', date: '2024-07-15', year: 2024, supplier: 'MERALIR S A', desc: 'Libro «Cocinemos» de TV Ciudad (impresión)', amount: 280400 },
+  { kind: 'compra', cat: 'equipamiento', recordId: 'adjudicacion-i341563', date: '2021-12-06', year: 2021, supplier: 'ISBEL S.A.', desc: 'Switcher / equipo de control de estudio para TV Ciudad', amount: 82314.54 },
+  { kind: 'compra', cat: 'insumos', recordId: 'adjudicacion-i430434', date: '2024-05-22', year: 2024, supplier: 'PITTAMIGLIO SCARCHELLI SANTIAGO J.', desc: 'Recetario del programa de TV Ciudad (impresión)', amount: 66850 },
+  { kind: 'compra', cat: 'equipamiento', recordId: 'adjudicacion-i482424', date: '2025-12-26', year: 2025, supplier: 'BANIFOX S.A.', desc: 'Disco duro interno para servidores (NAS) de TV Ciudad', amount: 12352.56 },
+  { kind: 'compra', cat: 'equipamiento', recordId: 'adjudicacion-i480983', date: '2025-12-24', year: 2025, supplier: 'MUNDOMAC S.A', desc: '3 computadores de escritorio especiales para TV Ciudad', amount: 11220 },
+  { kind: 'llamado', cat: 'equipamiento', recordId: 'aclar_llamado-i395511-4', date: '2023-06-06', year: 2023, supplier: '', desc: 'Sistema de gestión de medios audiovisuales / servidor de almacenamiento para TV Ciudad', amount: 0 },
+  { kind: 'llamado', cat: 'vehiculo', recordId: 'llamado-i453064', date: '2025-10-23', year: 2025, supplier: '', desc: 'Camión doble cabina, destino TV Ciudad', amount: 0 },
+  { kind: 'llamado', cat: 'vehiculo', recordId: 'llamado-i453068', date: '2025-02-26', year: 2025, supplier: '', desc: 'Camión cabina simple, destino TV Ciudad', amount: 0 },
+  { kind: 'llamado', cat: 'equipamiento', recordId: 'llamado-i194179', date: '2012-11-29', year: 2012, supplier: '', desc: '2 editores no lineales (filmación) para TV Ciudad', amount: 0 },
+  { kind: 'llamado', cat: 'equipamiento', recordId: 'llamado-i142639', date: '2009-06-12', year: 2009, supplier: '', desc: '4 editores no lineales (filmación) para TV Ciudad de la I.M.M.', amount: 0 },
+  { kind: 'llamado', cat: 'obra', recordId: 'llamado-i189078', date: '2012-05-29', year: 2012, supplier: '', desc: 'Reforma de los accesos a TV Ciudad', amount: 0 },
 ]
 
 /** Casos que llegaron a la prensa (contexto verificado en prensa, NO en la base de compras). */
@@ -147,9 +155,9 @@ const TVC_CONTENT = {
     ledger: {
       tag: 'La evidencia',
       title: 'Lo que la base sí registra',
-      intro: 'Los registros de Compras Estatales (comprador 98-1) que nombran a TV Ciudad: equipamiento de estudio, vehículos, obra e insumos, verificados y enlazados a su ficha. Solo dos tienen monto adjudicado (imprenta); los demás son llamados cuyo monto queda en un expediente aparte. Es lo que se compra para el canal, no cuánto cuesta operarlo.',
-      colDate: 'Fecha', colObjeto: 'Objeto', colSup: 'Proveedor', colCat: 'Rubro', colAmount: 'Monto', ficha: 'Ficha',
-      sinMonto: 'Sin monto adjudicado',
+      intro: 'Los registros de Compras Estatales (comprador 98-1) que nombran a TV Ciudad: equipamiento de estudio, vehículos, obra e insumos, verificados en la base y enlazados a su ficha en el sitio. Cinco tienen monto adjudicado; el resto son llamados aún sin adjudicación registrada. Es lo que se compra para el canal, no cuánto cuesta operarlo.',
+      colDate: 'Fecha', colObjeto: 'Objeto', colSup: 'Proveedor', colCat: 'Rubro', colAmount: 'Monto', ficha: 'Ver contrato',
+      sinMonto: 'Sin adjudicación en la base',
     },
     explore: {
       tag: 'Seguí explorando',
@@ -172,7 +180,7 @@ const TVC_CONTENT = {
     method: {
       tag: 'Cómo se hizo',
       title: 'Método y límites',
-      p1: 'El ledger sale de la base del sitio (Compras Estatales, comprador 98-1) buscando el texto «TV Ciudad» en el título, la descripción del ítem y su clasificación. Aparecen 20 registros; se muestran los más significativos, verificados y enlazados a su ficha. Se aplica el mismo tope de plausibilidad (5e10) que en el resto del sitio, aunque acá ningún registro se acerca a ese límite.',
+      p1: 'El ledger sale de la base del sitio (Compras Estatales, comprador 98-1) buscando el texto «TV Ciudad» en el título, la descripción del ítem y su clasificación. Aparecen 20 registros. El monto adjudicado no vive en el registro del llamado sino en su registro hermano de adjudicación (mismo número de compra): cruzándolos, cinco resolvieron a un monto y proveedor verificados; el resto sigue sin adjudicación en la base. Cada fila enlaza a la ficha del contrato en el sitio.',
       p2: 'El subconteo es deliberado y explícito: el costo real del canal es presupuestal, no de licitación, y las compras de equipamiento se adjudican en expedientes cuyo título ya no menciona a TV Ciudad. Por eso el grueso del dinero está en la sección de prensa, no en el ledger. Es un trabajo de transparencia sobre datos abiertos, no una auditoría.',
     },
     sourcesTitle: 'Fuentes',
@@ -218,9 +226,9 @@ const TVC_CONTENT = {
     ledger: {
       tag: 'The evidence',
       title: 'What the data does record',
-      intro: 'The Compras Estatales records (buyer 98-1) that name TV Ciudad: studio equipment, vehicles, works and supplies, verified and linked to their file. Only two carry an awarded amount (printing); the rest are tender calls whose amount lives in a separate file. It is what is bought for the channel, not what it costs to run.',
-      colDate: 'Date', colObjeto: 'Item', colSup: 'Supplier', colCat: 'Category', colAmount: 'Amount', ficha: 'File',
-      sinMonto: 'No awarded amount',
+      intro: 'The Compras Estatales records (buyer 98-1) that name TV Ciudad: studio equipment, vehicles, works and supplies, verified in the data and linked to their file on the site. Five carry an awarded amount; the rest are tender calls with no award on record yet. It is what is bought for the channel, not what it costs to run.',
+      colDate: 'Date', colObjeto: 'Item', colSup: 'Supplier', colCat: 'Category', colAmount: 'Amount', ficha: 'View contract',
+      sinMonto: 'No award on record',
     },
     explore: {
       tag: 'Keep exploring',
@@ -243,7 +251,7 @@ const TVC_CONTENT = {
     method: {
       tag: 'How it was done',
       title: 'Method and limits',
-      p1: 'The ledger comes from the site’s data (Compras Estatales, buyer 98-1), searching the text «TV Ciudad» in the title, the item description and its classification. Twenty records appear; the most significant are shown, verified and linked to their file. The same plausibility cap (5e10) used across the site is applied, though no record here comes near it.',
+      p1: 'The ledger comes from the site’s data (Compras Estatales, buyer 98-1), searching the text «TV Ciudad» in the title, the item description and its classification. Twenty records appear. The awarded amount does not live in the tender-call record but in its sibling award record (same purchase number): cross-referencing them, five resolved to a verified amount and supplier; the rest still have no award on record. Each row links to the contract’s page on the site.',
       p2: 'The undercount is deliberate and explicit: the channel’s real cost is budgetary, not tendered, and equipment purchases are awarded in files whose titles no longer mention TV Ciudad. That is why most of the money sits in the press section, not the ledger. This is transparency work over open data, not an audit.',
     },
     sourcesTitle: 'Sources',
