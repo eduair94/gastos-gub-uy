@@ -45,7 +45,9 @@
   "preview": {
     "eyebrow": "Preview",
     "atBcu": "BCU rate · {month}",
-    "viewContract": "View full contract"
+    "viewContract": "View full contract",
+    "convertTitle": "In pesos",
+    "convertAria": "Show the price in pesos and in today's pesos"
   },
   "common": {
     "search": "Search",

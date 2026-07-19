@@ -45,7 +45,9 @@
   "preview": {
     "eyebrow": "Vista previa",
     "atBcu": "cotización BCU · {month}",
-    "viewContract": "Ver contrato completo"
+    "viewContract": "Ver contrato completo",
+    "convertTitle": "Equivalencia en pesos",
+    "convertAria": "Ver el precio en pesos y a valores de hoy"
   },
   "common": {
     "search": "Buscar",

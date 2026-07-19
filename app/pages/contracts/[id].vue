@@ -12,6 +12,13 @@ const id = computed(() => String(route.params.id))
 const { data: res, error } = await useFetch<any>(() => `/api/contracts/${encodeURIComponent(id.value)}`)
 
 const contract = computed<ContractLike | null>(() => res.value?.data ?? null)
+
+// The monthly BCU rate table, so each item price can be shown in UYU at the
+// contract's own month and in today's pesos on click (see MoneyConvert).
+const { data: rateRes } = await useFetch<any>('/api/rates')
+const rateTable = computed(() => rateRes.value?.data ?? null)
+// Every line shares the contract's moment — the date whose BCU rate applies.
+const itemDate = computed(() => contractDate(contract.value))
 const notFound = computed(() => !!error.value || !contract.value)
 
 /**
@@ -1376,18 +1383,23 @@ useSeo(() => ({
                   >—</span>
                 </template>
                 <template #cell:unitAmount="{ row }">
-                  <MoneyAmount
+                  <MoneyConvert
                     :amount="row.unitAmount"
                     :currency="row.currency"
+                    :date="itemDate"
+                    :rate-table="rateTable"
                     :rule="false"
                     size="sm"
                     decimals
                   />
                 </template>
                 <template #cell:total="{ row }">
-                  <MoneyAmount
+                  <MoneyConvert
                     :amount="row.total"
                     :currency="row.currency"
+                    :date="itemDate"
+                    :rate-table="rateTable"
+                    :rule="false"
                     size="sm"
                   />
                 </template>
