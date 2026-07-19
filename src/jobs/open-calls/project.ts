@@ -87,6 +87,10 @@ export interface OpenCallProjection {
   classificationSet: string[];
   searchText: string;
   documents: IOpenCallDocument[];
+  // Set by the sync's pliego probe (jobs/open-calls/pliego-probe.ts), never by
+  // the pure projection itself. Absent here → the sync leaves the stored value
+  // untouched on re-sync.
+  documentsProbedAt?: Date | undefined;
   awardRef?: { releaseId: string; ocid: string; awardedAt?: Date | undefined } | undefined;
 }
 

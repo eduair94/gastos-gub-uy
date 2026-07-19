@@ -12,12 +12,20 @@ import { SiceCatalogModel } from "../../../shared/models/sice_catalog";
 import type { OpenCallStatus } from "../../../shared/types/monitor";
 import { enrichProjectionWithCatalog, projectOpenCall } from "./project";
 import type { CatalogLookupEntry, OpenCallProjection, ReleaseLike } from "./project";
+import { attachProbedPliegos } from "./pliego-probe";
+import type { ProbeBudget } from "./pliego-probe";
 
 const TENDER_ID_REGEX = /^(llamado|aclar_llamado|ajuste_llamado)-/;
 const LLAMADO_ID_REGEX = /^llamado-/;
 const ALERTABLE: OpenCallStatus[] = ["open", "clarification", "amended"];
 
 const DAY_MS = 86_400_000;
+
+// Per-run cap on pliego HEAD-probes against the government site. Steady state is
+// ~0 (each call is probed once, ever); this only bounds the first run over a
+// backlog. Backfill of the historical backlog is the deliberate, dedicated job
+// (src/jobs/backfill-pliego-docs.ts).
+const PROBE_MAX_PER_SYNC = Number(process.env.PLIEGO_PROBE_MAX_PER_SYNC ?? 150);
 
 export interface SyncOptions {
   /** Look-back window (days) for recently updated tender releases. Default 2. */
@@ -75,6 +83,9 @@ export async function syncOpenCalls(options: SyncOptions = {}): Promise<SyncResu
   let processed = 0;
   let upserted = 0;
   let inserted = 0;
+  // Shared across all batches so the whole run respects one probe budget.
+  const probeBudget: ProbeBudget = { remaining: PROBE_MAX_PER_SYNC };
+  let pliegoFound = 0;
 
   for (let i = 0; i < candidateOcids.length; i += OCID_BATCH) {
     const batch = candidateOcids.slice(i, i + OCID_BATCH);
@@ -99,6 +110,11 @@ export async function syncOpenCalls(options: SyncOptions = {}): Promise<SyncResu
       if (proj) projections.push(proj);
     }
     await enrichBatch(projections);
+
+    // Fill the pliego gap for docs-empty active calls the OCDS feed left bare
+    // (mutates projections in place). Bounded by probeBudget across the whole run.
+    const attach = await attachProbedPliegos(projections, probeBudget, now);
+    pliegoFound += attach.found;
 
     const ops: Parameters<typeof OpenCallModel.bulkWrite>[0] = [];
     const meta: Array<{ compraId: string; status: OpenCallStatus }> = [];
@@ -135,6 +151,6 @@ export async function syncOpenCalls(options: SyncOptions = {}): Promise<SyncResu
     }
   }
 
-  log(`sync-open-calls: processed ${processed}, upserted ${upserted} (inserted ${inserted}), newly-open ${newlyOpenedCompraIds.length}`);
+  log(`sync-open-calls: processed ${processed}, upserted ${upserted} (inserted ${inserted}), newly-open ${newlyOpenedCompraIds.length}, pliego-probed +${pliegoFound} (budget left ${probeBudget.remaining})`);
   return { candidateOcids: candidateOcids.length, processed, upserted, inserted, newlyOpenedCompraIds };
 }

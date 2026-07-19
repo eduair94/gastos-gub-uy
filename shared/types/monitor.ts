@@ -107,6 +107,10 @@ export interface IOpenCall extends Document {
   estimatedValue?: number | undefined
   currency?: string | undefined
   documents: IOpenCallDocument[]
+  // When the deterministic pliego URL was last HEAD-probed to fill a feed that
+  // carried no documents. Set once (success or miss) so re-syncs don't re-probe
+  // a call that has no pliego. See src/jobs/open-calls/pliego-probe.ts.
+  documentsProbedAt?: Date | undefined
   aiSummary?: IPliegoSummary | undefined
   awardRef?: { releaseId: string, ocid: string, awardedAt?: Date | undefined } | undefined
   // $setOnInsert only — "is this NEW?" (drives alerts). Never updated on resync.

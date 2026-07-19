@@ -105,6 +105,11 @@ const OpenCallSchema = new Schema<IOpenCall>(
     currency: { type: String },
 
     documents: { type: [DocumentSchema], default: [] },
+    // Marker: the deterministic pliego URL has been probed once for this call
+    // (the OCDS feed often omits the pliego the HTML page shows). Set on success
+    // OR miss so a docs-empty call is never re-probed every sync. Never blocks a
+    // real feed document — feed docs always win. See jobs/open-calls/pliego-probe.
+    documentsProbedAt: { type: Date },
     aiSummary: { type: PliegoSummarySchema, default: undefined },
     awardRef: {
       releaseId: { type: String },
