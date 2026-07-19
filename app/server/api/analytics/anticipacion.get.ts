@@ -1,0 +1,65 @@
+import { createError, defineEventHandler, getQuery } from 'h3'
+import { connectToDatabase } from '../../utils/database'
+import { TenderForecastModel } from '../../utils/models'
+import { DISPLAY_THRESHOLD } from '../../../../shared/forecast/constants'
+
+/**
+ * Public read endpoint for "Próximos llamados probables" — serves the
+ * precomputed `tender_forecast` collection (one doc per buyer × mid-level
+ * rubro node), rebuilt monthly by src/jobs/refresh-tender-forecast.ts.
+ *
+ * Read path is .find() + .lean() by index only — no aggregation, no COLLSCAN.
+ * releases.buyer.id has no index, but this collection is small (≈19k docs)
+ * and indexed on expectedWindow.start, rubroAncestors and confidence.
+ *
+ * Of the 19,352 forecasts in the collection, ~12,245 have an expectedWindow
+ * that has already elapsed (window.end < now). A page whose whole promise is
+ * "próximos llamados" must not surface those by default — sorting ascending
+ * on expectedWindow.start with no recency filter would put the stalest
+ * predictions first. So the default filter requires expectedWindow.end >= now;
+ * ?includeElapsed=1 opts back into the full (unfiltered-by-recency) set for
+ * debugging/analysis.
+ */
+export default defineEventHandler(async (event) => {
+  try {
+    await connectToDatabase()
+    const q = getQuery(event)
+
+    const limit = Math.min(Number(q.limit) || 50, 200)
+    const skip = Number(q.skip) || 0
+    const minConfidence = q.minConfidence != null ? Number(q.minConfidence) : DISPLAY_THRESHOLD
+    const includeElapsed = q.includeElapsed === '1' || q.includeElapsed === 'true'
+
+    const filter: Record<string, unknown> = { confidence: { $gte: minConfidence } }
+    if (q.buyer) filter.buyerId = String(q.buyer)
+    if (q.rubro) filter.rubroAncestors = String(q.rubro)
+    if (q.before) filter['expectedWindow.start'] = { $lte: new Date(String(q.before)) }
+    if (!includeElapsed) filter['expectedWindow.end'] = { $gte: new Date() }
+
+    // Distinguish "rollup never ran" (empty collection → 503, retry-able once the
+    // job runs) from "this filter simply matches nothing" (empty rows, total: 0,
+    // still a 200 — the collection exists and is populated).
+    const collectionIsEmpty = (await TenderForecastModel.estimatedDocumentCount()) === 0
+    if (collectionIsEmpty) {
+      throw createError({ statusCode: 503, statusMessage: 'Forecast not ready. Run the refresh-tender-forecast job.' })
+    }
+
+    const [rows, total] = await Promise.all([
+      TenderForecastModel.find(filter)
+        .sort({ 'expectedWindow.start': 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      TenderForecastModel.countDocuments(filter),
+    ])
+
+    const calculatedAt = rows[0]?.generatedAt ?? null
+
+    return { success: true, data: { rows, total, calculatedAt } }
+  }
+  catch (error: any) {
+    if (error?.statusCode) throw error
+    console.error('Error reading tender forecasts:', error)
+    throw createError({ statusCode: 500, statusMessage: 'Failed to read tender forecasts' })
+  }
+})
