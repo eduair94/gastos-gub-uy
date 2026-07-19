@@ -19,19 +19,26 @@
  * label it and keep the confidence visible. Personal names are tagged `persona`
  * and left without a biography on purpose (privacy).
  *
- * No web grounding: the current Gemini client is structured-output only, which is
- * incompatible with the Search tool in one call. Well-known media/agencies/entes
- * are answered from model knowledge; obscure names come back `otro` / low
- * confidence and can be re-run with grounding once that path exists.
+ * ## Cost: rules first, model only for the tail
+ *
+ * ~97% of suppliers (companies, people, co-ops, public bodies) are classified
+ * for FREE by name rules — they never needed a description. Only media/agency-
+ * shaped or unmatched names reach the LLM, so even a full 40k pass costs cents.
+ * `--rules-only` does a pure-free pass; the default fills the tail with the
+ * model. Gemini flash-lite also has a free tier (~1.5k req/day) — throttle to
+ * it and the model part is $0 too.
+ *
+ * No web grounding: the Gemini client is structured-output only, incompatible
+ * with the Search tool in one call. Well-known media/agencies are answered from
+ * model knowledge; obscure names come back `otro` / low confidence.
  *
  * Usage:
- *   npx tsx src/jobs/enrich-suppliers.ts --dry-run          # plan + cost estimate, no API calls
- *   npx tsx src/jobs/enrich-suppliers.ts                    # enrich the pauta recipients (skip done)
- *   npx tsx src/jobs/enrich-suppliers.ts --limit=10         # cheap sample
- *   npx tsx src/jobs/enrich-suppliers.ts --top=500          # 500 biggest suppliers by spend
+ *   npx tsx src/jobs/enrich-suppliers.ts --dry-run          # plan + cost estimate, no calls
+ *   npx tsx src/jobs/enrich-suppliers.ts --top=2000 --rules-only   # free: rules only, no model
+ *   npx tsx src/jobs/enrich-suppliers.ts --top=2000         # rules + model for the tail
  *   npx tsx src/jobs/enrich-suppliers.ts --names="EL PAIS S A,LA DIARIA  S.A."
+ *   npx tsx src/jobs/enrich-suppliers.ts --no-rules --top=50       # force model on everything
  *   npx tsx src/jobs/enrich-suppliers.ts --all              # re-enrich even if already stored
- *   npx tsx src/jobs/enrich-suppliers.ts --model=gemini-2.5-flash
  */
 
 import { mongoose } from "../../shared/connection/database";
@@ -104,6 +111,65 @@ async function topSuppliers(limit: number): Promise<string[]> {
   return rows.map((r) => (r as { name?: string }).name ?? "").filter(Boolean);
 }
 
+const RULE_MODEL = "rules-v1";
+
+interface RuleResult {
+  category: string;
+  confidence: number;
+  /** True when the name deserves the model (media/agency needing a real
+   *  description, or nothing matched). */
+  needsLLM: boolean;
+}
+
+/**
+ * Free, deterministic classification for the boring bulk — companies, people,
+ * co-ops, public bodies — which are ~97% of suppliers and never needed a
+ * description anyway. Anything media/advertising-shaped, or that no rule
+ * matches, returns needsLLM so the model names it precisely. This is what keeps
+ * the spend near zero: the LLM only ever sees the interesting tail.
+ */
+function classifyByRules(rawName: string): RuleResult {
+  const name = rawName.replace(/\s+/g, " ").trim();
+  const U = name.toUpperCase();
+
+  // Media / advertising cues — worth a precise type + description → defer to the model.
+  if (/\b(CANAL|TELEVISOR|TELEVISION|RADIO|EMISORA|DIARIO|SEMANARIO|PERIODICO|FM|PUBLICIDAD|PUBLICITARI|BROADCAST|COMUNICACION|PRENSA|EDITORIAL|PRODUCTORA|AGENCIA)\b/.test(U)) {
+    return { category: "otro", confidence: 0, needsLLM: true };
+  }
+
+  // Co-op.
+  if (/\bCOOPERATIVA\b|\bCOOP\b/.test(U)) {
+    return { category: "cooperativa", confidence: 0.85, needsLLM: false };
+  }
+
+  // Public body — appearing as a supplier is itself an anomaly, but the name is unambiguous.
+  if (
+    /^(INTENDENCIA|MINISTERIO|ADMINISTRACION NACIONAL|DIRECCION NACIONAL|DIRECCION GENERAL|INTENDENCIA|INSTITUTO NACIONAL|COMISION NACIONAL|FONDO NACIONAL|PRESIDENCIA|CONTADURIA|CONSEJO)\b/.test(U)
+    || /\b(ANCAP|ANTEL|ANEP|UDELAR|BROU|BPS|BSE|UTE|OSE|AFE|ANP|ANV)\b/.test(U)
+  ) {
+    return { category: "organismo-publico", confidence: 0.85, needsLLM: false };
+  }
+
+  // A registered company (has a legal form) → category is safe, no description needed.
+  const hasCompanyForm
+    = /\b(S\.?A\.?S?|S\.?R\.?L|SAS|SRL|LTDA|LIMITADA|SOCIEDAD ANONIMA)\b/.test(U)
+      || /\b(ASOCIACION|FUNDACION|CAMARA|FEDERACION)\b/.test(U);
+  if (hasCompanyForm) {
+    return { category: "empresa", confidence: 0.8, needsLLM: false };
+  }
+
+  // No legal form and 2–5 all-letter words → almost certainly a person (unipersonal).
+  const words = name.split(" ").filter(Boolean);
+  const looksPersonal = words.length >= 2 && words.length <= 5
+    && words.every(w => /^[A-Za-zÀ-ÿ.'-]+$/.test(w));
+  if (looksPersonal) {
+    return { category: "persona", confidence: 0.7, needsLLM: false };
+  }
+
+  // Unsure — let the model try.
+  return { category: "otro", confidence: 0, needsLLM: true };
+}
+
 async function main(): Promise<void> {
   const apiKey = process.env.GEMINI_API_KEY ?? "";
   const model = arg("model") ?? DEFAULT_MODEL;
@@ -143,14 +209,50 @@ async function main(): Promise<void> {
   }
   console.log(names.map((n, i) => `  ${i + 1}. ${n}`).join("\n"));
 
+  // Rules-first: classify the obvious bulk (companies, people, co-ops, public
+  // bodies) for FREE. Only media/agency-shaped or unmatched names reach the model.
+  const noRules = flag("no-rules");
+  const rulesOnly = flag("rules-only");
+  let ruled = 0;
+  const needLLM: string[] = [];
+  for (const name of names) {
+    const r = noRules ? { needsLLM: true, category: "otro", confidence: 0 } : classifyByRules(name);
+    if (!r.needsLLM) {
+      if (!dryRun) {
+        await SupplierEnrichmentModel.updateOne(
+          { name },
+          { $set: { name, category: r.category, description: "", descriptionEn: "", confidence: r.confidence, grounded: false, model: RULE_MODEL, enrichedAt: new Date() } },
+          { upsert: true }
+        );
+      }
+      ruled++;
+    }
+    else {
+      needLLM.push(name);
+    }
+  }
+  console.log(`[enrich] rules classified ${ruled} for free; ${needLLM.length} left for the model`);
+
   if (dryRun) {
-    console.log(`[enrich] dry-run: would call ${model} for ${names.length} suppliers (~$${(names.length * 0.00008).toFixed(4)} est.).`);
+    console.log(`[enrich] dry-run: would call ${model} for ${needLLM.length} suppliers (~$${(needLLM.length * 0.00008).toFixed(4)} est.). Rules would cover ${ruled} for $0.`);
+    await disconnectFromDatabase();
+    return;
+  }
+
+  if (rulesOnly) {
+    console.log(`[enrich] rules-only: ${ruled} stored free; ${needLLM.length} left (run without --rules-only to fill with the model).`);
+    await disconnectFromDatabase();
+    return;
+  }
+
+  if (!needLLM.length) {
+    console.log(`[enrich] done: ${ruled} classified by rules, nothing left for the model. cost=$0`);
     await disconnectFromDatabase();
     return;
   }
 
   if (!apiKey) {
-    console.error("[enrich] GEMINI_API_KEY is not set — cannot call the API. Set it and re-run.");
+    console.error("[enrich] GEMINI_API_KEY is not set — cannot call the API. Set it and re-run (or use --rules-only for the free pass).");
     await disconnectFromDatabase();
     process.exit(1);
   }
@@ -159,7 +261,7 @@ async function main(): Promise<void> {
   let ok = 0;
   let failed = 0;
 
-  for (const name of names) {
+  for (const name of needLLM) {
     try {
       const { data, usage } = await callGeminiStructured<EnrichResult>({
         apiKey,
@@ -200,7 +302,7 @@ async function main(): Promise<void> {
   }
 
   const cost = estimateCostUsd(totalUsage, FLASH_LITE_PRICING);
-  console.log(`[enrich] done: ${ok} ok, ${failed} failed. tokens=${totalUsage.totalTokens} est.cost=$${cost.toFixed(4)}`);
+  console.log(`[enrich] done: ${ruled} by rules (free) + ${ok} by model, ${failed} failed. tokens=${totalUsage.totalTokens} est.cost=$${cost.toFixed(4)}`);
 
   await disconnectFromDatabase();
 }
