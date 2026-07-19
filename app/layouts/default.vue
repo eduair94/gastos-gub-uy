@@ -25,6 +25,9 @@ watch(() => route.query.search, (q) => {
 
 const nav = computed(() => [
   { key: 'home', to: localePath('/'), icon: 'mdi-view-dashboard-outline' },
+  { key: 'gastos', to: localePath('/gastos'), icon: 'mdi-cash-multiple' },
+  { key: 'recopilatorios', to: localePath('/recopilatorios'), icon: 'mdi-folder-star-outline' },
+  { key: 'pauta', to: localePath('/pauta'), icon: 'mdi-bullhorn-variant-outline' },
   { key: 'contracts', to: localePath('/contracts'), icon: 'mdi-file-document-outline' },
   { key: 'products', to: localePath('/products'), icon: 'mdi-package-variant-closed' },
   { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
@@ -37,6 +40,7 @@ const nav = computed(() => [
   { key: 'providerAnomalies', to: localePath('/analytics/proveedores-anomalias'), icon: 'mdi-account-alert-outline' },
   { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
   { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
+  { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
   { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan' },
   // Individual investigation surfaced directly in the bar by request; other pieces stay
   // behind the hub. startsWith-based isActive keeps the hub highlighted too, which is fine.
@@ -373,6 +377,8 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             </v-icon>
           </button>
 
+          <TourLauncher variant="icon" />
+
           <v-menu v-if="user">
             <template #activator="{ props }">
               <button
@@ -603,6 +609,10 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             </v-icon>
             {{ isDark ? t('nav.themeLight') : t('nav.themeDark') }}
           </button>
+          <TourLauncher
+            variant="drawer"
+            @activate="drawer = false"
+          />
           <button
             v-for="l in otherLocales"
             :key="l.code"
@@ -670,6 +680,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
     <!-- Floating "love" card: star on GitHub or donate. Fixed-positioned,
          self-contained, persists its own minimized state. -->
     <DonationCard />
+    <TourHost />
   </v-app>
 </template>
 
@@ -885,8 +896,8 @@ watch([locale, user], () => nextTick(scheduleRecompute))
   height: 34px;
   padding: 0 var(--s-4);
   border-radius: var(--r-md);
-  background: var(--celeste-deep);
-  color: #fff;
+  background: var(--cta-fill);
+  color: var(--cta-fg);
   font-size: var(--t-sm);
   font-weight: 600;
   text-decoration: none;

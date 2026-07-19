@@ -180,10 +180,14 @@ async function save() {
       :label="t('alerts.name')"
       :placeholder="t('alerts.namePlaceholder')"
       maxlength="120"
+      data-tour="alert-name"
     />
 
     <!-- Catalog picker: search + rubro drilldown -->
-    <div class="wform__cat">
+    <div
+      class="wform__cat"
+      data-tour="alert-products"
+    >
       <span class="wform__label">{{ t('alerts.products') }}</span>
       <p class="wform__hint u-muted">
         {{ t('alerts.productsHint') }}
@@ -298,6 +302,7 @@ async function save() {
     <!-- Keywords -->
     <v-combobox
       v-model="form.keywords"
+      data-tour="alert-keywords"
       :label="t('alerts.keywords')"
       :hint="t('alerts.keywordsHint')"
       persistent-hint
@@ -330,7 +335,10 @@ async function save() {
     </div>
 
     <!-- Refinements -->
-    <details class="wform__refine">
+    <details
+      class="wform__refine"
+      data-tour="alert-refine"
+    >
       <summary>{{ t('alerts.refinements') }}</summary>
       <div class="wform__refinebody">
         <v-select
@@ -388,6 +396,7 @@ async function save() {
     <div
       v-else-if="preview"
       class="wform__preview"
+      data-tour="alert-preview"
     >
       <p class="wform__previewcount">
         {{ preview.total > 0 ? t('alerts.preview', { n: preview.total }) : t('alerts.previewNone') }}
@@ -424,6 +433,7 @@ async function save() {
         color="primary"
         type="submit"
         :loading="saving"
+        data-tour="alert-save"
       >
         {{ t('alerts.save') }}
       </v-btn>

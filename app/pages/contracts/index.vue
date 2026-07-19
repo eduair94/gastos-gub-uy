@@ -452,6 +452,7 @@ useSeo(() => ({
       <!-- Filter rail: a sidebar on desktop, a sheet on small screens. -->
       <aside
         class="explorer__rail"
+        data-tour="explorer-filters"
         :aria-label="t('filters.title')"
       >
         <FilterRail
@@ -504,7 +505,10 @@ useSeo(() => ({
              What this filter set actually contains, before you read a
              single row: how many, worth how much, spread across which
              years. -->
-        <div class="strip">
+        <div
+          class="strip"
+          data-tour="explorer-kpis"
+        >
           <div class="strip__figures">
             <div class="strip__fig">
               <span class="strip__n">{{ statsPending ? '·····' : formatNumber(stats?.count) }}</span>
@@ -666,7 +670,10 @@ useSeo(() => ({
           </div>
 
           <div v-else>
-            <table class="ctable dtable">
+            <table
+              class="ctable dtable"
+              data-tour="explorer-table"
+            >
               <thead>
                 <tr>
                   <th scope="col">

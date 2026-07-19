@@ -167,8 +167,8 @@ const upcoming = computed(() => (calData.value?.data?.items ?? []).slice(0, 6))
   padding: 0 var(--s-4);
   height: 40px;
   border-radius: var(--r-md);
-  background: var(--celeste-deep);
-  color: #fff;
+  background: var(--cta-fill);
+  color: var(--cta-fg);
   font-weight: 600;
   font-size: var(--t-sm);
   text-decoration: none;

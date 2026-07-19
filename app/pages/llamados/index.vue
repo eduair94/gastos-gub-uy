@@ -3,7 +3,6 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
-const { user } = useAuth()
 // Browsing open calls is public (backed by the DB); the "create alert" CTA needs
 // accounts, so it's hidden when Firebase isn't configured.
 const authEnabled = useAuthEnabled()
@@ -37,7 +36,13 @@ function submitSearch() {
   page.value = 1
 }
 
-const createAlertTo = computed(() => (user.value ? localePath('/app/alertas') : localePath('/registro')))
+// The CTA promises "an alert for THIS search", so carry the current keyword into the
+// alert builder (`?new=1` auto-opens the form, `?keyword=` prefills it). Guests are
+// bounced to /login by the auth middleware and returned here with the keyword intact.
+const createAlertTo = computed(() => ({
+  path: localePath('/app/alertas'),
+  query: { new: '1', ...(q.value.trim() ? { keyword: q.value.trim() } : {}) },
+}))
 </script>
 
 <template>
@@ -58,6 +63,7 @@ const createAlertTo = computed(() => (user.value ? localePath('/app/alertas') : 
       <form
         class="llamados__search"
         role="search"
+        data-tour="llamados-search"
         @submit.prevent="submitSearch"
       >
         <v-text-field
@@ -82,6 +88,7 @@ const createAlertTo = computed(() => (user.value ? localePath('/app/alertas') : 
         v-if="authEnabled"
         :to="createAlertTo"
         class="llamados__cta"
+        data-tour="llamados-cta"
       >
         <v-icon size="18">
           mdi-bell-plus-outline
@@ -89,6 +96,8 @@ const createAlertTo = computed(() => (user.value ? localePath('/app/alertas') : 
         {{ t('llamados.createAlertCta') }}
       </NuxtLink>
     </div>
+
+    <AudienceHook variant="band" />
 
     <p
       v-if="pagination?.total != null"
@@ -110,6 +119,7 @@ const createAlertTo = computed(() => (user.value ? localePath('/app/alertas') : 
     <div
       v-else-if="calls.length"
       class="llamados__grid"
+      data-tour="llamados-grid"
     >
       <OpenCallCard
         v-for="c in calls"
@@ -166,8 +176,8 @@ const createAlertTo = computed(() => (user.value ? localePath('/app/alertas') : 
   padding: 0 var(--s-4);
   height: 44px;
   border-radius: var(--r-md);
-  background: var(--celeste-deep);
-  color: #fff;
+  background: var(--cta-fill);
+  color: var(--cta-fg);
   font-weight: 600;
   font-size: var(--t-sm);
   text-decoration: none;

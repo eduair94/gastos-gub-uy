@@ -3,6 +3,7 @@ definePageMeta({ middleware: 'guest' })
 
 const { t } = useI18n()
 const localePath = useLocalePath()
+const route = useRoute()
 const { registerEmail, loginGoogle } = useAuth()
 
 useSeo({ title: t('auth.registerTitle'), description: t('auth.subtitle'), path: '/registro', noindex: true })
@@ -12,12 +13,24 @@ const password = ref('')
 const loading = ref(false)
 const error = ref('')
 
+// Preserve where the user was headed (e.g. the prefilled alert builder) across signup.
+function redirectTarget(): string {
+  const r = route.query.redirect
+  return typeof r === 'string' && r.startsWith('/') ? r : localePath('/app')
+}
+
+// Carry the return path over to the login page so switching auth mode never drops it.
+const loginTo = computed(() => ({
+  path: localePath('/login'),
+  query: route.query.redirect ? { redirect: route.query.redirect } : {},
+}))
+
 async function doRegister() {
   error.value = ''
   loading.value = true
   try {
     await registerEmail(email.value, password.value)
-    await navigateTo(localePath('/app'))
+    await navigateTo(redirectTarget())
   }
   catch (e) {
     error.value = authError(e, t)
@@ -32,7 +45,7 @@ async function doGoogle() {
   loading.value = true
   try {
     await loginGoogle()
-    await navigateTo(localePath('/app'))
+    await navigateTo(redirectTarget())
   }
   catch (e) {
     error.value = authError(e, t)
@@ -102,7 +115,7 @@ async function doGoogle() {
       </v-btn>
 
       <div class="authcard__links">
-        <span>{{ t('auth.haveAccount') }} <NuxtLink :to="localePath('/login')">{{ t('auth.signInInstead') }}</NuxtLink></span>
+        <span>{{ t('auth.haveAccount') }} <NuxtLink :to="loginTo">{{ t('auth.signInInstead') }}</NuxtLink></span>
       </div>
     </div>
   </div>

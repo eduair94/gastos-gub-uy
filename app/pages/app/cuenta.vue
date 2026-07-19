@@ -56,7 +56,10 @@ async function onLogout() {
     </header>
 
     <section class="panel cuenta__section">
-      <div class="cuenta__row">
+      <div
+        class="cuenta__row"
+        data-tour="account-email"
+      >
         <span class="cuenta__label">{{ t('accountPage.email') }}</span>
         <span class="u-mono">{{ user?.email }}</span>
         <span
@@ -77,6 +80,7 @@ async function onLogout() {
         :label="t('accountPage.enabled')"
         color="success"
         hide-details
+        data-tour="notif-enabled"
       />
       <v-select
         v-model="form.frequency"
@@ -85,6 +89,7 @@ async function onLogout() {
         :disabled="!form.enabled"
         hide-details
         class="cuenta__field"
+        data-tour="notif-frequency"
       />
       <v-select
         v-model="form.locale"
@@ -98,6 +103,7 @@ async function onLogout() {
         <v-btn
           color="primary"
           :loading="saving"
+          data-tour="notif-save"
           @click="save"
         >
           {{ t('accountPage.save') }}

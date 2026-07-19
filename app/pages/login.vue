@@ -19,6 +19,12 @@ function redirectTarget(): string {
   return typeof r === 'string' && r.startsWith('/') ? r : localePath('/app')
 }
 
+// Carry the return path over to the register page so switching auth mode never drops it.
+const registerTo = computed(() => ({
+  path: localePath('/registro'),
+  query: route.query.redirect ? { redirect: route.query.redirect } : {},
+}))
+
 async function doLogin() {
   error.value = ''
   loading.value = true
@@ -142,7 +148,7 @@ async function doMagic() {
         <NuxtLink :to="localePath('/recuperar')">
           {{ t('auth.forgotPassword') }}
         </NuxtLink>
-        <span>{{ t('auth.noAccount') }} <NuxtLink :to="localePath('/registro')">{{ t('auth.createOne') }}</NuxtLink></span>
+        <span>{{ t('auth.noAccount') }} <NuxtLink :to="registerTo">{{ t('auth.createOne') }}</NuxtLink></span>
       </div>
     </div>
   </div>

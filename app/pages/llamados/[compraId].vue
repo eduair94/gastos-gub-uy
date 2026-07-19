@@ -223,11 +223,15 @@ async function setReminder(days: number) {
         </section>
 
         <ClientOnly>
-          <PliegoSummary :compra-id="compraId" />
+          <PliegoSummary
+            :compra-id="compraId"
+            :has-benchmarks="benchmarks.length > 0"
+          />
         </ClientOnly>
 
         <section
           v-if="benchmarks.length"
+          id="benchmarks"
           class="panel calldetail__section"
         >
           <h2 class="u-eyebrow">

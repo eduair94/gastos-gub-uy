@@ -6,6 +6,9 @@
   "nav": {
     "skip": "Skip to content",
     "home": "Dashboard",
+    "gastos": "Spending",
+    "recopilatorios": "Compilations",
+    "pauta": "State advertising",
     "contracts": "Contracts",
     "products": "Products",
     "suppliers": "Suppliers",
@@ -15,6 +18,7 @@
     "providerAnomalies": "Flagged suppliers",
     "intendencias": "Intendencias",
     "organismos": "Spending by body",
+    "mapa": "Spending map",
     "investigaciones": "Investigations",
     "tvciudad": "TV Ciudad",
     "llamados": "Open calls",
@@ -121,6 +125,171 @@
     "anomaliesHelp": "Contracts that depart from the usual pattern. A flag is not an accusation: it's a starting point for review.",
     "exploreCta": "Open the explorer",
     "sourceNote": "Source: Compras Estatales open data (OCDS), catalogodatos.gub.uy."
+  },
+  "gastos": {
+    "eyebrow": "State spending",
+    "title": "Where your money goes.",
+    "lead": "{count} public purchases by the Uruguayan state since {yearFrom}, grouped for what they are: who gets paid, who spends, what is bought, and what doesn't add up. All from the data the state itself publishes.",
+    "exploreCta": "Explore the contracts",
+    "methodCta": "How it's calculated",
+    "stat": {
+      "contracts": "Purchases on record",
+      "typical": "Typical purchase (median)",
+      "suppliers": "State suppliers",
+      "flags": "Price flags"
+    },
+    "noTotal": {
+      "eyebrow": "The missing number",
+      "title": "The state can't give you a reliable total",
+      "body": "A handful of official records carry corrupt quantities. A single award declares 1,200,007 generation units at USD 519,788 each: USD 623 billion —about eight times the country's GDP— in one contract.",
+      "body2": "Three records like that hold 86% of all reported spending. A «total spent» headline would, in effect, be the sum of those errors. That's why the figure above is the median: half of the state's purchases are worth less than that, and it doesn't break on one bad number.",
+      "cta": "See why, and those records"
+    },
+    "volume": {
+      "title": "How many purchases the state makes, by year",
+      "help": "Number of purchases recorded each year. The volume keeps growing; tap a bar to open that year in the explorer."
+    },
+    "suppliers": {
+      "title": "Who gets the money",
+      "help": "The suppliers that were paid the most by the state. Fuel importers and printers lead the list.",
+      "meta": "{n} contracts"
+    },
+    "buyers": {
+      "title": "Who spends it",
+      "help": "The bodies that spend the most. Fuel, roads and energy account for most of it.",
+      "meta": "{n} contracts",
+      "byType": "See spending grouped by type of body",
+      "perCapita": "Compare departments per resident"
+    },
+    "categories": {
+      "title": "What the state buys",
+      "help": "The categories with the most reported spending. Roads and fuel dominate the tab.",
+      "share": "{pct} of reported spending",
+      "all": "See all products"
+    },
+    "flags": {
+      "title": "What doesn't add up",
+      "summary": "{total} price flags · {critical} critical",
+      "help": "Purchases whose unit price spikes against what's usually paid for the same item. A flag is not an accusation: it's where to start looking.",
+      "seeAll": "See all flags",
+      "seeUnexplained": "See the ones AI couldn't explain"
+    },
+    "opacity": {
+      "title": "The opacity, in two numbers",
+      "body": "The state does publish its purchases, but incompletely. Auditing or filtering on this data leaves most records out.",
+      "noStatus": "of tenders don't report how they ended",
+      "noMethod": "don't report which procedure was used",
+      "asOf": "Across {total} records · data as of {date}",
+      "source": "See the official source"
+    },
+    "explore": {
+      "title": "Now look for yourself",
+      "body": "This all comes from open data. You can drill down to each contract and its official record.",
+      "contracts": "Explore contracts",
+      "suppliers": "Suppliers",
+      "buyers": "Bodies",
+      "products": "Products"
+    },
+    "sourceNote": "Source: Compras Estatales open data (OCDS), catalogodatos.gub.uy. Amounts normalized to pesos; a few records with impossible quantities are excluded from averages."
+  },
+  "recop": {
+    "eyebrow": "Compilation",
+    "indexTitle": "Compilations",
+    "indexLead": "Public spending grouped by event: a festival, a public works push, a story. Each compilation gathers the contracts of a single event and adds up what it cost.",
+    "backToAll": "All compilations",
+    "teaserTitle": "Compilations",
+    "teaserBody": "Spending grouped by event — a festival, a public works push, a story — with its total cost and the contract-by-contract detail.",
+    "teaserCta": "See the compilations",
+    "kpi": {
+      "total": "Total cost",
+      "count": "Contracts",
+      "suppliers": "Suppliers"
+    },
+    "suppliersTitle": "Who got paid",
+    "suppliersHelp": "Suppliers ranked by amount awarded in this event. A contract with several suppliers counts in full for each: a ceiling, not a split.",
+    "categoriesTitle": "Where it went",
+    "categoriesHelp": "Spending by category, from each awarded item's price times quantity, in the contract currency.",
+    "byYearTitle": "Contracts by year",
+    "ledgerTitle": "The detail",
+    "ledgerHelp": "Every contract in the event, largest first. Tap one for its record and the link to the official purchase.",
+    "ledgerCount": "{n} contracts",
+    "ledgerNote": "Amounts in pesos, normalized. Records with impossible quantities are excluded from the total.",
+    "relatedTitle": "Other compilations",
+    "card": {
+      "count": "{n} contracts"
+    },
+    "methodTitle": "How a compilation is built",
+    "methodBody": "Each compilation is a saved query over the open data: a body, a text and, sometimes, a year range. The site resolves it live, so totals and detail are always current. The set of contracts is defined by editorial judgment, the way a journalist would.",
+    "toGastos": "Back to State spending",
+    "notFound": {
+      "title": "We couldn't find that compilation",
+      "body": "It may have been renamed or doesn't exist yet.",
+      "action": "See all compilations"
+    }
+  },
+  "pauta": {
+    "eyebrow": "State advertising",
+    "title": "The state's advertising, and who collects it",
+    "lead": "How much the Uruguayan state spends on advertising and propaganda, which bodies pay for it, and which media and agencies receive it. Amounts are apportioned per recipient, not the full contract.",
+    "stat": {
+      "total": "Spent on advertising",
+      "top5": "Goes to the top 5 recipients",
+      "formats": "Advertising formats"
+    },
+    "viewContracts": "See {name}'s contracts",
+    "cat": {
+      "medio-tv": "TV",
+      "medio-radio": "Radio",
+      "medio-prensa": "Press",
+      "medio-digital": "Digital",
+      "medio-via-publica": "Out-of-home",
+      "agencia-publicidad": "Agency",
+      "productora": "Producer",
+      "organismo-publico": "Public body",
+      "empresa": "Company",
+      "cooperativa": "Co-op",
+      "persona": "Person"
+    },
+    "aiNote": "Each recipient's category and description are AI-generated (Gemini) from the name: they are indicative, can be wrong, verify against the source.",
+    "outletsTitle": "Who receives the advertising",
+    "outletsHelp": "The biggest earners of state advertising: media, agencies and —sometimes— other public bodies. Amount apportioned per recipient within each ad type.",
+    "outletsNote": "The list includes advertising agencies and the odd public body, not only media outlets. A recipient with a public-body name (e.g. a Secretaría) topping the ranking is a quirk of the official data worth a closer look: it may be an internal transfer or a misattributed record.",
+    "buyersTitle": "Who pays for it",
+    "buyersHelp": "The bodies that spend the most on advertising. Tourism, the state banks and gambling (lotteries and casinos) lead the list.",
+    "formatsTitle": "In what format",
+    "formatsHelp": "The advertising-and-propaganda catalogue categories, by spend. «Advertising and broadcast service» accounts for almost all of it. Tap a category to see those contracts.",
+    "byYearTitle": "Advertising by year",
+    "byYearHelp": "Advertising-and-propaganda spend by year, in pesos.",
+    "sourceNote": "Source: Compras Estatales open data (OCDS), «Advertising and Propaganda» catalogue class. Totals are exact; the rankings sum each category's main recipients and payers, not the long tail.",
+    "teaserTitle": "State advertising",
+    "teaserBody": "How much the state spends on advertising and who collects it: media, agencies and the bodies that advertise most.",
+    "teaserCta": "See state advertising"
+  },
+  "sup": {
+    "cat": {
+      "medio-tv": "TV",
+      "medio-radio": "Radio",
+      "medio-prensa": "Press",
+      "medio-digital": "Digital",
+      "medio-via-publica": "Out-of-home",
+      "agencia-publicidad": "Agency",
+      "productora": "Producer",
+      "organismo-publico": "Public body",
+      "empresa": "Company",
+      "cooperativa": "Co-op",
+      "persona": "Person"
+    },
+    "aiNote": "Each supplier's category is AI-generated (Gemini) from the name: it's indicative, can be wrong, verify against the source.",
+    "aiTitle": "AI-generated category"
+  },
+  "mapa": {
+    "title": "The public spending map",
+    "lead": "Everything the state spends, dimensioned: each body is a rectangle, its size is what it spent. Grouped by type of body.",
+    "all": "All",
+    "totalLabel": "On the map:",
+    "hint": "Each rectangle's area is proportional to spend. Tap a body for its profile; pick a group to zoom in.",
+    "note": "Area = published procurement spend, normalized to pesos; records with impossible quantities are excluded. Precomputed monthly.",
+    "toOrganismos": "See the breakdown by group"
   },
   "contracts": {
     "title": "Contract explorer",
@@ -886,6 +1055,25 @@
     }
   },
   "seo": {
+    "gastos": {
+      "title": "Where your money goes — Uruguay's state spending",
+      "description": "Uruguay's public spending grouped as critique: who gets paid, who spends, what the state buys and what doesn't add up. With official open data from Compras Estatales."
+    },
+    "recop": {
+      "title": "Compilations — Uruguay's state spending by event",
+      "description": "Uruguay's public spending grouped by event: festivals, public works and stories, with what each one cost, from official Compras Estatales data."
+    },
+    "recopDetail": {
+      "title": "{title} — what it cost, contract by contract"
+    },
+    "pauta": {
+      "title": "State advertising — Uruguay's public advertising and who collects it",
+      "description": "How much the Uruguayan state spends on advertising and propaganda, which bodies pay for it, and which media and agencies receive it. Official open data from Compras Estatales."
+    },
+    "mapa": {
+      "title": "Uruguay's public spending map",
+      "description": "A treemap of Uruguayan state spending: each public body dimensioned by what it spends, grouped by type. Official data from Compras Estatales."
+    },
     "organismos": {
       "title": "Uruguay's state spending by public body",
       "description": "Public procurement grouped by type of body: departmental governments, ministries, health, state enterprises and education. Who spends most, with official Compras Estatales data."
@@ -1042,6 +1230,7 @@
     "summaryCriterios": "Evaluation criteria",
     "summaryMonto": "Reference amount",
     "summaryObservaciones": "Notes",
+    "summarySoon": "Coming soon: AI bidding-document summary.",
     "benchmarksTitle": "Historical award prices",
     "benchmarksLead": "What these categories were historically awarded for.",
     "benchmarksEmpty": "No price history for these categories.",
@@ -1054,6 +1243,22 @@
     "statusClosed": "Closed",
     "statusAwarded": "Awarded",
     "statusCancelled": "Cancelled"
+  },
+  "hook": {
+    "bandTitle": "Company, citizen or press?",
+    "slotLead": "In the meantime, the site already helps you:",
+    "segLabel": "Pick your profile",
+    "segEmpresa": "I'm a company",
+    "segCiudadano": "Citizen / Press",
+    "empresaV1": "Get notified the moment a call in your line of business opens.",
+    "empresaV2": "See what the State has paid before you set your price.",
+    "ciudadanoV1": "Follow the money: who buys, from whom, for how much.",
+    "ciudadanoV2": "Overpricing and anomalies detected automatically.",
+    "empresaCtaAlert": "Create an alert",
+    "empresaCtaBenchmarks": "See historical prices",
+    "empresaCtaExplore": "Explore spending",
+    "ciudadanoCtaAnomalias": "View anomalies",
+    "ciudadanoCtaExplorar": "Explore spending"
   },
   "alerts": {
     "title": "My alerts",
@@ -1232,5 +1437,68 @@
     "error": "We couldn't process the unsubscribe. The link may have expired.",
     "processing": "Processing…",
     "backHome": "Back to home"
+  },
+  "tour": {
+    "next": "Next",
+    "prev": "Back",
+    "done": "Done",
+    "close": "Close",
+    "progress": "Step {current} of {total}",
+    "launcher": "Guided tours",
+    "picker": {
+      "welcome": "First time here? Let us show you around.",
+      "title": "What would you like to do?",
+      "subtitle": "Pick a guided tour. They're short and you can leave anytime.",
+      "exploreTitle": "See where the money goes",
+      "exploreDesc": "Learn to explore government contracts: search, filter and read the amounts.",
+      "alertsTitle": "Get tender alerts",
+      "alertsDesc": "Set up an alert and get an email when a tender you care about opens.",
+      "dismiss": "Not now"
+    },
+    "explore": {
+      "heroTitle": "Search for anything",
+      "heroBody": "Type a product, a company or a government body. This is where exploring public spending begins.",
+      "bridgeTitle": "The contract explorer",
+      "bridgeBody": "We'll take you to the explorer, where you can see every contract and filter it however you like.",
+      "filtersTitle": "Filter the spending",
+      "filtersBody": "Narrow by product, buyer, supplier, amount, year or procurement method. Every filter updates the results instantly.",
+      "kpisTitle": "How much, how many",
+      "kpisBody": "For the chosen filters this summary shows how many contracts there are, what they add up to and the typical amount. The gold bar measures magnitude in pesos.",
+      "tableTitle": "The results",
+      "tableBody": "Each row is a contract. Tap one to see the detail: what was bought, from whom and for how much.",
+      "doneTitle": "Go explore!",
+      "doneBody": "You can also check anomalies, suppliers and buyers from the menu. To replay this tour, hit the help button (?)."
+    },
+    "alerts": {
+      "searchTitle": "Open tenders",
+      "searchBody": "These are the currently open tenders. Search by topic or keyword to find the ones you care about.",
+      "cardTitle": "Each card is a tender",
+      "cardBody": "It shows the government body, the procurement method and the closing date. Tap it for full details.",
+      "ctaTitle": "Create an alert",
+      "ctaBody": "With an alert you don't have to check by hand: we email you when a tender matching your search opens.",
+      "loginTitle": "You need a free account",
+      "loginBody": "Alerts and emails are free — you just need an account to save them. Sign in and we'll pick up where we left off.",
+      "loginBtn": "Sign in / Create account",
+      "nameTitle": "Give it a name",
+      "nameBody": "A name helps you recognize the alert later. For example: «Computers for schools».",
+      "productsTitle": "Pick products or categories",
+      "productsBody": "Search the product or category you want to watch. Add several — the alert fires on any of them.",
+      "keywordsTitle": "Or use keywords",
+      "keywordsBody": "Add words that must appear in the tender. Great for topics that don't fit a category.",
+      "refineTitle": "Refine the search",
+      "refineBody": "Optional: limit by body, procurement method or amount range so you only get what really matters.",
+      "previewTitle": "Live preview",
+      "previewBody": "Before saving, see how many tenders match today. Tune the alert so it's neither too broad nor too narrow.",
+      "saveTitle": "Save the alert",
+      "saveBody": "Done. From now on we'll compare every new tender against your alert. Now let's set up email.",
+      "emailTitle": "Your email",
+      "emailBody": "Alerts arrive at this address. Important: it must be verified; if you see «unverified», check your inbox and confirm.",
+      "enableTitle": "Turn on email",
+      "enableBody": "Flip this switch to receive alerts by email.",
+      "freqTitle": "When should we write?",
+      "freqBody": "Instantly (the moment it appears) or a daily digest with everything from the day.",
+      "finishTitle": "All set!",
+      "finishBody": "Save the changes and you'll start getting notices. Create as many alerts as you like from «My alerts»."
+    }
   }
 }

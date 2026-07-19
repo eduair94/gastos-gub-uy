@@ -3,6 +3,8 @@ definePageMeta({ middleware: 'auth' })
 
 const { t } = useI18n()
 const api = useMonitorApi()
+const route = useRoute()
+const router = useRouter()
 
 useSeo({ title: t('alerts.title'), description: t('alerts.lead'), path: '/app/alertas', noindex: true })
 
@@ -20,7 +22,17 @@ const { data, refresh } = await useFetch<{ data: Watch[] }>('/api/watches', { se
 const watches = computed(() => data.value?.data ?? [])
 
 const showForm = ref(false)
-const editing = ref<Watch | null>(null)
+const editing = ref<Partial<Watch> | null>(null)
+
+// Arriving from the /llamados "create an alert for this search" CTA: open the builder
+// prefilled with the searched keyword so the alert is one save away.
+onMounted(() => {
+  if (route.query.new == null) return
+  const kw = typeof route.query.keyword === 'string' ? route.query.keyword.trim() : ''
+  editing.value = kw ? { name: kw, keywords: [kw] } : null
+  showForm.value = true
+  router.replace({ query: {} })
+})
 
 function newWatch() {
   editing.value = null

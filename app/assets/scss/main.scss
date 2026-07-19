@@ -1,5 +1,6 @@
 @use "./tokens";
 @use "./investigaciones";
+@use "./tour";
 
 // ============================================================
 // Vuetify 4 reset restore
@@ -610,16 +611,21 @@ button.chip:disabled { cursor: default; }
 // Table-cell action link ("Ver contratos →") — the canonical row-level
 // affordance, used through <CellLink> (or this class on any `v-btn`). One home
 // so every table shares the same size/colour, and — the reason it exists — a
-// trailing arrow that stays optically centred on the label at any zoom / DPR.
+// trailing arrow that sits optically centred on the label.
 //
-// Vuetify already centres the icon box on the button's flex line, but the
-// default trailing-icon box is a fractional 15.43px: at non-integer browser
-// zoom the glyph lands on a half device-pixel and paints ~1px off the text —
-// the misalignment this fixes. Pinning it to a 15px integer box (same visual
-// size, now deterministic) lands the arrow dead-centre on the label at DPR 1
-// and within ~0.4px at fractional zoom — measured best of 14/15/16px. The
-// `!important` beats Vuetify's inline icon size, so a bare `append-icon`
-// button gets the fix too, not only the slot form.
+// The alignment is GEOMETRICALLY perfect already: Vuetify centres both the
+// label line and the icon box on the same flex line, the box is pinned to an
+// integer 15px, and the mdi-arrow-right glyph paints dead-centre in that box
+// (all three cross-axis centres coincide to <0.1px — measured on the live
+// page). Yet the arrow still *reads* high, because the label is 12px lowercase
+// Public Sans: a word's visual mass sits around its x-height, which is ~1-2px
+// BELOW the line-box centre, while the horizontally-symmetric arrow sits on the
+// centre. So the fix is a small OPTICAL nudge — translateY down by 1px lands
+// the arrow between the label's full-ink centre (+0.84px) and its x-height
+// centre (~+1.4px), i.e. optically centred on the word. transform, not margin,
+// so it's a pure repaint (no reflow) and scales cleanly with zoom. The
+// `!important` on font-size beats Vuetify's inline icon size, so a bare
+// `append-icon` button gets the fix too, not only the slot form.
 .cell-link.v-btn {
   text-transform: none;
   letter-spacing: 0;
@@ -630,6 +636,7 @@ button.chip:disabled { cursor: default; }
   width: 15px;
   height: 15px;
   line-height: 1;
+  transform: translateY(1px);
 }
 
 .v-chip {
@@ -667,13 +674,16 @@ button.chip:disabled { cursor: default; }
 }
 
 // Ink-hero alignment (global). The analytics pages apply `.u-container.hero__in`
-// on a single element: u-container centres it at the site max-width, then a
-// narrow `.hero__in { max-width: ~72ch }` re-centres a skinny column, so the
-// hero text floated inward and no longer lined up with the full-width header or
-// the content below. Keep the block at the container's width (its left edge
-// aligns with everything else) and cap only the MEASURE of each child line.
+// on a single element: u-container centres it at the site max-width (--container),
+// then a page-scoped `.hero__in { max-width: ~72ch }` re-caps it to a skinny
+// column, so the hero text floated inward and no longer lined up with the header
+// or the content below. Both the header (.topbar__inner.u-container) and the body
+// are capped at --container and centred, so the hero must be too — pinning it to
+// --container (not `none`, which makes the hero full-bleed and pushes its left
+// edge LEFT of the header on any viewport wider than --container) keeps its left
+// edge aligned with everything else. Cap only the MEASURE of each child line.
 .hero__in {
-  max-width: none !important;
+  max-width: var(--container) !important;
 }
 .hero__in > * {
   max-width: 74ch;

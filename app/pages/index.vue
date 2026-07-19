@@ -119,6 +119,7 @@ useSeo(() => ({
           <form
             class="bigsearch u-rise u-rise-2"
             role="search"
+            data-tour="hero-search"
             @submit.prevent="submit"
           >
             <label

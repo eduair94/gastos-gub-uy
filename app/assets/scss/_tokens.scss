@@ -38,6 +38,16 @@
   --rule-strong: #b6c1c7;
   --focus: #1f6feb;
 
+  // Filled "celeste" CTA button. `--celeste-deep` is the deep blue on
+  // paper but INVERTS to light blue in dark mode, so a hardcoded white
+  // label washes out and fails contrast (the recurring low-contrast
+  // button bug). Pair the fill with `--cta-fg`, which flips with it:
+  // white label on the deep light-mode fill, dark ink on the light
+  // dark-mode fill — mirroring Vuetify's primary / on-primary. Every
+  // hand-rolled filled button uses this pair, never `--celeste-deep + #fff`.
+  --cta-fill: var(--celeste-deep);
+  --cta-fg: #fff;
+
   // Money is the one thing that is gold. `--money` is the text
   // colour (contrast-safe per theme); `--money-rule` is the
   // magnitude bar, which is decorative and stays bright ochre.
@@ -114,6 +124,8 @@
   --celeste: #7fb3dd;
   --celeste-deep: #a6cdec;
   --celeste-wash: #14324a;
+  // celeste-deep flips light here, so the CTA label must flip dark.
+  --cta-fg: #08161f;
   --sol: #e8bc63;
   --sol-deep: #f0d193;
   --sol-wash: #33280f;

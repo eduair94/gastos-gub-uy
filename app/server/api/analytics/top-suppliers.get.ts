@@ -1,5 +1,6 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
+import { attachEnrichment } from '../../utils/enrichment'
 import { TopEntitiesModel } from '../../utils/models'
 
 export default defineEventHandler(async (event) => {
@@ -62,9 +63,12 @@ export default defineEventHandler(async (event) => {
       rank: index + 1, // Re-rank based on filtered order
     }))
 
+    // Annotate with the AI category chip (silently no-ops for un-enriched names).
+    const enriched = await attachEnrichment(formattedSuppliers, s => s.name)
+
     return {
       success: true,
-      data: formattedSuppliers,
+      data: enriched,
     }
   }
   catch (error) {

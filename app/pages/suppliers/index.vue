@@ -14,6 +14,8 @@ interface SupplierRow {
   buyerCount: number
   totalValue: number
   avgContractValue: number
+  /** AI category from supplier_enrichment (null when un-enriched). */
+  category?: string | null
 }
 
 const { t } = useI18n()
@@ -282,6 +284,7 @@ useSeo(() => ({
                 >
                   {{ s.name }}
                 </NuxtLink>
+                <SupplierChip :category="s.category" />
                 <span class="ctable__id">{{ s.supplierId }}</span>
               </td>
               <td

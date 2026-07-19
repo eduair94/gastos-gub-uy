@@ -56,6 +56,7 @@ export default defineNuxtConfig({
   css: [
     'vuetify/styles',
     '@mdi/font/css/materialdesignicons.css',
+    'driver.js/dist/driver.css',
     '~/assets/scss/main.scss',
   ],
 

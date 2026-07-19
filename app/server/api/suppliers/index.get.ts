@@ -1,5 +1,6 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
+import { attachEnrichment } from '../../utils/enrichment'
 import { SupplierPatternModel } from '../../utils/models'
 
 export default defineEventHandler(async (event) => {
@@ -46,10 +47,12 @@ export default defineEventHandler(async (event) => {
       SupplierPatternModel.countDocuments(filter),
     ])
 
+    const enriched = await attachEnrichment(suppliers, (s: { name?: string }) => s.name ?? '')
+
     return {
       success: true,
       data: {
-        suppliers,
+        suppliers: enriched,
         pagination: {
           page: Number(page),
           limit: Number(limit),

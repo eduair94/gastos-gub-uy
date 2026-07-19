@@ -6,6 +6,9 @@
   "nav": {
     "skip": "Ir al contenido",
     "home": "Panel",
+    "gastos": "Gastos",
+    "recopilatorios": "Recopilatorios",
+    "pauta": "Pauta oficial",
     "contracts": "Contratos",
     "products": "Productos",
     "suppliers": "Proveedores",
@@ -15,6 +18,7 @@
     "providerAnomalies": "Proveedores señalados",
     "intendencias": "Intendencias",
     "organismos": "Gasto por organismo",
+    "mapa": "Mapa del gasto",
     "investigaciones": "Investigaciones",
     "tvciudad": "TV Ciudad",
     "llamados": "Llamados",
@@ -121,6 +125,171 @@
     "anomaliesHelp": "Contratos que se apartan del patrón habitual. Una alerta no es una acusación: es un punto de partida para revisar.",
     "exploreCta": "Abrir el explorador",
     "sourceNote": "Fuente: datos abiertos de Compras Estatales (OCDS), catalogodatos.gub.uy."
+  },
+  "gastos": {
+    "eyebrow": "Gastos del Estado",
+    "title": "A dónde va tu plata.",
+    "lead": "{count} compras públicas del Estado uruguayo desde {yearFrom}, agrupadas como lo que son: quién cobra, quién gasta, qué se compra y qué no cierra. Todo con los datos que el propio Estado publica.",
+    "exploreCta": "Explorar los contratos",
+    "methodCta": "Cómo se calcula",
+    "stat": {
+      "contracts": "Compras registradas",
+      "typical": "Compra típica (mediana)",
+      "suppliers": "Proveedores del Estado",
+      "flags": "Alertas de precio"
+    },
+    "noTotal": {
+      "eyebrow": "El número que falta",
+      "title": "El Estado no te puede dar un total confiable",
+      "body": "Un puñado de registros oficiales trae cantidades corruptas. Una sola adjudicación declara 1.200.007 equipos de generación a USD 519.788 cada uno: USD 623.000 millones —unas ocho veces el PBI del país— en un contrato.",
+      "body2": "Tres registros como ese concentran el 86 % de todo el monto informado. Un titular de «total gastado» sería, en los hechos, la suma de esos errores. Por eso la cifra de arriba es la mediana: la mitad de las compras del Estado valen menos que eso, y no se rompe con un dato malo.",
+      "cta": "Ver por qué, y esos registros"
+    },
+    "volume": {
+      "title": "Cuántas compras hace el Estado, por año",
+      "help": "Cantidad de compras registradas cada año. El volumen no para de crecer; tocá una barra para ver ese año en el explorador."
+    },
+    "suppliers": {
+      "title": "Quién recibe la plata",
+      "help": "Los proveedores que más cobraron del Estado. Importadores de combustible e imprentas encabezan la lista.",
+      "meta": "{n} contratos"
+    },
+    "buyers": {
+      "title": "Quién la gasta",
+      "help": "Los organismos que más gastan. Combustible, vialidad y energía concentran la mayor parte.",
+      "meta": "{n} contratos",
+      "byType": "Ver el gasto agrupado por tipo de organismo",
+      "perCapita": "Comparar las Intendencias por habitante"
+    },
+    "categories": {
+      "title": "Qué compra el Estado",
+      "help": "Los rubros con más gasto informado. Rutas y combustible dominan la cuenta.",
+      "share": "{pct} del gasto informado",
+      "all": "Ver todos los productos"
+    },
+    "flags": {
+      "title": "Lo que no cierra",
+      "summary": "{total} alertas de precio · {critical} críticas",
+      "help": "Compras cuyo precio unitario se dispara frente a lo que se suele pagar por el mismo artículo. Una alerta no es una acusación: es por dónde empezar a mirar.",
+      "seeAll": "Ver todas las alertas",
+      "seeUnexplained": "Ver las que la IA no pudo explicar"
+    },
+    "opacity": {
+      "title": "La opacidad, en dos números",
+      "body": "El Estado publica sus compras, pero incompletas. Auditar o filtrar con estos datos deja afuera a la mayoría de los registros.",
+      "noStatus": "de los llamados no informa en qué estado terminó",
+      "noMethod": "no informa con qué procedimiento se compró",
+      "asOf": "Sobre {total} registros · datos a {date}",
+      "source": "Ver la fuente oficial"
+    },
+    "explore": {
+      "title": "Ahora mirá vos",
+      "body": "Todo esto sale de datos abiertos. Podés bajar hasta cada contrato y su ficha oficial.",
+      "contracts": "Explorar contratos",
+      "suppliers": "Proveedores",
+      "buyers": "Organismos",
+      "products": "Productos"
+    },
+    "sourceNote": "Fuente: datos abiertos de Compras Estatales (OCDS), catalogodatos.gub.uy. Montos normalizados a pesos; se excluyen de los promedios unos pocos registros con cantidades imposibles."
+  },
+  "recop": {
+    "eyebrow": "Recopilatorio",
+    "indexTitle": "Recopilatorios",
+    "indexLead": "El gasto público agrupado por evento: una fiesta, una obra, un hecho. Cada recopilatorio junta los contratos de un mismo evento y suma lo que costó.",
+    "backToAll": "Todos los recopilatorios",
+    "teaserTitle": "Recopilatorios",
+    "teaserBody": "El gasto agrupado por evento — una fiesta, una obra, un hecho — con su costo total y el detalle contrato por contrato.",
+    "teaserCta": "Ver los recopilatorios",
+    "kpi": {
+      "total": "Costo total",
+      "count": "Contratos",
+      "suppliers": "Proveedores"
+    },
+    "suppliersTitle": "Quién cobró",
+    "suppliersHelp": "Proveedores ordenados por monto adjudicado en este evento. El monto de un contrato con varios proveedores se cuenta entero en cada uno: es un techo, no un reparto.",
+    "categoriesTitle": "En qué se fue",
+    "categoriesHelp": "Gasto por rubro, según el precio por la cantidad de cada artículo adjudicado, en la moneda del contrato.",
+    "byYearTitle": "Contratos por año",
+    "ledgerTitle": "El detalle",
+    "ledgerHelp": "Cada contrato del evento, del mayor al menor. Tocá uno para ver su ficha y el enlace a la compra oficial.",
+    "ledgerCount": "{n} contratos",
+    "ledgerNote": "Montos en pesos, normalizados. Se excluyen del total los registros con cantidades imposibles.",
+    "relatedTitle": "Otros recopilatorios",
+    "card": {
+      "count": "{n} contratos"
+    },
+    "methodTitle": "Cómo se arma un recopilatorio",
+    "methodBody": "Cada recopilatorio es una consulta guardada sobre los datos abiertos: un organismo, un texto y, a veces, un rango de años. El sitio la resuelve en vivo, así que los totales y el detalle están siempre al día. El conjunto de contratos lo define un criterio editorial, como lo haría un periodista.",
+    "toGastos": "Volver a Gastos del Estado",
+    "notFound": {
+      "title": "No encontramos ese recopilatorio",
+      "body": "Puede haber cambiado de nombre o todavía no existe.",
+      "action": "Ver todos los recopilatorios"
+    }
+  },
+  "pauta": {
+    "eyebrow": "Pauta oficial",
+    "title": "La publicidad del Estado, y quién la cobra",
+    "lead": "Cuánto gasta el Estado uruguayo en publicidad y propaganda, qué organismos la pagan y qué medios y agencias la reciben. Los montos van repartidos por receptor, no el total del contrato.",
+    "stat": {
+      "total": "Gastado en publicidad",
+      "top5": "Se lleva el top 5 de receptores",
+      "formats": "Formatos de pauta"
+    },
+    "viewContracts": "Ver los contratos de {name}",
+    "cat": {
+      "medio-tv": "TV",
+      "medio-radio": "Radio",
+      "medio-prensa": "Prensa",
+      "medio-digital": "Digital",
+      "medio-via-publica": "Vía pública",
+      "agencia-publicidad": "Agencia",
+      "productora": "Productora",
+      "organismo-publico": "Organismo",
+      "empresa": "Empresa",
+      "cooperativa": "Cooperativa",
+      "persona": "Persona"
+    },
+    "aiNote": "La categoría y la descripción de cada receptor las genera una IA (Gemini) a partir del nombre: son orientativas, pueden equivocarse, verificá contra la fuente.",
+    "outletsTitle": "Quién recibe la pauta",
+    "outletsHelp": "Los que más cobran de la publicidad estatal: medios, agencias y —a veces— otros organismos. Monto repartido por receptor dentro de cada tipo de aviso.",
+    "outletsNote": "La lista incluye agencias de publicidad y algún organismo público, no solo medios de comunicación. Un receptor con nombre de organismo (por ejemplo una Secretaría) que encabeza el ranking es una rareza del dato oficial y conviene mirarla con cuidado: puede ser una transferencia interna o una carga mal atribuida.",
+    "buyersTitle": "Quién la paga",
+    "buyersHelp": "Los organismos que más gastan en publicidad. Turismo, la banca estatal y el juego (loterías y casinos) encabezan la lista.",
+    "formatsTitle": "En qué formato",
+    "formatsHelp": "Los rubros del catálogo de publicidad y propaganda, por gasto. «Servicio de publicidad y difusión» concentra casi todo. Tocá un rubro para ver esos contratos.",
+    "byYearTitle": "Publicidad por año",
+    "byYearHelp": "Gasto en publicidad y propaganda por año, en pesos.",
+    "sourceNote": "Fuente: datos abiertos de Compras Estatales (OCDS), clase de catálogo «Publicidad y Propaganda». Los totales son exactos; los rankings suman los principales receptores y pagadores de cada rubro, no la cola larga.",
+    "teaserTitle": "La pauta oficial",
+    "teaserBody": "Cuánto gasta el Estado en publicidad y quién la cobra: medios, agencias y los organismos que más pautan.",
+    "teaserCta": "Ver la pauta oficial"
+  },
+  "sup": {
+    "cat": {
+      "medio-tv": "TV",
+      "medio-radio": "Radio",
+      "medio-prensa": "Prensa",
+      "medio-digital": "Digital",
+      "medio-via-publica": "Vía pública",
+      "agencia-publicidad": "Agencia",
+      "productora": "Productora",
+      "organismo-publico": "Organismo",
+      "empresa": "Empresa",
+      "cooperativa": "Cooperativa",
+      "persona": "Persona"
+    },
+    "aiNote": "La categoría de cada proveedor la genera una IA (Gemini) a partir del nombre: es orientativa, puede equivocarse, verificá contra la fuente.",
+    "aiTitle": "Categoría generada por IA"
+  },
+  "mapa": {
+    "title": "El mapa del gasto público",
+    "lead": "Todo lo que gasta el Estado, dimensionado: cada organismo es un rectángulo y su tamaño es lo que gastó. Agrupado por tipo de organismo.",
+    "all": "Todos",
+    "totalLabel": "En el mapa:",
+    "hint": "El área de cada rectángulo es proporcional al gasto. Tocá un organismo para ver su ficha; elegí un grupo para acercarte.",
+    "note": "Área = gasto en compras publicado, normalizado a pesos; se excluyen los registros con cantidades imposibles. Datos precalculados por mes.",
+    "toOrganismos": "Ver el detalle por grupo"
   },
   "contracts": {
     "title": "Explorador de contratos",
@@ -886,6 +1055,25 @@
     }
   },
   "seo": {
+    "gastos": {
+      "title": "A dónde va tu plata — el gasto del Estado uruguayo",
+      "description": "Las compras públicas del Uruguay agrupadas como crítica: quién cobra, quién gasta, qué compra el Estado y qué no cierra. Con datos abiertos oficiales de Compras Estatales."
+    },
+    "recop": {
+      "title": "Recopilatorios — el gasto del Estado uruguayo por evento",
+      "description": "El gasto público uruguayo agrupado por evento: fiestas, obras y hechos, con lo que costó cada uno según datos oficiales de Compras Estatales."
+    },
+    "recopDetail": {
+      "title": "{title} — cuánto costó, contrato por contrato"
+    },
+    "pauta": {
+      "title": "Pauta oficial — la publicidad del Estado uruguayo y quién la cobra",
+      "description": "Cuánto gasta el Estado uruguayo en publicidad y propaganda, qué organismos la pagan y qué medios y agencias la reciben. Datos abiertos oficiales de Compras Estatales."
+    },
+    "mapa": {
+      "title": "El mapa del gasto público del Uruguay",
+      "description": "Un treemap del gasto del Estado uruguayo: cada organismo dimensionado por lo que gasta, agrupado por tipo de organismo. Datos oficiales de Compras Estatales."
+    },
     "organismos": {
       "title": "El gasto del Estado uruguayo por organismo",
       "description": "Compras públicas agrupadas por tipo de organismo: intendencias, ministerios, salud, entes y educación. Quién gasta más, con datos oficiales de Compras Estatales."
@@ -1042,6 +1230,7 @@
     "summaryCriterios": "Criterios de evaluación",
     "summaryMonto": "Monto de referencia",
     "summaryObservaciones": "Observaciones",
+    "summarySoon": "Próximamente: resumen del pliego con IA.",
     "benchmarksTitle": "Precios históricos de adjudicación",
     "benchmarksLead": "A cuánto se adjudicaron históricamente estos rubros.",
     "benchmarksEmpty": "No hay historial de precios para estos rubros.",
@@ -1054,6 +1243,22 @@
     "statusClosed": "Cerrado",
     "statusAwarded": "Adjudicado",
     "statusCancelled": "Cancelado"
+  },
+  "hook": {
+    "bandTitle": "¿Empresa, ciudadano o prensa?",
+    "slotLead": "Mientras tanto, el sitio ya te sirve para:",
+    "segLabel": "Elegí tu perfil",
+    "segEmpresa": "Soy empresa",
+    "segCiudadano": "Ciudadano / Prensa",
+    "empresaV1": "Enterate apenas se abre un llamado de tu rubro.",
+    "empresaV2": "Mirá a cuánto adjudicó el Estado antes de definir tu precio.",
+    "ciudadanoV1": "Seguí la plata: quién compra, a quién y a cuánto.",
+    "ciudadanoV2": "Sobreprecios y anomalías detectadas automáticamente.",
+    "empresaCtaAlert": "Crear una alerta",
+    "empresaCtaBenchmarks": "Ver precios históricos",
+    "empresaCtaExplore": "Explorar el gasto",
+    "ciudadanoCtaAnomalias": "Ver anomalías",
+    "ciudadanoCtaExplorar": "Explorar el gasto"
   },
   "alerts": {
     "title": "Mis alertas",
@@ -1232,5 +1437,68 @@
     "error": "No pudimos procesar la baja. El enlace puede estar vencido.",
     "processing": "Procesando…",
     "backHome": "Volver al inicio"
+  },
+  "tour": {
+    "next": "Siguiente",
+    "prev": "Atrás",
+    "done": "Listo",
+    "close": "Cerrar",
+    "progress": "Paso {current} de {total}",
+    "launcher": "Recorridos guiados",
+    "picker": {
+      "welcome": "Es tu primera visita. ¿Te hacemos un tour rápido?",
+      "title": "¿Qué querés hacer?",
+      "subtitle": "Elegí un recorrido guiado. Son cortos y podés salir cuando quieras.",
+      "exploreTitle": "Ver en qué se gasta el dinero",
+      "exploreDesc": "Aprendé a explorar los contratos del Estado: buscar, filtrar y leer los montos.",
+      "alertsTitle": "Recibir alertas de llamados",
+      "alertsDesc": "Configurá una alerta y recibí un email cuando se abra un llamado que te interesa.",
+      "dismiss": "Ahora no"
+    },
+    "explore": {
+      "heroTitle": "Buscá lo que quieras",
+      "heroBody": "Escribí un producto, una empresa o un organismo del Estado. Desde acá arranca toda la exploración del gasto público.",
+      "bridgeTitle": "El explorador de contratos",
+      "bridgeBody": "Te llevamos al explorador, donde vas a ver todos los contratos y podés filtrarlos a gusto.",
+      "filtersTitle": "Filtrá el gasto",
+      "filtersBody": "Acotá por producto, comprador, proveedor, monto, año o método de compra. Cada filtro actualiza los resultados al instante.",
+      "kpisTitle": "Cuánto y cuántos",
+      "kpisBody": "Para los filtros elegidos, este resumen te dice cuántos contratos hay, cuánto suman y el monto típico. La barra dorada mide la magnitud en pesos.",
+      "tableTitle": "Los resultados",
+      "tableBody": "Cada fila es un contrato. Tocá una para ver el detalle: qué se compró, a quién y por cuánto.",
+      "doneTitle": "¡A explorar!",
+      "doneBody": "También podés mirar anomalías, proveedores y organismos desde el menú. Cuando quieras repetir este recorrido, tocá el botón de ayuda (?)."
+    },
+    "alerts": {
+      "searchTitle": "Llamados abiertos",
+      "searchBody": "Acá están los llamados vigentes. Buscá por tema o palabra clave para encontrar los que te interesan.",
+      "cardTitle": "Cada tarjeta es un llamado",
+      "cardBody": "Muestra el organismo, el método de compra y la fecha de cierre. Tocala para ver todos los detalles.",
+      "ctaTitle": "Creá una alerta",
+      "ctaBody": "Con una alerta no tenés que revisar a mano: te avisamos por email cuando se abra un llamado que coincide con tu búsqueda.",
+      "loginTitle": "Necesitás una cuenta gratis",
+      "loginBody": "Las alertas y los emails son gratis: solo hay que crear una cuenta para guardarlas. Ingresá y seguimos desde donde quedamos.",
+      "loginBtn": "Ingresar / Crear cuenta",
+      "nameTitle": "Ponele un nombre",
+      "nameBody": "Un nombre te ayuda a reconocer la alerta después. Por ejemplo: «Computadoras para escuelas».",
+      "productsTitle": "Elegí productos o rubros",
+      "productsBody": "Buscá el producto o la categoría que querés vigilar. Podés agregar varios; la alerta se dispara con cualquiera de ellos.",
+      "keywordsTitle": "O usá palabras clave",
+      "keywordsBody": "Agregá palabras que deban aparecer en el llamado. Ideal para temas que no encajan en una categoría.",
+      "refineTitle": "Afiná la búsqueda",
+      "refineBody": "Opcional: limitá por organismo, método de compra o rango de montos para recibir solo lo que realmente importa.",
+      "previewTitle": "Vista previa en vivo",
+      "previewBody": "Antes de guardar, mirá cuántos llamados coinciden hoy. Así ajustás la alerta para que no sea ni muy amplia ni muy angosta.",
+      "saveTitle": "Guardá la alerta",
+      "saveBody": "Listo. Desde ahora vamos a comparar cada llamado nuevo con tu alerta. Ahora configuremos el email.",
+      "emailTitle": "Tu email",
+      "emailBody": "Las alertas llegan a este correo. Importante: tiene que estar verificado; si ves «sin verificar», revisá tu casilla y confirmá.",
+      "enableTitle": "Activá el email",
+      "enableBody": "Prendé este interruptor para recibir las alertas por correo.",
+      "freqTitle": "¿Cuándo te escribimos?",
+      "freqBody": "Al instante (te avisamos apenas aparece) o un resumen diario con todo lo del día.",
+      "finishTitle": "¡Todo listo!",
+      "finishBody": "Guardá los cambios y vas a empezar a recibir avisos. Podés crear todas las alertas que quieras desde «Mis alertas»."
+    }
   }
 }

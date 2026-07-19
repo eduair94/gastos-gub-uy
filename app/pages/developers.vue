@@ -117,7 +117,7 @@ const integrations = computed(() => [
 .dev__cta { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-5); }
 .dev__btn { display: inline-flex; align-items: center; gap: var(--s-2); height: 42px; padding: 0 var(--s-4); border: 1px solid var(--rule); border-radius: var(--r-md); color: var(--text); text-decoration: none; font-weight: 600; font-size: var(--t-sm); }
 .dev__btn:hover { border-color: var(--rule-strong); }
-.dev__btn--primary { background: var(--celeste-deep); color: #fff; border-color: var(--celeste-deep); }
+.dev__btn--primary { background: var(--cta-fill); color: var(--cta-fg); border-color: var(--cta-fill); }
 .dev__btn--primary:hover { filter: brightness(1.06); }
 .dev__steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s-4); margin-bottom: var(--s-7); }
 .dev__step { padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-3); }

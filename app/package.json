@@ -29,6 +29,7 @@
     "chart.js": "^4.5.0",
     "chartjs-adapter-date-fns": "^3.0.0",
     "date-fns": "^4.1.0",
+    "driver.js": "^1.8.0",
     "firebase": "^11.3.0",
     "firebase-admin": "^13.1.0",
     "h3": "^1.15.4",
