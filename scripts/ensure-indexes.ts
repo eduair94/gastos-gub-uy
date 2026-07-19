@@ -460,7 +460,18 @@ async function main(): Promise<void> {
       await notifications.createIndex({ status: 1, type: 1 }, { background: true })
       await notifications.createIndex({ userId: 1, createdAt: -1 }, { background: true })
       await notifications.createIndex({ status: 1, scheduledFor: 1 }, { background: true })
-      console.log('✅ notifications indexes ensured (dedupeKey unique, status+type, userId+createdAt, status+scheduledFor)')
+      // Inbox list + unread badge (a user's rows for one channel, newest first).
+      await notifications.createIndex({ userId: 1, channel: 1, createdAt: -1 }, { background: true })
+      // Per-channel drain query for the push/telegram dispatchers.
+      await notifications.createIndex({ status: 1, channel: 1 }, { background: true })
+      console.log('✅ notifications indexes ensured (dedupeKey unique, status+type, userId+createdAt, status+scheduledFor, userId+channel+createdAt, status+channel)')
+
+      // push_subscriptions: one Web Push endpoint per browser/device. endpoint
+      // unique makes re-subscribe an idempotent upsert; userId backs the fan-out.
+      const pushSubs = db.collection('push_subscriptions')
+      await pushSubs.createIndex({ endpoint: 1 }, { unique: true, background: true })
+      await pushSubs.createIndex({ userId: 1 }, { background: true })
+      console.log('✅ push_subscriptions indexes ensured (endpoint unique, userId)')
 
       const savedCalls = db.collection('saved_calls')
       await savedCalls.createIndex({ userId: 1, compraId: 1 }, { unique: true, background: true })
@@ -525,6 +536,14 @@ async function main(): Promise<void> {
         { name: 'sice_rubro_text', default_language: 'none', background: true },
       )
       console.log('✅ sice_rubro indexes ensured (token unique, parentToken, level, dataVersion, text)')
+
+      // --- supplier_contacts (Phase A enrichment) ---
+      const sc = db.collection('supplier_contacts')
+      await sc.createIndex({ supplierId: 1 }, { unique: true, background: true, name: 'supplierId_1' })
+      await sc.createIndex({ rut: 1 }, { background: true, name: 'rut_1' })
+      await sc.createIndex({ status: 1, priorityScore: -1 }, { background: true, name: 'status_1_priorityScore_-1' })
+      await sc.createIndex({ 'rubros.classificationId': 1 }, { background: true, name: 'rubros.classificationId_1' })
+      console.log('✅ supplier_contacts indexes ensured')
     }
     else {
       console.log('   plan: contract_item_features.compraId_1 (unique)')
@@ -535,7 +554,8 @@ async function main(): Promise<void> {
       console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')
       console.log('   plan: watches.{userId, active+categories, active}')
       console.log('   plan: open_calls.{compraId unique, classificationSet, tenderPeriod.endDate, buyer.id, status+endDate, firstSeenAt, text}')
-      console.log('   plan: notifications.{dedupeKey unique, status+type, userId+createdAt, status+scheduledFor}')
+      console.log('   plan: notifications.{dedupeKey unique, status+type, userId+createdAt, status+scheduledFor, userId+channel+createdAt, status+channel}')
+      console.log('   plan: push_subscriptions.{endpoint unique, userId}')
       console.log('   plan: saved_calls.{userId+compraId unique, userId+createdAt}')
       console.log('   plan: anomaly_feedback.{userId+anomalyId unique, anomalyId+vote, userId+createdAt}')
       console.log('   plan: api_keys.{prefix unique, userId+createdAt}')
@@ -543,6 +563,7 @@ async function main(): Promise<void> {
       console.log('   plan: webhook_deliveries.{dedupeKey unique, status+nextAttemptAt}')
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
+      console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId}')
     }
 
     if (failed > 0) {
