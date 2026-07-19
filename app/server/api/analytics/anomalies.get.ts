@@ -174,13 +174,24 @@ export default defineEventHandler(async (event) => {
 
     // How many in-scope flags are not yet AI-triaged. The verdict-typed views (unexplained /
     // explainable / uncertain / scored) are computed over TRIAGED flags only, so when a fresh
-    // detector run adds flags faster than the ~18 rpm triage clears them, those views under-report
-    // until the backlog drains. Surfacing this count lets the UI say the number is still settling
-    // rather than present a partial figure as final. Same non-ai scope as the main query; only
-    // price_spike is triaged. `unscored` is skipped — there it would just equal `total`.
+    // detector run adds flags faster than the triage clears them, those views under-report until
+    // the queue drains. Surfacing this count lets the UI say the number is still settling rather
+    // than present a partial figure as final. Same non-ai scope as the main query.
+    //
+    // Scoped to severityRank >= 3 to MATCH what the triage actually processes: score-anomalies-ai
+    // runs with DEFAULT_MIN_RANK=3 (high + critical only), so medium/low price_spike flags are
+    // never triaged by design and would otherwise sit here as a permanent, misleading "pending"
+    // that never drains. A verdict-typed view can only ever contain triaged (high/critical) flags
+    // anyway, so this is the count that truly settles to 0.
+    const TRIAGE_MIN_RANK = 3
     const VERDICT_VIEWS = new Set(['unexplained', 'explainable', 'uncertain', 'scored'])
     const wantPending = typeof ai === 'string' && VERDICT_VIEWS.has(ai)
-    const pendingFilter: Record<string, unknown> = { ...filter, 'type': 'price_spike', 'aiVerdict.explainable': { $exists: false } }
+    const pendingFilter: Record<string, unknown> = {
+      ...filter,
+      'type': 'price_spike',
+      'severityRank': { $gte: TRIAGE_MIN_RANK },
+      'aiVerdict.explainable': { $exists: false },
+    }
 
     // Execute query
     const [anomalies, total, pendingTriage] = await Promise.all([
