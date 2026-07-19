@@ -197,9 +197,13 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-08-06',
 
   runtimeConfig: {
-    mongoUri: process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017',
-    mongoDatabase: process.env.MONGODB_DB || process.env.MONGO_DATABASE || 'gastos_gub',
-
+    // NOTE: the Mongo connection string is deliberately NOT declared here.
+    // A `runtimeConfig` default is evaluated at BUILD time and baked into
+    // `.output/server/chunks/nitro/nitro.mjs`, which wrote the production DB
+    // password into a build artifact on every deploy. Nothing read these keys —
+    // the server connects through shared/config.ts, which reads
+    // process.env.MONGODB_URI at RUNTIME (dotenv, override:true). Keep it that way.
+    //
     // Firebase Admin credentials are read directly from process.env by
     // server/utils/firebase-admin.ts (FIREBASE_PROJECT_ID / _CLIENT_EMAIL /
     // _PRIVATE_KEY) — kept out of runtimeConfig so the private key never risks
