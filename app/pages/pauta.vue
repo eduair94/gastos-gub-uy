@@ -369,46 +369,6 @@ a.rank__link:hover .rank__go { color: var(--celeste-deep); transform: translateX
 .rank__name { font-size: var(--t-sm); font-weight: 600; line-height: 1.3; }
 .rank__desc { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.35; }
 
-/* AI category chip — a quiet, neutral pill by default; media types tinted. */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px var(--s-2);
-  border-radius: var(--r-full);
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  background: var(--surface-sunken);
-  border: 1px solid var(--rule);
-  white-space: nowrap;
-}
-
-.chip--medio-tv,
-.chip--medio-radio,
-.chip--medio-prensa,
-.chip--medio-digital,
-.chip--medio-via-publica {
-  color: var(--celeste-deep);
-  background: var(--celeste-wash);
-  border-color: color-mix(in srgb, var(--celeste) 40%, transparent);
-}
-
-.chip--agencia-publicidad,
-.chip--productora {
-  color: var(--verde);
-  background: color-mix(in srgb, var(--verde) 10%, transparent);
-  border-color: color-mix(in srgb, var(--verde) 34%, transparent);
-}
-
-.chip--organismo-publico {
-  color: var(--text-muted);
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
-  border-color: var(--rule-strong);
-}
-
 .rank__meta {
   font-family: var(--font-mono);
   font-size: var(--t-xs);

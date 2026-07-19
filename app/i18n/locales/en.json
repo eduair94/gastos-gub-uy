@@ -237,20 +237,6 @@
       "formats": "Advertising formats"
     },
     "viewContracts": "See {name}'s contracts",
-    "cat": {
-      "medio-tv": "TV",
-      "medio-radio": "Radio",
-      "medio-prensa": "Press",
-      "medio-digital": "Digital",
-      "medio-via-publica": "Out-of-home",
-      "agencia-publicidad": "Agency",
-      "productora": "Producer",
-      "organismo-publico": "Public body",
-      "empresa": "Company",
-      "cooperativa": "Co-op",
-      "persona": "Person"
-    },
-    "aiNote": "Each recipient's category and description are AI-generated (Gemini) from the name: they are indicative, can be wrong, verify against the source.",
     "outletsTitle": "Who receives the advertising",
     "outletsHelp": "The biggest earners of state advertising: media, agencies and —sometimes— other public bodies. Amount apportioned per recipient within each ad type.",
     "outletsNote": "The list includes advertising agencies and the odd public body, not only media outlets. A recipient with a public-body name (e.g. a Secretaría) topping the ranking is a quirk of the official data worth a closer look: it may be an internal transfer or a misattributed record.",

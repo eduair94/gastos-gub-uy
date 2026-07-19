@@ -237,20 +237,6 @@
       "formats": "Formatos de pauta"
     },
     "viewContracts": "Ver los contratos de {name}",
-    "cat": {
-      "medio-tv": "TV",
-      "medio-radio": "Radio",
-      "medio-prensa": "Prensa",
-      "medio-digital": "Digital",
-      "medio-via-publica": "Vía pública",
-      "agencia-publicidad": "Agencia",
-      "productora": "Productora",
-      "organismo-publico": "Organismo",
-      "empresa": "Empresa",
-      "cooperativa": "Cooperativa",
-      "persona": "Persona"
-    },
-    "aiNote": "La categoría y la descripción de cada receptor las genera una IA (Gemini) a partir del nombre: son orientativas, pueden equivocarse, verificá contra la fuente.",
     "outletsTitle": "Quién recibe la pauta",
     "outletsHelp": "Los que más cobran de la publicidad estatal: medios, agencias y —a veces— otros organismos. Monto repartido por receptor dentro de cada tipo de aviso.",
     "outletsNote": "La lista incluye agencias de publicidad y algún organismo público, no solo medios de comunicación. Un receptor con nombre de organismo (por ejemplo una Secretaría) que encabeza el ranking es una rareza del dato oficial y conviene mirarla con cuidado: puede ser una transferencia interna o una carga mal atribuida.",
