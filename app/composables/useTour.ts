@@ -70,9 +70,6 @@ export function useTour() {
   function markSeen() {
     if (import.meta.client) localStorage.setItem(SEEN_KEY, '1')
   }
-  function hasSeen(): boolean {
-    return import.meta.client && localStorage.getItem(SEEN_KEY) === '1'
-  }
   /** Rehydrate an in-progress tour after a full page reload. */
   function rehydrate() {
     if (!import.meta.client || state.value.tourId) return
@@ -283,13 +280,6 @@ export function useTour() {
     closePicker()
   }
 
-  /** Auto-offer the tours on a visitor's first ever visit. */
-  function maybeAutoStart() {
-    if (!import.meta.client) return
-    if (hasSeen() || state.value.tourId) return
-    openPicker(true)
-  }
-
   return {
     tours,
     state,
@@ -302,6 +292,5 @@ export function useTour() {
     openPicker,
     closePicker,
     dismissPicker,
-    maybeAutoStart,
   }
 }

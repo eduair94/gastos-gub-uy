@@ -1,5 +1,6 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { connectToDatabase } from '../../utils/database'
+import { fetchDei } from '../../utils/dei'
 import { ReleaseModel, SupplierPatternModel } from '../../utils/models'
 
 export default defineEventHandler(async (event) => {
@@ -66,10 +67,15 @@ export default defineEventHandler(async (event) => {
       }
     }).filter(contract => contract.awards.length > 0)
 
+    // Cross-reference the industrial registry (DEI) by RUT. Null for the ~94%
+    // of suppliers that aren't registered industrial firms — expected, not missing.
+    const dei = (await fetchDei([decodedSupplierId])).get(decodedSupplierId) ?? null
+
     return {
       success: true,
       data: {
         supplier: supplierPattern,
+        dei,
         recentContracts: contractsWithSupplierAwards,
         meta: {
           totalContractsFound: contractsWithSupplierAwards.length,

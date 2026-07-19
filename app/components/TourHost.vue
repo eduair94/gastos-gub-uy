@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// Mounted once in the default layout. Owns three things:
+// Mounted once in the default layout. Owns two things:
 //  1. resuming an in-progress tour after each route change (and after a reload),
-//  2. auto-offering the tours on a visitor's first ever visit,
-//  3. rendering the welcome / tour-picker dialog.
+//  2. rendering the tour-picker dialog (opened only by the manual TourLauncher button).
+// The tour never auto-offers itself — it is opt-in via the "?" launcher next to the nav.
 // All driver.js work is client-only (guarded inside useTour()).
 import type { TourId } from '~/utils/tours'
 
@@ -16,7 +16,6 @@ const {
   dismissPicker,
   resume,
   rehydrate,
-  maybeAutoStart,
 } = useTour()
 
 const options: Array<{ id: TourId, icon: string }> = [
@@ -31,7 +30,6 @@ function choose(id: TourId) {
 onMounted(() => {
   rehydrate()
   if (state.value.tourId) resume()
-  else maybeAutoStart()
 })
 
 // Resume across route changes (our own cross-page navigation, and safe no-op otherwise).

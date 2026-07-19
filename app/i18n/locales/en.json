@@ -268,7 +268,46 @@
       "otro": "Other"
     },
     "aiNote": "Each supplier's category is AI-generated (Gemini) from the name: it's indicative, can be wrong, verify against the source.",
-    "aiTitle": "AI-generated category"
+    "aiTitle": "AI-generated category",
+    "dei": {
+      "badge": "DEI",
+      "badgeTitle": "Industrial company listed in the Directory of Industrial Companies (MIEM)",
+      "title": "Industrial registry (DEI)",
+      "source": "Source: Directory of Industrial Companies (DEI), MIEM — open data. The match to the supplier is by tax ID (RUT).",
+      "f": {
+        "razonSocial": "Legal name",
+        "nombreComercial": "Trade name",
+        "tamano": "Size",
+        "actividad": "Industrial activity",
+        "tipos": "Activity types",
+        "ubicacion": "Location",
+        "estado": "Certification",
+        "vence": "Expires {date}",
+        "contacto": "Contact"
+      },
+      "size": {
+        "micro": "Micro",
+        "pequena": "Small",
+        "mediana": "Medium",
+        "gran": "Large"
+      },
+      "filter": {
+        "only": "Registered industrial companies only (DEI)",
+        "size": "Size",
+        "sizeAny": "Any size",
+        "dept": "Department",
+        "deptAny": "Whole country",
+        "clear": "Clear filters"
+      },
+      "insights": {
+        "title": "Industrial companies that sell to the State",
+        "summary": "{matched} of the {total} registered industrial companies (DEI) are state suppliers.",
+        "smallTitle": "Small companies, big contracts",
+        "smallHelp": "Companies registered as micro or small that rank among the largest state suppliers. Not an irregularity in itself, but the gap between declared size and awarded amount is worth a look.",
+        "mapTitle": "Map of industrial supplier companies",
+        "mapHelp": "Each point is a registered industrial company that sells to the State, placed at its primary establishment."
+      }
+    }
   },
   "estad": {
     "eyebrow": "Statistics",
@@ -299,7 +338,12 @@
     "totalLabel": "On the map:",
     "hint": "Each rectangle's area is proportional to spend. Tap a body for its profile; pick a group to zoom in.",
     "note": "Area = published procurement spend, normalized to pesos; records with impossible quantities are excluded. Precomputed monthly.",
-    "toOrganismos": "See the breakdown by group"
+    "toOrganismos": "See the breakdown by group",
+    "groupAria": "Pick a group of public bodies",
+    "viewAria": "How to view the map",
+    "viewMap": "Map",
+    "viewList": "List",
+    "memberCount": "{n} bodies"
   },
   "contracts": {
     "title": "Contract explorer",
@@ -1031,6 +1075,7 @@
   "organismos": {
     "title": "State spending, by public body",
     "lead": "Public procurement grouped by type of body: departmental governments, ministries, health, state enterprises and education. Who spends most and how spending evolves.",
+    "groupAria": "Pick a group of public bodies",
     "toIntendencias": "See the per-resident breakdown of the Intendencias",
     "linkBuyers": "Buying agencies",
     "method": {
@@ -1040,8 +1085,15 @@
       "refresh": "The data is recalculated automatically once a month.",
       "percapita": "Per-resident spend only applies to the Intendencias, which have a clear population behind them. For the rest, absolute spend is compared."
     },
+    "year": {
+      "label": "Year",
+      "all": "All-time (every year)",
+      "partialOpt": "{year} (partial)",
+      "partialNote": "{year} is a running year: partial data."
+    },
     "kpi": {
       "total": "Group spend",
+      "totalYear": "{year} spend",
       "members": "Bodies",
       "top": "Biggest spender",
       "span": "Period"
@@ -1049,6 +1101,7 @@
     "col": {
       "member": "Body",
       "spend": "Spend",
+      "spendYear": "{year} spend",
       "contracts": "Contracts",
       "share": "Of group"
     },
@@ -1260,6 +1313,18 @@
     "benchViewProduct": "View category detail",
     "benchViewContracts": "View all contracts",
     "benchDisclaimer": "Reference prices computed from the category's historical awards. Each supplier's figure is the total the State awarded them in this category. Always verify the official bidding document.",
+    "estimateTitle": "How much to bid to win?",
+    "estimateLead": "An estimate of the offer that historically won these items: the call's quantity times the unit price the State awarded in each category. A starting point for building your proposal.",
+    "estimateTargetLabel": "Target for the full call",
+    "estimateRangeSub": "competitive (p25) → typical winning (median)",
+    "estimateCoverage": "Estimated over {estimated} of {total} items with comparable history.",
+    "estimateUncovered": "{n} without history",
+    "estimateBreakdown": "See per-item detail",
+    "estimateColItem": "Item",
+    "estimateColQty": "Quantity",
+    "estimateColUnitPrice": "Awarded unit price",
+    "estimateColLine": "Estimate",
+    "estimateDisclaimer": "Indicative estimate from historical awards of the same category and unit. It does not account for specifications, deadlines or terms in the bidding document, which can change the price. Always verify the official document before bidding.",
     "statusOpen": "Open",
     "statusClarification": "With clarifications",
     "statusAmended": "Amended",

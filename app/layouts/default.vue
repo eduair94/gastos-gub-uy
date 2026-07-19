@@ -379,6 +379,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
           </button>
 
           <TourLauncher variant="icon" />
+          <DonationLauncher variant="icon" />
 
           <v-menu v-if="user">
             <template #activator="{ props }">
@@ -476,6 +477,20 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             mdi-close
           </v-icon>
         </button>
+      </div>
+
+      <!-- Mobile has no room for the top-bar action icons, so the two opt-in
+           features (guided tour, support the project) surface here at the top
+           of the drawer rather than being buried below the long nav list. -->
+      <div class="drawer__quick">
+        <DonationLauncher
+          variant="drawer"
+          @activate="drawer = false"
+        />
+        <TourLauncher
+          variant="drawer"
+          @activate="drawer = false"
+        />
       </div>
 
       <form
@@ -610,10 +625,6 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             </v-icon>
             {{ isDark ? t('nav.themeLight') : t('nav.themeDark') }}
           </button>
-          <TourLauncher
-            variant="drawer"
-            @activate="drawer = false"
-          />
           <button
             v-for="l in otherLocales"
             :key="l.code"
@@ -1046,6 +1057,20 @@ watch([locale, user], () => nextTick(scheduleRecompute))
   flex-direction: column;
   gap: var(--s-1);
   margin-top: var(--s-2);
+}
+
+/* Opt-in actions pinned to the top of the drawer (tour, support). Boxed so
+   they read as actions, not nav, and stay reachable without scrolling the
+   long section list below. */
+.drawer__quick {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--s-3) var(--s-4) 0;
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
 }
 
 .drawer__pref {

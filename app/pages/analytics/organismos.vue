@@ -17,10 +17,6 @@ const groups = computed<any[]>(() => res.value?.data?.groups ?? [])
 const calculatedAt = computed(() => res.value?.data?.calculatedAt ?? null)
 
 const selected = ref<string>((route.query.g as string) || 'intendencias')
-watch(selected, (v) => {
-  if (!v) return
-  router.replace({ query: v !== 'intendencias' ? { g: v } : {} })
-})
 
 const current = computed<any | null>(() =>
   groups.value.find(g => g.groupKey === selected.value) ?? groups.value[0] ?? null)
@@ -31,21 +27,100 @@ function groupBlurb(g: any): string {
   return locale.value === 'en' ? g.blurbEn : g.blurbEs
 }
 
-const members = computed<any[]>(() => current.value?.members ?? [])
+// ---- Year selection -----------------------------------------------------
+// Defaults to the latest full year (a one-year view, like the Intendencias page),
+// with an "Acumulado" option for the all-time totals. Every KPI, the ranking and the
+// table read the active year; the trend chart always shows the whole series.
+const ALL = 'all'
+// Computed server-side and serialised (useState) so SSR and client hydration agree —
+// a bare new Date() runs on both sides and could disagree across the Jan-1 boundary.
+const currentCalendarYear = useState('organ-current-year', () => new Date().getFullYear())
+
+/** Every year carrying data across all groups — union, so the list is stable when switching groups. */
+const dataYears = computed<number[]>(() => {
+  const set = new Set<number>()
+  for (const g of groups.value)
+    for (const y of (g.byYear ?? []))
+      if (Number.isFinite(y.year) && y.year > 0) set.add(y.year)
+  return [...set].sort((a, b) => a - b)
+})
+
+/** Latest FULL year — the most recent year that isn't the running calendar year. */
+const defaultYear = computed<number | null>(() => {
+  const ys = dataYears.value
+  if (!ys.length) return null
+  const full = ys.filter(y => y < currentCalendarYear.value)
+  return (full.length ? full[full.length - 1] : ys[ys.length - 1]) ?? null
+})
+
+// '' means "use the default"; 'all' is the cumulative view; otherwise a year string.
+const yearParam = ref<string>((route.query.year as string) ?? '')
+const selYear = computed<string>(() =>
+  yearParam.value === '' ? (defaultYear.value != null ? String(defaultYear.value) : ALL) : yearParam.value)
+const isAll = computed(() => selYear.value === ALL)
+const yr = computed<number | null>(() => (isAll.value ? null : Number(selYear.value) || null))
+const isPartial = (y: number | null) => y != null && y === currentCalendarYear.value
+
+const yearModel = computed<string>({
+  get: () => selYear.value,
+  set: (v) => { yearParam.value = v },
+})
+const yearItems = computed(() => [
+  { value: ALL, title: t('organismos.year.all') },
+  ...[...dataYears.value].reverse().map(y => ({
+    value: String(y),
+    title: isPartial(y) ? t('organismos.year.partialOpt', { year: y }) : String(y),
+  })),
+])
+
+// Keep the URL in step (shareable views), dropping params equal to the defaults.
+watch([selected, yearParam], () => {
+  const q: Record<string, string> = {}
+  if (selected.value && selected.value !== 'intendencias') q.g = selected.value
+  if (yearParam.value && yearParam.value !== String(defaultYear.value)) q.year = yearParam.value
+  router.replace({ query: q })
+})
+
+// ---- Members / figures for the active year ------------------------------
+/** A member's spend + contracts for the active year (or all-time under Acumulado). */
+function memberFigures(m: any): { total: number, contracts: number } {
+  if (isAll.value) return { total: m.total ?? 0, contracts: m.contracts ?? 0 }
+  const row = (m.byYear ?? []).find((y: any) => y.year === yr.value)
+  return { total: row?.total ?? 0, contracts: row?.contracts ?? 0 }
+}
+
+const members = computed<any[]>(() =>
+  (current.value?.members ?? [])
+    .map((m: any) => ({ ...m, ...memberFigures(m) }))
+    .filter((m: any) => m.total > 0 || m.contracts > 0)
+    .sort((a: any, b: any) => b.total - a.total))
+
+/** Group total for the active year — drives the KPI and every share. */
+const groupTotal = computed<number>(() => {
+  if (isAll.value) return current.value?.total ?? 0
+  const row = (current.value?.byYear ?? []).find((y: any) => y.year === yr.value)
+  return row?.total ?? 0
+})
+const memberCount = computed(() => members.value.length)
+
 const memberBars = computed(() =>
   members.value.map(m => ({ label: m.label, value: m.total, color: 'gold' })))
+// Trend chart always spans the whole series, regardless of the year filter.
 const byYear = computed(() =>
   (current.value?.byYear ?? []).map((y: any) => ({ year: y.year, value: y.total, count: y.contracts })))
 
 const topMember = computed(() => members.value[0] ?? null)
 function sharePct(m: any): string {
-  if (!current.value?.total) return '—'
-  return `${((m.total / current.value.total) * 100).toFixed(1)}%`
+  if (!groupTotal.value) return '—'
+  return `${((m.total / groupTotal.value) * 100).toFixed(1)}%`
 }
+// Data-coverage span — the full range of the group, independent of the year filter.
 const groupSpan = computed(() => {
-  const years = members.value.flatMap(m => [m.minYear, m.maxYear]).filter((y: any) => typeof y === 'number')
+  const years = (current.value?.members ?? [])
+    .flatMap((m: any) => [m.minYear, m.maxYear]).filter((y: any) => typeof y === 'number')
   if (!years.length) return '—'
-  const lo = Math.min(...years); const hi = Math.max(...years)
+  const lo = Math.min(...years)
+  const hi = Math.max(...years)
   return lo === hi ? String(lo) : `${lo}–${hi}`
 })
 
@@ -53,7 +128,7 @@ const rows = computed(() => members.value.map((m, i) => ({ ...m, rank: i + 1, sh
 const headers = computed(() => [
   { title: '#', key: 'rank', sortable: false, width: 48, align: 'end' as const },
   { title: t('organismos.col.member'), key: 'label', sortable: false },
-  { title: t('organismos.col.spend'), key: 'total', align: 'end' as const },
+  { title: isAll.value ? t('organismos.col.spend') : t('organismos.col.spendYear', { year: yr.value }), key: 'total', align: 'end' as const },
   { title: t('organismos.col.contracts'), key: 'contracts', align: 'end' as const },
   { title: t('organismos.col.share'), key: 'share', sortable: false, align: 'end' as const },
 ])
@@ -95,25 +170,23 @@ useSeo(() => ({
 
     <div class="u-container page">
       <!-- Group selector -->
-      <v-btn-toggle
+      <v-chip-group
         v-model="selected"
         mandatory
         color="primary"
-        density="comfortable"
-        variant="outlined"
-        divided
         class="groupsel"
+        :aria-label="t('organismos.groupAria')"
       >
-        <v-btn
+        <v-chip
           v-for="g in groupItems"
           :key="g.value"
           :value="g.value"
-          size="small"
-          class="text-none"
+          filter
+          variant="outlined"
         >
           {{ g.title }}
-        </v-btn>
-      </v-btn-toggle>
+        </v-chip>
+      </v-chip-group>
 
       <div
         v-if="error"
@@ -137,6 +210,35 @@ useSeo(() => ({
           {{ groupBlurb(current) }}
         </p>
 
+        <!-- Year filter -->
+        <div class="controls">
+          <v-select
+            v-model="yearModel"
+            :items="yearItems"
+            :label="t('organismos.year.label')"
+            density="comfortable"
+            variant="outlined"
+            hide-details
+            class="controls__year"
+            prepend-inner-icon="mdi-calendar-range"
+          />
+          <v-chip
+            v-if="isPartial(yr)"
+            color="warning"
+            variant="tonal"
+            size="small"
+            class="controls__partial"
+          >
+            <v-icon
+              start
+              size="14"
+            >
+              mdi-progress-clock
+            </v-icon>
+            {{ t('organismos.year.partialNote', { year: yr }) }}
+          </v-chip>
+        </div>
+
         <!-- KPIs -->
         <v-row
           class="kpis"
@@ -151,13 +253,13 @@ useSeo(() => ({
               border
             >
               <MoneyAmount
-                :amount="current.total"
+                :amount="groupTotal"
                 size="lg"
                 align="start"
                 compact
               />
               <div class="kpi__l">
-                {{ t('organismos.kpi.total') }}
+                {{ isAll ? t('organismos.kpi.total') : t('organismos.kpi.totalYear', { year: yr }) }}
               </div>
             </v-card>
           </v-col>
@@ -170,7 +272,7 @@ useSeo(() => ({
               border
             >
               <div class="kpi__n u-mono">
-                {{ formatNumber(current.memberCount) }}
+                {{ formatNumber(memberCount) }}
               </div>
               <div class="kpi__l">
                 {{ t('organismos.kpi.members') }}
@@ -269,6 +371,7 @@ useSeo(() => ({
             :items="rows"
             item-value="key"
             :items-per-page="-1"
+            :mobile-breakpoint="760"
             density="comfortable"
             hide-default-footer
           >
@@ -335,6 +438,10 @@ useSeo(() => ({
 .page { padding-top: var(--s-6); }
 .groupsel { flex-wrap: wrap; height: auto; margin-bottom: var(--s-5); }
 .groupblurb { margin: 0 0 var(--s-5); color: var(--text-muted); font-size: var(--t-sm); max-width: 74ch; }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin-bottom: var(--s-5); }
+.controls__year { flex: 0 1 260px; }
+.controls__partial { flex: 0 0 auto; }
 
 .kpis { margin-bottom: var(--s-4); }
 .kpi { padding: var(--s-4); height: 100%; }

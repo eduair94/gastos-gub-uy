@@ -484,6 +484,7 @@ useSeo(() => ({
             :items="tableRows"
             item-value="buyerId"
             :items-per-page="-1"
+            :mobile-breakpoint="760"
             density="comfortable"
             hide-default-footer
           >

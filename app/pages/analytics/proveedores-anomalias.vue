@@ -509,6 +509,7 @@ useSeo(() => ({
           :items-per-page-options="[{ value: ITEMS_PER_PAGE, title: String(ITEMS_PER_PAGE) }]"
           :sort-by="sortBy"
           item-value="_id"
+          :mobile-breakpoint="760"
           hover
           density="comfortable"
           @update:page="page = $event"

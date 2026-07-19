@@ -153,6 +153,39 @@
 .inv-ledger .rowflag { background: var(--alerta-wash); }
 .inv-ledger a { font-family: var(--font-mono); font-size: 0.8rem; color: var(--celeste-deep); }
 
+/* Mobile: each ledger row becomes a card — no horizontal scroll. */
+@media (max-width: 760px) {
+  .inv-ledger { overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .inv-ledger table { display: block; }
+  .inv-ledger thead {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
+  }
+  .inv-ledger tbody { display: flex; flex-direction: column; gap: var(--s-3); }
+  .inv-ledger tbody tr {
+    display: block; padding: var(--s-4);
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-1);
+  }
+  .inv-ledger tbody tr.rowflag { border-color: var(--alerta); background: var(--alerta-wash); }
+  .inv-ledger tbody tr:hover { background: var(--surface); }
+  .inv-ledger tbody tr.rowflag:hover { background: var(--alerta-wash); }
+  .inv-ledger tbody td,
+  .inv-ledger td.num {
+    display: block; min-width: 0; padding: var(--s-2) 0; border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--rule) 55%, transparent);
+    text-align: left; white-space: normal;
+  }
+  .inv-ledger tbody tr:last-child td { border-bottom: 0; }
+  .inv-ledger tbody td:first-child { border-top: 0; padding-top: 0; }
+  .inv-ledger tbody td[data-label]::before {
+    content: attr(data-label); display: block; margin-bottom: 3px;
+    font-family: var(--font-mono); font-size: var(--t-xs);
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
+  }
+  .inv-ledger tbody td.sup { font-size: var(--t-base); font-weight: 700; }
+}
+
 /* ---- Sources ---- */
 .inv-srcgroups { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-6) var(--s-7); }
 .inv-srcgroup h4 { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 var(--s-3); font-weight: 600; border-bottom: 1px solid var(--rule); padding-bottom: var(--s-2); }
@@ -237,7 +270,11 @@
   .inv-contra__vs { padding: var(--s-2) 0; }
   .inv-hubstats, .inv-tiles { grid-template-columns: repeat(2, 1fr); }
   .inv-srcgroups { grid-template-columns: 1fr; }
+  /* The 6rem hero top pad is desktop-scaled; on a narrow band it reads as a
+     dead void above the kicker. Step it down as the viewport narrows. */
+  .inv-hubhero { padding-block: var(--s-8) var(--s-7); }
 }
 @media (max-width: 640px) {
   .inv-tiles, .inv-obs-grid, .inv-sibs, .inv-cards, .inv-how, .inv-hubstats { grid-template-columns: 1fr; }
+  .inv-hubhero, .inv-cover { padding-block: var(--s-6); }
 }

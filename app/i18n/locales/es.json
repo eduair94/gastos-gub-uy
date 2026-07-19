@@ -268,7 +268,46 @@
       "otro": "Otro"
     },
     "aiNote": "La categoría de cada proveedor la genera una IA (Gemini) a partir del nombre: es orientativa, puede equivocarse, verificá contra la fuente.",
-    "aiTitle": "Categoría generada por IA"
+    "aiTitle": "Categoría generada por IA",
+    "dei": {
+      "badge": "DEI",
+      "badgeTitle": "Empresa industrial registrada en el Directorio de Empresas Industriales (MIEM)",
+      "title": "Registro industrial (DEI)",
+      "source": "Fuente: Directorio de Empresas Industriales (DEI), MIEM — datos abiertos. El cruce con el proveedor se hace por RUT.",
+      "f": {
+        "razonSocial": "Razón social",
+        "nombreComercial": "Nombre comercial",
+        "tamano": "Tamaño",
+        "actividad": "Actividad industrial",
+        "tipos": "Tipos de actividad",
+        "ubicacion": "Ubicación",
+        "estado": "Certificación",
+        "vence": "Vence el {date}",
+        "contacto": "Contacto"
+      },
+      "size": {
+        "micro": "Micro",
+        "pequena": "Pequeña",
+        "mediana": "Mediana",
+        "gran": "Grande"
+      },
+      "filter": {
+        "only": "Solo empresas industriales (DEI)",
+        "size": "Tamaño",
+        "sizeAny": "Cualquier tamaño",
+        "dept": "Departamento",
+        "deptAny": "Todo el país",
+        "clear": "Limpiar filtros"
+      },
+      "insights": {
+        "title": "Empresas industriales que le venden al Estado",
+        "summary": "{matched} de las {total} empresas industriales registradas (DEI) son proveedoras del Estado.",
+        "smallTitle": "Empresas chicas, contratos grandes",
+        "smallHelp": "Empresas registradas como micro o pequeñas que están entre los mayores proveedores del Estado. No es una irregularidad en sí, pero el desajuste entre tamaño declarado y monto adjudicado amerita una mirada.",
+        "mapTitle": "Mapa de empresas industriales proveedoras",
+        "mapHelp": "Cada punto es una empresa industrial registrada que le vende al Estado, ubicada según su establecimiento principal."
+      }
+    }
   },
   "estad": {
     "eyebrow": "Estadísticas",
@@ -299,7 +338,12 @@
     "totalLabel": "En el mapa:",
     "hint": "El área de cada rectángulo es proporcional al gasto. Tocá un organismo para ver su ficha; elegí un grupo para acercarte.",
     "note": "Área = gasto en compras publicado, normalizado a pesos; se excluyen los registros con cantidades imposibles. Datos precalculados por mes.",
-    "toOrganismos": "Ver el detalle por grupo"
+    "toOrganismos": "Ver el detalle por grupo",
+    "groupAria": "Elegí un grupo de organismos",
+    "viewAria": "Cómo ver el mapa",
+    "viewMap": "Mapa",
+    "viewList": "Lista",
+    "memberCount": "{n} organismos"
   },
   "contracts": {
     "title": "Explorador de contratos",
@@ -1031,6 +1075,7 @@
   "organismos": {
     "title": "El gasto del Estado, por organismo",
     "lead": "Compras públicas agrupadas por tipo de organismo: intendencias, ministerios, salud, entes y educación. Quién gasta más y en qué evoluciona el gasto.",
+    "groupAria": "Elegí un grupo de organismos",
     "toIntendencias": "Ver el detalle por habitante de las Intendencias",
     "linkBuyers": "Organismos compradores",
     "method": {
@@ -1040,8 +1085,15 @@
       "refresh": "Los datos se recalculan automáticamente una vez por mes.",
       "percapita": "El gasto por habitante solo aplica a las Intendencias, que tienen una población clara detrás. Para el resto, se compara el gasto absoluto."
     },
+    "year": {
+      "label": "Año",
+      "all": "Acumulado (todos los años)",
+      "partialOpt": "{year} (parcial)",
+      "partialNote": "{year} es un año en curso: datos parciales."
+    },
     "kpi": {
       "total": "Gasto del grupo",
+      "totalYear": "Gasto {year}",
       "members": "Organismos",
       "top": "El que más gasta",
       "span": "Período"
@@ -1049,6 +1101,7 @@
     "col": {
       "member": "Organismo",
       "spend": "Gasto",
+      "spendYear": "Gasto {year}",
       "contracts": "Contratos",
       "share": "Del grupo"
     },
@@ -1260,6 +1313,18 @@
     "benchViewProduct": "Ver ficha del rubro",
     "benchViewContracts": "Ver todos los contratos",
     "benchDisclaimer": "Precios de referencia calculados sobre adjudicaciones históricas del rubro. La cifra de cada proveedor es el total que le adjudicó el Estado en este rubro. Verificá siempre el pliego oficial.",
+    "estimateTitle": "¿Cuánto ofertar para ganar?",
+    "estimateLead": "Estimación de la oferta que históricamente ganó estos ítems: la cantidad del pliego por el precio unitario que el Estado adjudicó en cada rubro. Un punto de partida para armar tu propuesta.",
+    "estimateTargetLabel": "Objetivo para el pliego completo",
+    "estimateRangeSub": "competitivo (p25) → típico ganador (mediana)",
+    "estimateCoverage": "Estimado sobre {estimated} de {total} ítems con historial comparable.",
+    "estimateUncovered": "{n} sin historial",
+    "estimateBreakdown": "Ver detalle por ítem",
+    "estimateColItem": "Ítem",
+    "estimateColQty": "Cantidad",
+    "estimateColUnitPrice": "Precio unit. adjudicado",
+    "estimateColLine": "Estimado",
+    "estimateDisclaimer": "Estimación orientativa a partir de adjudicaciones históricas del mismo rubro y unidad. No contempla especificaciones, plazos ni condiciones del pliego, que pueden cambiar el precio. Verificá siempre el pliego oficial antes de ofertar.",
     "statusOpen": "Abierto",
     "statusClarification": "Con aclaraciones",
     "statusAmended": "Modificado",

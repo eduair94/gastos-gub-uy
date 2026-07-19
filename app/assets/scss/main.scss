@@ -537,6 +537,58 @@ button.chip:disabled { cursor: default; }
 }
 
 // ============================================================
+// Vuetify data tables — card distribution on mobile
+//
+// The analytics pages render on Vuetify's <v-data-table>. Each table
+// sets `mobile-breakpoint: 760`, so below that width Vuetify swaps to
+// its stacked layout (one row = a block of label/value cells) instead
+// of a horizontally-scrolling table. This block only re-skins that
+// stacked layout to match the site's cards: each row a framed surface,
+// each label the mono uppercase key. The classes below are Vuetify's
+// own mobile markup (v-data-table__tr--mobile / __td-title / __td-value).
+// ============================================================
+@media (max-width: 760px) {
+  .tablecard .v-table__wrapper > table { display: block; }
+  .tablecard .v-table__wrapper > table > tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-3);
+  }
+
+  .tablecard .v-data-table__tr--mobile {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-1);
+    overflow: hidden;
+  }
+
+  // Each cell: full-width row, label left / value right, hairline between.
+  .tablecard .v-data-table__tr--mobile > .v-data-table__td {
+    min-height: 0 !important;
+    padding: var(--s-2) var(--s-4) !important;
+    border: 0 !important;
+    border-top: 1px solid color-mix(in srgb, var(--rule) 55%, transparent) !important;
+  }
+  .tablecard .v-data-table__tr--mobile > .v-data-table__td:first-child { border-top: 0 !important; }
+
+  .tablecard .v-data-table__td-title {
+    font-family: var(--font-mono) !important;
+    font-size: var(--t-xs) !important;
+    font-weight: 500 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted) !important;
+  }
+  .tablecard .v-data-table__td-value {
+    font-size: var(--t-sm);
+    text-align: right;
+  }
+}
+
+// ============================================================
 // Motion
 //
 // One idea, applied consistently: content arrives by settling into
@@ -643,6 +695,34 @@ button.chip:disabled { cursor: default; }
   font-family: var(--font-mono);
   font-size: var(--t-xs);
   letter-spacing: 0.03em;
+}
+
+// ============================================================
+// Segmented toggles (.v-btn-toggle) — the "chip" group selectors used across
+// the analytics pages (mapa, organismos, proveedores-anomalias). Vuetify's
+// size="small" packs them tight: ~28px tall with thin horizontal padding, so
+// labels clip and — the reported bug — they're hard to hit on touch. Give every
+// toggle button a comfortable tap target (≥40px) and real breathing room, and
+// let the group and long labels wrap instead of overflowing. Applied globally so
+// every chip selector shares the same spacing.
+// ============================================================
+.v-btn-toggle {
+  height: auto !important;
+  flex-wrap: wrap;
+  row-gap: var(--s-2);
+
+  .v-btn {
+    min-height: 40px;
+    height: auto !important;
+    padding-block: var(--s-2) !important;
+    padding-inline: var(--s-4) !important;
+  }
+
+  // Labels wrap rather than clip once a button has vertical room to grow.
+  .v-btn__content {
+    white-space: normal;
+    line-height: 1.2;
+  }
 }
 
 .v-table {

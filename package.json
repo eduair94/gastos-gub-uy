@@ -18,6 +18,7 @@
     "cross-provider-anomalies": "tsx src/jobs/cross-provider-anomalies.ts",
     "refresh-organism-groups": "tsx src/jobs/refresh-organism-groups.ts",
     "import-sice-catalog": "tsx src/jobs/import-sice-catalog.ts",
+    "load-dei": "tsx src/jobs/load-dei.ts",
     "sync-open-calls": "tsx src/jobs/sync-open-calls.ts",
     "backfill-open-calls": "tsx src/jobs/backfill-open-calls.ts",
     "deadline-reminders": "tsx src/jobs/deadline-reminders.ts",

@@ -277,22 +277,34 @@ const ledger = computed(() => CORTESIA_CONTRACTS
                 :key="row.ocid + row.date"
                 :class="{ rowflag: row.flag }"
               >
-                <td class="mono">
+                <td
+                  class="mono"
+                  :data-label="cx.colDate"
+                >
                   {{ row.date }}
                 </td>
                 <td class="sup">
                   {{ row.supName }}
                 </td>
-                <td class="num mono">
+                <td
+                  class="num mono"
+                  :data-label="cx.colQty"
+                >
                   {{ row.qty }}
                 </td>
-                <td class="num mono">
+                <td
+                  class="num mono"
+                  :data-label="cx.colUnit"
+                >
                   {{ formatMoney(row.unit, 'UYU') }}<span
                     v-if="row.flat"
                     class="inv-warnpill"
                   >{{ locale === 'en' ? 'flat' : 'fijo' }}</span>
                 </td>
-                <td class="num">
+                <td
+                  class="num"
+                  :data-label="cx.colTot"
+                >
                   <MoneyAmount
                     :amount="row.tot"
                     size="sm"
@@ -302,7 +314,7 @@ const ledger = computed(() => CORTESIA_CONTRACTS
                     class="inv-warnpill"
                   >qty 0</span>
                 </td>
-                <td>
+                <td :data-label="cx.colMethod">
                   <span
                     v-if="row.method"
                     class="inv-badge inv-badge--exc"
@@ -312,7 +324,7 @@ const ledger = computed(() => CORTESIA_CONTRACTS
                     class="inv-badge inv-badge--nd"
                   >{{ cx.consultar }}</span>
                 </td>
-                <td>
+                <td :data-label="cx.colFicha">
                   <a
                     :href="row.url"
                     target="_blank"

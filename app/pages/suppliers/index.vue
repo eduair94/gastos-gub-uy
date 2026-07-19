@@ -16,7 +16,16 @@ interface SupplierRow {
   avgContractValue: number
   /** AI category from supplier_enrichment (null when un-enriched). */
   category?: string | null
+  /** DEI industrial-registry record when registered (null otherwise). */
+  dei?: { estado?: string | null } | null
 }
+
+/** Uruguay's 19 departments, value = DB form (uppercase), matched case-insensitively. */
+const DEPARTAMENTOS = [
+  'ARTIGAS', 'CANELONES', 'CERRO LARGO', 'COLONIA', 'DURAZNO', 'FLORES', 'FLORIDA',
+  'LAVALLEJA', 'MALDONADO', 'MONTEVIDEO', 'PAYSANDU', 'RIO NEGRO', 'RIVERA', 'ROCHA',
+  'SALTO', 'SAN JOSE', 'SORIANO', 'TACUAREMBO', 'TREINTA Y TRES',
+]
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -29,6 +38,19 @@ const router = useRouter()
 const search = ref((route.query.search as string) ?? '')
 const page = ref(Number(route.query.page ?? 1))
 const sort = ref((route.query.sort as string) ?? 'totalDesc')
+
+// ---- DEI cross-reference filters (also live in the URL) ----
+const deiOnly = ref(route.query.dei === '1')
+const tamano = ref((route.query.tamano as string) ?? '')
+const departamento = ref((route.query.departamento as string) ?? '')
+const hasFilters = computed(() => deiOnly.value || !!tamano.value || !!departamento.value)
+
+function clearFilters() {
+  deiOnly.value = false
+  tamano.value = ''
+  departamento.value = ''
+  page.value = 1
+}
 
 /** The two sort fields `suppliers/index.get.ts` actually indexes. */
 const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
@@ -46,19 +68,25 @@ const listQuery = computed(() => ({
   page: page.value,
   limit: 25,
   ...(searchTerm.value ? { search: searchTerm.value } : {}),
+  ...(deiOnly.value ? { dei: '1' } : {}),
+  ...(tamano.value ? { tamano: tamano.value } : {}),
+  ...(departamento.value ? { departamento: departamento.value } : {}),
   ...(SORTS[sort.value] ?? SORTS.totalDesc),
 }))
 
 // Page 7 of a different result set is meaningless.
-watch([searchTerm, sort], () => {
+watch([searchTerm, sort, deiOnly, tamano, departamento], () => {
   page.value = 1
 })
 
-watch([searchTerm, page, sort], () => {
+watch([searchTerm, page, sort, deiOnly, tamano, departamento], () => {
   const q: Record<string, string> = {}
   if (searchTerm.value) q.search = searchTerm.value
   if (page.value > 1) q.page = String(page.value)
   if (sort.value !== 'totalDesc') q.sort = sort.value
+  if (deiOnly.value) q.dei = '1'
+  if (tamano.value) q.tamano = tamano.value
+  if (departamento.value) q.departamento = departamento.value
   router.replace({ query: q })
 })
 
@@ -173,6 +201,69 @@ useSeo(() => ({
       </label>
     </div>
 
+    <!-- ===== DEI cross-reference filters ===== -->
+    <div class="filters">
+      <label class="filters__toggle">
+        <input
+          v-model="deiOnly"
+          type="checkbox"
+        >
+        <span>{{ t('sup.dei.filter.only') }}</span>
+      </label>
+
+      <label class="filters__sel">
+        <span class="u-sr-only">{{ t('sup.dei.filter.size') }}</span>
+        <select
+          v-model="tamano"
+          class="toolbar__select"
+        >
+          <option value="">
+            {{ t('sup.dei.filter.sizeAny') }}
+          </option>
+          <option value="micro">
+            {{ t('sup.dei.size.micro') }}
+          </option>
+          <option value="pequena">
+            {{ t('sup.dei.size.pequena') }}
+          </option>
+          <option value="mediana">
+            {{ t('sup.dei.size.mediana') }}
+          </option>
+          <option value="gran">
+            {{ t('sup.dei.size.gran') }}
+          </option>
+        </select>
+      </label>
+
+      <label class="filters__sel">
+        <span class="u-sr-only">{{ t('sup.dei.filter.dept') }}</span>
+        <select
+          v-model="departamento"
+          class="toolbar__select"
+        >
+          <option value="">
+            {{ t('sup.dei.filter.deptAny') }}
+          </option>
+          <option
+            v-for="d in DEPARTAMENTOS"
+            :key="d"
+            :value="d"
+          >
+            {{ d }}
+          </option>
+        </select>
+      </label>
+
+      <button
+        v-if="hasFilters"
+        class="filters__clear"
+        type="button"
+        @click="clearFilters"
+      >
+        {{ t('sup.dei.filter.clear') }}
+      </button>
+    </div>
+
     <p
       v-if="pagination?.total != null"
       class="count"
@@ -285,6 +376,10 @@ useSeo(() => ({
                   {{ s.name }}
                 </NuxtLink>
                 <SupplierChip :category="s.category" />
+                <DeiChip
+                  v-if="s.dei"
+                  :estado="s.dei.estado"
+                />
                 <span class="ctable__id">{{ s.supplierId }}</span>
               </td>
               <td
@@ -323,6 +418,9 @@ useSeo(() => ({
         </table>
       </div>
     </PaginatedList>
+
+    <!-- ===== DEI: transparency signal + map ===== -->
+    <DeiInsights />
 
     <p class="source">
       {{ t('home.sourceNote') }}
@@ -417,6 +515,40 @@ useSeo(() => ({
   font-size: var(--t-sm);
   cursor: pointer;
 }
+
+/* ---- DEI filters ---- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+
+.filters__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.filters__toggle input { accent-color: var(--verde); cursor: pointer; }
+
+.filters__clear {
+  padding: var(--s-1) var(--s-3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--celeste-deep);
+  font-family: var(--font-body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filters__clear:hover { text-decoration: underline; }
 
 .count {
   margin: 0 0 var(--s-3);

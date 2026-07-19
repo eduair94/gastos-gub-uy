@@ -8,13 +8,19 @@ import {
   Chart as ChartJS,
   Legend,
   LinearScale,
+  LineController,
   LineElement,
   PointElement,
+  ScatterController,
   Tooltip,
 } from 'chart.js'
 import { Scatter } from 'vue-chartjs'
 
-ChartJS.register(PointElement, LineElement, LinearScale, Tooltip, Legend)
+// Register controllers, not just elements: the median is a `type: 'line'` dataset
+// (LineController) and the dots are `type: 'scatter'` (ScatterController). Missing
+// LineController throws `"line" is not a registered controller` at chart init and
+// takes the whole page to Nuxt's 500 — masked in dev by module-load order.
+ChartJS.register(ScatterController, LineController, PointElement, LineElement, LinearScale, Tooltip, Legend)
 
 const props = withDefaults(defineProps<{
   /** Each point: x (unix ms), y (unit price), label (supplier), hi (highlight) */

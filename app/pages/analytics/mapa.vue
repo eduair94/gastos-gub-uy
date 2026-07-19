@@ -51,6 +51,47 @@ const treeGroups = computed(() => {
 
 const grandTotal = computed(() => treeGroups.value.reduce((a, g) => a + g.value, 0))
 
+// ---- View: treemap vs ranked list ---------------------------------------
+// The treemap encodes money as area — commanding on a wide screen, cramped on a
+// phone (cells shrink below their labels). So on mobile the ranked-list view is
+// the default; both are always switchable. SSR renders the treemap (crawlable),
+// then a phone flips to the list on mount — a post-hydration ref change, no
+// mismatch.
+const view = ref<'map' | 'list'>('map')
+onMounted(() => {
+  if (window.matchMedia?.('(max-width: 640px)').matches) view.value = 'list'
+})
+
+// Same hues as <TreemapChart> so switching views keeps each group's colour.
+const GROUP_COLORS = ['#5e93c4', '#3f7d62', '#6b7f8f', '#8a6ea0', '#4f9a94', '#b0805a', '#9a6a6a', '#7a86b8']
+
+// List rows mirror the treemap's two levels: at "all", one row per group (tap
+// drills in); focused on a group, one row per member (tap opens its profile).
+const listItems = computed(() => {
+  if (focus.value === 'all') {
+    return [...treeGroups.value]
+      .sort((a, b) => b.value - a.value)
+      .map((g, i) => ({
+        label: g.label,
+        value: g.value,
+        color: GROUP_COLORS[i % GROUP_COLORS.length],
+        groupKey: g.key,
+        sub: t('mapa.memberCount', { n: g.members.length }),
+      }))
+  }
+  const g = treeGroups.value[0]
+  if (!g) return []
+  return [...g.members]
+    .filter(m => m.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .map(m => ({ label: m.label, value: m.value, href: m.href, color: GROUP_COLORS[0]! }))
+})
+
+function onListSelect(i: number) {
+  const key = (listItems.value[i] as any)?.groupKey
+  if (key) focus.value = key
+}
+
 useSeo(() => ({
   title: t('seo.mapa.title'),
   description: t('seo.mapa.description'),
@@ -79,25 +120,23 @@ useSeo(() => ({
 
     <div class="u-container page">
       <div class="controls">
-        <v-btn-toggle
+        <v-chip-group
           v-model="focus"
           mandatory
           color="primary"
-          density="comfortable"
-          variant="outlined"
-          divided
           class="groupsel"
+          :aria-label="t('mapa.groupAria')"
         >
-          <v-btn
+          <v-chip
             v-for="g in groupOptions"
             :key="g.value"
             :value="g.value"
-            size="small"
-            class="text-none"
+            filter
+            variant="outlined"
           >
             {{ g.title }}
-          </v-btn>
-        </v-btn-toggle>
+          </v-chip>
+        </v-chip-group>
         <p class="controls__total">
           {{ t('mapa.totalLabel') }}
           <MoneyAmount
@@ -107,6 +146,46 @@ useSeo(() => ({
             :rule="false"
           />
         </p>
+      </div>
+
+      <div
+        v-if="!error && treeGroups.length"
+        class="viewbar"
+      >
+        <v-btn-toggle
+          v-model="view"
+          mandatory
+          density="comfortable"
+          variant="outlined"
+          divided
+          class="viewsel"
+          :aria-label="t('mapa.viewAria')"
+        >
+          <v-btn
+            value="map"
+            size="small"
+          >
+            <v-icon
+              start
+              size="18"
+            >
+              mdi-view-grid-outline
+            </v-icon>
+            {{ t('mapa.viewMap') }}
+          </v-btn>
+          <v-btn
+            value="list"
+            size="small"
+          >
+            <v-icon
+              start
+              size="18"
+            >
+              mdi-format-list-bulleted
+            </v-icon>
+            {{ t('mapa.viewList') }}
+          </v-btn>
+        </v-btn-toggle>
       </div>
 
       <div
@@ -122,7 +201,7 @@ useSeo(() => ({
       </div>
 
       <div
-        v-else-if="treeGroups.length"
+        v-else-if="treeGroups.length && view === 'map'"
         class="panel treemap-wrap"
       >
         <TreemapChart
@@ -130,6 +209,13 @@ useSeo(() => ({
           :height="focus === 'all' ? 660 : 560"
         />
       </div>
+
+      <SpendBars
+        v-else-if="treeGroups.length"
+        :items="listItems"
+        class="listview"
+        @select="onListSelect"
+      />
 
       <p class="hint">
         {{ t('mapa.hint') }}
@@ -187,6 +273,14 @@ useSeo(() => ({
 }
 
 .groupsel { flex-wrap: wrap; height: auto; }
+
+.viewbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--s-4);
+}
+
+.listview { margin-top: var(--s-1); }
 
 .controls__total {
   display: inline-flex;

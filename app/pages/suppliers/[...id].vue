@@ -75,6 +75,8 @@ const { data: detailRes, error: detailError } = await useFetch<any>(
 )
 
 const supplier = computed<SupplierPattern | null>(() => detailRes.value?.data?.supplier ?? null)
+/** DEI industrial-registry record when this supplier's RUT is registered (else null). */
+const dei = computed(() => detailRes.value?.data?.dei ?? null)
 const notFound = computed(() => detailError.value?.statusCode === 404 || (!supplier.value && !!detailError.value))
 
 // A 404 must answer 404, not a 200 carrying an apology — but the state itself
@@ -283,6 +285,15 @@ useSeo(() => ({
           </dd>
         </div>
       </dl>
+
+      <!-- ===== Industrial registry (DEI) =====
+           Shown only when the supplier's RUT is a registered industrial company.
+           Official MIEM open data, cross-referenced — a fact of record. -->
+      <DeiPanel
+        v-if="dei"
+        :dei="dei"
+        :supplier-name="supplier.name"
+      />
 
       <!-- ===== Revenue by year =====
            Guarded: the bars are gold, so they may only ever carry money. -->

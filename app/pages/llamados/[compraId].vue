@@ -37,6 +37,13 @@ const { data: benchData } = await useFetch<{ data: { benchmarks: Array<Record<st
 )
 const benchmarks = computed(() => benchData.value?.data?.benchmarks ?? [])
 
+// "¿Cuánto ofertar para ganar?" — quantity × historical award unit price per line.
+// (Bidder intel panel: estimate + benchmarks below.)
+const { data: estimateData } = await useFetch<{ data: Record<string, unknown> }>(
+  () => `/api/open-calls/${compraId.value}/estimate`,
+)
+const estimate = computed(() => estimateData.value?.data ?? null)
+
 useSeo({
   title: call.value.title || t('llamados.title'),
   description: call.value.description || call.value.title || t('llamados.lead'),
@@ -222,6 +229,8 @@ async function setReminder(days: number) {
           </ul>
         </section>
 
+        <CallBidEstimate :estimate="(estimate as any)" />
+
         <ClientOnly>
           <PliegoSummary
             :compra-id="compraId"
@@ -229,50 +238,7 @@ async function setReminder(days: number) {
           />
         </ClientOnly>
 
-        <section
-          v-if="benchmarks.length"
-          id="benchmarks"
-          class="panel calldetail__section"
-        >
-          <h2 class="u-eyebrow">
-            {{ t('llamados.benchmarksTitle') }}
-          </h2>
-          <p class="calldetail__benchlead u-muted">
-            {{ t('llamados.benchmarksLead') }}
-          </p>
-          <div
-            v-for="(b, i) in benchmarks"
-            :key="`b-${i}`"
-            class="calldetail__bench"
-          >
-            <div class="calldetail__benchhead u-splitrow">
-              <span class="u-truncate">{{ (b as any).label || (b as any).classificationId }}</span>
-              <span
-                v-if="(b as any).product"
-                class="u-mono u-muted"
-              >
-                {{ formatNumber((b as any).product.contractCount) }} {{ t('llamados.benchContracts') }}
-              </span>
-            </div>
-            <div
-              v-if="(b as any).priceBaselines?.length"
-              class="calldetail__baselines"
-            >
-              <div
-                v-for="(pb, j) in (b as any).priceBaselines"
-                :key="`pb-${j}`"
-                class="calldetail__baseline"
-              >
-                <span class="u-mono u-muted">{{ t('llamados.benchMedian') }} ({{ pb.unitName }})</span>
-                <MoneyAmount
-                  :amount="pb.p50"
-                  :currency="pb.currency"
-                  :rule="false"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
+        <CallBenchmarks :benchmarks="(benchmarks as any)" />
       </div>
 
       <aside class="calldetail__aside">
@@ -337,11 +303,6 @@ async function setReminder(days: number) {
 .calldetail__items { list-style: none; margin: 0; padding: 0; }
 .calldetail__item { display: flex; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--rule); }
 .calldetail__item:last-child { border-bottom: 0; }
-.calldetail__benchlead { font-size: var(--t-sm); margin: 0 0 var(--s-3); }
-.calldetail__bench { padding: var(--s-3) 0; border-bottom: 1px solid var(--rule); }
-.calldetail__bench:last-child { border-bottom: 0; }
-.calldetail__baselines { display: flex; flex-wrap: wrap; gap: var(--s-4); margin-top: var(--s-2); }
-.calldetail__baseline { display: flex; flex-direction: column; gap: 2px; }
 .calldetail__docs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
 .calldetail__doc { display: flex; align-items: center; gap: var(--s-2); color: var(--celeste-deep); text-decoration: none; font-size: var(--t-sm); }
 .calldetail__doc:hover { text-decoration: underline; }

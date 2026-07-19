@@ -209,22 +209,31 @@ const ledger = computed(() => IM_LEDGER.slice().sort((a, b) => b.amount - a.amou
                 v-for="row in ledger"
                 :key="row.ocid"
               >
-                <td class="u-mono nowrap">
+                <td
+                  class="u-mono nowrap"
+                  :data-label="c.ledger.colDate"
+                >
                   {{ formatDate(row.date) }}
                 </td>
                 <td class="obj">
                   {{ row.desc }}
                 </td>
-                <td class="sup">
+                <td
+                  class="sup"
+                  :data-label="c.ledger.colSup"
+                >
                   {{ row.supplier }}
                 </td>
-                <td>
+                <td :data-label="c.ledger.colDesc">
                   <span
                     class="im-badge"
                     :class="`im-badge--${row.cat}`"
                   >{{ (c.cat as Record<string, string>)[row.cat] }}</span>
                 </td>
-                <td class="num">
+                <td
+                  class="num"
+                  :data-label="c.ledger.colAmount"
+                >
                   <MoneyAmount
                     :amount="row.amount"
                     compact
@@ -401,6 +410,49 @@ const ledger = computed(() => IM_LEDGER.slice().sort((a, b) => b.amount - a.amou
 .inv-drillnote { margin: var(--s-2) 0 0; font-size: var(--t-xs); color: var(--text-muted); }
 .im-ledger .obj { font-weight: 600; min-width: 200px; }
 .im-ledger .sup { color: var(--text-muted); min-width: 170px; }
+
+/* Mobile: each ledger row becomes a card — no horizontal scroll. */
+@media (max-width: 760px) {
+  .im-ledger { overflow-x: visible; }
+  .im-ledger table { min-width: 0; display: block; }
+  .im-ledger thead {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
+  }
+  .im-ledger tbody { display: flex; flex-direction: column; gap: var(--s-3); }
+  .im-ledger tbody tr {
+    display: block;
+    padding: var(--s-4);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-1);
+  }
+  .im-ledger tbody tr:hover { background: var(--surface); }
+  .im-ledger tbody td {
+    display: block;
+    min-width: 0;
+    padding: var(--s-2) 0;
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--rule) 55%, transparent);
+    text-align: left;
+    white-space: normal;
+  }
+  .im-ledger tbody td:first-child { border-top: 0; padding-top: 0; }
+  .im-ledger tbody td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 3px;
+    font-family: var(--font-mono);
+    font-size: var(--t-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .im-ledger tbody td.obj { min-width: 0; font-size: var(--t-base); font-weight: 700; }
+  .im-ledger tbody td.sup { min-width: 0; }
+  .im-ledger tbody td.num { text-align: left; white-space: normal; }
+}
 
 /* Interconnection band */
 .im-explore {
