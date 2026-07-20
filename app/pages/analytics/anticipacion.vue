@@ -16,6 +16,7 @@
  * and let anyone walk away thinking a date shown here is an announcement.
  */
 import { ALERT_THRESHOLD, DISPLAY_THRESHOLD } from '#shared/forecast/constants'
+import { effectiveWindow } from '#shared/forecast/window-display'
 
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
@@ -67,15 +68,28 @@ function confidenceBand(c: number): Band {
 const BAND_COLOR: Record<Band, string> = { alta: 'success', media: 'warning', baja: 'grey' }
 
 // ---- Expected window as a human range, never a false-precision date -------
+// Overdue buyers (their own cadence already elapsed) have a raw `start` in
+// the past while `end` is still ahead — rendering that raw range produced
+// nonsense like "ago. 2025 – ago. 2026" (a window that appears to START
+// before today). effectiveWindow() (shared/forecast/window-display, reused
+// by Task 8's card) clamps the DISPLAYED start to `now` without dropping the
+// row — overdue is the most actionable signal here, not noise.
+function effWindow(r: any) {
+  return effectiveWindow(r.expectedWindow.start, r.expectedWindow.end, new Date())
+}
 function windowLabel(r: any): string {
+  const { start, end } = effWindow(r)
   const fmt = new Intl.DateTimeFormat(locale.value === 'en' ? 'en-GB' : 'es-UY', {
     month: 'short',
     year: 'numeric',
     timeZone: 'UTC',
   })
-  const a = fmt.format(new Date(r.expectedWindow.start))
-  const b = fmt.format(new Date(r.expectedWindow.end))
+  const a = fmt.format(start)
+  const b = fmt.format(end)
   return a === b ? a : `${a} – ${b}`
+}
+function isOverdue(r: any): boolean {
+  return effWindow(r).overdue
 }
 
 function evidenceTitle(r: any): string {
@@ -210,6 +224,16 @@ useSeo(() => ({
                       {{ r.rubroLabel }}
                     </td>
                     <td class="u-mono">
+                      <v-chip
+                        v-if="isOverdue(r)"
+                        size="x-small"
+                        color="error"
+                        variant="tonal"
+                        class="overdue-chip"
+                        :title="t('anticipacion.overdueHelp')"
+                      >
+                        {{ t('anticipacion.overdue') }}
+                      </v-chip>
                       {{ windowLabel(r) }}
                     </td>
                     <td>
@@ -327,6 +351,7 @@ useSeo(() => ({
 .dt__link { font-weight: 600; color: var(--text); text-decoration: none; }
 .dt__link:hover { color: var(--celeste-deep); text-decoration: underline; }
 .cell-sub { display: block; margin-top: 2px; font-size: var(--t-xs); color: var(--text-muted); }
+.overdue-chip { display: block; width: fit-content; margin-bottom: 4px; }
 .tablecard__foot { margin: 0; padding: var(--s-2) var(--s-4); font-size: var(--t-xs); color: var(--text-muted); border-top: 1px solid var(--rule); }
 
 .amt { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }

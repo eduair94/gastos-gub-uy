@@ -1196,6 +1196,8 @@
       "monto": "Typical amount"
     },
     "confidence": { "alta": "High", "media": "Medium", "baja": "Low" },
+    "overdue": "Overdue",
+    "overdueHelp": "This tender should already have been published based on the agency's historical cadence: it could appear any time now, not on the window's exact date.",
     "confidenceHelp": "How repeated and regular the historical buying pattern is: High = stable, recent cadence; Medium = a visible cadence with more variation; Low = a weak pattern, close to the display minimum.",
     "everyMonths": "every ~{n} months",
     "events": "{n} historical tenders",
