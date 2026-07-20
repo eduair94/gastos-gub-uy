@@ -106,9 +106,20 @@ const calculatedAt = computed<Date | null>(() => {
 // Absolute (SSR-stable, no hydration mismatch). Relative "hace X" is added client-only below.
 const updatedAbs = computed(() => {
   if (!calculatedAt.value) return null
-  return new Intl.DateTimeFormat(locale.value === 'en' ? 'en-GB' : 'es-UY', {
+  const s = new Intl.DateTimeFormat(locale.value === 'en' ? 'en-GB' : 'es-UY', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    // Pinned, not the runtime default: without it SSR formats in the server's
+    // zone (the prod box is UTC) and the client in the viewer's (UTC−3), so the
+    // hour differs and hydration mismatches. The audience is Uruguayan, so UY
+    // time is also the right thing to show everyone.
+    timeZone: 'America/Montevideo',
   }).format(calculatedAt.value)
+  // Node's ICU and Chrome's ICU disagree on which space they put before the
+  // "a. m." day period (U+202F vs U+00A0 vs plain) — same glyph, different code
+  // point — which Vue flags as a hydration text mismatch even though the two
+  // strings look identical. Fold every space variant to U+0020 so SSR and
+  // client bytes match regardless of ICU version.
+  return s.replace(/[\u202f\u00a0\u2009\u2007]/g, ' ')
 })
 const now = ref<number | null>(null)
 const updatedRel = computed(() => {
@@ -420,10 +431,14 @@ useSeo(() => ({
             />
             <span class="fresh__txt">
               {{ t('provAnom.updated') }}
-              <ClientOnly>
-                <strong>{{ updatedRel ?? updatedAbs }}</strong>
-                <template #fallback><strong>{{ updatedAbs }}</strong></template>
-              </ClientOnly>
+              <!-- No ClientOnly: `updatedRel` is null until onMounted sets `now`
+                   (server AND first client render), so both sides render
+                   `updatedAbs` and agree at hydration; the relative label then
+                   swaps in post-mount. Wrapping this in ClientOnly instead made
+                   Vue warn "hydration text content mismatch" on the fallback→
+                   default swap even though the strings were identical — a
+                   console error that cost the page its Best-Practices score. -->
+              <strong>{{ updatedRel ?? updatedAbs }}</strong>
             </span>
           </div>
           <div class="fresh__abs u-mono">
