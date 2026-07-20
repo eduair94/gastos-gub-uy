@@ -5,7 +5,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { GastosClient } from './client.js'
 import { tools } from './tools.js'
 
-// Stdio MCP server that exposes the gastos.gub.uy public API as tools. Configure
+// Stdio MCP server that exposes the conlatuya.checkleaked.cc public API as tools. Configure
 // with GASTOS_GUB_API_KEY (optional for reads, required with the `write` scope
 // for account tools) and optional GASTOS_GUB_BASE_URL.
 const client = new GastosClient()

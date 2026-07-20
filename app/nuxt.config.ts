@@ -4,7 +4,10 @@ import { resolve } from 'node:path'
 
 // The public origin. Needed by sitemap/robots and to emit absolute
 // canonical + og:url tags, which must never be relative.
-const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://gastos.gub.uy'
+// gastos.gub.uy does not resolve (no DNS) — the real, live domain is
+// conlatuya.checkleaked.cc. Emitting canonical/OG/sitemap/JSON-LD URLs
+// against a dead domain meant none of it was actually crawlable.
+const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || 'https://conlatuya.checkleaked.cc'
 
 // Firebase Web SDK config (public, safe to expose). Prefers NUXT_PUBLIC_FIREBASE_*
 // env vars; otherwise reads app/firebase.json (present at build time, gitignored).

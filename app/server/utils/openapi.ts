@@ -21,16 +21,16 @@ Use it freely to build dashboards, run research, or check public spending. 💛
 
 \`\`\`bash
 # Latest contracts (newest first)
-curl "https://gastos.gub.uy/api/contracts?limit=5"
+curl "https://conlatuya.checkleaked.cc/api/contracts?limit=5"
 
 # Summary statistics for a filter set
-curl "https://gastos.gub.uy/api/contracts/stats?year=2024&procurementMethodDetails=Compra%20Directa"
+curl "https://conlatuya.checkleaked.cc/api/contracts/stats?year=2024&procurementMethodDetails=Compra%20Directa"
 
 # Full-text search across contracts, suppliers and buyers
-curl "https://gastos.gub.uy/api/search?q=relojes&type=all"
+curl "https://conlatuya.checkleaked.cc/api/search?q=relojes&type=all"
 
 # One contract by its OCDS id / release id
-curl "https://gastos.gub.uy/api/contracts/adjudicacion-496833"
+curl "https://conlatuya.checkleaked.cc/api/contracts/adjudicacion-496833"
 \`\`\`
 
 ### Conventions
@@ -89,9 +89,9 @@ Account endpoints (your alerts/*watches*, saved calls, preferences, calendar) **
 
 \`\`\`bash
 # As a bearer token
-curl -H "Authorization: Bearer gk_live_xxx" "https://gastos.gub.uy/api/watches"
+curl -H "Authorization: Bearer gk_live_xxx" "https://conlatuya.checkleaked.cc/api/watches"
 # …or the x-api-key header
-curl -H "x-api-key: gk_live_xxx" "https://gastos.gub.uy/api/watches"
+curl -H "x-api-key: gk_live_xxx" "https://conlatuya.checkleaked.cc/api/watches"
 \`\`\`
 
 Keys look like \`gk_live_<8>_<32>\`. The full secret is shown **once** at creation — store it safely.

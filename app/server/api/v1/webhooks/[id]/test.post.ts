@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
   const body = JSON.stringify({
     event: 'ping',
     delivery: `test-${id}`,
-    data: { message: 'Test event from gastos.gub.uy webhooks', subscriptionId: id },
+    data: { message: 'Test event from Con la tuya, contribuyente webhooks', subscriptionId: id },
   })
   const signature = signPayload(sub.secret, body)
 

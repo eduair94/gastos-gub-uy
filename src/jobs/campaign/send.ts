@@ -103,7 +103,9 @@ function appBaseUrl(): string {
 
 /** The machine mailto: target listed alongside the https one-click URL in List-Unsubscribe. */
 function unsubscribeMailto(): string {
-  const addr = process.env.CAMPAIGN_UNSUB_MAILTO || process.env.COLD_SMTP_REPLY_TO || process.env.COLD_SMTP_FROM || "baja@gastos.gub.uy";
+  // Last-resort fallback only — a real send must set one of the env vars above to an
+  // actually-monitored mailbox (Ley 18.331 opt-out compliance depends on it working).
+  const addr = process.env.CAMPAIGN_UNSUB_MAILTO || process.env.COLD_SMTP_REPLY_TO || process.env.COLD_SMTP_FROM || "baja@conlatuya.checkleaked.cc";
   return addr.startsWith("mailto:") ? addr : `mailto:${addr}`;
 }
 

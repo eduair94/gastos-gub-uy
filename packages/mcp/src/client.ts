@@ -4,7 +4,7 @@ export interface GastosClientOptions {
 }
 
 /**
- * Thin HTTP client for the gastos.gub.uy public API. Reads the key/base URL from
+ * Thin HTTP client for the conlatuya.checkleaked.cc public API. Reads the key/base URL from
  * the constructor or the GASTOS_GUB_API_KEY / GASTOS_GUB_BASE_URL env vars. The
  * key is optional for reads (it raises the rate limit) and required with the
  * `write` scope for account tools.
@@ -15,7 +15,7 @@ export class GastosClient {
 
   constructor(opts: GastosClientOptions = {}) {
     this.apiKey = opts.apiKey ?? process.env.GASTOS_GUB_API_KEY
-    this.baseUrl = (opts.baseUrl ?? process.env.GASTOS_GUB_BASE_URL ?? 'https://gastos.gub.uy').replace(/\/$/, '')
+    this.baseUrl = (opts.baseUrl ?? process.env.GASTOS_GUB_BASE_URL ?? 'https://conlatuya.checkleaked.cc').replace(/\/$/, '')
   }
 
   async request(method: string, path: string, params?: Record<string, unknown>, body?: unknown): Promise<unknown> {

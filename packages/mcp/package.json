@@ -1,7 +1,7 @@
 {
   "name": "@gastos-gub/mcp",
   "version": "0.1.0",
-  "description": "MCP server for the gastos.gub.uy Uruguay government procurement API — tenders, contracts, analytics, anomalies and account alerts as tools.",
+  "description": "MCP server for the conlatuya.checkleaked.cc Uruguay government procurement API — tenders, contracts, analytics, anomalies and account alerts as tools.",
   "type": "module",
   "bin": {
     "gastos-gub-mcp": "dist/index.js"

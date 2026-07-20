@@ -67,7 +67,8 @@ export function createPusher(): Pusher {
   if (cached) return cached;
   const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT || "mailto:alertas@gastos.gub.uy";
+  // https: (not mailto:) — the domain has no configured mailbox; VAPID accepts either form.
+  const subject = process.env.VAPID_SUBJECT || "https://conlatuya.checkleaked.cc";
   cached = publicKey && privateKey ? new VapidPusher(publicKey, privateKey, subject) : new NoopPusher();
   return cached;
 }

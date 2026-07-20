@@ -77,6 +77,9 @@ export default defineEventHandler(async (event) => {
   const kicker = typeof query.kicker === 'string' ? truncate(query.kicker, 60) : ''
   const stat = typeof query.stat === 'string' ? truncate(query.stat, 40) : ''
   const isEn = query.locale === 'en'
+  // Derived, not hardcoded — a stale literal here is exactly how the site
+  // shipped OG images branded with a domain that didn't resolve.
+  const domain = new URL(useRuntimeConfig().public.siteUrl as string).hostname
 
   const fonts = await loadFonts()
 
@@ -130,7 +133,7 @@ export default defineEventHandler(async (event) => {
         : el('span', { key: 'stat-empty', style: { display: 'flex', height: '0px' } }),
     ]),
     el('div', { key: 'bottom', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
-      el('span', { key: 'domain', style: { display: 'flex', color: GRAFITO, fontSize: '22px', fontFamily: 'Public Sans', fontWeight: 400 } }, 'gastos.gub.uy'),
+      el('span', { key: 'domain', style: { display: 'flex', color: GRAFITO, fontSize: '22px', fontFamily: 'Public Sans', fontWeight: 400 } }, domain),
       el('span', { key: 'lang', style: { display: 'flex', color: GRAFITO, fontSize: '20px', fontFamily: 'Public Sans', fontWeight: 400 } }, isEn ? 'Uruguay public procurement' : 'Compras públicas del Uruguay'),
     ]),
   ])

@@ -1,13 +1,13 @@
 # @gastos-gub/mcp
 
-An [MCP](https://modelcontextprotocol.io) server for the **gastos.gub.uy** Uruguay
+An [MCP](https://modelcontextprotocol.io) server for the **conlatuya.checkleaked.cc** Uruguay
 government-procurement API. It exposes tenders (llamados), contracts, suppliers,
 buyers, analytics, anomalies and your account alerts as tools any MCP client
 (Claude Desktop, etc.) can call.
 
 ## Setup
 
-1. Get an API key at <https://gastos.gub.uy/app/api-keys>. A **read** key is
+1. Get an API key at <https://conlatuya.checkleaked.cc/app/api-keys>. A **read** key is
    enough for the data tools; the account tools (`list_my_watches`,
    `create_watch`, `list_saved_calls`, `get_calendar`) need a **write** key.
 2. Build (or install once published):
@@ -43,7 +43,7 @@ Once published to npm you can instead use `npx -y @gastos-gub/mcp`.
 | Variable | Default | Notes |
 |---|---|---|
 | `GASTOS_GUB_API_KEY` | — | Optional for reads (raises the rate limit); required with the `write` scope for account tools. |
-| `GASTOS_GUB_BASE_URL` | `https://gastos.gub.uy` | Override for a self-hosted instance. |
+| `GASTOS_GUB_BASE_URL` | `https://conlatuya.checkleaked.cc` | Override for a self-hosted instance. |
 
 ## Tools
 
@@ -56,4 +56,4 @@ Account (write-scoped key): `list_my_watches`, `create_watch`,
 `list_saved_calls`, `get_calendar`.
 
 Every tool is a thin call to the documented REST API — see the full reference at
-<https://gastos.gub.uy/docs>.
+<https://conlatuya.checkleaked.cc/docs>.

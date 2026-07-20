@@ -16,8 +16,9 @@ useSeo({
   },
 })
 
+const siteUrl = useRuntimeConfig().public.siteUrl as string
 const curlExample = `curl -H "x-api-key: gk_live_xxx" \\
-  "https://gastos.gub.uy/api/open-calls?limit=5"`
+  "${siteUrl}/api/open-calls?limit=5"`
 
 const integrations = computed(() => [
   { icon: 'mdi-lightning-bolt-outline', title: t('developers.zapierTitle'), body: t('developers.zapierBody') },
