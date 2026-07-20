@@ -1,5 +1,6 @@
 import { ReleaseModel } from "../../shared/models";
 import { IRelease } from "../../shared/types";
+import { hasVerifiedOverride } from "../../shared/utils/verified-override";
 import { DatabaseService } from "../../src/services/database-service";
 import { Logger } from "../../src/services/logger-service";
 import { ReleaseRSSFetcher } from "../../src/services/release-rss-fetcher";
@@ -139,7 +140,7 @@ async function processRelease(foundRelease: any, rssFetcher: any, currencyRates:
             console.log(`   - Amount data: ${JSON.stringify(amountData, null, 2)}`);
 
             // Create release with metadata
-            const releaseWithMetadata = {
+            const releaseWithMetadata: Record<string, unknown> = {
                 ...release,
                 sourceFileName: "web-test",
                 sourceYear: 2025,
@@ -150,6 +151,16 @@ async function processRelease(foundRelease: any, rssFetcher: any, currencyRates:
                 rssPublishDate: foundRelease.publishDate,
                 rssLink: foundRelease.link
             };
+
+            // Never let this dev script re-inflate a release whose total was verified
+            // against the government page: check the STORED document (not `release`,
+            // which is fresh off the feed and can never itself carry the marker) and
+            // drop `amount` from the upcoming $set if it's protected.
+            const storedRelease = await ReleaseModel.findOne({ id: release.id }, { id: 1, amount: 1 }).lean();
+            if (hasVerifiedOverride(storedRelease)) {
+                console.log("🛡️  Verified override present on stored release — skipping amount recompute");
+                delete releaseWithMetadata.amount;
+            }
 
             // Upload to database
             console.log("📤 Uploading to database...");

@@ -141,7 +141,11 @@ const ReleaseSchema = new Schema<IRelease>(
       currencies: [{ type: String }],
       hasAmounts: { type: Boolean },
       primaryAmount: { type: Number }, // Main amount in UYU for sorting/filtering
-      primaryCurrency: { type: String }
+      primaryCurrency: { type: String },
+      // Set only by src/jobs/correct-lumpsum-artifacts.ts. Its presence means the
+      // total was verified against the government page and must NOT be recomputed
+      // (see shared/utils/verified-override.ts).
+      verifiedOverride: { type: Schema.Types.Mixed }
     }
   },
   {

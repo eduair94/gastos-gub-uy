@@ -465,6 +465,9 @@
     "publishedOn": "Publicado el",
     "officialSource": "Ver en Compras Estatales",
     "officialSourceHelp": "Abre la ficha oficial de este contrato en comprasestatales.gub.uy.",
+    "verifiedTotalBadge": "Monto verificado",
+    "verifiedTotalHelp": "El dato original del feed multiplicaba la cantidad por un valor que en realidad era el monto total del contrato. Corregimos el total contra la ficha oficial; las líneas de abajo muestran el dato crudo del feed.",
+    "verifiedTotalSource": "Ver ficha oficial",
     "ocid": "Identificador OCDS",
     "sections": {
       "summary": "Resumen",

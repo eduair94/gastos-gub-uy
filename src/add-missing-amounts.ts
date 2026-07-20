@@ -1,5 +1,6 @@
 import { connectToDatabase } from "../shared/connection/database";
 import { ReleaseModel } from "../shared/models";
+import { hasVerifiedOverride } from "../shared/utils/verified-override";
 import {
   AMOUNT_CALCULATION_VERSION,
   calculateTotalAmounts,
@@ -62,8 +63,15 @@ async function addMissingAmounts() {
     while (processedCount < releasesWithoutAmount) {
       console.log(`\n📦 Processing batch starting at ${processedCount}...`);
 
-      // Get a batch of releases without amount field
-      const releases = await ReleaseModel.find(fullQuery)
+      // Get a batch of releases without amount field. Exclude anything already carrying
+      // a page-verified override here in the query itself (not just the in-loop
+      // `hasVerifiedOverride` guard below): without this, a protected doc that fails
+      // the version test would never be corrected, so it would keep re-occupying the
+      // front of every batch forever, wasting a slot each pass instead of just once.
+      const releases = await ReleaseModel.find({
+        ...fullQuery,
+        "amount.verifiedOverride": { $exists: false }
+      })
         .limit(BATCH_SIZE)
         .lean();
 
@@ -78,6 +86,12 @@ async function addMissingAmounts() {
 
       for (const release of releases) {
         try {
+          // A total verified against the government page outranks anything we can
+          // recompute from the feed — never overwrite it.
+          if (hasVerifiedOverride(release)) {
+            continue;
+          }
+
           // Check if this is a version update
           const isVersionUpdate = !!(release.amount && (release.amount as any).version !== AMOUNT_CALCULATION_VERSION);
           const hadPreviousAmount = release.amount && (release.amount as any).primaryAmount;

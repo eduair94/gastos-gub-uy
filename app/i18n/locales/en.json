@@ -465,6 +465,9 @@
     "publishedOn": "Published on",
     "officialSource": "View on Compras Estatales",
     "officialSourceHelp": "Opens the official record for this contract on comprasestatales.gub.uy.",
+    "verifiedTotalBadge": "Verified amount",
+    "verifiedTotalHelp": "The raw feed multiplied the quantity by a value that was actually the contract's total amount. We corrected the total against the official record; the lines below show the raw feed data.",
+    "verifiedTotalSource": "View official record",
     "ocid": "OCDS identifier",
     "sections": {
       "summary": "Summary",

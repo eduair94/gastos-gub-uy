@@ -1,5 +1,6 @@
 import { ReleaseModel } from "../../shared/models";
 import { IRelease } from "../../shared/types";
+import { hasVerifiedOverride } from "../../shared/utils/verified-override";
 import { IDatabaseService } from "../services/database-service";
 import { IFileService } from "../services/file-service";
 import { ILogger } from "../services/logger-service";
@@ -16,6 +17,34 @@ export interface IReleaseUploader {
 
 export interface IJsonData {
   releases?: IRelease[];
+}
+
+/**
+ * The pipeline-`$set` expression that decides whether a release's stored `amount`
+ * survives a re-upload untouched or gets recomputed from the incoming feed file.
+ *
+ * - When `isProtected` (the stored release already carries a page-verified override),
+ *   ALWAYS keep the stored amount (`"$amount"`) — never recompute it, regardless of
+ *   the awards-count comparison below. A government amendment winning this precedence
+ *   is handled elsewhere (reconcile-award-amendments.ts), never here.
+ * - Otherwise, the same OCDS release id can be republished across multiple source
+ *   files (e.g. a tender-stage file and a later, richer award-stage file); keep the
+ *   existing stored amount only if it already has strictly more awards than the
+ *   incoming file, so an earlier/thinner republish can't clobber a later/richer one.
+ *
+ * Pure and side-effect free (no Mongo call, no I/O) so it's directly unit-testable.
+ */
+export function amountPipelineExpr(isProtected: boolean, amountData: unknown, incomingAwardsCount: number): unknown {
+  if (isProtected) {
+    return "$amount";
+  }
+  return {
+    $cond: [
+      { $gt: [{ $size: { $ifNull: ["$awards", []] } }, incomingAwardsCount] },
+      "$amount",
+      { $literal: amountData }
+    ]
+  };
 }
 
 export class ReleaseUploader implements IReleaseUploader {
@@ -121,6 +150,33 @@ export class ReleaseUploader implements IReleaseUploader {
     const bulkOps: any[] = [];
     const BATCH_SIZE = 10000; // Process in batches to avoid memory issues
 
+    // This loop's pipeline $set can recompute `amount` for a release whose total was
+    // verified against the government page. Unlike add-missing-amounts.ts, the loop
+    // variable here (`release`) comes straight from the feed file being parsed, never
+    // from the database, so it can never itself carry the verifiedOverride marker —
+    // checking it directly would be a guard that never fires. Pre-load which of this
+    // file's ids are protected, against the STORED document, so the pipeline below can
+    // leave their amount untouched no matter what the awards-count comparison says.
+    const releaseIds = data.releases.map((r) => r.id).filter(Boolean) as string[];
+    const protectedIds = new Set<string>();
+    if (releaseIds.length) {
+      // Narrow both the filter (only ids that even have the field) and the projection
+      // (only the one field we need) — a whole-year feed file can carry 10k+ ids, x3
+      // concurrent files, and pulling the full `amount` subtree for every one of them
+      // was needless memory pressure under this process's 512MB cap. $exists: true also
+      // matches `verifiedOverride: null`, so keep running the docs through
+      // hasVerifiedOverride() below — the Mongo filter narrows, the helper decides.
+      const existingDocs = await ReleaseModel.find(
+        { id: { $in: releaseIds }, "amount.verifiedOverride": { $exists: true } },
+        { id: 1, "amount.verifiedOverride": 1 }
+      ).lean();
+      for (const doc of existingDocs) {
+        if (hasVerifiedOverride(doc)) {
+          protectedIds.add((doc as any).id);
+        }
+      }
+    }
+
     // Prepare all bulk operations
     for (const release of data.releases) {
       try {
@@ -193,13 +249,10 @@ export class ReleaseUploader implements IReleaseUploader {
                       { $literal: incomingAwards || [] }
                     ]
                   },
-                  amount: {
-                    $cond: [
-                      { $gt: [{ $size: { $ifNull: ["$awards", []] } }, incomingAwardsCount] },
-                      "$amount",
-                      { $literal: amountData }
-                    ]
-                  }
+                  // Never let a re-sync recompute a page-verified total: for a protected
+                  // id, always keep the stored amount, regardless of the awards-count
+                  // comparison below. See amountPipelineExpr() for the decision itself.
+                  amount: amountPipelineExpr(protectedIds.has(release.id), amountData, incomingAwardsCount)
                 }
               }
             ],

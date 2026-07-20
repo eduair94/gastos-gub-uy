@@ -84,6 +84,9 @@ export interface ContractLike {
     exchangeRateDate?: string
     totalItems?: number
     version?: number
+    // Stamped by src/jobs/correct-lumpsum-artifacts.ts when the stored total
+    // was a lump sum multiplied by quantity; see `contractVerifiedOverride`.
+    verifiedOverride?: unknown
   }
 }
 
@@ -124,6 +127,35 @@ export function tagTone(tag?: string | null): string {
 export function contractAmount(c?: ContractLike | null): number | null {
   const a = c?.amount?.primaryAmount
   return typeof a === 'number' && Number.isFinite(a) ? a : null
+}
+
+/**
+ * The audit record left when a release's header total was corrected against
+ * the government's own published figure (see
+ * `src/jobs/correct-lumpsum-artifacts.ts`, which stamps
+ * `amount.verifiedOverride` — mirrors `shared/utils/verified-override.ts`).
+ *
+ * Some OCDS items carry a contract LUMP SUM in `unit.value.amount`;
+ * multiplying it by quantity inflated the stored total by orders of
+ * magnitude. Present only on the handful of releases that job has corrected —
+ * everything else returns `null`, and never throws on a malformed or absent
+ * override so a bad/partial value can't take the whole page down.
+ */
+export function contractVerifiedOverride(c?: ContractLike | null): {
+  sourceUrl: string
+  officialTotal: number
+  officialCurrency: string
+  previousPrimaryAmount: number | null
+} | null {
+  const v = c?.amount?.verifiedOverride as Record<string, unknown> | null | undefined
+  if (!v || typeof v !== 'object' || typeof v.sourceUrl !== 'string') return null
+  return {
+    sourceUrl: v.sourceUrl,
+    officialTotal: Number(v.officialTotal),
+    officialCurrency: String(v.officialCurrency ?? ''),
+    previousPrimaryAmount:
+      typeof v.previousPrimaryAmount === 'number' ? v.previousPrimaryAmount : null,
+  }
 }
 
 export function contractCurrency(c?: ContractLike | null): string {
