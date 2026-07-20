@@ -1186,6 +1186,10 @@
       "body": "This calculation is built from each agency's historical purchasing pattern. It is not an official government announcement and not a guarantee that the tender will be published: Uruguay's procurement system does not announce tenders in advance. Read it as a probability, not a fact."
     },
     "filters": { "buyer": "Agency", "rubro": "Category" },
+    "card": {
+      "title": "Likely upcoming tender in this category",
+      "disclaimer": "Estimate from historical purchasing pattern, not an official announcement."
+    },
     "col": {
       "organismo": "Agency",
       "rubro": "Category",

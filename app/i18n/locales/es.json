@@ -1186,6 +1186,10 @@
       "body": "Este cálculo se arma a partir del patrón histórico de compras de cada organismo. No es un anuncio oficial del Estado ni una garantía de que el llamado se vaya a publicar: el sistema de compras uruguayo no anticipa sus licitaciones. Tomalo como una probabilidad, no como un hecho."
     },
     "filters": { "buyer": "Organismo", "rubro": "Rubro" },
+    "card": {
+      "title": "Próximo llamado probable en este rubro",
+      "disclaimer": "Estimación por patrón histórico de compras, no un anuncio oficial."
+    },
     "col": {
       "organismo": "Organismo",
       "rubro": "Rubro",

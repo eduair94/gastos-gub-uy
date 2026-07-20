@@ -330,6 +330,12 @@ useSeo(() => ({
         </div>
       </section>
 
+      <!-- ===== Anticipated tender (self-hides when no upcoming forecast) ===== -->
+      <AnticipatedTenderCard
+        :rubro="code"
+        class="block"
+      />
+
       <!-- ===== Purchases by year ===== -->
       <section
         v-if="byYear.length"
