@@ -20,6 +20,7 @@
     "partidos": "Compras por partido",
     "organismos": "Gasto por organismo",
     "mapa": "Mapa del gasto",
+    "anticipacion": "Anticipación",
     "estadisticas": "Estadísticas",
     "investigaciones": "Investigaciones",
     "tvciudad": "TV Ciudad",
@@ -1177,6 +1178,53 @@
     "col": { "dept": "Departamento", "party": "Partido", "contracts": "Contratos" },
     "updated": "Actualizado {date}"
   },
+  "anticipacion": {
+    "title": "Anticipación de llamados",
+    "subtitle": "Cuándo es probable que cada organismo público publique su próximo llamado en un rubro, estimado a partir de su propio historial de compras.",
+    "disclaimer": {
+      "title": "Es una estimación, no un anuncio",
+      "body": "Este cálculo se arma a partir del patrón histórico de compras de cada organismo. No es un anuncio oficial del Estado ni una garantía de que el llamado se vaya a publicar: el sistema de compras uruguayo no anticipa sus licitaciones. Tomalo como una probabilidad, no como un hecho."
+    },
+    "filters": { "buyer": "Organismo", "rubro": "Rubro" },
+    "card": {
+      "title": "Próximo llamado probable en este rubro",
+      "disclaimer": "Estimación por patrón histórico de compras, no un anuncio oficial."
+    },
+    "col": {
+      "organismo": "Organismo",
+      "rubro": "Rubro",
+      "ventana": "Ventana esperada",
+      "cadencia": "Cadencia",
+      "confianza": "Confianza",
+      "incumbente": "Último ganador",
+      "monto": "Monto típico"
+    },
+    "confidence": { "alta": "Alta", "media": "Media", "baja": "Baja" },
+    "confidenceHelp": "Qué tan repetido y regular es el patrón histórico de compra: Alta = cadencia estable y reciente; Media = cadencia visible pero con más variación; Baja = patrón débil, cerca del mínimo para mostrarse.",
+    "overdue": "Atrasado",
+    "overdueHelp": "El llamado ya debería haberse publicado según la cadencia histórica de este organismo: puede aparecer en cualquier momento, no en la fecha exacta que indica la ventana.",
+    "everyDays": "cada ~{n} día(s)",
+    "everyWeeks": "cada ~{n} semana(s)",
+    "everyMonths": "cada ~{n} meses",
+    "events": "{n} llamados históricos",
+    "perUnit": "por {unit}",
+    "unitGeneric": "unidad",
+    "noAmount": "sin dato de precio",
+    "evidence": "Últimos llamados de este rubro",
+    "resultsCount": "{n} llamados esperados",
+    "showingCaveat": "Mostrando los {n} próximos de {total} en total",
+    "windowUnknown": "Fecha no disponible",
+    "coverage": "Cobertura: solo organismo × rubro con al menos 3 llamados históricos comparables. No incluye compras centralizadas, convenios marco ni prórrogas de contratos vigentes.",
+    "updated": "Calculado el {date}",
+    "notReady": {
+      "title": "La anticipación todavía no está disponible",
+      "body": "El cálculo se arma con un job mensual; si nunca corrió, todavía no hay datos para mostrar."
+    },
+    "noMatches": {
+      "title": "No encontramos llamados próximos para esa búsqueda",
+      "body": "Buscamos en todos los llamados esperados y ninguno coincide con ese organismo o rubro. Probá con otro término o limpiá la búsqueda."
+    }
+  },
   "mandate": {
     "role": {
       "president": "Presidencia",
@@ -1363,6 +1411,10 @@
     "partidos": {
       "title": "Compras públicas por partido — comparación departamental",
       "description": "Comparación descriptiva de las compras públicas de los 19 departamentos de Uruguay, agrupadas por el partido gobernante. Mapa y datos abiertos, sin juicio de gestión."
+    },
+    "anticipacion": {
+      "title": "Anticipación de llamados — cuándo podría licitar cada organismo",
+      "description": "Estimación de cuándo cada organismo público podría publicar su próximo llamado en cada rubro, calculada a partir de su historial de compras. No es un anuncio oficial."
     },
     "home": {
       "title": "Con la tuya, contribuyente — Compras públicas del Uruguay",

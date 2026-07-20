@@ -20,6 +20,7 @@
     "partidos": "Procurement by party",
     "organismos": "Spending by body",
     "mapa": "Spending map",
+    "anticipacion": "Anticipation",
     "estadisticas": "Statistics",
     "investigaciones": "Investigations",
     "tvciudad": "TV Ciudad",
@@ -1177,6 +1178,53 @@
     "col": { "dept": "Department", "party": "Party", "contracts": "Contracts" },
     "updated": "Updated {date}"
   },
+  "anticipacion": {
+    "title": "Tender anticipation",
+    "subtitle": "When a public agency is likely to publish its next tender in a given category, estimated from its own purchasing history.",
+    "disclaimer": {
+      "title": "This is an estimate, not an announcement",
+      "body": "This calculation is built from each agency's historical purchasing pattern. It is not an official government announcement and not a guarantee that the tender will be published: Uruguay's procurement system does not announce tenders in advance. Read it as a probability, not a fact."
+    },
+    "filters": { "buyer": "Agency", "rubro": "Category" },
+    "card": {
+      "title": "Likely upcoming tender in this category",
+      "disclaimer": "Estimate from historical purchasing pattern, not an official announcement."
+    },
+    "col": {
+      "organismo": "Agency",
+      "rubro": "Category",
+      "ventana": "Expected window",
+      "cadencia": "Cadence",
+      "confianza": "Confidence",
+      "incumbente": "Last winner",
+      "monto": "Typical amount"
+    },
+    "confidence": { "alta": "High", "media": "Medium", "baja": "Low" },
+    "overdue": "Overdue",
+    "overdueHelp": "This tender should already have been published based on the agency's historical cadence: it could appear any time now, not on the window's exact date.",
+    "confidenceHelp": "How repeated and regular the historical buying pattern is: High = stable, recent cadence; Medium = a visible cadence with more variation; Low = a weak pattern, close to the display minimum.",
+    "everyDays": "every ~{n} day(s)",
+    "everyWeeks": "every ~{n} week(s)",
+    "everyMonths": "every ~{n} months",
+    "events": "{n} historical tenders",
+    "perUnit": "per {unit}",
+    "unitGeneric": "unit",
+    "noAmount": "no price data",
+    "evidence": "Recent tenders in this category",
+    "resultsCount": "{n} expected tenders",
+    "showingCaveat": "Showing the next {n} of {total} total",
+    "windowUnknown": "Date unavailable",
+    "coverage": "Coverage: only agency × category pairs with at least 3 comparable historical tenders. Excludes centralized purchases, framework agreements and contract extensions.",
+    "updated": "Calculated on {date}",
+    "notReady": {
+      "title": "Anticipation isn't available yet",
+      "body": "This is built by a monthly job; if it hasn't run yet, there's no data to show."
+    },
+    "noMatches": {
+      "title": "We couldn't find any upcoming tenders for that search",
+      "body": "We searched the whole set of expected tenders and none match that agency or category. Try a different term or clear the search."
+    }
+  },
   "mandate": {
     "role": {
       "president": "Presidency",
@@ -1363,6 +1411,10 @@
     "partidos": {
       "title": "Public procurement by party — departmental comparison",
       "description": "A descriptive comparison of the 19 Uruguayan departments' public procurement, grouped by the governing party. Map and open data, with no management judgement."
+    },
+    "anticipacion": {
+      "title": "Tender anticipation — when each agency might publish next",
+      "description": "An estimate of when each public agency might publish its next tender in each category, calculated from its purchasing history. Not an official announcement."
     },
     "home": {
       "title": "Con la tuya, contribuyente — Uruguay's public procurement",
