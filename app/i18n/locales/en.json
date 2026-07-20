@@ -601,6 +601,14 @@
     "features": {
       "variation": "Variation"
     },
+    "tax": {
+      "totalWithTax": "Total with taxes",
+      "withTax": "With taxes",
+      "subtotal": "Subtotal before taxes",
+      "taxes": "Taxes",
+      "help": "Purchase total from the official site. Open-data feed prices are tax-exclusive.",
+      "source": "View on comprasestatales"
+    },
     "reference": {
       "paid": "Paid",
       "typical": "Typical (median)",

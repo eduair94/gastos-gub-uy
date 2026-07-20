@@ -601,6 +601,14 @@
     "features": {
       "variation": "Variación"
     },
+    "tax": {
+      "totalWithTax": "Total con impuestos",
+      "withTax": "Con impuestos",
+      "subtotal": "Subtotal sin impuestos",
+      "taxes": "Impuestos",
+      "help": "Monto total de la compra según el sitio oficial. Los precios del feed de datos abiertos son sin impuestos.",
+      "source": "Ver en comprasestatales"
+    },
     "reference": {
       "paid": "Se pagó",
       "typical": "Habitual (mediana)",

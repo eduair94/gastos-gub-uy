@@ -347,6 +347,80 @@ function rowFeatures(row: ItemRow): ItemFeatures | null {
   return itemFeatures.value.get(row.nro) ?? null
 }
 
+// ---- Impuestos / total con impuestos (scraped) ----------------------
+// The OCDS feed carries only tax-EXCLUSIVE unit prices, and truncates fractional
+// quantities to integers (0,17 KG -> 0). The government page is the only source
+// of the per-line "Monto total con impuestos" and the compra's tax-inclusive
+// grand total, so the same lazy scrape that fetches características returns them.
+type ScrapedMoney = { amount: number, currency: string }
+interface ItemTax { quantity: number | null, quantityUnit: string, netUnit: number | null, gross: ScrapedMoney | null }
+
+const taxByNro = computed<Map<number, ItemTax>>(() => {
+  const map = new Map<number, ItemTax>()
+  for (const it of featRes.value?.data?.items ?? []) {
+    if (typeof it?.nro !== 'number') continue
+    const gross = it.grossTotal && typeof it.grossTotal.amount === 'number'
+      ? { amount: it.grossTotal.amount, currency: it.grossTotal.currency || 'UYU' }
+      : null
+    map.set(it.nro, {
+      quantity: typeof it.quantity === 'number' ? it.quantity : null,
+      quantityUnit: typeof it.quantityUnit === 'string' ? it.quantityUnit : '',
+      netUnit: it.netUnitPrice && typeof it.netUnitPrice.amount === 'number' ? it.netUnitPrice.amount : null,
+      gross,
+    })
+  }
+  return map
+})
+const hasTaxData = computed(() => {
+  for (const v of taxByNro.value.values()) if (v.gross) return true
+  return false
+})
+function taxRow(row: ItemRow): ItemTax | null {
+  return row.nro === null ? null : (taxByNro.value.get(row.nro) ?? null)
+}
+// Prefer the page's fractional quantity — the feed truncates 0,17 KG to 0.
+function displayQuantity(row: ItemRow): number | null {
+  const t = taxRow(row)
+  return t && t.quantity !== null ? t.quantity : row.quantity
+}
+function rowGross(row: ItemRow): ScrapedMoney | null {
+  return taxRow(row)?.gross ?? null
+}
+// Net line recomputed with the correct (fractional) quantity when we have it, so
+// it never contradicts the tax-inclusive figure beside it.
+function displayNetTotal(row: ItemRow): number | null {
+  const t = taxRow(row)
+  if (t && t.quantity !== null) {
+    const unit = t.netUnit ?? row.unitAmount
+    return unit === null ? null : unit * t.quantity
+  }
+  return row.total
+}
+
+const compraTotal = computed<ScrapedMoney | null>(() => {
+  const total = featRes.value?.data?.total
+  return total && typeof total.amount === 'number'
+    ? { amount: total.amount, currency: total.currency || 'UYU' }
+    : null
+})
+// The compra's tax breakdown: subtotal (Σ qty×net sin imp) → impuestos → total
+// con impuestos, all off the same official page so the three always reconcile.
+// Subtotal is only meaningful in a single currency, so it's dropped when lines mix.
+const taxBreakdown = computed<{ total: number, subtotalNet: number | null, impuestos: number | null, currency: string } | null>(() => {
+  const total = compraTotal.value
+  if (!total) return null
+  let subtotal = 0
+  let sawAny = false
+  let mixed = false
+  for (const v of taxByNro.value.values()) {
+    if (v.gross && v.gross.currency !== total.currency) mixed = true
+    if (v.quantity !== null && v.netUnit !== null) { subtotal += v.quantity * v.netUnit; sawAny = true }
+  }
+  const subtotalNet = sawAny && !mixed ? subtotal : null
+  const impuestos = subtotalNet !== null ? total.amount - subtotalNet : null
+  return { total: total.amount, subtotalNet, impuestos, currency: total.currency }
+})
+
 // ---- Who ------------------------------------------------------------
 interface ContactPoint {
   name?: string
@@ -669,7 +743,7 @@ const referenceColumns = computed(() => [
   { key: 'n', label: t('contract.reference.comparables'), align: 'end' as const, mono: true },
 ])
 
-function itemColumns(hasPrices: boolean) {
+function itemColumns(hasPrices: boolean, hasTax = false) {
   const cols = [
     { key: 'description', label: t('common.description'), primary: true },
     { key: 'code', label: t('contract.fields.classification') },
@@ -681,6 +755,10 @@ function itemColumns(hasPrices: boolean) {
       { key: 'unitAmount', label: t('common.unitPrice'), align: 'end' as const } as any,
       { key: 'total', label: t('common.total'), align: 'end' as const } as any,
     )
+    // The tax-inclusive line total, only once the scrape has supplied it.
+    if (hasTax) {
+      cols.push({ key: 'grossTotal', label: t('contract.tax.withTax'), align: 'end' as const } as any)
+    }
   }
   return cols
 }
@@ -997,6 +1075,51 @@ useSeo(() => ({
                   target="_blank"
                   rel="noopener external"
                 >{{ t('contract.verifiedTotalSource') }}</a>
+              </p>
+            </div>
+
+            <!-- Total CON impuestos, scraped from the official page: the OCDS
+                 feed's "Adjudicado" figure above is tax-exclusive, so this is
+                 the real amount the state paid, plus how it's reached. -->
+            <div
+              v-if="taxBreakdown"
+              class="head__tax"
+            >
+              <p class="head__taxl">
+                {{ t('contract.tax.totalWithTax') }}
+              </p>
+              <MoneyAmount
+                :amount="taxBreakdown.total"
+                :currency="taxBreakdown.currency"
+                size="lg"
+                align="start"
+                decimals
+              />
+              <dl
+                v-if="taxBreakdown.subtotalNet !== null"
+                class="head__taxbreak"
+              >
+                <div class="head__taxrow">
+                  <dt>{{ t('contract.tax.subtotal') }}</dt>
+                  <dd class="u-mono">
+                    {{ formatMoney(taxBreakdown.subtotalNet, taxBreakdown.currency, { decimals: true }) }}
+                  </dd>
+                </div>
+                <div class="head__taxrow">
+                  <dt>{{ t('contract.tax.taxes') }}</dt>
+                  <dd class="u-mono">
+                    {{ formatMoney(taxBreakdown.impuestos, taxBreakdown.currency, { decimals: true }) }}
+                  </dd>
+                </div>
+              </dl>
+              <p class="head__taxsrc">
+                {{ t('contract.tax.help') }}
+                <a
+                  v-if="awardLink"
+                  :href="awardLink"
+                  target="_blank"
+                  rel="noopener external"
+                >{{ t('contract.tax.source') }}</a>
               </p>
             </div>
           </template>
@@ -1448,7 +1571,7 @@ useSeo(() => ({
 
               <DataTable
                 v-else
-                :columns="itemColumns(g.hasPrices)"
+                :columns="itemColumns(g.hasPrices, hasTaxData)"
                 :rows="g.rows"
                 :row-key="it => it.key"
                 min-width="560px"
@@ -1504,7 +1627,7 @@ useSeo(() => ({
                   >{{ row.codeDescription }}</span>
                 </template>
                 <template #cell:quantity="{ row }">
-                  {{ formatNumber(row.quantity) }}
+                  {{ formatNumber(displayQuantity(row)) }}
                 </template>
                 <template #cell:unitName="{ row }">
                   <span v-if="row.unitName">{{ row.unitName }}</span>
@@ -1526,13 +1649,30 @@ useSeo(() => ({
                 </template>
                 <template #cell:total="{ row }">
                   <MoneyConvert
-                    :amount="row.total"
+                    :amount="displayNetTotal(row)"
                     :currency="row.currency"
                     :date="itemDate"
                     :rate-table="rateTable"
                     :rule="false"
                     size="sm"
                   />
+                </template>
+                <!-- "Monto total con impuestos" scraped from the gov page — the
+                     open feed carries only tax-exclusive prices. -->
+                <template #cell:grossTotal="{ row }">
+                  <MoneyConvert
+                    v-if="rowGross(row)"
+                    :amount="rowGross(row)?.amount"
+                    :currency="rowGross(row)?.currency ?? 'UYU'"
+                    :date="itemDate"
+                    :rate-table="rateTable"
+                    :rule="false"
+                    size="sm"
+                  />
+                  <span
+                    v-else
+                    class="u-muted"
+                  >—</span>
                 </template>
               </DataTable>
             </div>
@@ -2094,6 +2234,58 @@ useSeo(() => ({
 .head__verifiedhelp a {
   color: var(--celeste-deep);
   font-weight: 600;
+}
+
+/* ---- Total con impuestos (scraped) ---- */
+.head__tax {
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px dashed var(--border);
+  max-width: 34ch;
+}
+
+.head__taxl {
+  margin: 0 0 var(--s-1);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.head__taxbreak {
+  margin: var(--s-2) 0 0;
+  display: grid;
+  gap: 2px;
+}
+
+.head__taxrow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--t-sm);
+}
+
+.head__taxrow dt {
+  color: var(--text-muted);
+}
+
+.head__taxrow dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.head__taxsrc {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.head__taxsrc a {
+  color: var(--celeste-deep);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* ---- Official source ---- */
