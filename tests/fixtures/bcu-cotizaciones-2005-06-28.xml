@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<SOAP-ENV:Body>
+		<wsbcucotizaciones.ExecuteResponse xmlns="Cotiza">
+			<Salida xmlns="Cotiza">
+				<respuestastatus>
+					<status>1</status>
+					<codigoerror>0</codigoerror>
+					<mensaje/>
+				</respuestastatus>
+				<datoscotizaciones>
+					<datoscotizaciones.dato xmlns="Cotiza">
+						<Fecha>2005-06-28</Fecha>
+						<Moneda>1111</Moneda>
+						<Nombre>EURO</Nombre>
+						<CodigoISO>EURO</CodigoISO>
+						<Emisor>UNION MONET.EUROPEA</Emisor>
+						<TCC>29.709420</TCC>
+						<TCV>29.757480</TCV>
+						<ArbAct>1.207700</ArbAct>
+						<FormaArbitrar>1</FormaArbitrar>
+					</datoscotizaciones.dato>
+					<datoscotizaciones.dato xmlns="Cotiza">
+						<Fecha>2005-06-28</Fecha>
+						<Moneda>9800</Moneda>
+						<Nombre>UNIDAD INDEXADA</Nombre>
+						<CodigoISO>U.I.</CodigoISO>
+						<Emisor>URUGUAY</Emisor>
+						<TCC>1.462400</TCC>
+						<TCV>1.462400</TCV>
+						<ArbAct>0.059326</ArbAct>
+						<FormaArbitrar>1</FormaArbitrar>
+					</datoscotizaciones.dato>
+				</datoscotizaciones>
+			</Salida>
+		</wsbcucotizaciones.ExecuteResponse>
+	</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
