@@ -78,6 +78,11 @@ const TenderForecastSchema = new Schema<ITenderForecast>(
 TenderForecastSchema.index({ buyerId: 1, rubroNodeId: 1 }, { unique: true });
 TenderForecastSchema.index({ dataVersion: 1 });
 TenderForecastSchema.index({ "expectedWindow.start": 1 });
+// Backs the read endpoint's default filter (expectedWindow.end >= now, the
+// "still-open window" recency cut) — without this the query walks the
+// expectedWindow.start index and fetches ~2/3 of the collection (elapsed
+// docs sort first) before paging. See app/server/api/analytics/anticipacion.get.ts.
+TenderForecastSchema.index({ "expectedWindow.end": 1 });
 TenderForecastSchema.index({ rubroAncestors: 1 });
 TenderForecastSchema.index({ confidence: -1 });
 

@@ -10,7 +10,8 @@ import { DISPLAY_THRESHOLD } from '../../../../shared/forecast/constants'
  *
  * Read path is .find() + .lean() by index only — no aggregation, no COLLSCAN.
  * releases.buyer.id has no index, but this collection is small (≈19k docs)
- * and indexed on expectedWindow.start, rubroAncestors and confidence.
+ * and indexed on expectedWindow.start, expectedWindow.end, rubroAncestors
+ * and confidence.
  *
  * Of the 19,352 forecasts in the collection, ~12,245 have an expectedWindow
  * that has already elapsed (window.end < now). A page whose whole promise is
@@ -25,15 +26,28 @@ export default defineEventHandler(async (event) => {
     await connectToDatabase()
     const q = getQuery(event)
 
-    const limit = Math.min(Number(q.limit) || 50, 200)
-    const skip = Number(q.skip) || 0
-    const minConfidence = q.minConfidence != null ? Number(q.minConfidence) : DISPLAY_THRESHOLD
+    // Clamp skip/limit into sane, non-negative ranges. `Number(...) || default`
+    // alone isn't enough: negative numbers and NaN are both truthy inputs that
+    // can slip past a bare `||` (NaN || default DOES fall through, but a
+    // negative like -5 does not), and Mongo either rejects a negative .skip()
+    // (uncaught 500) or reinterprets a negative .limit() as batch-closing
+    // semantics rather than the intended cap.
+    const rawLimit = Number(q.limit)
+    const limit = Math.max(1, Math.min(200, Number.isFinite(rawLimit) && rawLimit ? rawLimit : 50))
+    const rawSkip = Number(q.skip)
+    const skip = Math.max(0, Number.isFinite(rawSkip) ? rawSkip : 0)
+
+    const rawMinConfidence = q.minConfidence != null ? Number(q.minConfidence) : NaN
+    const minConfidence = Number.isFinite(rawMinConfidence) ? rawMinConfidence : DISPLAY_THRESHOLD
     const includeElapsed = q.includeElapsed === '1' || q.includeElapsed === 'true'
 
     const filter: Record<string, unknown> = { confidence: { $gte: minConfidence } }
     if (q.buyer) filter.buyerId = String(q.buyer)
     if (q.rubro) filter.rubroAncestors = String(q.rubro)
-    if (q.before) filter['expectedWindow.start'] = { $lte: new Date(String(q.before)) }
+    if (q.before) {
+      const before = new Date(String(q.before))
+      if (!Number.isNaN(before.getTime())) filter['expectedWindow.start'] = { $lte: before }
+    }
     if (!includeElapsed) filter['expectedWindow.end'] = { $gte: new Date() }
 
     // Distinguish "rollup never ran" (empty collection → 503, retry-able once the
@@ -49,8 +63,9 @@ export default defineEventHandler(async (event) => {
         .sort({ 'expectedWindow.start': 1 })
         .skip(skip)
         .limit(limit)
+        .maxTimeMS(8000)
         .lean(),
-      TenderForecastModel.countDocuments(filter),
+      TenderForecastModel.countDocuments(filter).maxTimeMS(8000),
     ])
 
     const calculatedAt = rows[0]?.generatedAt ?? null

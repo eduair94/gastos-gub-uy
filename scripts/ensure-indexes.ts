@@ -567,9 +567,12 @@ async function main(): Promise<void> {
       await forecast.createIndex({ buyerId: 1, rubroNodeId: 1 }, { unique: true, background: true, name: 'buyerId_1_rubroNodeId_1' })
       await forecast.createIndex({ dataVersion: 1 }, { background: true, name: 'dataVersion_1' })
       await forecast.createIndex({ 'expectedWindow.start': 1 }, { background: true, name: 'expectedWindow.start_1' })
+      // Backs the read endpoint's default filter (expectedWindow.end >= now); without it
+      // that query walks expectedWindow.start and fetches ~2/3 of the collection before paging.
+      await forecast.createIndex({ 'expectedWindow.end': 1 }, { background: true, name: 'expectedWindow.end_1' })
       await forecast.createIndex({ rubroAncestors: 1 }, { background: true, name: 'rubroAncestors_1' })
       await forecast.createIndex({ confidence: -1 }, { background: true, name: 'confidence_-1' })
-      console.log('✅ tender_forecast indexes ensured (buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, rubroAncestors, confidence)')
+      console.log('✅ tender_forecast indexes ensured (buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, expectedWindow.end, rubroAncestors, confidence)')
     }
     else {
       console.log('   plan: contract_item_features.compraId_1 (unique)')
@@ -590,7 +593,7 @@ async function main(): Promise<void> {
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
       console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId}')
-      console.log('   plan: tender_forecast.{buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, rubroAncestors, confidence}')
+      console.log('   plan: tender_forecast.{buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, expectedWindow.end, rubroAncestors, confidence}')
     }
 
     if (failed > 0) {
