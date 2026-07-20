@@ -1,4 +1,8 @@
-import { driver, type Driver, type DriveStep, type PopoverDOM } from 'driver.js'
+// driver.js is loaded on demand, not at import time. <TourHost>/<TourLauncher>
+// live in the default layout, so a static import put driver.js (25 KB) and its
+// stylesheet in the critical path of every page for a feature almost nobody
+// starts. The type-only imports below are erased at compile time.
+import type { Driver, DriveStep, PopoverDOM } from 'driver.js'
 import { buildTour, type TourId, type TourStep } from '~/utils/tours'
 
 // ============================================================
@@ -164,8 +168,15 @@ export function useTour() {
     }
   }
 
-  function driveSegment(all: TourStep[], seg: TourStep[], segStart: number) {
+  async function driveSegment(all: TourStep[], seg: TourStep[], segStart: number) {
     const driveSteps = seg.map((s, li) => toDriveStep(all, s, segStart + li))
+
+    // Both the library and its stylesheet arrive here, the moment a tour
+    // actually runs. The import is cached, so later segments cost nothing.
+    const [{ driver }] = await Promise.all([
+      import('driver.js'),
+      import('driver.js/dist/driver.css'),
+    ])
 
     activeDriver = driver({
       steps: driveSteps,
@@ -256,7 +267,7 @@ export function useTour() {
       if (state.value.tourId !== st.tourId || state.value.stepIndex !== st.stepIndex) return
       if (localePath(cur.route) !== route.path || activeDriver?.isActive()) return
 
-      driveSegment(steps, seg, st.stepIndex)
+      await driveSegment(steps, seg, st.stepIndex)
     }
     finally {
       resuming = false

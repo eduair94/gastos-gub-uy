@@ -1,7 +1,12 @@
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
+
+// NOTE: components are deliberately NOT imported here. vite-plugin-vuetify
+// (wired up in nuxt.config.ts) resolves each one from the template that uses
+// it, so the bundle carries only what the app renders. Registering them all
+// here would defeat that. Directives stay eager — they are a few hundred bytes
+// and are applied by name, which the resolver cannot see.
 
 // Palette mirrors assets/scss/_tokens.scss. Vuetify needs literal hex
 // values, so these two files must move together — tokens is the source
@@ -55,7 +60,6 @@ const dark = {
 export default defineNuxtPlugin((nuxtApp) => {
   const vuetify = createVuetify({
     ssr: true,
-    components,
     directives,
     theme: {
       defaultTheme: 'contribuyente',
