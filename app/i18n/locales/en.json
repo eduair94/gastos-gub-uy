@@ -16,6 +16,7 @@
     "anomalies": "Flags",
     "unexplained": "Unexplained",
     "providerAnomalies": "Flagged suppliers",
+    "providerLoadErrors": "Recurring errors",
     "intendencias": "Intendencias",
     "partidos": "Procurement by party",
     "organismos": "Spending by body",
@@ -1007,6 +1008,10 @@
         "title": "Flagged providers",
         "dek": "Which providers and buyers concentrate the unexplained flags."
       },
+      "providerLoadErrors": {
+        "title": "Recurring errors",
+        "dek": "Which providers and agencies repeat the same data-load errors."
+      },
       "intendencias": {
         "title": "Departmental governments",
         "dek": "Spending by the departmental governments, compared per capita."
@@ -1128,6 +1133,90 @@
     "empty": {
       "title": "No providers for these filters",
       "body": "Try lowering the minimum flags or clearing the category filter."
+    }
+  },
+  "provLoadErr": {
+    "title": "Recurring data-load errors by provider and agency",
+    "lead": "We cross-reference the data-load errors — prices or quantities the AI flagged as a data-entry mistake, not corruption — against the providers and agencies behind them, to see whether the same provider or the same agency repeats the same error over and over. It's to report and fix at the source.",
+    "seeFlags": "See all data-load errors",
+    "updated": "Updated",
+    "autoNote": "recomputed every 24 h",
+    "refresh": "Refresh",
+    "ago": {
+      "minutes": "{n} min ago",
+      "hours": "{n} h ago",
+      "days": "{n} d ago"
+    },
+    "method": {
+      "title": "How it's built",
+      "body": "A flag is a 'data-load error' when the extreme unit price is not a real overprice but a mistake when loading the data: a quantity of 10,000 where it should be 1, the line total loaded as the unit price, or a figure in the wrong currency. A second AI review (Gemini) classifies them. Here we group them by provider and by agency to see which ones repeat. Recomputed every 24 hours.",
+      "distortion": "The 'mis-loaded amount' is an estimate of how much the bad record inflated the reported figure: (loaded price − top of the usual range) × quantity, brought to today's pesos. It is not money the provider billed — it is a distortion in the data — which is why it shows in celeste, not gold.",
+      "clamped": "{n} flag(s) with an implausible quantity were capped so a bad record can't dominate the totals."
+    },
+    "kpi": {
+      "flags": "data-load errors",
+      "providers": "providers with errors",
+      "captive": "concentrated at one agency",
+      "topRubro": "in the top category"
+    },
+    "sort": {
+      "flags": "Most errors",
+      "overprice": "Largest mis-loaded amount",
+      "worstZ": "Worst divergence"
+    },
+    "minFlags": {
+      "label": "Min. errors",
+      "step": "≥ {n}"
+    },
+    "rubro": {
+      "label": "Category"
+    },
+    "rubroUnknown": "No category",
+    "zCapped": "×1000+",
+    "captiveOnly": "Concentrated only",
+    "captiveHelp": "Concentrated: all of the provider's errors come from a single agency.",
+    "captiveBadge": "one agency · {n}",
+    "captiveTag": "one agency",
+    "ofBuyers": "of {n} agencies",
+    "seeItsFlags": "see its errors",
+    "pager": {
+      "first": "First page",
+      "prev": "Previous page",
+      "next": "Next page",
+      "last": "Last page",
+      "range": "{from}–{to} of {total}"
+    },
+    "col": {
+      "provider": "Provider",
+      "flags": "Errors",
+      "overprice": "Mis-loaded amount",
+      "worstZ": "Worst div.",
+      "topBuyer": "Top agency"
+    },
+    "patterns": {
+      "title": "Patterns",
+      "note": "What repeats behind the data-load errors. Click any bar or pair to see those errors."
+    },
+    "panel": {
+      "concentration": "Concentration by provider",
+      "concentrationSub": "The providers with the most data-load errors.",
+      "buyers": "Agencies that concentrate",
+      "buyersSub": "Agencies with the most errors, and across how many providers they spread.",
+      "pairs": "Pairs with the most errors",
+      "pairsSub": "The same provider and the same agency, repeated.",
+      "rubro": "Category",
+      "rubroSub": "Which categories carry the most load errors.",
+      "recurrence": "Recurrence by year"
+    },
+    "buyerSub": "{n} providers",
+    "disclaimer": "A data-load error is not an accusation: it is bad data to fix at the source. The amounts are estimates over official open data.",
+    "notReady": {
+      "title": "No cross-reference data yet",
+      "body": "The per-provider computation hasn't run yet. Try again later."
+    },
+    "empty": {
+      "title": "No providers for these filters",
+      "body": "Try lowering the minimum errors or clearing the category filter."
     }
   },
   "partidos": {
@@ -1472,6 +1561,10 @@
     "providerAnomalies": {
       "title": "Providers with unexplained overprices — Uruguay",
       "description": "Which providers and buyers concentrate the overprices the AI could not explain in Uruguay's public spending. Cross-reference updated every 24 hours."
+    },
+    "providerLoadErrors": {
+      "title": "Recurring data-load errors by provider and agency — Uruguay",
+      "description": "Which providers and agencies repeat the same data-load errors (quantities, currency, price) in Uruguay's public spending. Cross-reference updated every 24 hours."
     },
     "curros": {
       "title": "Cases on record — corruption in Uruguayan public procurement, cross-referenced",

@@ -412,6 +412,22 @@ async function main(): Promise<void> {
         .createIndex({ calculatedAt: -1 }, { background: true })
       console.log('✅ provider_anomaly_stats indexes ensured (supplierName unique, flagCount, primaryOverprice, worstZ) + summary.calculatedAt')
 
+      // provider_load_error_stats: the load-errors-by-provider cross-reference, rebuilt
+      // (compute-then-swap) by src/jobs/cross-provider-load-errors.ts. Same shape as
+      // provider_anomaly_stats but scoped to the load-error bucket; `supplierName` unique is the
+      // upsert key; the rest back the /api/analytics/provider-load-errors sorts. The summary rollup
+      // is read by calculatedAt desc.
+      const loadErrStats = client.db(DB_NAME).collection('provider_load_error_stats')
+      await loadErrStats.createIndex({ supplierName: 1 }, { unique: true, background: true })
+      await loadErrStats.createIndex({ flagCount: -1 }, { background: true })
+      await loadErrStats.createIndex({ primaryOverprice: -1 }, { background: true })
+      await loadErrStats.createIndex({ overpriceUyuToday: -1 }, { background: true })
+      await loadErrStats.createIndex({ worstZ: -1 }, { background: true })
+      await client.db(DB_NAME)
+        .collection('provider_load_error_summary')
+        .createIndex({ calculatedAt: -1 }, { background: true })
+      console.log('✅ provider_load_error_stats indexes ensured (supplierName unique, flagCount, primaryOverprice, worstZ) + summary.calculatedAt')
+
       // organism_group_stats: precomputed spending rollups per organism group (Intendencias,
       // Ministerios, Salud, Entes, Educación), rebuilt monthly (compute-then-swap by dataVersion)
       // by src/jobs/refresh-organism-groups.ts. `groupKey` unique is the upsert/read key.
@@ -581,6 +597,7 @@ async function main(): Promise<void> {
       console.log('   plan: product_analytics.code_1 (unique), rankBySpend_1, rankByLines_1')
       console.log('   plan: anomalies.aiVerdict.explainable_1_severityRank_-1')
       console.log('   plan: provider_anomaly_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
+      console.log('   plan: provider_load_error_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
       console.log('   plan: organism_group_stats.{groupKey unique, dataVersion}')
       console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')
       console.log('   plan: watches.{userId, active+categories, active}')

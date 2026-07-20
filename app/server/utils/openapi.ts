@@ -757,6 +757,20 @@ export const openApiDocument = {
         responses: { 200: { description: 'Ranked providers + summary.', content: { 'application/json': { schema: okWrapper({ type: 'object', properties: { providers: { type: 'array', items: { $ref: '#/components/schemas/ProviderAnomaly' } }, pagination: { $ref: '#/components/schemas/Pagination' } } }) } } } },
       },
     },
+    '/api/analytics/provider-load-errors': {
+      get: {
+        tags: ['Analytics'],
+        summary: 'Providers by data-load-error concentration',
+        description: 'Cross-reference of providers/organisms against data-load-error flags (aiVerdict category error-carga / '
+          + 'moneda-erronea) — error count, per-type split, per-currency mis-loaded amount, worst z-score, concentrated-agency '
+          + 'signal. Precomputed daily. A load error is a data-entry mistake to report at the source, not corruption.',
+        parameters: [
+          ...paginationParams,
+          { name: 'sortBy', in: 'query', schema: { type: 'string', enum: ['flagCount', 'overprice', 'worstZ'], default: 'flagCount' } },
+        ],
+        responses: { 200: { description: 'Ranked providers + summary.', content: { 'application/json': { schema: okWrapper({ type: 'object', properties: { providers: { type: 'array', items: { $ref: '#/components/schemas/ProviderLoadError' } }, pagination: { $ref: '#/components/schemas/Pagination' } } }) } } } },
+      },
+    },
     '/api/analytics/organism-groups': {
       get: {
         tags: ['Analytics'],
@@ -1565,6 +1579,19 @@ export const openApiDocument = {
           captive: { type: 'boolean', description: 'All flags concentrated with a single buyer.' },
           topBuyer: { type: 'string' },
           overprice: { type: 'array', items: { type: 'object', properties: { currency: { type: 'string' }, amount: { type: 'number' } } } },
+        },
+      },
+      ProviderLoadError: {
+        type: 'object',
+        properties: {
+          supplierName: { type: 'string' },
+          flagCount: { type: 'integer', description: 'Number of data-load-error flags for this provider.' },
+          topCategory: { type: 'string', enum: ['error-carga', 'moneda-erronea'], description: 'The provider\'s most frequent load-error type.' },
+          categories: { type: 'array', items: { type: 'object', properties: { category: { type: 'string' }, count: { type: 'integer' } } } },
+          worstZ: { type: 'number' },
+          captive: { type: 'boolean', description: 'All errors concentrated at a single agency.' },
+          topBuyer: { type: 'string' },
+          overprice: { type: 'array', description: 'Estimated mis-loaded amount per currency (a data-quality distortion, not money billed).', items: { type: 'object', properties: { currency: { type: 'string' }, amount: { type: 'number' } } } },
         },
       },
       OrganismGroup: {

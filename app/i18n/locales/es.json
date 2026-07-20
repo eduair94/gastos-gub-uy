@@ -16,6 +16,7 @@
     "anomalies": "Alertas",
     "unexplained": "Sin explicación",
     "providerAnomalies": "Proveedores señalados",
+    "providerLoadErrors": "Errores recurrentes",
     "intendencias": "Intendencias",
     "partidos": "Compras por partido",
     "organismos": "Gasto por organismo",
@@ -1007,6 +1008,10 @@
         "title": "Proveedores señalados",
         "dek": "Qué proveedores y compradores concentran las alertas sin explicación."
       },
+      "providerLoadErrors": {
+        "title": "Errores recurrentes",
+        "dek": "Qué proveedores y organismos repiten los mismos errores de carga."
+      },
       "intendencias": {
         "title": "Intendencias",
         "dek": "El gasto de los gobiernos departamentales, comparado por habitante."
@@ -1128,6 +1133,90 @@
     "empty": {
       "title": "Sin proveedores para estos filtros",
       "body": "Probá bajar el mínimo de alertas o quitar el filtro de rubro."
+    }
+  },
+  "provLoadErr": {
+    "title": "Errores de carga recurrentes por proveedor y organismo",
+    "lead": "Cruzamos los errores de carga —precios o cantidades que la IA marcó como un error al cargar los datos, no como corrupción— contra los proveedores y organismos detrás de ellos, para ver si un mismo proveedor o un mismo organismo repite el mismo error una y otra vez. Es para reportar y corregir en la fuente.",
+    "seeFlags": "Ver todos los errores de carga",
+    "updated": "Actualizado",
+    "autoNote": "se recalcula cada 24 h",
+    "refresh": "Actualizar",
+    "ago": {
+      "minutes": "hace {n} min",
+      "hours": "hace {n} h",
+      "days": "hace {n} d"
+    },
+    "method": {
+      "title": "Cómo se arma",
+      "body": "Una alerta es un «error de carga» cuando el precio unitario extremo no es un sobreprecio real sino un error al cargar los datos: una cantidad de 10.000 donde debería ser 1, el total de la línea cargado como precio unitario, o una cifra en otra moneda. Una segunda revisión con IA (Gemini) las clasifica. Acá las agrupamos por proveedor y por organismo para ver cuáles se repiten. Se recalcula cada 24 horas.",
+      "distortion": "El «monto mal cargado» es una estimación de cuánto infló el dato erróneo la cifra reportada: (precio cargado − tope del rango habitual) × cantidad, llevado a pesos de hoy. No es plata que el proveedor cobró —es una distorsión en los datos—, por eso se muestra en celeste, no en dorado.",
+      "clamped": "{n} alerta(s) con cantidad implausible se acotaron a un tope para que un dato erróneo no domine los totales."
+    },
+    "kpi": {
+      "flags": "errores de carga",
+      "providers": "proveedores con errores",
+      "captive": "concentrados en un organismo",
+      "topRubro": "en el rubro principal"
+    },
+    "sort": {
+      "flags": "Más errores",
+      "overprice": "Mayor monto mal cargado",
+      "worstZ": "Peor divergencia"
+    },
+    "minFlags": {
+      "label": "Errores mínimos",
+      "step": "≥ {n}"
+    },
+    "rubro": {
+      "label": "Rubro"
+    },
+    "rubroUnknown": "Sin rubro",
+    "zCapped": "×1000+",
+    "captiveOnly": "Solo concentrados",
+    "captiveHelp": "Concentrado: todos los errores del proveedor provienen de un único organismo.",
+    "captiveBadge": "un solo organismo · {n}",
+    "captiveTag": "un organismo",
+    "ofBuyers": "de {n} organismos",
+    "seeItsFlags": "ver sus errores",
+    "pager": {
+      "first": "Primera página",
+      "prev": "Página anterior",
+      "next": "Página siguiente",
+      "last": "Última página",
+      "range": "{from}–{to} de {total}"
+    },
+    "col": {
+      "provider": "Proveedor",
+      "flags": "Errores",
+      "overprice": "Monto mal cargado",
+      "worstZ": "Peor div.",
+      "topBuyer": "Organismo principal"
+    },
+    "patterns": {
+      "title": "Patrones",
+      "note": "Lo que se repite detrás de los errores de carga. Tocá cualquier barra o par para ver esos errores."
+    },
+    "panel": {
+      "concentration": "Concentración por proveedor",
+      "concentrationSub": "Los proveedores con más errores de carga.",
+      "buyers": "Organismos que concentran",
+      "buyersSub": "Organismos con más errores, y entre cuántos proveedores se reparten.",
+      "pairs": "Pares con más errores",
+      "pairsSub": "Un mismo proveedor y un mismo organismo, repetidos.",
+      "rubro": "Rubro",
+      "rubroSub": "En qué rubros se cargan más errores.",
+      "recurrence": "Recurrencia por año"
+    },
+    "buyerSub": "{n} proveedores",
+    "disclaimer": "Un error de carga no es una acusación: es un dato mal cargado para corregir en la fuente. Los montos son estimaciones sobre datos abiertos oficiales.",
+    "notReady": {
+      "title": "Todavía no hay datos del cruce",
+      "body": "El cálculo por proveedor aún no se ejecutó. Vuelve a intentar más tarde."
+    },
+    "empty": {
+      "title": "Sin proveedores para estos filtros",
+      "body": "Probá bajar el mínimo de errores o quitar el filtro de rubro."
     }
   },
   "partidos": {
@@ -1472,6 +1561,10 @@
     "providerAnomalies": {
       "title": "Proveedores con sobreprecios sin explicación — Uruguay",
       "description": "Qué proveedores y compradores concentran los sobreprecios que la IA no pudo explicar en las compras del Estado uruguayo. Cruce actualizado cada 24 horas."
+    },
+    "providerLoadErrors": {
+      "title": "Errores de carga recurrentes por proveedor y organismo — Uruguay",
+      "description": "Qué proveedores y organismos repiten los mismos errores de carga (cantidades, moneda, precio) en las compras del Estado uruguayo. Cruce actualizado cada 24 horas."
     },
     "curros": {
       "title": "Curros en evidencia — corrupción en compras del Estado uruguayo, cruzada con datos",

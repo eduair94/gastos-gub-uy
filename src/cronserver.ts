@@ -61,6 +61,11 @@ class CronServer {
   // writes its own provider_anomaly_stats/summary). Runs after the anomaly detector + AI triage.
   private crossProviderStatus: CronJobStatus;
   private isCrossProviderRunning: boolean = false;
+  // Provider × data-load-error cross-reference — independent (reads anomalies + supplier_patterns,
+  // writes its own provider_load_error_stats/summary). The load-error sibling of the cross-provider
+  // job; runs right after it, once the AI triage has written fresh aiVerdict categories.
+  private loadErrorProviderStatus: CronJobStatus;
+  private isLoadErrorProviderRunning: boolean = false;
   // Organism-group spending rollups — independent (reads releases, writes its own
   // organism_group_stats). Monthly; feeds /analytics/organismos + /analytics/intendencias.
   private organismGroupStatus: CronJobStatus;
@@ -96,6 +101,7 @@ class CronServer {
     this.digestStatus = freshStatus();
     this.catalogStatus = freshStatus();
     this.crossProviderStatus = freshStatus();
+    this.loadErrorProviderStatus = freshStatus();
     this.organismGroupStatus = freshStatus();
     this.productVariantsStatus = freshStatus();
     this.webhooksStatus = freshStatus();
@@ -396,6 +402,23 @@ class CronServer {
     };
     this.app.post("/cron/cross-provider", triggerCrossProvider);
     this.app.get("/cron/cross-provider", triggerCrossProvider);
+
+    // Provider × data-load-error cross-reference: status + manual trigger. Independent guard
+    // (does not touch releases), so it never consults busyWith().
+    this.app.get("/cron/provider-load-errors/status", (_req, res) => {
+      res.json({ ...this.loadErrorProviderStatus, isRunning: this.isLoadErrorProviderRunning });
+    });
+    const triggerLoadErrorProvider = (_req: express.Request, res: express.Response): void => {
+      if (this.isLoadErrorProviderRunning) {
+        res.status(409).json({ error: "Provider load-error cross-reference already running", status: this.loadErrorProviderStatus });
+        return;
+      }
+      this.logger.info("Manual provider load-error cross-reference trigger initiated");
+      this.runLoadErrorProviderJob().catch((error) => this.logger.error("Manual provider-load-errors trigger failed:", error));
+      res.json({ message: "Provider load-error cross-reference triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/provider-load-errors", triggerLoadErrorProvider);
+    this.app.get("/cron/provider-load-errors", triggerLoadErrorProvider);
 
     // Organism-group rollups: status + manual trigger. Independent guard (does not touch releases).
     this.app.get("/cron/organism-groups/status", (_req, res) => {
@@ -782,6 +805,19 @@ class CronServer {
     );
     this.logger.info(`Provider anomaly cross-reference scheduled with expression: ${crossProviderExpression} (Uruguay timezone)`);
 
+    // Provider × data-load-error cross-reference, daily at 06:30 — right after the 06:00 unexplained
+    // cross-reference, on the same fresh aiVerdicts. Light job (~1k flags), independent of busyWith
+    // (writes its own collections). Feeds /analytics/proveedores-errores-carga.
+    const loadErrorProviderExpression = "30 6 * * *";
+    cron.schedule(
+      loadErrorProviderExpression,
+      async () => {
+        await this.runLoadErrorProviderJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Provider load-error cross-reference scheduled with expression: ${loadErrorProviderExpression} (Uruguay timezone)`);
+
     // Organism-group spending rollups, monthly at 03:00 on the 1st. Heavy-ish (~85s full-collection
     // aggregation) but rarely changing month-to-month, and independent (writes its own collection).
     const organismGroupExpression = "0 3 1 * *";
@@ -1100,6 +1136,40 @@ class CronServer {
       this.logger.error("Provider anomaly cross-reference failed:", errorMessage);
     } finally {
       this.isCrossProviderRunning = false;
+    }
+  }
+
+  /**
+   * Provider × data-load-error cross-reference. Groups the load-error flags (aiVerdict.explainable =
+   * 'yes' AND aiVerdict.category ∈ {error-carga, moneda-erronea}) by provider and by organism into
+   * provider_load_error_stats/summary, which /analytics/proveedores-errores-carga reads. Reads
+   * anomalies + supplier_patterns and writes its own collections, so it is independent of busyWith();
+   * its own boolean serialises repeat runs.
+   */
+  private async runLoadErrorProviderJob(): Promise<void> {
+    if (this.isLoadErrorProviderRunning) {
+      this.logger.warn("Skipping provider load-error cross-reference - already running");
+      return;
+    }
+    this.isLoadErrorProviderRunning = true;
+    this.loadErrorProviderStatus.status = "running";
+    this.loadErrorProviderStatus.lastRun = new Date();
+    this.loadErrorProviderStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting provider load-error cross-reference...");
+      await this.runJobProcess("jobs/cross-provider-load-errors");
+      this.loadErrorProviderStatus.status = "idle";
+      this.loadErrorProviderStatus.successfulRuns++;
+      this.logger.info("Provider load-error cross-reference completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.loadErrorProviderStatus.status = "error";
+      this.loadErrorProviderStatus.lastError = errorMessage;
+      this.loadErrorProviderStatus.failedRuns++;
+      this.logger.error("Provider load-error cross-reference failed:", errorMessage);
+    } finally {
+      this.isLoadErrorProviderRunning = false;
     }
   }
 

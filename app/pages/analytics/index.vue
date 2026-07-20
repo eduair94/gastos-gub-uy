@@ -31,6 +31,7 @@ const cards = computed(() => [
   { key: 'unexplained', to: '/analytics/unexplained', icon: 'mdi-help-rhombus-outline', emoji: '🔎' },
   { key: 'erroresCarga', to: '/analytics/errores-carga', icon: 'mdi-database-alert-outline', emoji: '🧾', feature: true },
   { key: 'providerAnomalies', to: '/analytics/proveedores-anomalias', icon: 'mdi-account-alert-outline', emoji: '🏢' },
+  { key: 'providerLoadErrors', to: '/analytics/proveedores-errores-carga', icon: 'mdi-clipboard-alert-outline', emoji: '🧮' },
   { key: 'intendencias', to: '/analytics/intendencias', icon: 'mdi-city-variant-outline', emoji: '🏙️' },
   { key: 'organismos', to: '/analytics/organismos', icon: 'mdi-finance', emoji: '🏛️' },
   { key: 'mapa', to: '/analytics/mapa', icon: 'mdi-view-grid-outline', emoji: '🗺️' },
