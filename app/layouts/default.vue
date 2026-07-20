@@ -42,6 +42,7 @@ const nav = computed(() => [
     { key: 'partidos', to: localePath('/analytics/partidos'), icon: 'mdi-vote-outline' },
     { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
     { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
+    { key: 'anticipacion', to: localePath('/analytics/anticipacion'), icon: 'mdi-crystal-ball' },
   ] },
   // Investigaciones: every investigation reachable directly, without first visiting
   // the hub — TV Ciudad no longer folds into the overflow. Parent → /investigaciones.

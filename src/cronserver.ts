@@ -75,6 +75,11 @@ class CronServer {
   // few minutes: enqueue deliveries for newly-seen events, then drain the outbox.
   private webhooksStatus: CronJobStatus;
   private isWebhooksRunning: boolean = false;
+  // Tender-forecast recurrence rollup — independent (full-collection scan of releases,
+  // writes its own tender_forecast collection). Monthly; derived and descriptive only
+  // (no pre-publication signal exists in the feed).
+  private tenderForecastStatus: CronJobStatus;
+  private isTenderForecastRunning: boolean = false;
 
   constructor() {
     this.app = express();
@@ -94,6 +99,7 @@ class CronServer {
     this.organismGroupStatus = freshStatus();
     this.productVariantsStatus = freshStatus();
     this.webhooksStatus = freshStatus();
+    this.tenderForecastStatus = freshStatus();
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -440,6 +446,23 @@ class CronServer {
     };
     this.app.post("/cron/webhooks", triggerWebhooks);
     this.app.get("/cron/webhooks", triggerWebhooks);
+
+    // Tender-forecast recurrence rollup: status + manual trigger. Independent guard (full-collection
+    // scan of releases, writes its own tender_forecast collection), so it never consults busyWith().
+    this.app.get("/cron/tender-forecast/status", (_req, res) => {
+      res.json({ ...this.tenderForecastStatus, isRunning: this.isTenderForecastRunning });
+    });
+    const triggerTenderForecast = (_req: express.Request, res: express.Response): void => {
+      if (this.isTenderForecastRunning) {
+        res.status(409).json({ error: "Tender-forecast refresh already running", status: this.tenderForecastStatus });
+        return;
+      }
+      this.logger.info("Manual tender-forecast refresh trigger initiated");
+      this.runTenderForecastJob().catch((error) => this.logger.error("Manual tender-forecast trigger failed:", error));
+      res.json({ message: "Tender-forecast refresh triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/tender-forecast", triggerTenderForecast);
+    this.app.get("/cron/tender-forecast", triggerTenderForecast);
 
     // Monitor de Llamados: open-calls sync, reminders, digest — status + triggers
     this.app.get("/cron/open-calls/status", (_req, res) => {
@@ -816,6 +839,21 @@ class CronServer {
       { scheduled: true, timezone: "America/Montevideo" }
     );
     this.logger.info(`Webhook delivery scheduled with expression: ${webhooksExpression} (Uruguay timezone)`);
+
+    // Tender-forecast recurrence rollup, monthly on the 1st at 05:00 — same day as, two hours
+    // after, the organism-group rollup (03:00), its closest monthly sibling; no other job is
+    // scheduled at 05:00 on the 1st, so this never stacks with another full-collection scan.
+    // Full-collection scan of releases; writes its own tender_forecast collection, independent
+    // of busyWith. Derived, descriptive (no pre-publication signal in the feed).
+    const tenderForecastExpression = "0 5 1 * *";
+    cron.schedule(
+      tenderForecastExpression,
+      async () => {
+        await this.runTenderForecastJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Tender-forecast refresh scheduled with expression: ${tenderForecastExpression} (Uruguay timezone)`);
   }
 
   /**
@@ -1161,6 +1199,39 @@ class CronServer {
       this.logger.error("Webhook delivery failed:", errorMessage);
     } finally {
       this.isWebhooksRunning = false;
+    }
+  }
+
+  /**
+   * Tender-forecast recurrence rollup: full-collection scan of `releases` inferring per-buyer ×
+   * rubro tender cadence/window/confidence, compute-then-swap into tender_forecast (~19k docs,
+   * roughly 9–15 minutes). Reads releases, writes its own collection, so it is independent of
+   * busyWith(); its own boolean serialises repeat runs.
+   */
+  private async runTenderForecastJob(): Promise<void> {
+    if (this.isTenderForecastRunning) {
+      this.logger.warn("Skipping tender-forecast refresh - already running");
+      return;
+    }
+    this.isTenderForecastRunning = true;
+    this.tenderForecastStatus.status = "running";
+    this.tenderForecastStatus.lastRun = new Date();
+    this.tenderForecastStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting tender-forecast refresh...");
+      await this.runJobProcess("jobs/refresh-tender-forecast");
+      this.tenderForecastStatus.status = "idle";
+      this.tenderForecastStatus.successfulRuns++;
+      this.logger.info("Tender-forecast refresh completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.tenderForecastStatus.status = "error";
+      this.tenderForecastStatus.lastError = errorMessage;
+      this.tenderForecastStatus.failedRuns++;
+      this.logger.error("Tender-forecast refresh failed:", errorMessage);
+    } finally {
+      this.isTenderForecastRunning = false;
     }
   }
 

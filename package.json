@@ -19,6 +19,7 @@
     "refresh-organism-groups": "tsx src/jobs/refresh-organism-groups.ts",
     "refresh-dept-indicators": "tsx src/jobs/refresh-dept-indicators.ts",
     "build-uruguay-geo": "node scripts/build-uruguay-geo.mjs",
+    "refresh-tender-forecast": "tsx src/jobs/refresh-tender-forecast.ts",
     "import-sice-catalog": "tsx src/jobs/import-sice-catalog.ts",
     "load-dei": "tsx src/jobs/load-dei.ts",
     "sync-open-calls": "tsx src/jobs/sync-open-calls.ts",
