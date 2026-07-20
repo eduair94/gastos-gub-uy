@@ -806,7 +806,7 @@ class CronServer {
           await this.runJobProcess("jobs/refresh-dept-indicators");
           this.logger.info("Dept-indicators refresh completed successfully");
         } catch (error) {
-          this.logger.error("Dept-indicators refresh failed:", error);
+          this.logger.error("Dept-indicators refresh failed:", error instanceof Error ? error : String(error));
         }
       },
       { scheduled: true, timezone: "America/Montevideo" }

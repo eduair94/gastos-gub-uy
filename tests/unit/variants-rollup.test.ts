@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { rollupVariants } from '../src/jobs/variants/rollup'
+import { rollupVariants } from '../../src/jobs/variants/rollup'
 
 const out = rollupVariants([
   { features: [{ name: 'Marca', value: 'FARMACO URUGUAYO' }, { name: 'Presentación', value: 'CAJA' }], variation: '72 ENVASES' },

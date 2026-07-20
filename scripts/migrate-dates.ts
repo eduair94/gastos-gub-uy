@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import { MongoClient } from 'mongodb';
-import type { IRelease } from './shared/types/database';
+import type { IRelease } from '../shared/types/database';
 
 dotenv.config();
 
@@ -200,7 +200,7 @@ main().catch(err => {
    - Example: MONGODB_URI=mongodb://localhost:27017/gastos_gub
 
 2. Run the migration:
-   npx tsx migrate-dates.ts
+   npx tsx scripts/migrate-dates.ts
 
 3. The script will:
    - Connect to your MongoDB database

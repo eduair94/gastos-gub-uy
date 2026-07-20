@@ -155,7 +155,7 @@ The OCDS shape is deep and inconsistent. Never re-improvise extraction:
   otherwise testing the wrong database.
 - `releases` holds **2,171,928** docs (live). `date` is a real **BSON Date**
   — the schema comments it out and it survives via `strict:false`, but a
-  `migrate-dates.ts` run already converted it (`$type:'string'` matches 0).
+  `scripts/migrate-dates.ts` run already converted it (`$type:'string'` matches 0).
   No `$dateFromString` needed.
 - Money lives at `awards[].items[].unit.value.amount`; pre-normalised to UYU
   at `amount.primaryAmount` = **unit price × quantity**.

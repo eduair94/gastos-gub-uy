@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { assertSafeWebhookUrl, generateWebhookSecret, signPayload } from '../shared/webhooks/sign'
+import { assertSafeWebhookUrl, generateWebhookSecret, signPayload } from '../../shared/webhooks/sign'
 
 // signPayload: stable + prefixed
 const sig = signPayload('s3cr3t', '{"a":1}')

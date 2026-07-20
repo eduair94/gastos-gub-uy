@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { generateApiKey, hashToken, parsePrefix, verifyToken } from '../app/server/utils/api-key'
+import { generateApiKey, hashToken, parsePrefix, verifyToken } from '../../app/server/utils/api-key'
 
 const { token, prefix, hash } = generateApiKey()
 assert.match(token, /^gk_live_[0-9A-Za-z]{8}_[0-9A-Za-z]{32}$/, 'token format')

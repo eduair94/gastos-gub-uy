@@ -23,3 +23,6 @@ firebase.json
 
 # Playwright MCP browser artifacts
 .playwright-mcp/
+# Local scratch: throwaway QA screenshots, ad-hoc logs. Never committed.
+.scratch/
+docs/screenshots
