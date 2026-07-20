@@ -16,7 +16,7 @@ quantity and baking the blown-up result into the persisted `amount.primaryAmount
 |-------|--------|--------------------------------------|
 | quantity | 330 000 | 330 000 |
 | unit.value.amount | 3 316 USD | — (3 316 is the net-of-tax **contract total**, not a unit price) |
-| computed total | **1 094 280 000 USD** (330 000 × 3 316) | **4 201 USD** ("Monto Total Adjudicado") |
+| computed total | **1 094 280 000 USD** (330 000 × 3 316) | **4 201 USD** ("Monto Total de la Compra") |
 | amount.primaryAmount | **≈ 43 823 788 580 UYU** | ≈ **103 600 UYU** nominal 2005 (4 201 × 24,66) |
 
 Two independent errors compound here: the quantity blowup (~260 000×) and the wrong-era FX
@@ -81,7 +81,7 @@ self-correct on their next scheduled refresh.
 
 - Platform-wide historical FX correction (separate spec).
 - Splitting a verified award total across multiple line items (impossible from the official page,
-  which only exposes one "Monto Total Adjudicado"). Per-item totals stay informational.
+  which only exposes one "Monto Total de la Compra"). Per-item totals stay informational.
 - Any change to how `detect-anomalies` scores or suppresses. This job is independent.
 - Correcting releases whose official total genuinely matches the computed one (not artifacts).
 
@@ -120,8 +120,7 @@ numbers as the worked example (mirroring the `MAX_PLAUSIBLE_RELEASE_UYU` comment
 
 For each candidate: derive `idCompra` = ocid with `ocds-<prefix>-` stripped (regex
 `/^ocds-[a-z0-9]+-/i`; equivalently the numeric suffix of the releaseId), fetch
-`https://www.comprasestatales.gub.uy/consultas/detalle/id/{idCompra}`, parse the **"Monto Total
-Adjudicado"** value and its currency.
+`https://www.comprasestatales.gub.uy/consultas/detalle/id/{idCompra}`, parse the **"Monto Total de la Compra"** value and its currency.
 
 - Serial fetch with a polite delay + `user-agent` header (match `refresh-exchange-rates.ts`), retry
   with backoff, hard timeout. This is the same deterministic-sibling-probe shape as
@@ -248,7 +247,7 @@ No runner-based test suite; the repo uses standalone `tsx` assertion scripts und
 
 1. `tests/unit/test-lumpsum-artifacts.ts` (new, following the existing convention) — pure-function
    coverage: candidate-predicate accepts the SURYPARK shape and rejects a normal high-value award;
-   the "Monto Total Adjudicado" parser returns 4 201 / USD on a saved fixture of the 53193 page;
+   the "Monto Total de la Compra" parser returns 4 201 / USD on a saved fixture of the 53193 page;
    the BCU SOAP response parser returns `2005-06 → usd 24.66 / eur 29.75748 / ui 1.4624` on a saved
    XML fixture; `hasVerifiedOverride` guard logic. Network and DB are not exercised here.
 2. Extend the **existing** `tests/unit/test-amount-calculator.ts` for any change to

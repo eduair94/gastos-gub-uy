@@ -1,0 +1,18 @@
+# Shared editor defaults so a Windows dev box and the Linux prod runner agree. Matches the existing
+# code (2-space indent, LF, trailing-newline). No formatter is enforced in CI — this is the baseline.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false  # two trailing spaces = hard line break in Markdown
+
+[*.{png,jpg,jpeg,ico,woff2,pdf,zip,tgz,webp}]
+trim_trailing_whitespace = false
+insert_final_newline = false

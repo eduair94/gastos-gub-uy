@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { decodeCursor, encodeCursor } from '../app/server/utils/cursor'
+import { decodeCursor, encodeCursor } from '../../app/server/utils/cursor'
 
 const c = { t: 1721000000000, id: '6894de0cfbc85dc56b8ca856' }
 const s = encodeCursor(c)

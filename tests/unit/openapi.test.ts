@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { openApiDocument as doc } from '../app/server/utils/openapi'
+import { openApiDocument as doc } from '../../app/server/utils/openapi'
 
 // 1. Version + security schemes exist.
 assert.equal(doc.openapi, '3.1.0', 'openapi version')

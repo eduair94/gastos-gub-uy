@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { parseItemFeatures, parseBuyObject } from '../shared/utils/item-features'
+import { parseItemFeatures, parseBuyObject } from '../../shared/utils/item-features'
 
 const html = `
 <p class="buy-object">Solución bicarbonatada molar</p>

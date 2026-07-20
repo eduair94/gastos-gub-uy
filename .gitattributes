@@ -1,0 +1,30 @@
+# Normalize line endings: store LF in the repo, check out native. Keeps a Windows dev box from
+# churning CRLF diffs against the Linux prod server. Existing files are only renormalized when next
+# modified, so this does not create a repo-wide reformat commit.
+* text=auto
+
+# Shell scripts and anything the Linux runner executes must stay LF regardless of platform.
+*.sh    text eol=lf
+*.mjs   text eol=lf
+*.cjs   text eol=lf
+*.ts    text eol=lf
+*.vue   text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# Binaries: never diff, never touch line endings.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.ico   binary
+*.woff2 binary
+*.pdf   binary
+*.zip   binary
+*.tgz   binary
+*.webp  binary
+
+# Collapse noisy generated files in PR diffs (still versioned, just folded by default).
+package-lock.json    linguist-generated=true
+app/package-lock.json linguist-generated=true
+docs/screenshots/**  linguist-generated=true

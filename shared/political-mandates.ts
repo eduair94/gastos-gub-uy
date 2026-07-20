@@ -112,7 +112,9 @@ interface NationalWindow extends Window {
   label: string
   president: string
   party: PartyCode
-  coalition?: string
+  // `| undefined` is required, not redundant: the root tsconfig sets exactOptionalPropertyTypes,
+  // and these objects are built with `coalition: <expr> | undefined` rather than by omitting the key.
+  coalition?: string | undefined
 }
 const NATIONAL: NationalWindow[] = [
   { label: '2000–2005', president: 'Jorge Batlle', party: 'PC', s: monthIndex('2000-03'), e: monthIndex('2005-03') },
@@ -178,7 +180,7 @@ export interface MandateResult {
   role?: 'president' | 'intendente'
   /** '2020–2025'. */
   termLabel?: string
-  coalition?: string
+  coalition?: string | undefined
   /** Ente directorios are shared (coparticipación); label as govt-of-the-day, not party-owned. */
   boardSplitCaveat?: boolean
   /** The calendar year straddles a handover (or part falls outside the curated range). */
@@ -254,7 +256,7 @@ export interface MandateTerm {
   party: PartyCode
   partyLabel: string
   partyColor: string
-  coalition?: string
+  coalition?: string | undefined
   startYear: number
   endYear: number
 }
