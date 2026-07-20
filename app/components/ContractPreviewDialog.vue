@@ -112,6 +112,17 @@ const money = computed(() => {
   return { nativeAmount, nativeCurrency, isForeign, mixed, historic, today, monthLabel }
 })
 
+/**
+ * Present only on releases where a lump sum stored in the item's unit price
+ * inflated the header total by orders of magnitude and it was corrected
+ * against the government's own published figure (see
+ * `contractVerifiedOverride`). The line items below are deliberately left as
+ * the raw feed reported them, so without this the header money and the
+ * item table/footer total visibly contradict each other. Mirrors the badge
+ * on the contract detail page (`app/pages/contracts/[id].vue`).
+ */
+const verifiedOverride = computed(() => contractVerifiedOverride(props.contract))
+
 // --- Local display helpers (kept here so the dialog is self-contained) -------
 
 /** Reorder lines so those matching the active search lead (stable within a tie). */
@@ -272,6 +283,35 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
           </ul>
         </div>
 
+        <!-- Present only on releases where a lump sum stored in the item's
+             unit price inflated this total by orders of magnitude and the
+             header figure was corrected against the official record (see
+             `contractVerifiedOverride`). The line items below are left as
+             the raw feed reported them, so this explains the gap instead
+             of leaving it looking like a contradiction. -->
+        <div
+          v-if="verifiedOverride"
+          class="idlg__verified"
+        >
+          <span
+            class="tag tag--activo"
+            :title="t('contract.verifiedTotalHelp')"
+          >
+            <v-icon size="12">
+              mdi-check-decagram
+            </v-icon>
+            {{ t('contract.verifiedTotalBadge') }}
+          </span>
+          <p class="idlg__verifiedhelp">
+            {{ t('contract.verifiedTotalHelp') }}
+            <a
+              :href="verifiedOverride.sourceUrl"
+              target="_blank"
+              rel="noopener external"
+            >{{ t('contract.verifiedTotalSource') }}</a>
+          </p>
+        </div>
+
         <!-- In-dialog search: a big contract can list hundreds of lines. -->
         <div
           v-if="allItems.length > 6"
@@ -310,12 +350,14 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
               <th
                 scope="col"
                 class="itable__num"
+                :title="verifiedOverride ? t('contract.verifiedTotalHelp') : undefined"
               >
                 {{ t('common.unitPrice') }}
               </th>
               <th
                 scope="col"
                 class="itable__num"
+                :title="verifiedOverride ? t('contract.verifiedTotalHelp') : undefined"
               >
                 {{ t('common.total') }}
               </th>
@@ -374,6 +416,14 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
             </tr>
           </tbody>
           <tfoot v-if="itemsTotal">
+            <tr v-if="verifiedOverride">
+              <td
+                :colspan="4"
+                class="idlg__verifiedcaption"
+              >
+                {{ t('contract.verifiedTotalHelp') }}
+              </td>
+            </tr>
             <tr>
               <td :colspan="3">
                 {{ t('common.total') }}
@@ -506,6 +556,20 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
 .idlg__convlabel { min-width: 12ch; font-size: var(--t-xs); color: var(--text-muted); }
 .idlg__convtoday .idlg__convlabel { color: var(--celeste-deep); cursor: help; }
 
+/* Verified total (correct-lumpsum-artifacts.ts override) — mirrors
+   .head__verified/.head__verifiedhelp on the contract detail page. */
+.idlg__verified { margin-bottom: var(--s-4); }
+.idlg__verifiedhelp {
+  margin: var(--s-1) 0 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.idlg__verifiedhelp a {
+  color: var(--celeste-deep);
+  font-weight: 600;
+}
+
 .idlg__filter {
   display: flex;
   align-items: center;
@@ -595,6 +659,18 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+/* The "raw feed" note above the total: a full sentence, not a label —
+   overrides the mono/uppercase/letter-spacing the total row uses. */
+.itable tfoot .idlg__verifiedcaption {
+  padding-top: var(--s-2);
+  font-family: var(--font-body);
+  font-size: var(--t-xs);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.5;
+  white-space: normal;
 }
 
 @media (max-width: 760px) {
