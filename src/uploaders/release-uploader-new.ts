@@ -1,5 +1,6 @@
 import { ReleaseModel } from "../../shared/models";
 import { IRelease } from "../../shared/types";
+import { hasVerifiedOverride } from "../../shared/utils/verified-override";
 import { IDatabaseService } from "../services/database-service";
 import { ILogger } from "../services/logger-service";
 import { ReleaseRSSFetcher } from "../services/release-rss-fetcher";
@@ -410,6 +411,20 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
       this.logger.info(`  reiteración-del-gasto probe: +${reiterAttach.found} found (${reiterAttach.probed} probed, ${reiterAttach.carried} carried, budget left ${reiterBudget.remaining})`);
     }
 
+    // This loop $sets a fully-rebuilt document, so a release whose total was verified
+    // against the government page would be silently re-inflated. Look up which ids
+    // carry an override and omit `amount` from their update.
+    const preparedIds = prepared.map((p) => p.release.id).filter(Boolean);
+    const protectedIds = new Set<string>(
+      preparedIds.length
+        ? (
+            await ReleaseModel.find({ id: { $in: preparedIds } }, { id: 1, amount: 1 }).lean()
+          )
+            .filter((d: any) => hasVerifiedOverride(d))
+            .map((d: any) => d.id)
+        : []
+    );
+
     for (const { release, releaseData } of prepared) {
       try {
         // Calculate total amounts from awards (multicurrency support with conversion)
@@ -420,7 +435,7 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
         });
 
         // Add metadata to the release (matching original uploader structure)
-        const releaseWithMetadata = {
+        const releaseWithMetadata: Record<string, unknown> = {
           ...release,
           sourceFileName: "web", // As requested
           sourceYear: year, // As requested
@@ -432,6 +447,10 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
           rssPublishDate: releaseData.publishDate,
           rssLink: releaseData.link,
         };
+        // Keep the verified total; everything else about the release still refreshes.
+        if (protectedIds.has(release.id)) {
+          delete releaseWithMetadata.amount;
+        }
 
         // Add bulk operation - keep upsert for safety in case of race conditions
         bulkOps.push({
@@ -677,7 +696,10 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
             },
           ],
         },
-        { id: 1, rssLink: 1, "amount.primaryAmount": 1 }
+        // amount.verifiedOverride must be projected too: the reconcile guard below reads
+        // it off this same `candidate` document, and a narrower projection would silently
+        // make that guard never fire.
+        { id: 1, rssLink: 1, "amount.primaryAmount": 1, "amount.verifiedOverride": 1 }
       ).lean();
 
       this.logger.info(`Found ${candidates.length} non-final releases to re-check against the live API`);
@@ -723,6 +745,11 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
             const ocdsRelease = result.data.releases?.[0];
             if (!ocdsRelease || !ocdsRelease.id) {
               failed++;
+              continue;
+            }
+
+            // Never let a re-sync recompute a page-verified total.
+            if (hasVerifiedOverride(result.candidate)) {
               continue;
             }
 

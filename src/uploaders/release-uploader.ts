@@ -1,5 +1,6 @@
 import { ReleaseModel } from "../../shared/models";
 import { IRelease } from "../../shared/types";
+import { hasVerifiedOverride } from "../../shared/utils/verified-override";
 import { IDatabaseService } from "../services/database-service";
 import { IFileService } from "../services/file-service";
 import { ILogger } from "../services/logger-service";
@@ -121,6 +122,27 @@ export class ReleaseUploader implements IReleaseUploader {
     const bulkOps: any[] = [];
     const BATCH_SIZE = 10000; // Process in batches to avoid memory issues
 
+    // This loop's pipeline $set can recompute `amount` for a release whose total was
+    // verified against the government page. Unlike add-missing-amounts.ts, the loop
+    // variable here (`release`) comes straight from the feed file being parsed, never
+    // from the database, so it can never itself carry the verifiedOverride marker —
+    // checking it directly would be a guard that never fires. Pre-load which of this
+    // file's ids are protected, against the STORED document, so the pipeline below can
+    // leave their amount untouched no matter what the awards-count comparison says.
+    const releaseIds = data.releases.map((r) => r.id).filter(Boolean) as string[];
+    const protectedIds = new Set<string>();
+    if (releaseIds.length) {
+      const existingDocs = await ReleaseModel.find(
+        { id: { $in: releaseIds } },
+        { id: 1, amount: 1 }
+      ).lean();
+      for (const doc of existingDocs) {
+        if (hasVerifiedOverride(doc)) {
+          protectedIds.add((doc as any).id);
+        }
+      }
+    }
+
     // Prepare all bulk operations
     for (const release of data.releases) {
       try {
@@ -193,13 +215,18 @@ export class ReleaseUploader implements IReleaseUploader {
                       { $literal: incomingAwards || [] }
                     ]
                   },
-                  amount: {
-                    $cond: [
-                      { $gt: [{ $size: { $ifNull: ["$awards", []] } }, incomingAwardsCount] },
-                      "$amount",
-                      { $literal: amountData }
-                    ]
-                  }
+                  // Never let a re-sync recompute a page-verified total: for a protected
+                  // id, always keep the stored amount, regardless of the awards-count
+                  // comparison below.
+                  amount: protectedIds.has(release.id)
+                    ? "$amount"
+                    : {
+                        $cond: [
+                          { $gt: [{ $size: { $ifNull: ["$awards", []] } }, incomingAwardsCount] },
+                          "$amount",
+                          { $literal: amountData }
+                        ]
+                      }
                 }
               }
             ],

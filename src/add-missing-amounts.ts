@@ -1,5 +1,6 @@
 import { connectToDatabase } from "../shared/connection/database";
 import { ReleaseModel } from "../shared/models";
+import { hasVerifiedOverride } from "../shared/utils/verified-override";
 import {
   AMOUNT_CALCULATION_VERSION,
   calculateTotalAmounts,
@@ -78,6 +79,12 @@ async function addMissingAmounts() {
 
       for (const release of releases) {
         try {
+          // A total verified against the government page outranks anything we can
+          // recompute from the feed — never overwrite it.
+          if (hasVerifiedOverride(release)) {
+            continue;
+          }
+
           // Check if this is a version update
           const isVersionUpdate = !!(release.amount && (release.amount as any).version !== AMOUNT_CALCULATION_VERSION);
           const hadPreviousAmount = release.amount && (release.amount as any).primaryAmount;

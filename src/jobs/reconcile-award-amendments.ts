@@ -66,6 +66,7 @@
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
 import { ReleaseModel } from "../../shared/models";
 import { calculateTotalAmounts, fetchCurrencyRates, fetchUYIRate } from "../utils/amount-calculator";
+import { hasVerifiedOverride } from "../../shared/utils/verified-override";
 import { rescoreReleaseIds } from "./detect-anomalies";
 
 const MARKER_VERSION = 1;
@@ -311,6 +312,7 @@ async function main(): Promise<void> {
   let corrected = 0;
   let noBase = 0;
   let skippedAmbiguous = 0;
+  let skippedVerified = 0;
   let removedOvercount = 0; // sum of (original - corrected) primaryAmount, corrected only
   const correctedIds: string[] = [];
   const top: Array<{ id: string; before: number; after: number }> = [];
@@ -345,6 +347,17 @@ async function main(): Promise<void> {
 
       for (const base of bases) {
         basesChecked++;
+
+        // PRECEDENCE: a government-published amendment is newer ground truth than our
+        // page verification, so it is allowed to win — but only by REPLACING the
+        // override, never by silently recomputing around it. We skip here and require
+        // a deliberate re-run of correct-lumpsum-artifacts to re-verify, because the
+        // merged item math is exactly the quantity x lump-sum trap this guards.
+        if (hasVerifiedOverride(base)) {
+          skippedVerified++;
+          continue;
+        }
+
         const { merged, changes } = mergeAwards(base.awards || [], amendments);
         if (fingerprint(merged) === fingerprint(base.awards || [])) continue; // already correct / no-op
 
@@ -423,6 +436,7 @@ async function main(): Promise<void> {
   console.log(`   ocids w/ amendment,no base: ${noBase}`);
   console.log(`   ${opts.dryRun ? "WOULD correct" : "corrected"}           : ${corrected}`);
   console.log(`   skipped (re-key ambiguous): ${skippedAmbiguous}`);
+  if (skippedVerified) console.log(`   skipped (verified override): ${skippedVerified}`);
   console.log(`   phantom UYU removed       : ${Math.round(removedOvercount).toLocaleString()}`);
   console.log(`   top corrections:`);
   for (const t of top.slice(0, 15)) {
