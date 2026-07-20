@@ -56,7 +56,7 @@ import {
   fetchOfficialTotal,
   idCompraFromOcid,
 } from "./lib/comprasestatales-total";
-import { candidateMatchStage, isArtifactConfirmed, isLumpsumSuspect } from "./lib/lumpsum-candidates";
+import { candidateMatchStage, isArtifactConfirmed, isLumpsumSuspect, LUMPSUM_DEFAULTS } from "./lib/lumpsum-candidates";
 
 const DELAY_MS = 1200;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -64,6 +64,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 function arg(name: string): string | null {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
   return hit ? hit.slice(name.length + 3) : null;
+}
+
+/**
+ * Usage errors (bad/missing CLI flags) exit non-zero with a clean one-line
+ * message — never a thrown Error, which the top-level `.catch()` would print
+ * with a 10-line stack trace that has nothing to do with the actual mistake
+ * (a typo'd flag). Always called before `connectToDatabase()`.
+ */
+function usageError(message: string): never {
+  console.error(`❌ Usage error: ${message}`);
+  process.exit(1);
 }
 
 /** Same shape app/server/utils/rates.ts builds, loaded once for the run. */
@@ -111,18 +122,108 @@ function pristineForSuspectCheck(release: any, existingOverride: VerifiedOverrid
   return { ...release, amount: { ...restAmount, primaryAmount: existingOverride.previousPrimaryAmount } };
 }
 
+/**
+ * Cheap, read-only re-derivation of *why* `isLumpsumSuspect()` rejected a
+ * release, for diagnostics only — this never gates behavior, `isLumpsumSuspect()`
+ * itself stays the single source of truth. Mirrors its checks (see
+ * ./lib/lumpsum-candidates.ts) because a hard-coded "too many priced lines"
+ * message is wrong for the other four ways the check can fail (wrong tag,
+ * amount out of band, zero priced items, no qty>=threshold foreign line) —
+ * which matters because `--release=<id>` bypasses candidateMatchStage()
+ * entirely, so a mistyped or plain ineligible id lands here too.
+ */
+function describeNotSuspectReason(release: any): string {
+  const o = LUMPSUM_DEFAULTS;
+  const tag = release?.tag;
+  if (!(Array.isArray(tag) && tag.includes("award"))) {
+    return `tag is ${JSON.stringify(tag ?? null)}, not an "award" release`;
+  }
+  const primary = release?.amount?.primaryAmount;
+  if (typeof primary !== "number" || !Number.isFinite(primary)) {
+    return "amount.primaryAmount is missing or not a number";
+  }
+  if (primary < o.suspectMinUyu) {
+    return `primaryAmount ${Math.round(primary).toLocaleString()} UYU is below the ${o.suspectMinUyu.toLocaleString()} suspect floor`;
+  }
+  if (primary >= o.maxPlausibleUyu) {
+    return `primaryAmount ${Math.round(primary).toLocaleString()} UYU is at/above the ${o.maxPlausibleUyu.toLocaleString()} plausible ceiling (already excluded from aggregates)`;
+  }
+  const awards = Array.isArray(release?.awards) ? release.awards : [];
+  const priced = awards
+    .flatMap((a: any) => (Array.isArray(a?.items) ? a.items : []))
+    .filter((i: any) => (typeof i?.unit?.value?.amount === "number" ? i.unit.value.amount : 0) > 0);
+  if (priced.length === 0) return "no priced line items";
+  if (priced.length > o.maxPricedItems) {
+    return `${priced.length} priced line items — more than ${o.maxPricedItems}, so one official total cannot be attributed to a single line`;
+  }
+  const hasForeignBulk = priced.some((i: any) => {
+    const qty = typeof i?.quantity === "number" ? i.quantity : null;
+    const currency = typeof i?.unit?.value?.currency === "string" ? i.unit.value.currency : "";
+    return qty !== null && qty >= o.qtyThreshold && ["USD", "EUR"].includes(currency.toUpperCase());
+  });
+  if (!hasForeignBulk) {
+    return `no priced line with quantity >= ${o.qtyThreshold} in a foreign currency (USD/EUR)`;
+  }
+  return "does not match the lump-sum profile";
+}
+
+/**
+ * The month whose BCU rate `toNominalUyu()` (shared/utils/real-value.ts)
+ * ACTUALLY applied — mirrors that module's private `rateForMonth()` fallback
+ * (nearest earlier month present in the table) so `verifiedOverride.rateMonth`
+ * always records the month whose rate was truly used, never just the
+ * release's own month. The rate table has zero gaps today (2000-01..2026-07),
+ * so this is currently always `=== month`, but the field is public-facing and
+ * must stay correct the day a gap exists. Only called after `toNominalUyu()`
+ * has already returned non-null for the same (month, table), so a `null`
+ * result here would mean the two disagree — treated as a fresh "no rate" case
+ * rather than trusted.
+ */
+function effectiveRateMonth(table: RateTable, month: string): string | null {
+  if (table.byMonth[month]) return month;
+  const months = Object.keys(table.byMonth).filter((m) => m <= month).sort();
+  const prev = months[months.length - 1];
+  return prev ?? null;
+}
+
 async function main(): Promise<void> {
   const commit = process.argv.includes("--commit");
   const force = process.argv.includes("--force");
-  const only = arg("release");
-  const limit = Number(arg("limit") ?? 0);
+
+  // An explicitly-passed-but-empty --release= (e.g. `--release=$ID` with an
+  // unset shell variable) must NEVER fall through to
+  // `only ? { id: only } : candidateMatchStage()` below — that ternary treats
+  // "" the same as "not passed" and silently turns one intended release into
+  // a ~141-release pool-wide run. Reject before touching the DB.
+  const releaseArg = arg("release");
+  if (releaseArg === "") {
+    usageError(
+      "--release= was given an empty value. Pass an id (--release=adjudicacion-53193) " +
+        'or omit the flag entirely for a pool-wide run — an empty value must never be treated as "no filter".',
+    );
+  }
+  const only = releaseArg;
+
+  // A non-numeric --limit= (e.g. --limit=abc -> NaN) must not silently disable
+  // the limit — the same "typo turns into a bigger run than intended" failure
+  // mode as the --release= case above (`if (limit > 0)` below would just skip
+  // applying any cap).
+  const limitArg = arg("limit");
+  let limit = 0;
+  if (limitArg !== null) {
+    const parsed = Number(limitArg);
+    if (limitArg === "" || !Number.isFinite(parsed)) {
+      usageError(`--limit=${limitArg} is not a valid number.`);
+    }
+    limit = parsed;
+  }
 
   // A blanket forced run would let a routine re-sync silently restore the
   // inflated figure across the whole pool — the exact failure mode
   // verifiedOverride exists to prevent. --force is only meaningful pointed at
   // one release an operator has decided, by hand, needs re-verifying.
   if (force && !only) {
-    throw new Error(
+    usageError(
       "--force requires --release=<id> — refusing a blanket forced re-run over the whole candidate pool. " +
         "Target the specific release you want to re-verify, e.g. --release=adjudicacion-53193 --force.",
     );
@@ -140,7 +241,7 @@ async function main(): Promise<void> {
   const rateTable = await loadRateTable();
   console.log(`   rate table: ${Object.keys(rateTable.byMonth).length} months`);
 
-  let corrected = 0, notSuspect = 0, notArtifact = 0, unverified = 0, noRate = 0, skipped = 0;
+  let corrected = 0, notSuspect = 0, notArtifact = 0, noIdCompra = 0, unverified = 0, noRate = 0, skipped = 0;
 
   for (const release of candidates as any[]) {
     const id = release.id;
@@ -160,15 +261,21 @@ async function main(): Promise<void> {
     // attributed across several priced lines.
     const suspectSubject = existingOverride ? pristineForSuspectCheck(release, existingOverride) : release;
     if (!isLumpsumSuspect(suspectSubject)) {
-      console.warn(`   ? ${id}: fails isLumpsumSuspect (too many priced lines for one total to be attributed) — skipping`);
+      console.warn(`   ? ${id}: does not match the lump-sum profile (${describeNotSuspectReason(suspectSubject)}) — skipping`);
       notSuspect++;
       continue;
     }
 
     const idCompra = idCompraFromOcid(release.ocid ?? "");
     if (!idCompra) {
-      console.warn(`   ? ${id}: no id_compra from ocid ${release.ocid}`);
-      unverified++;
+      // Distinct from `unverified` below: this release was never scrapeable at
+      // all (the ocid tail isn't a numeric purchase id), as opposed to one that
+      // HAS a real id_compra but whose page fetch/parse failed. Most of the
+      // remaining candidate pool falls in this bucket (e.g. ocds-yfs5dr-i411869)
+      // — worth reporting separately so the operator doesn't read them as "the
+      // scraper is failing" when they were never candidates for scraping.
+      console.warn(`   ? ${id}: ocid ${release.ocid} has no numeric purchase id — not scrapeable`);
+      noIdCompra++;
       continue;
     }
 
@@ -202,6 +309,13 @@ async function main(): Promise<void> {
     }
 
     if (!isArtifactConfirmed(computed, official.amount)) {
+      // Auditability-first: log agreement too, not just corrections — an
+      // operator reviewing the run needs to see which ids were checked and
+      // left alone, not just which ones changed.
+      console.log(
+        `   ✓ ${id}  official total agrees, left alone` +
+        `   (${official.currency} ${computed.toLocaleString()} vs official ${official.amount.toLocaleString()})`
+      );
       notArtifact++;
       await sleep(DELAY_MS);
       continue;
@@ -213,6 +327,20 @@ async function main(): Promise<void> {
       : null;
     if (primaryAmount === null) {
       console.warn(`   ? ${id}: no BCU rate for ${official.currency} in ${rateMonth} — run seed-historical-rates`);
+      noRate++;
+      await sleep(DELAY_MS);
+      continue;
+    }
+
+    // The month whose rate was ACTUALLY applied — toNominalUyu() falls back to
+    // the nearest earlier month when release.date's own month is missing from
+    // the table, so `rateMonth` above (the release's own month) is not always
+    // the one that produced `primaryAmount`. Re-derive and store THAT month.
+    const effectiveMonth = effectiveRateMonth(rateTable, rateMonth!);
+    if (effectiveMonth === null) {
+      // Should be unreachable — toNominalUyu() already found a rate for this
+      // (month, table) above. Defensive: never record a rateMonth we can't back up.
+      console.warn(`   ? ${id}: could not re-derive the effective rate month for ${rateMonth} — skipping`);
       noRate++;
       await sleep(DELAY_MS);
       continue;
@@ -233,19 +361,35 @@ async function main(): Promise<void> {
       sourceUrl: detalleUrl(idCompra),
       officialTotal: official.amount,
       officialCurrency: official.currency,
-      rateMonth: rateMonth!,
+      rateMonth: effectiveMonth,
       previousPrimaryAmount,
       previousComputedTotal,
       verifiedAt: new Date(),
       reason: "lumpsum-in-unit-price",
     };
 
+    // Built EXPLICITLY, never via `{...release.amount, ...}` — a blind spread
+    // would carry over stale conversion metadata describing the OLD, wrong
+    // conversion (exchangeRateDate/uyiExchangeRate stamped by whatever
+    // amount-calculator.ts run last, unrelated to the BCU rate actually used
+    // here). A "verified against the official source" record must not display
+    // a contradictory rate date (app/pages/contracts/[id].vue renders
+    // `amount.exchangeRateDate` under the "Tipo de cambio al" label).
+    //   - REMOVED (describe the superseded conversion, not this one):
+    //     exchangeRateDate, uyiExchangeRate, wasVersionUpdate, previousAmount
+    //   - RESTAMPED: updatedAt — the record genuinely is being updated now
+    //   - KEPT as-is (still accurate, unrelated to the currency conversion):
+    //     totalItems, originalUYUAmount, hasConvertedAmounts, version
     // Built as one complete object and written in a single $set below — never
     // incrementally. A partially-written override would still satisfy
     // hasVerifiedOverride()'s presence check and permanently mask the release
     // from every future recomputation.
     const amount = {
-      ...release.amount,
+      totalItems: release.amount?.totalItems,
+      originalUYUAmount: release.amount?.originalUYUAmount,
+      hasConvertedAmounts: release.amount?.hasConvertedAmounts,
+      version: release.amount?.version,
+      updatedAt: new Date().toISOString(),
       totalAmounts: { [official.currency]: official.amount },
       // [id].get.ts derives the native currency from this list; a stale multi-entry
       // list would make it fall back to the nominal figure.
@@ -258,7 +402,7 @@ async function main(): Promise<void> {
 
     console.log(
       `   ✎ ${id}  ${Math.round(previousPrimaryAmount ?? 0).toLocaleString()} -> ${Math.round(primaryAmount).toLocaleString()} UYU` +
-      `   (${official.currency} ${computed.toLocaleString()} -> ${official.amount.toLocaleString()} @ ${rateMonth})`
+      `   (${official.currency} ${computed.toLocaleString()} -> ${official.amount.toLocaleString()} @ ${effectiveMonth})`
     );
 
     if (commit) {
@@ -269,9 +413,10 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n   corrected     : ${corrected}`);
-  console.log(`   not suspect   : ${notSuspect} (fails isLumpsumSuspect's priced-item cap — candidateMatchStage is only a pre-filter)`);
-  console.log(`   not artifact  : ${notArtifact} (official total agrees — left alone)`);
-  console.log(`   unverified    : ${unverified} (page missing/unparseable)`);
+  console.log(`   not suspect   : ${notSuspect} (does not match the lump-sum profile — see per-release reasons above; candidateMatchStage is only a pre-filter)`);
+  console.log(`   not artifact  : ${notArtifact} (official total agrees — left alone; see the ✓ lines above)`);
+  console.log(`   no id_compra  : ${noIdCompra} (ocid has no numeric purchase id — never scrapeable, distinct from a scrape failure below)`);
+  console.log(`   unverified    : ${unverified} (has an id_compra, but its page fetch/parse failed)`);
   console.log(`   no rate       : ${noRate} (seed exchange_rates for those months)`);
   console.log(`   already done  : ${skipped}`);
   if (!commit) console.log("   🧪 dry run: nothing written. Re-run with --commit.");
