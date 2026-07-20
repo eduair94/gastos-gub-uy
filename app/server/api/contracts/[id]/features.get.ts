@@ -48,14 +48,15 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'cache-control', 'public, max-age=86400')
 
     const cached = await ContractItemFeaturesModel.findOne({ compraId }).lean()
-    // Serve the cache only once it has been scraped for the object too — stored
-    // even as '' to record "we looked and there was none". Entries cached before
-    // buy-object was captured have `object === undefined`; those fall through and
-    // re-scrape once to backfill it, then short-circuit forever after.
-    if (cached && cached.object !== undefined) {
+    // Serve the cache only once it has been scraped for the object AND the
+    // tax-inclusive total too — both stored even as '' / null to record "we
+    // looked and there was none". Entries cached before either field was
+    // captured have it `undefined`; those fall through and re-scrape once to
+    // backfill, then short-circuit forever after.
+    if (cached && cached.object !== undefined && cached.total !== undefined) {
       return {
         success: true,
-        data: { compraId, source: cached.source, items: cached.items ?? [], object: cached.object || null },
+        data: { compraId, source: cached.source, items: cached.items ?? [], object: cached.object || null, total: cached.total ?? null },
       }
     }
 
@@ -75,6 +76,7 @@ export default defineEventHandler(async (event) => {
 
     let items: ScrapedItem[] | null = null
     let object: string | null = null
+    let total: { amount: number, currency: string } | null = null
     let source: 'adjudicacion' | 'llamado' = urls[0]!.source
     // A page we tried to fetch but couldn't (network/5xx) — distinct from a page
     // that loaded fine and simply has no características.
@@ -88,6 +90,9 @@ export default defineEventHandler(async (event) => {
       }
       items = scraped.items
       if (object === null && scraped.object) object = scraped.object
+      // The "Monto Total de la Compra" lives on the adjudicación page; keep the
+      // first one found (the llamado page carries no awarded total).
+      if (total === null && scraped.total) total = scraped.total
       source = u.source
       if (scraped.items.length) break
     }
@@ -108,6 +113,7 @@ export default defineEventHandler(async (event) => {
           source: cached?.source ?? source,
           items: cached?.items ?? [],
           object: object ?? (cached?.object || null),
+          total: total ?? (cached?.total ?? null),
           transient: true,
         },
       }
@@ -117,11 +123,11 @@ export default defineEventHandler(async (event) => {
     // marked "looked" and never re-scraped just for the object again.
     await ContractItemFeaturesModel.updateOne(
       { compraId },
-      { $set: { compraId, items, source, object: object ?? '', fetchedAt: new Date() } },
+      { $set: { compraId, items, source, object: object ?? '', total: total ?? null, fetchedAt: new Date() } },
       { upsert: true },
     ).catch(() => {})
 
-    return { success: true, data: { compraId, source, items, object } }
+    return { success: true, data: { compraId, source, items, object, total: total ?? null } }
   }
   catch (error) {
     if ((error as { statusCode?: number }).statusCode) throw error

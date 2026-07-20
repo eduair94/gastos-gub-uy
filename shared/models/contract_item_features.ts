@@ -15,6 +15,11 @@ import { mongoose } from "../connection/database";
 // invalidation and debugging. An empty `items` array is cached too — it
 // records "we looked and the page has none", which stops every later
 // view from re-scraping.
+export interface IMoney {
+  amount: number;
+  currency: string;
+}
+
 export interface IContractItemFeature {
   /** Gov item number ("Ítem Nº 1" -> 1). Matches the OCDS item id prefix. */
   nro: number;
@@ -22,6 +27,18 @@ export interface IContractItemFeature {
   features: { name: string; value: string }[];
   /** The "Variación" free-text note, when present. */
   variation?: string;
+  /**
+   * The page's "Cantidad" — the FRACTIONAL quantity. The OCDS feed truncates it
+   * to an integer (0,17 KG -> 0), which zeroes sub-unit produce lines, so the
+   * scraped value is the only correct quantity for the tax breakdown.
+   */
+  quantity?: number;
+  /** The quantity's printed unit ("KG", "UNIDAD", "FRASCO"). */
+  quantityUnit?: string;
+  /** "Precio unitario sin impuestos" — tax-EXCLUSIVE unit price (matches OCDS). */
+  netUnitPrice?: IMoney;
+  /** "Monto total con impuestos" — tax-INCLUSIVE line total (absent from OCDS). */
+  grossTotal?: IMoney;
 }
 
 export interface IContractItemFeatures {
@@ -39,8 +56,23 @@ export interface IContractItemFeatures {
   object?: string;
   /** Which page yielded the data: the adjudicación or the llamado. */
   source: "adjudicacion" | "llamado";
+  /**
+   * "Monto Total de la Compra" — the tax-INCLUSIVE grand total off the gov page.
+   * The OCDS feed has no such figure (its amounts are tax-exclusive), so this is
+   * the only authoritative total-con-impuestos. `null` records "we scraped and
+   * the page had none" (distinguishes it from a not-yet-backfilled `undefined`).
+   */
+  total?: IMoney | null;
   fetchedAt: Date;
 }
+
+const MoneySchema = new Schema<IMoney>(
+  {
+    amount: { type: Number, required: true },
+    currency: { type: String, required: true },
+  },
+  { _id: false }
+);
 
 const ContractItemFeaturesSchema = new Schema<IContractItemFeatures>(
   {
@@ -63,6 +95,10 @@ const ContractItemFeaturesSchema = new Schema<IContractItemFeatures>(
               default: [],
             },
             variation: { type: String },
+            quantity: { type: Number },
+            quantityUnit: { type: String },
+            netUnitPrice: { type: MoneySchema },
+            grossTotal: { type: MoneySchema },
           },
           { _id: false }
         ),
@@ -71,6 +107,7 @@ const ContractItemFeaturesSchema = new Schema<IContractItemFeatures>(
     },
     object: { type: String },
     source: { type: String, required: true, enum: ["adjudicacion", "llamado"] },
+    total: { type: MoneySchema, default: undefined },
     fetchedAt: { type: Date, required: true, default: Date.now },
   },
   {
