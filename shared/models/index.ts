@@ -13,6 +13,7 @@ export * from './product_analytics';
 export * from './product_variants';
 export * from './provider_anomaly_stats';
 export * from './release';
+export * from './supplier_contacts';
 export * from './supplier_pattern';
 export * from './tender_forecast';
 

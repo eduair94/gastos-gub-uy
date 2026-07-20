@@ -118,7 +118,9 @@ function getRateLimiter(path: string): RateLimiter {
   if (route === '/api/search' || route.startsWith('/api/search/')) {
     return searchLimiter
   }
-  if (route === '/api/export' || route.startsWith('/api/export/')) {
+  // Any export route — the legacy `/api/export*` and per-resource ones like
+  // `/api/contacts/export` — gets the strict export bucket (heavy full-set pull).
+  if (route === '/api/export' || route.startsWith('/api/export/') || route.endsWith('/export')) {
     return exportLimiter
   }
   return apiLimiter

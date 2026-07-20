@@ -12,6 +12,7 @@
     "contracts": "Contracts",
     "products": "Products",
     "suppliers": "Suppliers",
+    "contactos": "Contacts",
     "buyers": "Agencies",
     "anomalies": "Flags",
     "unexplained": "Unexplained",
@@ -731,6 +732,49 @@
       }
     }
   },
+  "contacts": {
+    "title": "Provider contact directory",
+    "lead": "Contact data for {total} state providers, for research and business outreach. Download the filtered list as CSV, Excel, JSON or vCard.",
+    "searchPlaceholder": "Search a provider by name…",
+    "resultsSummary": "{count} contacts",
+    "table": {
+      "name": "Provider",
+      "rubro": "Category",
+      "locality": "Locality",
+      "email": "Email",
+      "website": "Website",
+      "phone": "Phone"
+    },
+    "sort": {
+      "priorityDesc": "Most relevant",
+      "nameAsc": "Name (A–Z)"
+    },
+    "filter": {
+      "rubro": "Category",
+      "rubroAny": "All categories",
+      "dept": "Department",
+      "deptAny": "Whole country",
+      "size": "Size",
+      "sizeAny": "Any size",
+      "deiOnly": "Registered only (DEI)",
+      "verifiedOnly": "Verified emails only",
+      "hasPhone": "Has phone",
+      "hasWebsite": "Has website",
+      "clear": "Clear filters"
+    },
+    "download": {
+      "label": "Download {count} contacts",
+      "aria": "Download as {format}"
+    },
+    "empty": {
+      "title": "No contact matches those filters",
+      "body": "Try widening the filters or turning off “verified emails only”. The department and size filters use the DEI registry, which does not cover every provider."
+    },
+    "notice": {
+      "source": "Data gathered from public sources: the MIEM DEI registry, providers' own websites, and open data from Compras Estatales. Third-party data restricted by its terms of use is excluded.",
+      "optout": "Are you a provider and want your data removed? Email us at"
+    }
+  },
   "buyers": {
     "title": "Buying agencies",
     "lead": "{total} Uruguayan state agencies that run procurement.",
@@ -1448,6 +1492,10 @@
     "suppliers": {
       "title": "Suppliers to the Uruguayan state",
       "description": "Directory of {total} suppliers to the Uruguayan state, with amounts received, buying agencies, and contracts."
+    },
+    "contacts": {
+      "title": "Contacts of suppliers to the Uruguayan state",
+      "description": "Downloadable directory of contact data for {total} suppliers to the Uruguayan state: email, website, phone and category. CSV, Excel, JSON and vCard."
     },
     "supplierDetail": {
       "title": "{name} — state supplier",
