@@ -386,6 +386,8 @@ export interface IRelease extends Document {
     hasAmounts: boolean
     primaryAmount: number // Main amount in UYU for sorting/filtering
     primaryCurrency: string
+    /** Present when the total was verified against comprasestatales — do not recompute. */
+    verifiedOverride?: import('../utils/verified-override').VerifiedOverride
   }
 }
 
