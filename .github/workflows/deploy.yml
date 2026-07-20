@@ -19,20 +19,21 @@ jobs:
   deploy:
     runs-on: [self-hosted, gastos-167]
     steps:
-      - uses: actions/checkout@v4
-
-      # Materialize secrets (Mongo + Firebase) from a repo secret. Never commit .env.
-      - name: Write app/.env
+      # IMPORTANT: deploy the LIVE repo, NOT the runner's ephemeral checkout.
+      # pm2 `gastos-gub-dashboard` serves /root/gastos-gub-uy/app/.output. If we
+      # build+swap inside the runner's _work checkout (as `actions/checkout`
+      # does), the fresh .output is orphaned there and pm2 keeps serving stale
+      # code — the deploy reports "healthy" while the live site never changes
+      # (observed 2026-07-20). deploy-dashboard.mjs resolves REPO from its own
+      # path, so running it out of /root/gastos-gub-uy makes it build+swap the
+      # very dir pm2 runs. The live repo already holds app/.env (never
+      # committed), so no secret materialization is needed.
+      - name: Deploy the live repo
         shell: bash
-        run: printf '%s' "${{ secrets.DASHBOARD_ENV }}" > app/.env
-
-      # Reproducible install from the committed lockfile (no caret float).
-      - name: Install deps
-        shell: bash
-        run: npm --prefix app ci
-
-      # Atomic, self-rolling-back deploy. A failed/broken build leaves the live
-      # site untouched; the script's own lockfile also blocks manual/CI overlap.
-      - name: Deploy
-        shell: bash
-        run: node scripts/deploy-dashboard.mjs
+        run: |
+          set -euo pipefail
+          cd /root/gastos-gub-uy
+          git fetch origin master
+          git reset --hard origin/master
+          npm --prefix app ci
+          node scripts/deploy-dashboard.mjs
