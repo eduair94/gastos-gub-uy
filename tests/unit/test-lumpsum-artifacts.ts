@@ -119,4 +119,56 @@ assert.equal(isArtifactConfirmed(9000, 4201), false);          // ~2x -> below r
 assert.equal(isArtifactConfirmed(4201, 0), false);             // guard against divide-by-zero
 assert.equal(LUMPSUM_DEFAULTS.ratioMin, 5);
 
+// FIX 1: an amendment (awardUpdate) carrying an otherwise-perfect lump-sum shape
+// must NOT be selected. Amendment records only ever hold an adjustment, never the
+// full purchase total, so writing the official total onto one would mis-attribute
+// it — this is deliberately left excluded (ajuste_adjudicacion-28580 is the known
+// live example: 60,000 KG x USD 4,492/kg, primaryAmount ~= 10,850,241,558 UYU).
+assert.equal(isLumpsumSuspect({
+  ...suryparkRelease,
+  id: "ajuste_adjudicacion-28580",
+  tag: ["awardUpdate"],
+}), false);
+
+// A release with no tag at all must also be excluded (tag is required, not merely
+// non-blocking) — the schema always carries it, but the guard must not assume so.
+assert.equal(isLumpsumSuspect({
+  ...suryparkRelease,
+  tag: undefined,
+}), false);
+
+// FIX 2: a release already corrected (amount.verifiedOverride present) must not be
+// re-selected, mirroring candidateMatchStage's "amount.verifiedOverride": { $exists: false }.
+assert.equal(isLumpsumSuspect({
+  ...suryparkRelease,
+  amount: { primaryAmount: suryparkRelease.amount.primaryAmount, verifiedOverride: { source: "comprasestatales" } },
+}), false);
+
+// FIX 3: more than maxPricedItems (default 2) priced lines -> the single official
+// total cannot be attributed to any one line; candidateMatchStage cannot express
+// this cap, so isLumpsumSuspect is the only place it is enforced. (This differs
+// from the existing "many priced lines" test above only in count: 3 is the
+// smallest case that exceeds the default cap of 2.)
+assert.equal(isLumpsumSuspect({
+  ...suryparkRelease,
+  awards: [{ items: [
+    { quantity: 330000, unit: { value: { amount: 3316, currency: "USD" } } },
+    { quantity: 330000, unit: { value: { amount: 3316, currency: "USD" } } },
+    { quantity: 5, unit: { value: { amount: 10, currency: "USD" } } },
+  ] }],
+}), false);
+
+// FIX 5: exact-boundary cases.
+// quantity === qtyThreshold (1000) -> included (the bound is >=).
+assert.equal(isLumpsumSuspect({
+  ...suryparkRelease,
+  awards: [{ items: [{ quantity: 1000, unit: { value: { amount: 3316, currency: "USD" } } }] }],
+}), true);
+// primaryAmount === suspectMinUyu (1e9) -> included (the bound is >=).
+assert.equal(isLumpsumSuspect({ ...suryparkRelease, amount: { primaryAmount: 1e9 } }), true);
+// primaryAmount === maxPlausibleUyu (50e9) -> EXCLUDED (the bound is strictly <).
+assert.equal(isLumpsumSuspect({ ...suryparkRelease, amount: { primaryAmount: 50e9 } }), false);
+// isArtifactConfirmed at exactly ratioMin (5) -> counts as confirmed (the bound is >=).
+assert.equal(isArtifactConfirmed(5000, 1000), true);
+
 console.log("ok: lumpsum artifacts");

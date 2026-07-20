@@ -15,7 +15,47 @@
  * The band matters: releases above maxPlausibleUyu are already dropped from
  * aggregates by analytics-pipeline's MAX_PLAUSIBLE_RELEASE_UYU, so the ones that
  * actually distort the public totals are the ones sitting just BELOW that ceiling.
+ *
+ * ---
+ *
+ * CONTRACT — read this before wiring either export into a job:
+ *
+ * `candidateMatchStage()` is a cheap, indexed Mongo PRE-FILTER only. It is
+ * deliberately LOOSER than `isLumpsumSuspect()` — in particular it has no way to
+ * express "at most maxPricedItems priced lines" without an index-hostile $where
+ * or $expr, so it can and does pass through documents that `isLumpsumSuspect()`
+ * would reject (a live check found 8/150 Mongo-matched releases disagree this
+ * way, one with as many as 18 priced items). Every consumer MUST re-check each document
+ * the Mongo stage returns with `isLumpsumSuspect()` before acting on it (e.g.
+ * before overwriting `amount` with a scraped official total). Skip that
+ * re-check and a release with several priced lines will have its total
+ * silently overwritten from a single published figure that cannot be
+ * attributed to any one line — exactly the multi-line case this module exists
+ * to keep out of automatic correction.
+ *
+ * DELIBERATE LIMITATION — amendments stay excluded: both functions require the
+ * release to be tagged `award` (never `awardUpdate`/`awardCancellation`/etc).
+ * The official government page publishes one "Monto Total de la Compra" for
+ * the whole purchase; an `ajuste_adjudicacion` (amendment) record holds only an
+ * adjustment on top of a base award, so writing the purchase's full total onto
+ * the amendment record would mis-attribute it to the wrong document. That risk
+ * has not been separately investigated, so amendment-tagged releases are
+ * excluded rather than guessed at. Known example this excludes today:
+ * `ajuste_adjudicacion-28580` (ocid ocds-yfs5dr-1287667): one priced item,
+ * 60,000 KG x USD 4,492/kg, `amount.primaryAmount` ~= 10,850,241,558 UYU. It
+ * has the exact lump-sum shape this job targets but is intentionally left for
+ * a future, separate investigation rather than auto-corrected here.
+ *
+ * KNOWN LATENT GAP — currency casing: `isLumpsumSuspect()` upper-cases the
+ * item currency before comparing against FOREIGN; the Mongo `$in: FOREIGN` in
+ * `candidateMatchStage()` is case-sensitive and does NOT upper-case. All live
+ * data observed so far stores currency codes upper-case, so the two encodings
+ * agree in practice, but a future lower-/mixed-case `unit.value.currency` would
+ * be picked up by `isLumpsumSuspect()` and silently dropped by the Mongo stage.
+ * Left as-is deliberately (not worth an index-hostile $toUpper in the $match).
  */
+
+import { hasVerifiedOverride } from "../../../shared/utils/verified-override";
 
 export const LUMPSUM_DEFAULTS = {
   /** A unit price attached to this many units is implausible for a real unit price. */
@@ -34,7 +74,18 @@ export type LumpsumOptions = Partial<typeof LUMPSUM_DEFAULTS>;
 
 const FOREIGN = ["USD", "EUR"];
 
-/** The `$match` for stage 1. Kept in step with isLumpsumSuspect below. */
+/**
+ * The `$match` for stage 1 — a cheap, indexed PRE-FILTER, not the full rule.
+ *
+ * It is deliberately LOOSER than `isLumpsumSuspect()`: it cannot express the
+ * "at most maxPricedItems priced lines" cap (see the module docblock's
+ * CONTRACT section above) without an index-hostile $expr, so it can return
+ * documents with many priced lines that `isLumpsumSuspect()` would reject.
+ * Every consumer MUST re-check each fetched document with `isLumpsumSuspect()`
+ * before acting on it — skipping that re-check means a multi-line release can
+ * have its total overwritten from a single official figure that cannot be
+ * attributed to any one line.
+ */
 export function candidateMatchStage(o: LumpsumOptions = {}): Record<string, unknown> {
   const opts = { ...LUMPSUM_DEFAULTS, ...o };
   return {
@@ -60,14 +111,32 @@ interface AnyItem {
   unit?: { value?: { amount?: unknown; currency?: unknown } };
 }
 interface AnyAward { items?: AnyItem[] }
-interface AnyRelease { amount?: { primaryAmount?: unknown }; awards?: AnyAward[] }
+interface AnyRelease {
+  amount?: { primaryAmount?: unknown; verifiedOverride?: unknown };
+  awards?: AnyAward[];
+  /** OCDS tag array, e.g. ["award"] or ["awardUpdate"]. May be absent. */
+  tag?: unknown;
+}
 
 const num = (v: unknown): number | null =>
   typeof v === "number" && Number.isFinite(v) ? v : null;
 
-/** The same rule as candidateMatchStage, applied to a document in hand. */
+/** True when `tag` (an array field in this schema) contains "award". */
+const isTaggedAward = (tag: unknown): boolean => Array.isArray(tag) && tag.includes("award");
+
+/**
+ * The same rule as candidateMatchStage, applied to a document in hand.
+ *
+ * This is the FULL rule — the one Mongo's `$match` can only loosely
+ * approximate (see the module docblock's CONTRACT section). In particular
+ * this is the function that enforces the `maxPricedItems` cap that
+ * `candidateMatchStage()` cannot express; callers MUST run every candidate
+ * document through this function before treating it as confirmed.
+ */
 export function isLumpsumSuspect(release: AnyRelease, o: LumpsumOptions = {}): boolean {
   const opts = { ...LUMPSUM_DEFAULTS, ...o };
+  if (!isTaggedAward(release?.tag)) return false;
+  if (hasVerifiedOverride(release)) return false;
   const primary = num(release?.amount?.primaryAmount);
   if (primary === null || primary < opts.suspectMinUyu || primary >= opts.maxPlausibleUyu) {
     return false;
