@@ -59,6 +59,13 @@ const currency = computed(() => contractCurrency(contract.value))
 const suppliers = computed(() => contractSuppliers(contract.value))
 const date = computed(() => contractDate(contract.value))
 
+// Present only on the handful of releases where a lump sum stored in
+// `unit.value.amount` inflated the header total by orders of magnitude and
+// a job (src/jobs/correct-lumpsum-artifacts.ts) corrected it against the
+// government's own published figure. Drives the "verified" badge below the
+// header total; null everywhere else, so nothing renders on ordinary pages.
+const verifiedOverride = computed(() => contractVerifiedOverride(contract.value))
+
 // The amount restated in today's pesos — foreign converted at its own month's
 // BCU rate, then deflated to today via the Unidad Indexada (server computes it).
 // Worth showing when it moves the figure: always for a foreign-currency contract
@@ -965,6 +972,33 @@ useSeo(() => ({
             >
               {{ t('money.convertedFrom', { currency: originalCurrencies.join(', ') }) }}
             </p>
+
+            <!-- Present only on releases where a lump sum stored in the item's
+                 unit price inflated this total by orders of magnitude and the
+                 header figure was corrected against the official record (see
+                 `contractVerifiedOverride`). The line items below are left as
+                 the raw feed reported them, so this explains the gap instead
+                 of leaving it looking like a contradiction. -->
+            <div
+              v-if="verifiedOverride"
+              class="head__verified"
+            >
+              <span
+                class="tag tag--activo"
+                :title="t('contract.verifiedTotalHelp')"
+              >
+                <v-icon size="12">mdi-check-decagram</v-icon>
+                {{ t('contract.verifiedTotalBadge') }}
+              </span>
+              <p class="head__verifiedhelp">
+                {{ t('contract.verifiedTotalHelp') }}
+                <a
+                  :href="verifiedOverride.sourceUrl"
+                  target="_blank"
+                  rel="noopener external"
+                >{{ t('contract.verifiedTotalSource') }}</a>
+              </p>
+            </div>
           </template>
           <!-- Not "Sin monto": this stage has no amount to report yet,
                which is a fact about the process, not a gap in the data. -->
@@ -2045,6 +2079,21 @@ useSeo(() => ({
   max-width: 30ch;
   font-size: var(--t-sm);
   color: var(--text-muted);
+}
+
+/* ---- Verified total (correct-lumpsum-artifacts.ts override) ---- */
+.head__verified { margin-top: var(--s-2); max-width: 34ch; }
+
+.head__verifiedhelp {
+  margin: var(--s-1) 0 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.head__verifiedhelp a {
+  color: var(--celeste-deep);
+  font-weight: 600;
 }
 
 /* ---- Official source ---- */
