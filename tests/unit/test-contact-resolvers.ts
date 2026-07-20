@@ -15,7 +15,10 @@ function fakeDb(rows: any[]) {
 }
 
 (async () => {
-  const db = fakeDb([{ rut: "214843360014", email: "admin@murry.uy", sitioWeb: "https://murry.uy", telefono: "099..." }]);
+  const db = fakeDb([{
+    rut: "214843360014", email: "admin@murry.uy", sitioWeb: "https://murry.uy", telefono: "099...",
+    direccion: "Av. Italia 1234", lat: -34.9, lng: -56.1, localidad: "Montevideo", departamento: "Montevideo",
+  }]);
   const r = createDeiResolver(db);
   assert.equal(r.name, "dei");
   const out = await r.resolve({ supplierId: "R/214843360014", rut: "214843360014", name: "MURRY S A" });
@@ -24,6 +27,13 @@ function fakeDb(rows: any[]) {
   assert.equal(out.emails[0].source, "dei");
   assert.ok(out.emails[0].confidence >= 0.85);
   assert.equal(out.website, "https://murry.uy");
+  // Rescued address/geo — previously discarded — with dei provenance.
+  assert.equal(out.phoneSource, "dei");
+  assert.ok(out.place, "expected a place block from the rescued DEI fields");
+  assert.equal(out.place!.source, "dei");
+  assert.equal(out.place!.address, "Av. Italia 1234");
+  assert.equal(out.place!.lat, -34.9);
+  assert.equal(out.place!.locality, "Montevideo, Montevideo");
 
   // No DEI row → empty result, no throw. rut must be length >= 8 so this
   // genuinely exercises the findOne → null branch (not the length guard).

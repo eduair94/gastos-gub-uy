@@ -29,6 +29,70 @@ export async function search(query: string): Promise<SearchHit[]> {
   return hits;
 }
 
+// --- Google Maps proxy (findPlaceFromText + placeDetails) ----------------------
+// A keyless GET façade over Google Maps Platform. Base URL is overridable so the
+// host can move without touching the resolver; defaults to the shared proxy.
+const MAPS_PROXY = process.env.MAPS_PROXY_URL || "https://google-maps-proxy.checkleaked.cc";
+// Location bias rectangle covering Uruguay (sw|ne), so candidates skew local.
+const UY_BIAS = "rectangle:-35.1,-58.5|-30.0,-53.0";
+
+export interface PlaceCandidate { placeId: string; name: string; address: string }
+export interface PlaceDetails {
+  name?: string;
+  phone?: string | null;
+  website?: string | null;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  hours?: string | null;
+  mapsUrl?: string | null;
+}
+
+/** Text → candidate places. Returns [] on any failure (same swallow contract as fetchHtml). */
+export async function findPlace(query: string): Promise<PlaceCandidate[]> {
+  try {
+    const res = await axios.get(`${MAPS_PROXY}/findPlaceFromText`, {
+      timeout: 15000,
+      headers: { "User-Agent": UA },
+      params: {
+        input: query, inputtype: "textquery",
+        fields: "place_id,name,formatted_address,business_status",
+        locationbias: UY_BIAS, language: "es",
+      },
+    });
+    const cands = (res.data?.candidates ?? []) as any[];
+    return cands
+      .map(c => ({ placeId: String(c.place_id ?? ""), name: String(c.name ?? ""), address: String(c.formatted_address ?? "") }))
+      .filter(c => c.placeId);
+  } catch { return []; }
+}
+
+/** place_id → full knowledge-panel details. Returns null on any failure. */
+export async function placeDetails(placeId: string): Promise<PlaceDetails | null> {
+  try {
+    const res = await axios.get(`${MAPS_PROXY}/placeDetails`, {
+      timeout: 15000,
+      headers: { "User-Agent": UA },
+      params: {
+        place_id: placeId, language: "es",
+        fields: "name,formatted_address,international_phone_number,formatted_phone_number,website,url,opening_hours,geometry",
+      },
+    });
+    const r = res.data?.result;
+    if (!r) return null;
+    return {
+      name: r.name,
+      phone: r.international_phone_number || r.formatted_phone_number || null,
+      website: r.website || null,
+      address: r.formatted_address || null,
+      lat: r.geometry?.location?.lat ?? null,
+      lng: r.geometry?.location?.lng ?? null,
+      hours: Array.isArray(r.opening_hours?.weekday_text) ? r.opening_hours.weekday_text.join(" | ") : null,
+      mapsUrl: r.url || null,
+    };
+  } catch { return null; }
+}
+
 // impo gazette search → return the result page HTML blob(s) for regex scanning.
 export async function searchGazette(query: string): Promise<string[]> {
   const html = await fetchHtml(`https://www.impo.com.uy/diariooficial/?buscar=${encodeURIComponent(query)}`);

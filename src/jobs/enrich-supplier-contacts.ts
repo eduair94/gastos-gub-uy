@@ -10,7 +10,11 @@ import { createDeiResolver } from "./enrich/resolvers/dei";
 import { createWebsiteResolver } from "./enrich/resolvers/website";
 import { createWebSearchResolver } from "./enrich/resolvers/web-search";
 import { createImpoResolver } from "./enrich/resolvers/impo";
-import { fetchHtml, search, searchGazette } from "./enrich/backends";
+import { createGoogleMapsResolver } from "./enrich/resolvers/google-maps";
+import { createGeminiJudge } from "./enrich/match-judge";
+import { fetchHtml, search, searchGazette, findPlace, placeDetails } from "./enrich/backends";
+import type { PlaceInfo } from "./enrich/types";
+import type { FieldSource } from "../../shared/models/supplier_contacts";
 
 function arg(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -25,7 +29,7 @@ async function main() {
   const limit = Number(arg("limit") ?? "100");
   const minPriority = Number(arg("minPriority") ?? "0");
   const staleDays = Number(arg("stale-days") ?? "90");
-  const wanted = new Set((arg("sources") ?? "dei,website,webSearch,impo").split(","));
+  const wanted = new Set((arg("sources") ?? "dei,website,webSearch,impo,googleMaps").split(","));
 
   // DNS canary: if the runtime can't reach a resolver at all, mxValid() will
   // (correctly, per hygiene.ts) return false for every domain over the whole
@@ -59,6 +63,16 @@ async function main() {
   if (wanted.has("webSearch")) resolvers.push(createWebSearchResolver({ search, fetchHtml }));
   if (wanted.has("website")) resolvers.push(createWebsiteResolver(fetchHtml));
   if (wanted.has("impo")) resolvers.push(createImpoResolver(searchGazette));
+  // googleMaps runs LAST so DEI's official address/geo/phone win the first-non-null
+  // race; Maps only fills the gap. Needs GEMINI_API_KEY for the match judge.
+  if (wanted.has("googleMaps")) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("⚠️ googleMaps requested but GEMINI_API_KEY is unset — skipping the match judge would accept false matches; resolver NOT registered.");
+    } else {
+      resolvers.push(createGoogleMapsResolver({ findPlace, placeDetails, judge: createGeminiJudge({ apiKey }) }));
+    }
+  }
 
   // Candidate suppliers by spend priority, skipping fresh ones.
   const staleBefore = new Date(Date.now() - staleDays * 864e5);
@@ -93,12 +107,15 @@ async function main() {
       const all: ContactCandidate[] = [];
       let website: string | null = existing?.website ?? null;
       let phone: string | null = null;
+      let phoneSource: FieldSource | null = null;
+      let place: PlaceInfo | null = null;
       for (let i = 0; i < resolvers.length; i++) {
         const r = resolvers[i];
         const res: ResolverResult = await r.resolve({ ...input, website }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
         all.push(...res.emails);
         if (!website && res.website) website = res.website;
-        if (!phone && res.phone) phone = res.phone;
+        if (!phone && res.phone) { phone = res.phone; phoneSource = res.phoneSource ?? null; }
+        if (!place && res.place) place = res.place;
         // Throttle external calls, but not after the LAST resolver — that
         // sleep was pure dead time, wasting ~1/3 of runtime at full scale.
         if (i < resolvers.length - 1) await sleep(r.name === "dei" ? 0 : 800);
@@ -111,12 +128,23 @@ async function main() {
 
       processed++;
       if (dryRun) {
-        console.log(`${processed}. ${name} — ${primaryEmail ?? "(none)"} [${emails.length} email(s), ${rubros.length} rubro(s)]`);
+        console.log(`${processed}. ${name} — ${primaryEmail ?? "(none)"} [${emails.length} email(s), ${rubros.length} rubro(s)]${place ? ` 📍${place.source}${phone ? " 📞" : ""}` : ""}`);
         continue;
       }
       await SupplierContactModel.updateOne(
         { supplierId },
-        { $set: { supplierId, rut, name, emails, primaryEmail, website, phone, rubros, status, priorityScore, enrichedAt: new Date() } },
+        { $set: {
+          supplierId, rut, name, emails, primaryEmail, website, phone, phoneSource,
+          address: place?.address ?? null,
+          locality: place?.locality ?? null,
+          lat: place?.lat ?? null,
+          lng: place?.lng ?? null,
+          hours: place?.hours ?? null,
+          mapsUrl: place?.mapsUrl ?? null,
+          placeId: place?.placeId ?? null,
+          placeSource: place?.source ?? null,
+          rubros, status, priorityScore, enrichedAt: new Date(),
+        } },
         { upsert: true },
       );
       if (processed % 25 === 0) console.log(`   …${processed}/${limit}`);

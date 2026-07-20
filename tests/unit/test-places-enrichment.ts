@@ -1,0 +1,127 @@
+// tests/unit/test-places-enrichment.ts
+// Match-score prefilter + Gemini match-judge (stubbed) + googleMaps resolver (fake
+// backends). No network, no DB — mirrors the node:assert convention of the repo.
+import assert from "node:assert";
+import {
+  normalizeCompanyName, contentTokens, scoreMatch, addressInUruguay, HIGH_SCORE, LOW_SCORE,
+} from "../../src/jobs/enrich/match-score";
+import { createGeminiJudge, type MatchPair } from "../../src/jobs/enrich/match-judge";
+import { createGoogleMapsResolver } from "../../src/jobs/enrich/resolvers/google-maps";
+import type { PlaceCandidate, PlaceDetails } from "../../src/jobs/enrich/backends";
+
+// --- match-score ------------------------------------------------------------
+(async () => {
+  // Accent fold + legal-suffix stripping.
+  assert.equal(normalizeCompanyName("GARINO HNÓS. S.A."), "garino hnos s a");
+  assert.deepEqual(contentTokens("GARINO HNOS S A"), ["garino"]); // hnos/s/a are legal/short → dropped
+
+  // Exact-ish name → high band (accept without LLM). "GARINO HNOS S A" vs "Garino Hnos. S.A."
+  assert.ok(scoreMatch("GARINO HNOS S A", "Garino Hnos. S.A.") >= HIGH_SCORE);
+
+  // Letter-spaced acronym is glued back so the identifying token survives; the real
+  // match "AGAM LIMITADA" vs "Laboratorio Agam Ltda." is no longer auto-rejected.
+  assert.equal(contentTokens("A G A M LIMITADA").join(","), "agam"); // not [] anymore
+  const agam = scoreMatch("A G A M LIMITADA", "Laboratorio Agam Ltda.");
+  assert.ok(agam > LOW_SCORE, `AGAM should not be auto-rejected, got ${agam}`);
+  // "C I E M S A CONSTRUCCIONES…" vs "CIEMSA" lands in the uncertain band (→ judge).
+  const ciemsa = scoreMatch("C I E M S A CONSTRUCCIONES E INSTALACIONES", "CIEMSA");
+  assert.ok(ciemsa > LOW_SCORE && ciemsa < HIGH_SCORE, `CIEMSA should be uncertain, got ${ciemsa}`);
+
+  // Clear non-match → low band (auto-reject). "SURYPARK S.A." vs "SoluPark".
+  assert.ok(scoreMatch("SURYPARK S.A.", "SoluPark") <= LOW_SCORE);
+
+  // Geographic gate.
+  assert.ok(addressInUruguay("Bolonia 2280, 11500 Montevideo, Uruguay"));
+  assert.ok(!addressInUruguay("Via Stradonetto, 185, Pescara PE, Italy"));
+  assert.ok(!addressInUruguay(null));
+  console.log("ok: match-score");
+})();
+
+// --- match-judge (stubbed Gemini) ------------------------------------------
+(async () => {
+  // Empty input → no call, empty map.
+  let calls = 0;
+  const countingCall = (async () => { calls++; return { data: { verdicts: [] }, usage: { promptTokens: 0, candidatesTokens: 0, totalTokens: 0 } }; }) as any;
+  const emptyJudge = createGeminiJudge({ apiKey: "k", call: countingCall });
+  assert.equal((await emptyJudge([])).size, 0);
+  assert.equal(calls, 0, "judge must not call Gemini for empty input");
+
+  // Verdicts are de-multiplexed by index.
+  const call = (async (opts: any) => {
+    // echo a match for the item whose candidate contains "agam"
+    const verdicts = (opts.prompt as string).split("\n").map((line: string) => {
+      const i = Number(line.split(".")[0]);
+      const match = /agam/i.test(line);
+      return { i, match, conf: match ? 0.9 : 0.2 };
+    });
+    return { data: { verdicts }, usage: { promptTokens: 1, candidatesTokens: 1, totalTokens: 2 } };
+  }) as any;
+  const judge = createGeminiJudge({ apiKey: "k", call });
+  const pairs: MatchPair[] = [
+    { i: 0, name: "AGAM LIMITADA", candidate: "Laboratorio Agam Ltda.", address: "Montevideo, Uruguay" },
+    { i: 1, name: "SURYPARK S.A.", candidate: "SoluPark", address: "Montevideo, Uruguay" },
+  ];
+  const verdicts = await judge(pairs);
+  assert.equal(verdicts.get(0)?.match, true);
+  assert.equal(verdicts.get(1)?.match, false);
+
+  // A throwing Gemini call must not accept anything (fail closed).
+  const throwing = createGeminiJudge({ apiKey: "k", call: (async () => { throw new Error("boom"); }) as any });
+  assert.equal((await throwing(pairs)).size, 0);
+  console.log("ok: match-judge");
+})();
+
+// --- googleMaps resolver ----------------------------------------------------
+const DETAILS: PlaceDetails = {
+  name: "Garino Hnos. S.A.", phone: "+598 2 000 0000", website: "https://garino.com.uy",
+  address: "Camino X 100, Montevideo, Uruguay", lat: -34.8, lng: -56.2, hours: "Lun: 9-17", mapsUrl: "https://maps.google.com/?cid=1",
+};
+function fakeBackends(candidates: PlaceCandidate[], details: PlaceDetails | null = DETAILS) {
+  return {
+    findPlace: async (_q: string) => candidates,
+    placeDetails: async (_id: string) => details,
+  };
+}
+const yesJudge = (async (_p: MatchPair[]) => new Map(_p.map(p => [p.i, { i: p.i, match: true, conf: 0.9 }]))) as any;
+const noJudge = (async (_p: MatchPair[]) => new Map()) as any;
+
+(async () => {
+  // High-score candidate → accepted WITHOUT the judge (judge would throw if called).
+  const throwJudge = (async () => { throw new Error("judge should not be called"); }) as any;
+  const r = createGoogleMapsResolver({ ...fakeBackends([
+    { placeId: "p1", name: "Garino Hnos. S.A.", address: "Camino X 100, Montevideo, Uruguay" },
+  ]), judge: throwJudge });
+  assert.equal(r.name, "googleMaps");
+  const out = await r.resolve({ supplierId: "R/1", rut: "216...", name: "GARINO HNOS S A" });
+  assert.equal(out.emails.length, 0, "Places supplies no emails");
+  assert.equal(out.phone, "+598 2 000 0000");
+  assert.equal(out.phoneSource, "googleMaps");
+  assert.equal(out.website, "https://garino.com.uy");
+  assert.ok(out.place);
+  assert.equal(out.place!.source, "googleMaps");
+  assert.equal(out.place!.placeId, "p1");
+  assert.equal(out.place!.lat, -34.8);
+
+  // Non-UY candidates filtered out → empty, no details fetch.
+  const foreign = createGoogleMapsResolver({ ...fakeBackends([
+    { placeId: "it", name: "INNOVALUE Srl", address: "Via Stradonetto, Pescara PE, Italy" },
+  ]), judge: yesJudge });
+  const outF = await foreign.resolve({ supplierId: "R/2", rut: "218121080019", name: "Innovaluy SRL" });
+  assert.deepEqual(outF.place ?? null, null);
+  assert.equal(outF.emails.length, 0);
+
+  // Uncertain band (CIEMSA ≈ 0.53) + judge says YES → accepted.
+  const uncertainYes = createGoogleMapsResolver({ ...fakeBackends([
+    { placeId: "cm", name: "CIEMSA", address: "Camino Carrasco, Montevideo, Uruguay" },
+  ]), judge: yesJudge });
+  const outY = await uncertainYes.resolve({ supplierId: "R/3", rut: "2...", name: "C I E M S A CONSTRUCCIONES E INSTALACIONES" });
+  assert.ok(outY.place, "judge YES on uncertain band should accept");
+
+  // Uncertain band + judge says NO → rejected.
+  const uncertainNo = createGoogleMapsResolver({ ...fakeBackends([
+    { placeId: "cm", name: "CIEMSA", address: "Camino Carrasco, Montevideo, Uruguay" },
+  ]), judge: noJudge });
+  const outN = await uncertainNo.resolve({ supplierId: "R/4", rut: "2...", name: "C I E M S A CONSTRUCCIONES E INSTALACIONES" });
+  assert.equal(outN.place ?? null, null, "judge NO on uncertain band should reject");
+  console.log("ok: googleMaps resolver");
+})();
