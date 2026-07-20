@@ -63,8 +63,6 @@ export interface EmpCase {
   deepDive?: string
 }
 
-const GOV = (id: string) => `https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/${id}`
-
 /* ============================================================================
  *  CATÁLOGO — empresas señaladas × ¿verificable en la base?
  * ========================================================================== */
@@ -452,15 +450,15 @@ export const EMP_CASES: EmpCase[] = [
 /* ============================================================================
  *  DEEP-DIVE 1 — ITHG + Solidar · ambulancias de ASSE (la invisibilidad)
  * ========================================================================== */
-export interface EmpLedgerRow { ocid: string, idc: string, year: number, buyer: string, desc: string, amount: number, url: string }
+export interface EmpLedgerRow { ocid: string, idc: string, year: number, buyer: string, desc: string, amount: number }
 
 /** Las 5 fichas de ITHG que la base SÍ registra (verificadas en releases). */
 export const ITHG_LEDGER: EmpLedgerRow[] = [
-  { ocid: 'ocds-yfs5dr-902017', idc: '902017', year: 2021, buyer: 'ASSE (central)', desc: 'Servicio de equipo técnico + ambulancia común y especializada (11 renglones)', amount: 21323014, url: GOV('902017') },
-  { ocid: 'ocds-yfs5dr-1023474', idc: '1023474', year: 2023, buyer: 'Atención de Urgencia, Emergencia Prehospitalaria y Traslado', desc: 'Equipo técnico de traslado + ambulancia + transporte con chofer', amount: 8164130, url: GOV('1023474') },
-  { ocid: 'ocds-yfs5dr-1028317', idc: '1028317', year: 2023, buyer: 'Atención de Urgencia, Emergencia Prehospitalaria y Traslado', desc: 'Arrendamiento de ambulancia', amount: 2925000, url: GOV('1028317') },
-  { ocid: 'ocds-yfs5dr-1213486', idc: '1213486', year: 2025, buyer: 'Centro de Rehabilitación Médico Ocupacional y Sicosocial', desc: 'Arrendamiento de ambulancia', amount: 125000, url: GOV('1213486') },
-  { ocid: 'ocds-yfs5dr-1267284', idc: '1267284', year: 2025, buyer: 'Centro de Rehabilitación Médico Ocupacional y Sicosocial', desc: 'Arrendamiento de ambulancia', amount: 125000, url: GOV('1267284') },
+  { ocid: 'ocds-yfs5dr-902017', idc: '902017', year: 2021, buyer: 'ASSE (central)', desc: 'Servicio de equipo técnico + ambulancia común y especializada (11 renglones)', amount: 21323014 },
+  { ocid: 'ocds-yfs5dr-1023474', idc: '1023474', year: 2023, buyer: 'Atención de Urgencia, Emergencia Prehospitalaria y Traslado', desc: 'Equipo técnico de traslado + ambulancia + transporte con chofer', amount: 8164130 },
+  { ocid: 'ocds-yfs5dr-1028317', idc: '1028317', year: 2023, buyer: 'Atención de Urgencia, Emergencia Prehospitalaria y Traslado', desc: 'Arrendamiento de ambulancia', amount: 2925000 },
+  { ocid: 'ocds-yfs5dr-1213486', idc: '1213486', year: 2025, buyer: 'Centro de Rehabilitación Médico Ocupacional y Sicosocial', desc: 'Arrendamiento de ambulancia', amount: 125000 },
+  { ocid: 'ocds-yfs5dr-1267284', idc: '1267284', year: 2025, buyer: 'Centro de Rehabilitación Médico Ocupacional y Sicosocial', desc: 'Arrendamiento de ambulancia', amount: 125000 },
 ]
 
 export const ITHG_STATS = {
@@ -499,12 +497,12 @@ export const SATURNO_BY_BUYER: { buyer: string, n: number, spend: number, force:
 
 /** Las compras de carne PORCINA (bondiola) de la Armada — el corazón de la causa penal. */
 export const SATURNO_ARMADA_LEDGER: EmpLedgerRow[] = [
-  { ocid: 'ocds-yfs5dr-931845', idc: '931845', year: 2022, buyer: 'Comando General de la Armada', desc: 'Carne vacuna (uso humano) — 8 renglones', amount: 19679088, url: GOV('931845') },
-  { ocid: 'ocds-yfs5dr-908806', idc: '908806', year: 2021, buyer: 'Comando General de la Armada', desc: 'Carne vacuna (uso humano)', amount: 10208940, url: GOV('908806') },
-  { ocid: 'ocds-yfs5dr-858910', idc: '858910', year: 2021, buyer: 'Comando General de la Armada', desc: 'Carne porcina (bondiola) — el corte del faltante', amount: 9124255, url: GOV('858910') },
-  { ocid: 'ocds-yfs5dr-908807', idc: '908807', year: 2021, buyer: 'Comando General de la Armada', desc: 'Carne porcina (bondiola) — el corte del faltante', amount: 9124255, url: GOV('908807') },
-  { ocid: 'ocds-yfs5dr-924956', idc: '924956', year: 2022, buyer: 'Comando General de la Armada', desc: 'Carne porcina (bondiola)', amount: 8765365, url: GOV('924956') },
-  { ocid: 'ocds-yfs5dr-948067', idc: '948067', year: 2022, buyer: 'Comando General de la Armada', desc: 'Carne porcina (bondiola)', amount: 8765365, url: GOV('948067') },
+  { ocid: 'ocds-yfs5dr-931845', idc: '931845', year: 2022, buyer: 'Comando General de la Armada', desc: 'Carne vacuna (uso humano) — 8 renglones', amount: 19679088 },
+  { ocid: 'ocds-yfs5dr-908806', idc: '908806', year: 2021, buyer: 'Comando General de la Armada', desc: 'Carne vacuna (uso humano)', amount: 10208940 },
+  { ocid: 'ocds-yfs5dr-858910', idc: '858910', year: 2021, buyer: 'Comando General de la Armada', desc: 'Carne porcina (bondiola) — el corte del faltante', amount: 9124255 },
+  { ocid: 'ocds-yfs5dr-908807', idc: '908807', year: 2021, buyer: 'Comando General de la Armada', desc: 'Carne porcina (bondiola) — el corte del faltante', amount: 9124255 },
+  { ocid: 'ocds-yfs5dr-924956', idc: '924956', year: 2022, buyer: 'Comando General de la Armada', desc: 'Carne porcina (bondiola)', amount: 8765365 },
+  { ocid: 'ocds-yfs5dr-948067', idc: '948067', year: 2022, buyer: 'Comando General de la Armada', desc: 'Carne porcina (bondiola)', amount: 8765365 },
 ]
 
 export const SATURNO_STATS = {

@@ -7,6 +7,8 @@
  */
 import { ITHG_LEDGER, ITHG_STATS } from '~/data/investigaciones-empresas'
 
+const localePath = useLocalePath()
+
 const ES = {
   title: 'ITHG: cinco fichas en la base, veinte millones de dólares en la realidad',
   dek: 'Una sociedad creada en 2020 como «proveedora marítima» pasó a concentrar el 96% de los traslados en ambulancia de ASSE, todo por compra directa. La base de Compras Estatales registra apenas cinco contratos por unos 33 millones de pesos. La auditoría de ASSE y el Tribunal de Cuentas documentan más de dos mil millones. La diferencia es la parte del gasto que la transparencia no ve.',
@@ -24,8 +26,8 @@ const ES = {
   gapVisible: 'En la base (5 fichas)', gapDocumentado: 'Auditoría ASSE (2021–23)', gapObservado: 'Observado por el TCR',
   gapFinding: 'La base registra menos del 2% de lo que la auditoría documenta. No es un error de los datos: es la naturaleza de la compra directa de emergencia, que puede resolverse por fuera del circuito que deja ficha pública. Donde más plata se movió, la transparencia es más fina.',
   ledgerTag: 'La evidencia', ledgerTitle: 'Las cinco fichas que sí quedaron registradas',
-  ledgerIntro: 'Los cinco contratos de ITHG que figuran en Compras Estatales, verificados en la base y enlazados a su ficha oficial. Es lo poco que el dato abierto muestra de una relación mucho más grande.',
-  colDate: 'Año', colBuyer: 'Comprador', colObjeto: 'Objeto', colAmount: 'Monto', ficha: 'Ficha oficial',
+  ledgerIntro: 'Los cinco contratos de ITHG que figuran en Compras Estatales, verificados en la base y enlazados a su ficha en el sitio. Es lo poco que el dato abierto muestra de una relación mucho más grande.',
+  colDate: 'Año', colBuyer: 'Comprador', colObjeto: 'Objeto', colAmount: 'Monto', ficha: 'Ver contrato',
   solTag: 'El espejo', solTitle: 'Solidar (JD&A): la «competidora» del mismo domicilio',
   sol1: 'En las licitaciones de ambulancias de ASSE apareció una segunda empresa, Solidar (razón social JD&A S.A.S.), presentada como competidora independiente. El Tribunal de Cuentas observó el convenio marco por «indicios de prácticas prohibidas» contra la libre competencia: Solidar comparte con ITHG el domicilio, los equipos y contratos entre sí, y ofertaba en términos idénticos. En el Parlamento, los propios funcionarios del SAME 105 no supieron explicar a cuál de las dos empresas estaban vinculados.',
   sol2: `En la base, Solidar/JD&A figura con ${ITHG_STATS.solidarFichas} contratos. El convenio marco quedó suspendido y no entró en vigor; Solidar operó sobre todo como subcontratista de ITHG.`,
@@ -35,7 +37,7 @@ const ES = {
   srcTitle: 'Fuentes',
   discTitle: 'Cómo leer esta investigación',
   disc: [
-    'Los cinco contratos y sus montos salen de la base de Compras Estatales (OCDS) del sitio, verificados uno por uno y enlazados a su ficha oficial. Las cifras mayores —los ~US$ 20 M, los +$2.000 M observados, el 96,47%, la ambulancia de US$ 800 mil— provienen de la auditoría de ASSE, del Tribunal de Cuentas y de la prensa citada, no de la base.',
+    'Los cinco contratos y sus montos salen de la base de Compras Estatales (OCDS) del sitio, verificados uno por uno y enlazados a su ficha en el sitio. Las cifras mayores —los ~US$ 20 M, los +$2.000 M observados, el 96,47%, la ambulancia de US$ 800 mil— provienen de la auditoría de ASSE, del Tribunal de Cuentas y de la prensa citada, no de la base.',
     'ITHG no está imputada. Se la nombra como proveedora del Estado y como objeto de una auditoría y una denuncia públicas. Un contrato observado o una compra directa no es, por sí solo, prueba de delito. Quien quiera aportar su descargo puede hacerlo.',
   ],
 }
@@ -57,8 +59,8 @@ const EN: typeof ES = {
   gapVisible: 'In the data (5 records)', gapDocumentado: 'ASSE audit (2021–23)', gapObservado: 'Observed by the TCR',
   gapFinding: 'The data records less than 2% of what the audit documents. It is not a data error: it is the nature of emergency direct-purchase, which can be settled outside the circuit that leaves a public record. Where the most money moved, transparency is thinnest.',
   ledgerTag: 'The evidence', ledgerTitle: 'The five records that were logged',
-  ledgerIntro: 'ITHG\'s five contracts that appear in State procurement, verified in the data and linked to their official record. It is the little the open data shows of a far larger relationship.',
-  colDate: 'Year', colBuyer: 'Buyer', colObjeto: 'Item', colAmount: 'Amount', ficha: 'Official record',
+  ledgerIntro: 'ITHG\'s five contracts that appear in State procurement, verified in the data and linked to their record on the site. It is the little the open data shows of a far larger relationship.',
+  colDate: 'Year', colBuyer: 'Buyer', colObjeto: 'Item', colAmount: 'Amount', ficha: 'View contract',
   solTag: 'The mirror', solTitle: 'Solidar (JD&A): the "competitor" at the same address',
   sol1: 'A second firm, Solidar (registered as JD&A S.A.S.), showed up in ASSE\'s ambulance tenders as an independent competitor. The Tribunal de Cuentas observed the framework for "signs of prohibited practices" against competition: Solidar shares ITHG\'s address, equipment and mutual contracts, and bid in identical terms. In Parliament, SAME 105 officials could not explain which of the two firms they were linked to.',
   sol2: `In the data, Solidar/JD&A appears with ${ITHG_STATS.solidarFichas} contracts. The framework was suspended and never took effect; Solidar operated mainly as ITHG\'s subcontractor.`,
@@ -68,7 +70,7 @@ const EN: typeof ES = {
   srcTitle: 'Sources',
   discTitle: 'How to read this investigation',
   disc: [
-    'The five contracts and their amounts come from the site\'s State-procurement data (OCDS), verified one by one and linked to their official record. The larger figures —the ~US$20 M, the +$2,000 M observed, the 96.47%, the US$800k ambulance— come from ASSE\'s audit, the Tribunal de Cuentas and the cited press, not from the data.',
+    'The five contracts and their amounts come from the site\'s State-procurement data (OCDS), verified one by one and linked to their record on the site. The larger figures —the ~US$20 M, the +$2,000 M observed, the 96.47%, the US$800k ambulance— come from ASSE\'s audit, the Tribunal de Cuentas and the cited press, not from the data.',
     'ITHG is not charged. It is named as a State supplier and as the subject of a public audit and complaint. An observed contract or a direct purchase is not, on its own, proof of a crime. Anyone named may add their response.',
   ],
 }
@@ -315,12 +317,10 @@ const SOURCES = [
                   />
                 </td>
                 <td class="num">
-                  <a
-                    :href="row.url"
-                    target="_blank"
-                    rel="noopener"
+                  <NuxtLink
+                    :to="localePath(`/contracts/adjudicacion-${row.idc}`)"
                     class="im-ficha u-mono"
-                  >{{ c.ficha }} →</a>
+                  >{{ c.ficha }} →</NuxtLink>
                 </td>
               </tr>
             </tbody>

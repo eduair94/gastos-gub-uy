@@ -2,7 +2,7 @@
 /**
  * Intendencia de Montevideo — gasto discrecional a la luz del déficit.
  * Chrome estático alrededor de ~/data/investigaciones-im. Cada contrato del ledger
- * enlaza a su ficha oficial; el déficit y los casos mediáticos son prensa citada.
+ * enlaza a su ficha en el sitio; el déficit y los casos mediáticos son prensa citada.
  */
 import {
   IM_CATEGORIES,
@@ -260,12 +260,10 @@ const ledger = computed(() => IM_LEDGER.slice().sort((a, b) => b.amount - a.amou
                   />
                 </td>
                 <td class="num">
-                  <a
-                    :href="row.url"
-                    target="_blank"
-                    rel="noopener"
+                  <NuxtLink
+                    :to="localePath(`/contracts/adjudicacion-${row.id}`)"
                     class="im-ficha u-mono"
-                  >{{ c.ledger.ficha }} →</a>
+                  >{{ c.ledger.ficha }} →</NuxtLink>
                 </td>
               </tr>
             </tbody>

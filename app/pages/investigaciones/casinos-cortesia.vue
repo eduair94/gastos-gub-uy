@@ -2,7 +2,7 @@
 /**
  * Deep-dive: the "consumición de cortesía" (art. 79764). The dispersion scatter is
  * the signature — Código de Barras' flat 4× premium against the cloud. The ledger
- * lists all 63 lines, each linking to its official record. Data + copy from the module.
+ * lists all 63 lines, each linking to its record on the site. Data + copy from the module.
  */
 import {
   CORTESIA_BASELINE,
@@ -345,11 +345,9 @@ const ledger = computed(() => CORTESIA_CONTRACTS
                   >{{ cx.consultar }}</span>
                 </td>
                 <td :data-label="cx.colFicha">
-                  <a
-                    :href="row.url"
-                    target="_blank"
-                    rel="noopener"
-                  >{{ row.idc }} ↗</a>
+                  <NuxtLink :to="localePath(`/contracts/adjudicacion-${row.idc}`)">
+                    {{ row.idc }} →
+                  </NuxtLink>
                 </td>
               </tr>
             </tbody>

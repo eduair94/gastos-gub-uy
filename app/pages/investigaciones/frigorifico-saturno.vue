@@ -7,6 +7,8 @@
  */
 import { SATURNO_ARMADA_LEDGER, SATURNO_BY_BUYER, SATURNO_STATS } from '~/data/investigaciones-empresas'
 
+const localePath = useLocalePath()
+
 const ES = {
   title: 'Frigorífico Saturno: la carne de los cuarteles y las toneladas que no llegaron',
   dek: 'Abasto de Carnes Saturno es uno de los grandes proveedores de carne del Estado: 283 contratos por unos 1.140 millones de pesos con el INDA, el Ejército, la Armada y la Fuerza Aérea. En la Armada, una pericia detectó un faltante de unas 57 toneladas de carne, sobreprecios y cortes no licitados. El caso está en la Fiscalía de Delitos Económicos.',
@@ -25,15 +27,15 @@ const ES = {
   case1: 'Según la pericia contable en la causa, entre las licitaciones 28/2021 y 28/2022 de la Armada faltan unos 57.398 kg de carne (~$8,4 millones): 34.936 kg de bondiola no pueden justificarse como recibidos. La maniobra descrita: los oficiales encargaban cortes no licitados —lomo, chorizo, peceto— pese a que la adjudicación era por bondiola, y el frigorífico fijaba por esos cortes precios muy por encima del mercado, descontándolos del saldo de bondiola adjudicada. Se hallaron además 26 remitos con sellos y firmas irregulares.',
   case2: 'En la base, las compras de carne porcina (bondiola) de la Armada a Saturno en 2021 y 2022 están a la vista. No prueban el faltante —eso surge de la pericia interna—, pero anclan la relación contractual sobre la que se investiga: son los renglones de los que, según la Armada, la carne no llegó a destino.',
   ledgerTag: 'La evidencia', ledgerTitle: 'Las compras de la Armada, ficha por ficha',
-  ledgerIntro: 'Contratos de Saturno con el Comando General de la Armada, verificados en la base y enlazados a su ficha oficial. En rojo, el corte del faltante: la carne porcina (bondiola).',
-  colDate: 'Año', colObjeto: 'Objeto', colAmount: 'Monto', ficha: 'Ficha oficial',
+  ledgerIntro: 'Contratos de Saturno con el Comando General de la Armada, verificados en la base y enlazados a su ficha en el sitio. En rojo, el corte del faltante: la carne porcina (bondiola).',
+  colDate: 'Año', colObjeto: 'Objeto', colAmount: 'Monto', ficha: 'Ver contrato',
   statusTag: 'El estado', statusTitle: 'Dónde está la causa',
   status1: 'La Armada presentó la denuncia penal a fines de 2022. La causa está a cargo de la Fiscalía de Delitos Económicos y Complejos (fiscal Sandra Fleitas), con al menos 12 oficiales citados a declarar y una investigación administrativa interna en paralelo.',
   status2: 'La otra campana: la investigación penal se centra en los oficiales de la Armada, no en el frigorífico, que no está imputado formalmente. Lo que está cuestionado son sus precios y sus remitos. Saturno sigue siendo, en la base, un proveedor de carne habitual del Estado.',
   srcTitle: 'Fuentes',
   discTitle: 'Cómo leer esta investigación',
   disc: [
-    'Los contratos, montos y compradores salen de la base de Compras Estatales (OCDS) del sitio, verificados y enlazados a su ficha oficial. El faltante de 57 toneladas, los sobreprecios y los remitos irregulares provienen de la pericia contable y la denuncia de la Armada, reportadas por la prensa citada —no de la base.',
+    'Los contratos, montos y compradores salen de la base de Compras Estatales (OCDS) del sitio, verificados y enlazados a su ficha en el sitio. El faltante de 57 toneladas, los sobreprecios y los remitos irregulares provienen de la pericia contable y la denuncia de la Armada, reportadas por la prensa citada —no de la base.',
     'El frigorífico no está imputado. Se lo nombra como proveedor del Estado y como parte cuestionada en una causa pública. Un contrato o un precio alto no es, por sí solo, prueba de delito. Quien quiera aportar su descargo puede hacerlo.',
   ],
 }
@@ -56,15 +58,15 @@ const EN: typeof ES = {
   case1: 'Per the forensic audit in the case, between the Navy\'s tenders 28/2021 and 28/2022 about 57,398 kg of meat are missing (~$8.4 million): 34,936 kg of shoulder cannot be justified as received. The described maneuver: officers ordered un-tendered cuts —sirloin, chorizo, eye round— even though the award was for shoulder, and the plant set well-above-market prices for those cuts, deducting them from the pending shoulder balance. 26 delivery notes with irregular stamps and signatures were also found.',
   case2: 'In the data, the Navy\'s pork (shoulder) purchases from Saturno in 2021 and 2022 are in plain sight. They do not prove the shortfall —that comes from the internal audit— but they anchor the contractual relationship under investigation: they are the line items from which, per the Navy, the meat did not reach its destination.',
   ledgerTag: 'The evidence', ledgerTitle: 'The Navy\'s purchases, record by record',
-  ledgerIntro: 'Saturno\'s contracts with the Navy Command, verified in the data and linked to their official record. In red, the cut of the shortfall: pork (shoulder).',
-  colDate: 'Year', colObjeto: 'Item', colAmount: 'Amount', ficha: 'Official record',
+  ledgerIntro: 'Saturno\'s contracts with the Navy Command, verified in the data and linked to their record on the site. In red, the cut of the shortfall: pork (shoulder).',
+  colDate: 'Year', colObjeto: 'Item', colAmount: 'Amount', ficha: 'View contract',
   statusTag: 'The status', statusTitle: 'Where the case stands',
   status1: 'The Navy filed the criminal complaint in late 2022. The case is with the Economic & Complex Crimes Prosecutor (Sandra Fleitas), with at least 12 officers summoned to testify and a parallel internal administrative investigation.',
   status2: 'The other side: the criminal probe centers on the Navy officers, not the plant, which is not formally charged. What is questioned are its prices and its delivery notes. Saturno remains, in the data, a regular State meat supplier.',
   srcTitle: 'Sources',
   discTitle: 'How to read this investigation',
   disc: [
-    'The contracts, amounts and buyers come from the site\'s State-procurement data (OCDS), verified and linked to their official record. The 57-tonne shortfall, the over-prices and the irregular delivery notes come from the forensic audit and the Navy\'s complaint, reported by the cited press —not from the data.',
+    'The contracts, amounts and buyers come from the site\'s State-procurement data (OCDS), verified and linked to their record on the site. The 57-tonne shortfall, the over-prices and the irregular delivery notes come from the forensic audit and the Navy\'s complaint, reported by the cited press —not from the data.',
     'The plant is not charged. It is named as a State supplier and as a questioned party in a public case. A contract or a high price is not, on its own, proof of a crime. Anyone named may add their response.',
   ],
 }
@@ -312,12 +314,10 @@ const SOURCES = [
                   />
                 </td>
                 <td class="num">
-                  <a
-                    :href="row.url"
-                    target="_blank"
-                    rel="noopener"
+                  <NuxtLink
+                    :to="localePath(`/contracts/adjudicacion-${row.idc}`)"
                     class="im-ficha u-mono"
-                  >{{ c.ficha }} →</a>
+                  >{{ c.ficha }} →</NuxtLink>
                 </td>
               </tr>
             </tbody>

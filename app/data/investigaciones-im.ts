@@ -23,7 +23,6 @@ export interface ImLedgerRow {
   /** Real classification.description from the ficha (what was actually bought). */
   desc: string
   amount: number
-  url: string
 }
 export interface ImCategory { key: string, spend: number, contracts: number }
 export interface ImNewsCase { key: string, amountText: string, source: string, url: string, date: string }
@@ -52,25 +51,23 @@ export const IM_CATEGORIES: ImCategory[] = [
 export const IM_CONSULTORIA = { spend: 342996586, contracts: 286 }
 export const IM_DISCRECIONAL_TOTAL = IM_CATEGORIES.reduce((s, c) => s + c.spend, 0)
 
-const ficha = (id: string) => `https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/${id}`
-
 /** 15 contratos verificados (buyer 98-1, proveedor y monto confirmados en la base). Ilustrativos, no exhaustivos. */
 export const IM_LEDGER: ImLedgerRow[] = [
-  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i271252', id: 'i271252', date: '2018-09-20', year: 2018, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 13770492, url: ficha('i271252') },
-  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i384862', id: 'i384862', date: '2023-03-07', year: 2023, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 9016393, url: ficha('i384862') },
-  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i309070', id: 'i309070', date: '2020-04-03', year: 2020, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 7786885, url: ficha('i309070') },
-  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i315676', id: 'i315676', date: '2020-09-24', year: 2020, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 7377049, url: ficha('i315676') },
-  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i298544', id: 'i298544', date: '2019-12-20', year: 2019, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 7377049, url: ficha('i298544') },
-  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i290472', id: 'i290472', date: '2019-06-25', year: 2019, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 6885246, url: ficha('i290472') },
-  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i231587', id: 'i231587', date: '2016-06-14', year: 2016, supplier: 'MONTE CARLO S A', desc: "Publicidad radial", amount: 4238800, url: ficha('i231587') },
-  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i233600', id: 'i233600', date: '2016-07-27', year: 2016, supplier: 'SAETA (Emisoras de Televisión y Anexos)', desc: "Publicidad televisiva", amount: 3804100, url: ficha('i233600') },
-  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i284087', id: 'i284087', date: '2019-03-07', year: 2019, supplier: 'AMEN S.A.', desc: "Campaña publicitaria", amount: 2719754, url: ficha('i284087') },
-  { cat: 'eventos', ocid: 'ocds-yfs5dr-i280144', id: 'i280144', date: '2019-05-08', year: 2019, supplier: 'Asociación Rural del Uruguay', desc: "Venta de entradas para espectáculos", amount: 3244539, url: ficha('i280144') },
-  { cat: 'eventos', ocid: 'ocds-yfs5dr-i291780', id: 'i291780', date: '2019-09-13', year: 2019, supplier: 'CANCLINI VILAR FEDERICO', desc: "Carpa para espectáculos", amount: 3210000, url: ficha('i291780') },
-  { cat: 'eventos', ocid: 'ocds-yfs5dr-i303299', id: 'i303299', date: '2020-03-06', year: 2020, supplier: 'Asociación Rural del Uruguay', desc: "Venta de entradas para espectáculos", amount: 2667500, url: ficha('i303299') },
-  { cat: 'eventos', ocid: 'ocds-yfs5dr-i375681', id: 'i375681', date: '2022-12-16', year: 2022, supplier: 'PALLADIUM S A', desc: "Vallado para el desfile de Carnaval 2023", amount: 2573578, url: ficha('i375681') },
-  { cat: 'merchandising', ocid: 'ocds-yfs5dr-i444887', id: 'i444887', date: '2024-11-18', year: 2024, supplier: 'LANCER S A', desc: "Remeras de algodón (naranja)", amount: 5784554, url: ficha('i444887') },
-  { cat: 'merchandising', ocid: 'ocds-yfs5dr-i408848', id: 'i408848', date: '2023-12-13', year: 2023, supplier: 'LANCER S A', desc: "Remeras de algodón (naranja)", amount: 3794602, url: ficha('i408848') },
+  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i271252', id: 'i271252', date: '2018-09-20', year: 2018, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 13770492 },
+  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i384862', id: 'i384862', date: '2023-03-07', year: 2023, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 9016393 },
+  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i309070', id: 'i309070', date: '2020-04-03', year: 2020, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 7786885 },
+  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i315676', id: 'i315676', date: '2020-09-24', year: 2020, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 7377049 },
+  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i298544', id: 'i298544', date: '2019-12-20', year: 2019, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 7377049 },
+  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i290472', id: 'i290472', date: '2019-06-25', year: 2019, supplier: 'SIETEVEINTE S.R.L.', desc: "Asesoramiento publicitario", amount: 6885246 },
+  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i231587', id: 'i231587', date: '2016-06-14', year: 2016, supplier: 'MONTE CARLO S A', desc: "Publicidad radial", amount: 4238800 },
+  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i233600', id: 'i233600', date: '2016-07-27', year: 2016, supplier: 'SAETA (Emisoras de Televisión y Anexos)', desc: "Publicidad televisiva", amount: 3804100 },
+  { cat: 'publicidad', ocid: 'ocds-yfs5dr-i284087', id: 'i284087', date: '2019-03-07', year: 2019, supplier: 'AMEN S.A.', desc: "Campaña publicitaria", amount: 2719754 },
+  { cat: 'eventos', ocid: 'ocds-yfs5dr-i280144', id: 'i280144', date: '2019-05-08', year: 2019, supplier: 'Asociación Rural del Uruguay', desc: "Venta de entradas para espectáculos", amount: 3244539 },
+  { cat: 'eventos', ocid: 'ocds-yfs5dr-i291780', id: 'i291780', date: '2019-09-13', year: 2019, supplier: 'CANCLINI VILAR FEDERICO', desc: "Carpa para espectáculos", amount: 3210000 },
+  { cat: 'eventos', ocid: 'ocds-yfs5dr-i303299', id: 'i303299', date: '2020-03-06', year: 2020, supplier: 'Asociación Rural del Uruguay', desc: "Venta de entradas para espectáculos", amount: 2667500 },
+  { cat: 'eventos', ocid: 'ocds-yfs5dr-i375681', id: 'i375681', date: '2022-12-16', year: 2022, supplier: 'PALLADIUM S A', desc: "Vallado para el desfile de Carnaval 2023", amount: 2573578 },
+  { cat: 'merchandising', ocid: 'ocds-yfs5dr-i444887', id: 'i444887', date: '2024-11-18', year: 2024, supplier: 'LANCER S A', desc: "Remeras de algodón (naranja)", amount: 5784554 },
+  { cat: 'merchandising', ocid: 'ocds-yfs5dr-i408848', id: 'i408848', date: '2023-12-13', year: 2023, supplier: 'LANCER S A', desc: "Remeras de algodón (naranja)", amount: 3794602 },
 ]
 
 /** Casos mediáticos (contexto verificado en prensa, no en la base de compras). */
@@ -119,8 +116,8 @@ const IM_CONTENT = {
     ledger: {
       tag: 'La evidencia',
       title: 'Quince contratos, uno por uno',
-      intro: 'Los contratos discrecionales más grandes del período, verificados en la base y enlazados a su ficha oficial. La publicidad se concentra en un puñado de proveedores; el merchandising (remeras, gorros) siguió incluso en 2023 y 2024, en pleno rojo.',
-      colDate: 'Fecha', colObjeto: 'Objeto', colDesc: 'Proveedor / rubro', colSup: 'Proveedor', colAmount: 'Monto', ficha: 'Ficha',
+      intro: 'Los contratos discrecionales más grandes del período, verificados en la base y enlazados a su ficha en el sitio. La publicidad se concentra en un puñado de proveedores; el merchandising (remeras, gorros) siguió incluso en 2023 y 2024, en pleno rojo.',
+      colDate: 'Fecha', colObjeto: 'Objeto', colDesc: 'Proveedor / rubro', colSup: 'Proveedor', colAmount: 'Monto', ficha: 'Ver contrato',
     },
     explore: {
       tag: 'Seguí explorando',
@@ -182,8 +179,8 @@ const IM_CONTENT = {
     ledger: {
       tag: 'The evidence',
       title: 'Fifteen contracts, one by one',
-      intro: 'The largest discretionary contracts of the period, verified in the data and linked to their official file. Advertising concentrates in a handful of suppliers; the merchandising (t-shirts, hats) continued even in 2023 and 2024, deep in the red.',
-      colDate: 'Date', colObjeto: 'Item', colDesc: 'Supplier / category', colSup: 'Supplier', colAmount: 'Amount', ficha: 'File',
+      intro: 'The largest discretionary contracts of the period, verified in the data and linked to their record on the site. Advertising concentrates in a handful of suppliers; the merchandising (t-shirts, hats) continued even in 2023 and 2024, deep in the red.',
+      colDate: 'Date', colObjeto: 'Item', colDesc: 'Supplier / category', colSup: 'Supplier', colAmount: 'Amount', ficha: 'View contract',
     },
     explore: {
       tag: 'Keep exploring',
