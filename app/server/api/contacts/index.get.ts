@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
-import { buildContactFilter, contactSort, sanitizeContact } from '../../utils/contacts'
+import { buildContactFilter, contactSort, CONTACTS_MAX_TIME_MS, sanitizeContact } from '../../utils/contacts'
 import { attachDei } from '../../utils/dei'
 import { SupplierContactModel } from '../../utils/models'
 
@@ -28,8 +28,9 @@ export default defineEventHandler(async (event) => {
         .sort(contactSort(query))
         .skip(skip)
         .limit(limit)
+        .maxTimeMS(CONTACTS_MAX_TIME_MS)
         .lean(),
-      SupplierContactModel.countDocuments(built.filter),
+      SupplierContactModel.countDocuments(built.filter, { maxTimeMS: CONTACTS_MAX_TIME_MS }),
     ])
 
     // DEI badge keyed off the page rows only, then ToS-sanitize each.

@@ -7,6 +7,10 @@
  */
 import type { ISupplierContact } from './models'
 import { DeiCompanyModel } from './models'
+import { escapeRegex, sanitizeSearch } from './query'
+
+/** Shared ceiling for the list/export DB reads so a pathological query can't pin a mongod thread. */
+export const CONTACTS_MAX_TIME_MS = 15_000
 
 /** Hard ceiling on a single export — never silently exceeded (see export handler). */
 export const EXPORT_CAP = 50_000
@@ -44,21 +48,32 @@ export async function buildContactFilter(query: ContactQuery): Promise<FilterRes
   const filter: Record<string, unknown> = { status: 'enriched' }
 
   // Default = deliverable list: at least one MX-validated, valid email.
-  // verified=0 widens to any email candidate.
+  // verified=0 widens to any surfaceable email — but still excludes suppressed/
+  // invalid, so a widened row always has a displayable address (mirrors pickEmails).
   if (String(query.verified ?? '1') === '0') {
-    filter['emails.0'] = { $exists: true }
+    filter.emails = { $elemMatch: { status: { $nin: ['suppressed', 'invalid'] } } }
   }
   else {
     filter.emails = { $elemMatch: { mxValid: true, status: 'valid' } }
   }
 
-  const search = query.search ? String(query.search).trim() : ''
-  if (search) filter.name = { $regex: search, $options: 'i' }
+  // User input → escaped literal + length cap before it reaches the regex engine
+  // (ReDoS guard; the repo-wide rule, see app/server/context.md).
+  const search = sanitizeSearch(query.search)
+  if (search) filter.name = { $regex: escapeRegex(search), $options: 'i' }
 
   if (query.rubro) filter['rubros.classificationId'] = String(query.rubro)
 
-  if (String(query.hasPhone ?? '') === '1') filter.phone = { $nin: [null, ''] }
-  if (String(query.hasWebsite ?? '') === '1') filter.website = { $nin: [null, ''] }
+  // "has phone" means a DISPLAYABLE phone: googleMaps-sourced phones are stripped
+  // on read (ToS), so counting them here would inflate the total with blank cells.
+  if (String(query.hasPhone ?? '') === '1') {
+    filter.phone = { $nin: [null, ''] }
+    filter.phoneSource = { $ne: 'googleMaps' }
+  }
+  if (String(query.hasWebsite ?? '') === '1') {
+    filter.website = { $nin: [null, ''] }
+    filter.websiteSource = { $ne: 'googleMaps' }
+  }
 
   const tamano = query.tamano ? String(query.tamano) : ''
   const departamento = query.departamento ? String(query.departamento) : ''
@@ -157,6 +172,8 @@ export function sanitizeContact(
     .sort((a, b) => b.share - a.share)
 
   const phone = doc.phoneSource === 'googleMaps' ? null : (doc.phone ?? null)
+  // A Places-listed website is Google-Maps content under the same ToS as phone.
+  const website = doc.websiteSource === 'googleMaps' ? null : (doc.website ?? null)
   const placeRestricted = doc.placeSource === 'googleMaps'
 
   return {
@@ -165,7 +182,7 @@ export function sanitizeContact(
     name: doc.name ?? '',
     email: pickDisplayEmail(doc.primaryEmail ?? null, emails),
     emails,
-    website: doc.website ?? null,
+    website,
     phone,
     locality: placeRestricted ? null : (doc.locality ?? null),
     address: placeRestricted ? null : (doc.address ?? null),
@@ -225,9 +242,10 @@ export function toJsonExport(contacts: PublicContact[]): string {
   return JSON.stringify(contacts, null, 2)
 }
 
-/** vCard 3.0 text escape: backslash, comma, semicolon, newline. */
+/** vCard 3.0 text escape: backslash, comma, semicolon, and ANY line break
+ *  (CRLF/CR/LF → \n) so a bare CR in source data can't inject a vCard property. */
 function vcardEscape(v: string): string {
-  return v.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
+  return v.replace(/\\/g, '\\\\').replace(/\r\n|\r|\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
 }
 
 export function toVcard(contacts: PublicContact[]): string {

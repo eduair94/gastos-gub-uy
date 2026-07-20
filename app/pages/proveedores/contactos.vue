@@ -40,6 +40,9 @@ const FORMATS = [
   { fmt: 'vcf', icon: 'mdi-card-account-details-outline' },
 ] as const
 
+/** Server-side export ceiling (mirrors EXPORT_CAP); above it the download is capped. */
+const EXPORT_CAP = 50_000
+
 const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
@@ -125,6 +128,9 @@ const contacts = computed<ContactRow[]>(() => listRes.value?.data?.contacts ?? [
 const pagination = computed(() => listRes.value?.data?.pagination ?? null)
 const directoryTotal = computed<number | null>(() => totalRes.value?.data?.pagination?.total ?? null)
 const filteredTotal = computed<number>(() => pagination.value?.total ?? 0)
+// Above the cap the download returns the top EXPORT_CAP rows — say so up front,
+// since an anchor download can't surface the server's truncation header.
+const exportTruncated = computed(() => filteredTotal.value > EXPORT_CAP)
 const totalPages = computed(() => Math.max(1, pagination.value?.totalPages ?? 1))
 const rubros = computed<RubroFacet[]>(() => rubroRes.value?.data?.rubros ?? [])
 
@@ -371,6 +377,13 @@ useSeo(() => ({
         </a>
       </div>
     </div>
+
+    <p
+      v-if="exportTruncated"
+      class="dl__warn"
+    >
+      {{ t('contacts.download.capWarning', { cap: formatNumber(EXPORT_CAP) }) }}
+    </p>
 
     <p class="count">
       {{ t('contacts.resultsSummary', { count: formatNumber(filteredTotal) }) }}
@@ -656,6 +669,12 @@ useSeo(() => ({
 }
 
 .dl__btn:hover { border-color: var(--celeste); color: var(--celeste-deep); }
+
+.dl__warn {
+  margin: 0 0 var(--s-3);
+  font-size: var(--t-sm);
+  color: var(--text-muted);
+}
 
 .count {
   margin: 0 0 var(--s-3);

@@ -764,7 +764,8 @@
     },
     "download": {
       "label": "Descargar {count} contactos",
-      "aria": "Descargar en {format}"
+      "aria": "Descargar en {format}",
+      "capWarning": "La descarga incluye los primeros {cap} contactos. Afiná los filtros para exportar un grupo más chico."
     },
     "empty": {
       "title": "Ningún contacto coincide con esos filtros",

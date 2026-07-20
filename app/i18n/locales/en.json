@@ -764,7 +764,8 @@
     },
     "download": {
       "label": "Download {count} contacts",
-      "aria": "Download as {format}"
+      "aria": "Download as {format}",
+      "capWarning": "The download includes the first {cap} contacts. Narrow the filters to export a smaller group."
     },
     "empty": {
       "title": "No contact matches those filters",

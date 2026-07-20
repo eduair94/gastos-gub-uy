@@ -3,6 +3,7 @@ import { connectToDatabase } from '../../utils/database'
 import {
   buildContactFilter,
   contactSort,
+  CONTACTS_MAX_TIME_MS,
   EXPORT_CAP,
   EXPORT_META,
   sanitizeContact,
@@ -38,6 +39,7 @@ export default defineEventHandler(async (event) => {
       : await SupplierContactModel.find(built.filter)
         .sort(contactSort(query))
         .limit(EXPORT_CAP + 1)
+        .maxTimeMS(CONTACTS_MAX_TIME_MS)
         .lean()
 
     const truncated = rows.length > EXPORT_CAP

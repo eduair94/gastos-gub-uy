@@ -136,6 +136,18 @@ export default defineEventHandler(async (event) => {
   // a much higher ceiling. apiAuth.ts already validated the key and set context.
   const apiKey = event.context.apiKey as { id: string } | null
   if (apiKey) {
+    // Export is a heavy full-set pull regardless of who asks: a valid key raises
+    // the general ceiling but must NOT skip the strict export bucket, or a keyed
+    // caller could pull the whole contact directory 600×/min. Throttle it on the
+    // key id, separately from the read/write bucket.
+    const route = (event.node.req.url || '').split('?')[0].replace(/\/+$/, '')
+    if (route.endsWith('/export') && !exportLimiter.isAllowed(`key:${apiKey.id}:export`)) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Too Many Requests - Please slow down',
+        data: { error: 'Rate limit exceeded', retryAfter: 60 },
+      })
+    }
     const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.node.req.method || 'GET')
     const limiter = isWrite ? keyedWriteLimiter : keyedReadLimiter
     if (!limiter.isAllowed(`key:${apiKey.id}`)) {
