@@ -1206,6 +1206,8 @@
     "noAmount": "sin dato de precio",
     "evidence": "Últimos llamados de este rubro",
     "resultsCount": "{n} llamados esperados",
+    "showingCaveat": "Mostrando los {n} próximos de {total} en total",
+    "windowUnknown": "Fecha no disponible",
     "coverage": "Cobertura: solo organismo × rubro con al menos 3 llamados históricos comparables. No incluye compras centralizadas, convenios marco ni prórrogas de contratos vigentes.",
     "updated": "Calculado el {date}",
     "notReady": {
@@ -1213,8 +1215,8 @@
       "body": "El cálculo se arma con un job mensual; si nunca corrió, todavía no hay datos para mostrar."
     },
     "noMatches": {
-      "title": "Ningún llamado esperado con estos filtros",
-      "body": "Probá con otro organismo o rubro, o limpiá los filtros."
+      "title": "No encontramos llamados próximos para esa búsqueda",
+      "body": "Buscamos en todos los llamados esperados y ninguno coincide con ese organismo o rubro. Probá con otro término o limpiá la búsqueda."
     }
   },
   "mandate": {

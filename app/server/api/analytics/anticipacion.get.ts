@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { TenderForecastModel } from '../../utils/models'
+import { escapeRegex, sanitizeSearch } from '../../utils/query'
 import { DISPLAY_THRESHOLD } from '../../../../shared/forecast/constants'
 
 /**
@@ -44,6 +45,22 @@ export default defineEventHandler(async (event) => {
     const filter: Record<string, unknown> = { confidence: { $gte: minConfidence } }
     if (q.buyer) filter.buyerId = String(q.buyer)
     if (q.rubro) filter.rubroAncestors = String(q.rubro)
+
+    // Free-text search over the WHOLE eligible set (not just the fetched page) —
+    // for the public page's Organismo/Rubro boxes, where a citizen types a name
+    // fragment rather than the exact buyerId/rubroAncestors token the params
+    // above expect. Case-insensitive; input is escaped before it reaches the
+    // regex engine so `.`/`(`/`*` etc. can't break the query or ReDoS this
+    // unauthenticated endpoint. Distinct from `buyer`/`rubro` above (exact-match,
+    // used by Task 8's card and Fase-2 surfaces) — both sets are additive (AND).
+    // KNOWN LIMITATION: plain `$regex 'i'` folds case but not accents
+    // (`atencion` won't match `Atención`), since tender_forecast has no
+    // normalized search field. A fast-follow, not solved here.
+    const buyerText = sanitizeSearch(q.buyerText)
+    const rubroText = sanitizeSearch(q.rubroText)
+    if (buyerText) filter.buyerName = { $regex: escapeRegex(buyerText), $options: 'i' }
+    if (rubroText) filter.rubroLabel = { $regex: escapeRegex(rubroText), $options: 'i' }
+
     if (q.before) {
       const before = new Date(String(q.before))
       if (!Number.isNaN(before.getTime())) filter['expectedWindow.start'] = { $lte: before }

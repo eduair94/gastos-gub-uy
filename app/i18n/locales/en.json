@@ -1206,6 +1206,8 @@
     "noAmount": "no price data",
     "evidence": "Recent tenders in this category",
     "resultsCount": "{n} expected tenders",
+    "showingCaveat": "Showing the next {n} of {total} total",
+    "windowUnknown": "Date unavailable",
     "coverage": "Coverage: only agency × category pairs with at least 3 comparable historical tenders. Excludes centralized purchases, framework agreements and contract extensions.",
     "updated": "Calculated on {date}",
     "notReady": {
@@ -1213,8 +1215,8 @@
       "body": "This is built by a monthly job; if it hasn't run yet, there's no data to show."
     },
     "noMatches": {
-      "title": "No expected tenders match these filters",
-      "body": "Try a different agency or category, or clear the filters."
+      "title": "We couldn't find any upcoming tenders for that search",
+      "body": "We searched the whole set of expected tenders and none match that agency or category. Try a different term or clear the search."
     }
   },
   "mandate": {

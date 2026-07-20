@@ -21,28 +21,24 @@ import { effectiveWindow } from '#shared/forecast/window-display'
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
 
-const { data: res, pending, error } = await useFetch<any>('/api/analytics/anticipacion', {
-  query: { limit: 150 },
-})
-
-const rows = computed<any[]>(() => res.value?.data?.rows ?? [])
-const calculatedAt = computed(() => res.value?.data?.calculatedAt ?? null)
-
-// ---- Filters (client-side, over the already-fetched, already-sorted page) --
+// ---- Filters (server-side, over the WHOLE eligible set — not just the
+// fetched page) -------------------------------------------------------------
 // The endpoint's own `buyer`/`rubro` params expect exact ids (buyerId,
-// rubroAncestors token) that a citizen typing a name would never guess.
-// Filtering the fetched rows by substring keeps the endpoint's soonest-first
-// order intact — this never re-sorts, only narrows.
+// rubroAncestors token) that a citizen typing a name would never guess, so
+// the free-text boxes here are wired to the endpoint's separate `buyerText`/
+// `rubroText` params (case-insensitive regex, server-side) instead. Earlier
+// version of this page filtered client-side over only the first 150 fetched
+// rows — a real organism/rubro that wasn't among the 150 globally-soonest
+// forecasts (of ~7,100 eligible) silently read as "nothing coming" even
+// though a match existed further down the sorted set. Debounced so typing
+// doesn't fire a request per keystroke; `useFetch`'s `query` is reactive to
+// the debounced refs, so a filter change re-queries the whole set rather
+// than re-slicing an already-narrow local array.
 const buyerFilter = ref('')
 const rubroFilter = ref('')
-const filteredRows = computed(() => {
-  const b = buyerFilter.value.trim().toLowerCase()
-  const r = rubroFilter.value.trim().toLowerCase()
-  return rows.value.filter(row =>
-    (!b || (row.buyerName ?? '').toLowerCase().includes(b))
-    && (!r || (row.rubroLabel ?? '').toLowerCase().includes(r)),
-  )
-})
+const buyerFilterDebounced = refDebounced(buyerFilter, 300)
+const rubroFilterDebounced = refDebounced(rubroFilter, 300)
+
 function hasActiveFilters(): boolean {
   return !!(buyerFilter.value || rubroFilter.value)
 }
@@ -50,6 +46,18 @@ function clearFilters() {
   buyerFilter.value = ''
   rubroFilter.value = ''
 }
+
+const { data: res, pending, error } = await useFetch<any>('/api/analytics/anticipacion', {
+  query: computed(() => ({
+    limit: 200,
+    ...(buyerFilterDebounced.value.trim() ? { buyerText: buyerFilterDebounced.value.trim() } : {}),
+    ...(rubroFilterDebounced.value.trim() ? { rubroText: rubroFilterDebounced.value.trim() } : {}),
+  })),
+})
+
+const rows = computed<any[]>(() => res.value?.data?.rows ?? [])
+const total = computed<number>(() => res.value?.data?.total ?? 0)
+const calculatedAt = computed(() => res.value?.data?.calculatedAt ?? null)
 
 // ---- Confidence → qualitative band (AMENDMENT 1) --------------------------
 // `confidence` saturates at exactly 1.0 for very tight cadences; showing
@@ -74,11 +82,25 @@ const BAND_COLOR: Record<Band, string> = { alta: 'success', media: 'warning', ba
 // before today). effectiveWindow() (shared/forecast/window-display, reused
 // by Task 8's card) clamps the DISPLAYED start to `now` without dropping the
 // row — overdue is the most actionable signal here, not noise.
+// Single `now` reused by both windowLabel() and isOverdue() for the same row,
+// instead of each calling `new Date()` independently — avoids a (theoretical)
+// disagreement between the two if a clock-boundary is crossed between calls,
+// and avoids redundant allocations across the whole table. Recomputed only
+// when the row set actually changes (a fetch/refetch), not on every unrelated
+// re-render, so it doesn't go stale on a long-open tab either.
+const now = computed(() => {
+  void rows.value
+  return new Date()
+})
 function effWindow(r: any) {
-  return effectiveWindow(r.expectedWindow.start, r.expectedWindow.end, new Date())
+  return effectiveWindow(r.expectedWindow.start, r.expectedWindow.end, now.value)
 }
 function windowLabel(r: any): string {
   const { start, end } = effWindow(r)
+  // effectiveWindow()'s no-throw contract can still hand back an Invalid
+  // Date (unparseable/absent input) — Intl.DateTimeFormat#format throws a
+  // RangeError on those, which would take the whole row down with it.
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return t('anticipacion.windowUnknown')
   const fmt = new Intl.DateTimeFormat(locale.value === 'en' ? 'en-GB' : 'es-UY', {
     month: 'short',
     year: 'numeric',
@@ -158,8 +180,10 @@ useSeo(() => ({
         type="table"
       />
 
-      <template v-else-if="rows.length">
-        <!-- Filters -->
+      <template v-else-if="rows.length || hasActiveFilters()">
+        <!-- Filters — always visible once past the initial load, even when
+             the current search matches nothing, so a citizen can see and
+             correct/clear the search rather than land on a dead end. -->
         <div class="controls">
           <v-text-field
             v-model="buyerFilter"
@@ -183,9 +207,19 @@ useSeo(() => ({
           />
         </div>
 
-        <template v-if="filteredRows.length">
+        <template v-if="rows.length">
           <p class="count u-mono">
-            {{ t('anticipacion.resultsCount', { n: filteredRows.length }) }}
+            {{ t('anticipacion.resultsCount', { n: rows.length }) }}
+          </p>
+          <!-- The endpoint always returns a soonest-first page capped at
+               `limit`; when the full eligible set is bigger than what's
+               shown, say so plainly rather than let the list read as
+               exhaustive. -->
+          <p
+            v-if="total > rows.length"
+            class="caveat u-mono"
+          >
+            {{ t('anticipacion.showingCaveat', { n: rows.length, total }) }}
           </p>
 
           <v-card
@@ -207,7 +241,7 @@ useSeo(() => ({
                 </thead>
                 <tbody>
                   <tr
-                    v-for="r in filteredRows"
+                    v-for="r in rows"
                     :key="r._id"
                   >
                     <td>
@@ -342,6 +376,7 @@ useSeo(() => ({
 .controls__field { flex: 0 1 260px; min-width: 200px; }
 
 .count { margin: 0 0 var(--s-2); font-size: var(--t-xs); color: var(--text-muted); }
+.caveat { margin: 0 0 var(--s-3); font-size: var(--t-xs); color: var(--text-muted); }
 
 .tablecard { overflow: hidden; }
 .dt { width: 100%; border-collapse: collapse; }
