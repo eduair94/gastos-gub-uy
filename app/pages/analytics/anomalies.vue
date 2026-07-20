@@ -1203,9 +1203,11 @@ useSeo(() => ({
   line-height: 1.55;
 }
 
-/* Unexplained = the real signal: accent it with the same "alerta" hue as the severity tag. */
+/* Unexplained = the real signal: accent it with the same "alerta" hue as the severity tag.
+   Label uses --alerta-ink, not --alerta: on its own 10% wash the raw hue is 4.36:1
+   in dark mode (under AA). See the -ink pair note in _tokens.scss. */
 .flags__ai--no .flags__aiv {
-  color: var(--alerta);
+  color: var(--alerta-ink);
   border-color: color-mix(in srgb, var(--alerta) 40%, transparent);
   background: color-mix(in srgb, var(--alerta) 10%, transparent);
 }
