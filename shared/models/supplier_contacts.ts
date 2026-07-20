@@ -2,9 +2,11 @@ import { Schema } from "mongoose";
 import type { Model } from "mongoose";
 import { mongoose } from "../connection/database";
 
-export type EmailSource = "dei" | "website" | "webSearch" | "impo" | "rupe" | "manual";
+export type EmailSource = "dei" | "website" | "webSearch" | "impo" | "rupe" | "manual" | "googleMaps";
 export type EmailStatus = "candidate" | "valid" | "invalid" | "suppressed";
 export type ContactStatus = "pending" | "enriched" | "no_contact" | "error";
+/** Provenance for phone/place fields → gates public display (dei = free, googleMaps = ToS-restricted). */
+export type FieldSource = "dei" | "googleMaps";
 
 export interface IEmailEntry {
   email: string;
@@ -28,6 +30,19 @@ export interface ISupplierContact {
   primaryEmail: string | null;
   website: string | null;
   phone: string | null;
+  /** Provenance of `phone`. */
+  phoneSource: FieldSource | null;
+  // Knowledge-panel location data (from DEI open data or the Google Maps proxy).
+  address: string | null;
+  locality: string | null;
+  lat: number | null;
+  lng: number | null;
+  hours: string | null;
+  mapsUrl: string | null;
+  /** Google place_id — the only Places field safe to cache indefinitely per ToS. */
+  placeId: string | null;
+  /** Provenance of the location block; dei = displayable, googleMaps = live-refetch/embed only. */
+  placeSource: FieldSource | null;
   rubros: IRubro[];
   status: ContactStatus;
   priorityScore: number;
@@ -58,6 +73,15 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
   primaryEmail: { type: String, default: null },
   website: { type: String, default: null },
   phone: { type: String, default: null },
+  phoneSource: { type: String, default: null },
+  address: { type: String, default: null },
+  locality: { type: String, default: null },
+  lat: { type: Number, default: null },
+  lng: { type: Number, default: null },
+  hours: { type: String, default: null },
+  mapsUrl: { type: String, default: null },
+  placeId: { type: String, default: null },
+  placeSource: { type: String, default: null },
   rubros: { type: [RubroSchema], default: [] },
   status: { type: String, default: "pending" },
   priorityScore: { type: Number, default: 0 },
@@ -69,6 +93,8 @@ SupplierContactSchema.index({ supplierId: 1 }, { unique: true });
 SupplierContactSchema.index({ rut: 1 });
 SupplierContactSchema.index({ status: 1, priorityScore: -1 });
 SupplierContactSchema.index({ "rubros.classificationId": 1 });
+SupplierContactSchema.index({ placeSource: 1 });
+SupplierContactSchema.index({ locality: 1 });
 
 export const SupplierContactModel: Model<ISupplierContact> =
   (mongoose.models.SupplierContact as Model<ISupplierContact>) ||
