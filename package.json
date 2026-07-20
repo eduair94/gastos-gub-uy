@@ -23,6 +23,10 @@
     "refresh-organism-groups": "tsx src/jobs/refresh-organism-groups.ts",
     "refresh-dept-indicators": "tsx src/jobs/refresh-dept-indicators.ts",
     "build-uruguay-geo": "node scripts/build-uruguay-geo.mjs",
+    "build:mdi-subset": "node scripts/build-mdi-subset.mjs",
+    "check:mdi-subset": "node scripts/build-mdi-subset.mjs --check",
+    "build:vuetify-utilities": "node scripts/build-vuetify-utilities-subset.mjs",
+    "check:vuetify-utilities": "node scripts/build-vuetify-utilities-subset.mjs --check",
     "refresh-tender-forecast": "tsx src/jobs/refresh-tender-forecast.ts",
     "import-sice-catalog": "tsx src/jobs/import-sice-catalog.ts",
     "load-dei": "tsx src/jobs/load-dei.ts",
@@ -86,6 +90,7 @@
     "eslint": "^9.0.0",
     "prettier": "^3.3.0",
     "rimraf": "^6.0.0",
+    "subset-font": "^2.5.0",
     "tsx": "^4.20.3",
     "typescript": "^5.5.0"
   },

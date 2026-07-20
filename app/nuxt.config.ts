@@ -1,6 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 // The public origin. Needed by sitemap/robots and to emit absolute
 // canonical + og:url tags, which must never be relative.
@@ -57,11 +58,32 @@ export default defineNuxtConfig({
   },
 
   css: [
-    'vuetify/styles',
-    '@mdi/font/css/materialdesignicons.css',
-    'driver.js/dist/driver.css',
+    // NOT 'vuetify/styles' (294 KB): that file is reset + elements + a 235 KB
+    // utility layer, and it is render-blocking on every page. These two are
+    // generated from it by `npm run build:vuetify-utilities` — the same base
+    // minus the utility layer (20 KB), plus verbatim copies of the ~40 utility
+    // classes this app's templates actually use (5 KB).
+    '~/assets/scss/vuetify-base.css',
+    '~/assets/scss/vuetify-utilities-subset.css',
+    // NOT '@mdi/font/css/materialdesignicons.css': that is 346 KB of CSS and a
+    // 403 KB webfont for 7,400 icons, of which this app draws ~160. The subset
+    // below is generated from the source by scripts/build-mdi-subset.mjs
+    // (`npm run build:mdi-subset`) and is ~9 KB of each.
+    '~/assets/scss/mdi-subset.scss',
+    // NOT driver.js's stylesheet: composables/useTour.ts imports it alongside
+    // the library the first time a guided tour actually runs.
     '~/assets/scss/main.scss',
   ],
+
+  features: {
+    // Nuxt's default is to inline the page's CSS into every SSR response. With
+    // Vuetify's full stylesheet in the graph that made each HTML document ~970 KB
+    // of mostly-identical CSS — re-parsed and re-downloaded on every entry, never
+    // cached, and render-blocking by construction (FCP was 13 s on mobile).
+    // Serving CSS as a normal hashed stylesheet lets it be cached once and shared
+    // across every page.
+    inlineStyles: false,
+  },
 
   build: {
     transpile: ['vuetify'],
@@ -73,6 +95,26 @@ export default defineNuxtConfig({
     },
     ssr: {
       noExternal: ['vuetify'],
+    },
+    vue: {
+      template: { transformAssetUrls },
+    },
+  },
+
+  hooks: {
+    // Tree-shake Vuetify. plugins/vuetify.ts used to do `import * as components
+    // from 'vuetify/components'`, which registered all ~180 components and
+    // dragged every one of their stylesheets into the entry bundle: ~1 MB of JS
+    // and ~250 KB of component CSS on the critical path of a page that renders a
+    // dozen of them. vite-plugin-vuetify resolves each component from the
+    // template that actually uses it, so a page pays only for what it renders.
+    'vite:extendConfig': (config) => {
+      // `styles` is left at its default (each component imports its own
+      // PRECOMPILED css). The `styles.configFile` route would let Vuetify's
+      // SASS be reconfigured, but it recompiles the framework per component and
+      // roughly doubled the production build; the utility layer is trimmed from
+      // the plain CSS instead — see the css[] block above.
+      config.plugins!.push(vuetify({ autoImport: true }))
     },
   },
 
