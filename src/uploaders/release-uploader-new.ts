@@ -414,11 +414,19 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
     // This loop $sets a fully-rebuilt document, so a release whose total was verified
     // against the government page would be silently re-inflated. Look up which ids
     // carry an override and omit `amount` from their update.
+    // Narrow both the filter and the projection to just the field this check needs —
+    // pulling the whole `amount` subtree for every id in a whole-year batch is needless
+    // memory pressure. $exists: true also matches `verifiedOverride: null`, so keep
+    // running the docs through hasVerifiedOverride() below — the Mongo filter narrows,
+    // the helper decides.
     const preparedIds = prepared.map((p) => p.release.id).filter(Boolean);
     const protectedIds = new Set<string>(
       preparedIds.length
         ? (
-            await ReleaseModel.find({ id: { $in: preparedIds } }, { id: 1, amount: 1 }).lean()
+            await ReleaseModel.find(
+              { id: { $in: preparedIds }, "amount.verifiedOverride": { $exists: true } },
+              { id: 1, "amount.verifiedOverride": 1 }
+            ).lean()
           )
             .filter((d: any) => hasVerifiedOverride(d))
             .map((d: any) => d.id)
@@ -710,6 +718,7 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
 
       let updated = 0;
       let failed = 0;
+      let amountProtected = 0;
       const BATCH_SIZE = 200;
       const concurrency = 20;
 
@@ -748,11 +757,6 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
               continue;
             }
 
-            // Never let a re-sync recompute a page-verified total.
-            if (hasVerifiedOverride(result.candidate)) {
-              continue;
-            }
-
             const awards = ocdsRelease.awards || [];
             const amountData = calculateTotalAmounts(awards, currencyRates, uyiRate, {
               includeVersionInfo: true,
@@ -773,6 +777,16 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
               amount: amountData,
               reconciledAt: new Date(),
             };
+
+            // Never let a re-sync recompute a page-verified total. Unlike a bare
+            // `continue` (which would have discarded every other field above — awards,
+            // tender, parties, buyer, supplier, reconciledAt — all legitimate non-amount
+            // OCDS updates), only drop `amount` from this release's $set so the rest of
+            // the re-sync still lands.
+            if (hasVerifiedOverride(result.candidate)) {
+              delete setFields.amount;
+              amountProtected++;
+            }
 
             const parties = ocdsRelease.parties || [];
             const buyer = parties.find((p: any) => p.roles && p.roles.includes("buyer")) || ocdsRelease.buyer;
@@ -809,7 +823,9 @@ export class ReleaseUploaderNew implements IReleaseUploaderNew {
         }
       }
 
-      this.logger.info(`Reconciliation complete: scanned ${candidates.length}, updated ${updated}, failed ${failed}`);
+      this.logger.info(
+        `Reconciliation complete: scanned ${candidates.length}, updated ${updated}, failed ${failed}, amountProtected ${amountProtected}`
+      );
       return { scanned: candidates.length, updated, failed };
     } catch (err) {
       this.logger.error("Reconciliation failed:", err as Error);

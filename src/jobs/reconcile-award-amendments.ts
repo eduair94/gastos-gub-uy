@@ -313,6 +313,7 @@ async function main(): Promise<void> {
   let noBase = 0;
   let skippedAmbiguous = 0;
   let skippedVerified = 0;
+  const skippedVerifiedIds: string[] = [];
   let removedOvercount = 0; // sum of (original - corrected) primaryAmount, corrected only
   const correctedIds: string[] = [];
   const top: Array<{ id: string; before: number; after: number }> = [];
@@ -350,11 +351,16 @@ async function main(): Promise<void> {
 
         // PRECEDENCE: a government-published amendment is newer ground truth than our
         // page verification, so it is allowed to win — but only by REPLACING the
-        // override, never by silently recomputing around it. We skip here and require
-        // a deliberate re-run of correct-lumpsum-artifacts to re-verify, because the
-        // merged item math is exactly the quantity x lump-sum trap this guards.
+        // override, never by silently recomputing around it. We deliberately do NOT
+        // auto-apply here: correct-lumpsum-artifacts itself skips any release that
+        // already carries an override, so simply re-running it will NOT pick this back
+        // up. Re-verification requires a manual, explicitly-forced re-run targeted at
+        // this release id (the merged item math is exactly the quantity x lump-sum trap
+        // this guards). Ids are collected below so an operator can find and re-verify
+        // them.
         if (hasVerifiedOverride(base)) {
           skippedVerified++;
+          skippedVerifiedIds.push(base.id);
           continue;
         }
 
@@ -436,7 +442,14 @@ async function main(): Promise<void> {
   console.log(`   ocids w/ amendment,no base: ${noBase}`);
   console.log(`   ${opts.dryRun ? "WOULD correct" : "corrected"}           : ${corrected}`);
   console.log(`   skipped (re-key ambiguous): ${skippedAmbiguous}`);
-  if (skippedVerified) console.log(`   skipped (verified override): ${skippedVerified}`);
+  if (skippedVerified) {
+    console.log(`   skipped (verified override): ${skippedVerified}`);
+    const shown = skippedVerifiedIds.slice(0, 50);
+    console.log(`     ids: ${shown.join(", ")}`);
+    if (skippedVerifiedIds.length > shown.length) {
+      console.log(`     …and ${skippedVerifiedIds.length - shown.length} more`);
+    }
+  }
   console.log(`   phantom UYU removed       : ${Math.round(removedOvercount).toLocaleString()}`);
   console.log(`   top corrections:`);
   for (const t of top.slice(0, 15)) {
