@@ -17,7 +17,11 @@ quantity and baking the blown-up result into the persisted `amount.primaryAmount
 | quantity | 330 000 | 330 000 |
 | unit.value.amount | 3 316 USD | — (3 316 is the net-of-tax **contract total**, not a unit price) |
 | computed total | **1 094 280 000 USD** (330 000 × 3 316) | **4 201 USD** ("Monto Total Adjudicado") |
-| amount.primaryAmount | **≈ 43 823 788 580 UYU** | — |
+| amount.primaryAmount | **≈ 43 823 788 580 UYU** | ≈ **103 600 UYU** nominal 2005 (4 201 × 24,66) |
+
+Two independent errors compound here: the quantity blowup (~260 000×) and the wrong-era FX
+(~40,05 instead of the 2005 rate of 24,66). Together the page overstates this contract by a factor
+of roughly **420 000×**.
 
 A second, identical case exists: `adjudicacion-31334` (same buyer + supplier, 2004, "timbres de
 tasas catastrales", 360 000 × 2 832,11 USD → ≈ 40 831 381 689 UYU). These two releases alone are
@@ -40,13 +44,30 @@ supplier** in `top_entities` (84.65B of its 85.14B total is just these two).
   detect or correct a mismatch. `awards[].value` isn't even preserved in the schema
   (`shared/models/release.ts` AwardSchema).
 
-### Second, related bug (in scope, bounded)
+### Second, related bug — already architected, just unseeded
 
-`calculateTotalAmounts` converts foreign currency to UYU at **today's** rate
-(`convertToUYU` → live/fallback rate), so a 2005 USD figure is converted at the 2026 rate. This
-distorts *every* historical foreign-currency release, not just these artifacts. We fix it **only
-for the releases this job already touches** (recompute at the release's own period rate); the
-platform-wide version is a separate future spec.
+`calculateTotalAmounts` converts foreign currency to UYU at **today's** rate, so a 2005 USD figure
+is converted at the 2026 rate, and that wrong number is what `amount.primaryAmount` holds.
+
+This is **already known and already solved in the display layer**. `shared/utils/real-value.ts`
+(`toNominalUyu` / `toTodayUyu`) converts at the release's **own month** from the monthly BCU table
+(`exchange_rates`), and `app/server/api/contracts/[id].get.ts:165-169` deliberately reads
+`totalAmounts[nativeCurrency]` rather than `primaryAmount` with the comment: *"for a foreign
+contract `primaryAmount` is already a UYU conversion done at the current rate, which is exactly the
+error this fixes."* The same layer backs `MoneyConvert.vue`, `ContractPreviewDialog.vue` and
+`cross-provider-anomalies.ts`.
+
+The **only** gap is coverage: `exchange_rates` holds 44 months (2022-12 → 2026-07), because its
+feeder API (cambio-uruguay `/evolution/bcu`) hard-rejects `period > 60` (HTTP 400,
+`validValues: [...,"60"]` — verified). For a 2005 release `rateForMonth()` finds no month at or
+before it and correctly returns `null`, so the UI falls back to the nominal figure.
+
+So the fix is **not new conversion code** — it is a one-time **historical seed** of `exchange_rates`
+from BCU, which `refresh-exchange-rates.ts` already anticipates by design: *"It NEVER deletes
+months, so a historical seed loaded once (for pre-window years) survives every refresh."* Seeding
+repairs comparable-value display for every pre-2022 foreign-currency release platform-wide, not
+just this job's candidates. `amount.primaryAmount` stays as-is for non-candidates (rollups still
+use it); re-deriving it platform-wide remains a separate future spec.
 
 ## Goal
 
@@ -111,33 +132,66 @@ Adjudicado"** value and its currency.
 - If the page can't be fetched/parsed, or has no unambiguous single total → skip, log as
   `unverified`. Never guess.
 
-### Stage 3 — historical FX resolution
+### Stage 3 — historical FX: seed the existing table (separate job, no new conversion code)
 
-`getHistoricalRate(dateISO, currency): Promise<number | null>` — cache-first:
+A standalone one-time job `src/jobs/seed-historical-rates.ts` backfills `exchange_rates` for
+pre-2022 months, exactly the "historical seed loaded once" that `refresh-exchange-rates.ts`
+documents. It reuses that job's `monthlyAverages()` shape and upsert semantics (never delete,
+only set the fields actually obtained).
 
-1. Look up `ExchangeRateModel` for the release's `YYYY-MM` (already covers 2022-12→now).
-2. Miss (e.g. 2004/2005) → scrape the **BCU** historical form
-   (`bcu.gub.uy/Estadisticas-e-Indicadores/Paginas/Cotizaciones.aspx`; "Desde/Hasta" date range,
-   downloadable TXT, coverage back to ~2000). No clean API exists, so drive the ASPX form
-   (chrome-devtools/playwright MCP or a scripted POST of the form fields) for the release's month,
-   parse the TXT, and **upsert the month back into `ExchangeRateModel`** so it's never re-scraped.
-   Isolate this in its own module (`src/jobs/lib/bcu-historical-rate.ts`) so the fragile scraper is
-   testable and swappable.
-3. Still no rate → skip the release, log as `noRate`. Do not fall back to today's rate.
+Source: the **BCU SOAP web service** — no scraping needed. Verified live against the real endpoint:
+
+```
+POST https://cotizaciones.bcu.gub.uy/wscotizaciones/servlet/awsbcucotizaciones
+SOAPAction: Cotizaaction/AWSBCUCOTIZACIONES.Execute
+Body: wsbcucotizaciones.Execute / Entrada { Moneda: int[], FechaDesde, FechaHasta, Grupo: 0 }
+→ Salida.datoscotizaciones['datoscotizaciones.dato'][] { Fecha, Moneda, Nombre, TCC, TCV }
+```
+
+Currency codes (from the companion `awsbcumonedas` service): **USD (billete) = 2225, EUR = 1111,
+UI (Unidad Indexada) = 9800**. Use **TCV** (venta), matching what `refresh-exchange-rates.ts`
+already averages (`sell`).
+
+Verified sample for **2005-06-28** — the exact resolution date of `adjudicacion-53193`:
+USD `TCV 24.66`, EUR `TCV 29.757480`, UI `1.462400`. Contrast with the ~40.05 UYU/USD the stored
+`primaryAmount` was built with — the historical rate is **~1.6× lower**, on top of the ~260 000×
+quantity blowup.
+
+The client lives in `src/jobs/lib/bcu-historical-rates.ts` (build envelope → POST → parse XML →
+daily rows → monthly averages per currency), leaving the job itself trivial and the parser
+unit-testable against a saved XML fixture. Seed USD, EUR and **UI** (the UI series is what makes
+"en pesos de hoy" work for old contracts too). No XML library is needed beyond a narrow regex/
+string parse of the flat `datoscotizaciones.dato` blocks — but keep that parse in one function.
+
+Request in **≤ 1-year slices** (the service returns every daily row for the range) walking backwards
+from 2022-11 to ~2000-01, with a polite delay between calls.
+
+Consumers need **no change**: `toNominalUyu` / `toTodayUyu` already convert at the release's own
+month and start working for old dates the moment the months exist.
+
+Then, inside the correction job, the verified official total is converted with the **same shared
+helper** (`toNominalUyu(officialTotal, officialCurrency, monthKey(release.date), rateTable)`) — not
+a bespoke rate lookup. If it returns `null` (month still missing after seeding), skip the release
+and log `noRate`. Never fall back to today's rate.
 
 ### Stage 4 — write-back (only with `--commit`)
 
 Set `amount` for the release to the verified figure:
 
-- `totalAmounts = { [officialCurrency]: officialTotal }`, `primaryAmount = officialTotal ×
-  historicalRate` (UYU), `primaryCurrency = 'UYU'`, `version` bumped, plus an audit sub-object:
+- `totalAmounts = { [officialCurrency]: officialTotal }` — this is the field the contract page and
+  the real-value layer actually read, so correcting it is what fixes the displayed figure,
+- `currencies = [officialCurrency]` (kept in sync — `[id].get.ts` derives the native currency from
+  it, and a stale multi-entry list would make it fall back to nominal),
+- `primaryAmount = toNominalUyu(officialTotal, officialCurrency, monthKey(date), rateTable)` — UYU
+  of the release's OWN month, `primaryCurrency = 'UYU'`, `version` bumped,
+- plus an audit sub-object:
 
 ```ts
 amount.verifiedOverride = {
   source: 'comprasestatales',
   sourceUrl,                    // the detalle URL scraped
   officialTotal, officialCurrency,
-  historicalRate, rateMonth,    // e.g. 40.05, '2005-06'
+  rateMonth,                    // e.g. '2005-06' — the month whose BCU rate was applied
   previousPrimaryAmount,        // 43_823_788_580 — what we replaced
   previousComputedTotal,        // 1_094_280_000 USD
   verifiedAt: <ISO>,
@@ -195,11 +249,12 @@ No runner-based test suite; the repo uses standalone `tsx` assertion scripts und
 1. `tests/unit/test-lumpsum-artifacts.ts` (new, following the existing convention) — pure-function
    coverage: candidate-predicate accepts the SURYPARK shape and rejects a normal high-value award;
    the "Monto Total Adjudicado" parser returns 4 201 / USD on a saved fixture of the 53193 page;
-   `hasVerifiedOverride` guard logic. Network and DB are not exercised here.
+   the BCU SOAP response parser returns `2005-06 → usd 24.66 / eur 29.75748 / ui 1.4624` on a saved
+   XML fixture; `hasVerifiedOverride` guard logic. Network and DB are not exercised here.
 2. Extend the **existing** `tests/unit/test-amount-calculator.ts` for any change to
    `amount-calculator.ts` (it already covers this module — do not create a parallel test).
-3. Live spot-check on 167: `getHistoricalRate('2005-06','USD')` returns a plausible 2005 rate
-   (~24 UYU/USD, **not** ~40), and the scraper returns 4 201 USD for id 53193.
+3. Live spot-check on 167: after seeding, `exchange_rates` holds `2005-06` with a plausible rate
+   (~24 UYU/USD, **not** ~40), and the comprasestatales parser returns 4 201 USD for id 53193.
 4. Targeted root `tsc` on the changed files.
 5. `--dry-run` on 167, eyeball the full before/after table.
 6. `--commit --release=adjudicacion-53193` first (single), verify the contract page shows ~4 201
@@ -209,7 +264,8 @@ No runner-based test suite; the repo uses standalone `tsx` assertion scripts und
 ## Files
 
 - `src/jobs/correct-lumpsum-artifacts.ts` (new — the job)
-- `src/jobs/lib/bcu-historical-rate.ts` (new — historical FX scraper + cache)
+- `src/jobs/seed-historical-rates.ts` (new — one-time pre-2022 `exchange_rates` backfill)
+- `src/jobs/lib/bcu-historical-rates.ts` (new — BCU SOAP client + response parser)
 - `src/utils/amount-calculator.ts` or a small shared module (new `hasVerifiedOverride` helper)
 - `shared/models/release.ts`, `shared/types/database.ts` (add `verifiedOverride` to the amount type)
 - `src/uploaders/release-uploader-new.ts`, `src/uploaders/release-uploader.ts`,
