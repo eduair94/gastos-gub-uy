@@ -3,6 +3,7 @@ definePageMeta({ middleware: 'auth' })
 
 const { t } = useI18n()
 const api = useMonitorApi()
+const { track } = useAnalytics()
 
 useSeo({ title: t('webhooks.title'), description: t('webhooks.lead'), path: '/app/webhooks', noindex: true })
 
@@ -84,6 +85,7 @@ async function submitCreate() {
       ...(Object.keys(filters).length ? { filters } : {}),
     })
     newSecret.value = res.data.secret
+    track('webhook_create', { events: form.events.join(',') })
     createOpen.value = false
     revealOpen.value = true
     await refresh()
@@ -100,6 +102,7 @@ async function copySecret() {
   if (import.meta.client && navigator.clipboard) {
     await navigator.clipboard.writeText(newSecret.value)
     copied.value = true
+    track('webhook_secret_copy')
   }
 }
 
@@ -112,15 +115,20 @@ async function testHook(row: Hook) {
     testResult[row._id] = res.data.ok
       ? `${t('webhooks.testOk')}${res.data.status ? ` (${res.data.status})` : ''}`
       : t('webhooks.testFail')
+    // The endpoint's own HTTP status is the whole point of a test — it tells us
+    // whether integrators are failing on 404s, 401s or timeouts.
+    track('webhook_test', { ok: !!res.data.ok, status: res.data.status ?? 0 })
   }
   catch {
     testResult[row._id] = t('webhooks.testFail')
+    track('webhook_test', { ok: false, status: 0 })
   }
 }
 
 async function remove(row: Hook) {
   if (import.meta.client && !window.confirm(t('webhooks.removeConfirm'))) return
   await api.webhooks.remove(row._id)
+  track('webhook_delete')
   await refresh()
 }
 
@@ -147,11 +155,14 @@ function fmtDate(iso: string | null): string {
       <p class="wh__intro">
         {{ t('webhooks.intro') }}
       </p>
+      <!-- /docs is same-origin, so the global outbound-link delegate ignores it;
+           this is the only signal that anyone reached the API reference. -->
       <a
         href="/docs"
         target="_blank"
         rel="noopener"
         class="wh__doclink"
+        @click="track('docs_open', { source: 'webhooks' })"
       >
         <v-icon size="16">
           mdi-book-open-variant

@@ -6,6 +6,7 @@ const router = useRouter()
 // Browsing open calls is public (backed by the DB); the "create alert" CTA needs
 // accounts, so it's hidden when Firebase isn't configured.
 const authEnabled = useAuthEnabled()
+const { track } = useAnalytics()
 
 useSeo({ title: t('llamados.title'), description: t('llamados.lead'), path: '/llamados' })
 
@@ -34,7 +35,11 @@ watch([q, sort, page], () => {
 
 function submitSearch() {
   page.value = 1
+  if (q.value.trim()) track('search', { search_term: q.value.trim(), location: 'llamados' })
+  else track('filter_clear', { surface: 'llamados' })
 }
+
+watch(sort, s => track('sort_change', { surface: 'llamados', sort: s }))
 
 // The CTA promises "an alert for THIS search", so carry the current keyword into the
 // alert builder (`?new=1` auto-opens the form, `?keyword=` prefills it). Guests are

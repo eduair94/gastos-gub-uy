@@ -82,7 +82,40 @@ export default defineNuxtConfig({
     '@nuxtjs/sitemap',
     '@nuxtjs/robots',
     '@vite-pwa/nuxt',
+    'nuxt-gtag',
   ],
+
+  // Google Analytics 4. The module only *declares* the tag here — loading it is
+  // plugins/analytics.client.ts's job, because whether we may measure at all
+  // depends on the reader's consent (see composables/useConsent.ts).
+  //
+  // `initMode: 'manual'` keeps gtag.js off the wire until that decision is
+  // known, while nuxt-gtag still queues initCommands into dataLayer first, so
+  // the Consent Mode v2 defaults below are always the first thing GA sees.
+  // `send_page_view: false` because SSR + i18n prefix routes + pageTransition
+  // make gtag's automatic History tracking double-count; the plugin sends
+  // page_view by hand instead.
+  gtag: {
+    id: process.env.NUXT_PUBLIC_GTAG_ID || 'G-E3V3E1LLC0',
+    initMode: 'manual',
+    loadingStrategy: 'defer',
+    config: {
+      send_page_view: false,
+      anonymize_ip: true,
+    },
+    initCommands: [
+      ['consent', 'default', {
+        analytics_storage: 'denied',
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        // Give the banner a moment to grant consent before the first hit is
+        // modelled as cookieless — avoids losing the entry page of a reader
+        // who accepts immediately.
+        wait_for_update: 500,
+      }],
+    ],
+  },
 
   // Installable PWA + the service worker that receives Web Push. injectManifest
   // (not generateSW) because we ship a custom SW with push/notificationclick

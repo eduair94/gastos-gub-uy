@@ -50,6 +50,7 @@ export function useTour() {
   const router = useRouter()
   const { user } = useAuth()
   const authEnabled = useAuthEnabled()
+  const { track } = useAnalytics()
 
   const tours: TourId[] = ['explore', 'alerts']
 
@@ -191,14 +192,20 @@ export function useTour() {
       onHighlighted: () => {
         // Keep the persisted global index current (for reload / dismissal).
         const li = activeDriver?.getActiveIndex() ?? 0
-        state.value = { tourId: state.value.tourId, stepIndex: segStart + li }
+        const gi = segStart + li
+        state.value = { tourId: state.value.tourId, stepIndex: gi }
         persist()
+        track('tour_step', { tour: state.value.tourId ?? '', step: gi + 1 })
       },
       onNextClick: () => {
         const li = activeDriver?.getActiveIndex() ?? 0
         const gi = segStart + li
         if (li < seg.length - 1) { activeDriver?.moveNext(); return }
-        if (gi >= all.length - 1) { finish(true); return } // tour complete
+        if (gi >= all.length - 1) {
+          track('tour_complete', { tour: state.value.tourId ?? '' })
+          finish(true) // tour complete
+          return
+        }
         goToStep(all, gi + 1) // cross to next page
       },
       onPrevClick: () => {
@@ -207,8 +214,11 @@ export function useTour() {
         if (li > 0) { activeDriver?.movePrevious(); return }
         if (gi > 0) goToStep(all, gi - 1) // cross back to previous page
       },
-      // X / ESC (overlay is disabled above). Programmatic destroy() never lands here.
+      // X / ESC (overlay is disabled above). Programmatic destroy() never lands here,
+      // so this is the true "gave up mid-tour" signal — as opposed to the onNextClick
+      // completion branch above.
       onDestroyStarted: () => {
+        track('tour_abandon', { tour: state.value.tourId ?? '', step: state.value.stepIndex + 1 })
         if (activeDriver) activeDriver.destroy() // real teardown (h(false))
         cleanup(true)
       },
@@ -259,6 +269,7 @@ export function useTour() {
     markSeen()
     const steps = buildSteps(id)
     if (!steps.length) return
+    track('tour_start', { tour: id })
     if (activeDriver) { activeDriver.destroy(); activeDriver = null }
     state.value = { tourId: id, stepIndex: 0 }
     persist()

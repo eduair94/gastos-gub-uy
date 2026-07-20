@@ -22,6 +22,7 @@ const emit = defineEmits<{ 'update:modelValue': [boolean] }>()
 
 const { t } = useI18n()
 const localePath = useLocalePath()
+const { track } = useAnalytics()
 
 const open = computed({
   get: () => props.modelValue,
@@ -83,6 +84,7 @@ async function copy() {
   try {
     await navigator.clipboard.writeText(reportText.value)
     copied.value = true
+    track('report_error_copy')
     if (copyTimer) clearTimeout(copyTimer)
     copyTimer = setTimeout(() => (copied.value = false), 1800)
   }

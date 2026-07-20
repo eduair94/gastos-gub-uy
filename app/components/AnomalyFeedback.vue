@@ -21,6 +21,7 @@ const { isAuthed, loginGoogle } = useAuth()
 // public counts but hide the (dead) controls and the login prompt entirely.
 const authEnabled = useAuthEnabled()
 const api = useMonitorApi()
+const { track } = useAnalytics()
 
 // A guest who picks "more sign-in options" leaves for /login; the intended vote
 // is parked here and applied on return (same anomaly, now authed) so the click
@@ -85,6 +86,7 @@ async function commitVote(target: 1 | -1 | null, commentText = ''): Promise<bool
     }
     up.value = res.data.counts.up
     down.value = res.data.counts.down
+    track('anomaly_vote', { verdict: target === null ? 'retract' : target === 1 ? 'confirm' : 'dispute' })
     return true
   }
   catch {

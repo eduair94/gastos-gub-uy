@@ -108,6 +108,35 @@ const examples = [
         </p>
       </section>
 
+      <!-- Who is behind this. An independent project earns more trust when it
+           says who built it than when it hides — and it's an E-E-A-T signal. -->
+      <section class="sec">
+        <h2>{{ t('about.authorTitle') }}</h2>
+        <p>{{ t('about.authorBody') }}</p>
+        <p class="links">
+          <a
+            href="https://www.linkedin.com/in/eduardo-airaudo/"
+            target="_blank"
+            rel="noopener external"
+          >
+            <v-icon size="15">mdi-linkedin</v-icon>
+            LinkedIn
+          </a>
+          <a
+            href="https://github.com/eduair94/gastos-gub-uy"
+            target="_blank"
+            rel="noopener external"
+          >
+            <v-icon size="15">mdi-github</v-icon>
+            GitHub
+          </a>
+          <a href="mailto:shellixs750@gmail.com">
+            <v-icon size="15">mdi-email-outline</v-icon>
+            {{ t('about.authorContact') }}
+          </a>
+        </p>
+      </section>
+
       <NuxtLink
         :to="localePath('/contracts')"
         class="cta"

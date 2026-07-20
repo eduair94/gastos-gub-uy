@@ -7,6 +7,7 @@ const { user, logout } = useAuth()
 const api = useMonitorApi()
 const push = useWebPush()
 const pwa = usePwaInstall()
+const { track } = useAnalytics()
 
 useSeo({ title: t('accountPage.title'), description: t('accountPage.title'), path: '/app/cuenta', noindex: true })
 
@@ -63,6 +64,8 @@ async function save() {
       channels: { email: form.channels.email, inapp: form.channels.inapp },
     })
     savedOk.value = true
+    const channels = Object.entries(form.channels).filter(([, on]) => on).map(([k]) => k).join(',')
+    track('notification_prefs_save', { enabled: form.enabled, frequency: form.frequency, channels })
   }
   finally {
     saving.value = false
@@ -82,6 +85,7 @@ async function linkTelegram() {
   tgLoading.value = true
   try {
     const res = await api.telegram.link()
+    track('telegram_link_start')
     window.open(res.data.url, '_blank', 'noopener')
   }
   catch {
@@ -97,6 +101,7 @@ async function unlinkTelegram() {
     await api.telegram.unlink()
     telegram.linked = false
     telegram.username = null
+    track('telegram_unlink')
   }
   finally {
     tgLoading.value = false
@@ -241,9 +246,15 @@ async function onLogout() {
               {{ t('accountPage.channelPush') }}
             </p>
             <p class="chan__hint">
-              <template v-if="!push.isSupported.value">{{ t('accountPage.pushUnsupported') }}</template>
-              <template v-else-if="push.permission.value === 'denied'">{{ t('accountPage.pushBlocked') }}</template>
-              <template v-else>{{ t('accountPage.channelPushHint') }} · {{ t('accountPage.pushDevices', { count: data?.data.push.devices ?? 0 }) }}</template>
+              <template v-if="!push.isSupported.value">
+                {{ t('accountPage.pushUnsupported') }}
+              </template>
+              <template v-else-if="push.permission.value === 'denied'">
+                {{ t('accountPage.pushBlocked') }}
+              </template>
+              <template v-else>
+                {{ t('accountPage.channelPushHint') }} · {{ t('accountPage.pushDevices', { count: data?.data.push.devices ?? 0 }) }}
+              </template>
             </p>
           </div>
         </div>
@@ -273,10 +284,18 @@ async function onLogout() {
               {{ t('accountPage.channelTelegram') }}
             </p>
             <p class="chan__hint">
-              <template v-if="!telegramConfigured">{{ t('accountPage.telegramNotConfigured') }}</template>
-              <template v-else-if="telegram.linked && telegram.username">{{ t('accountPage.telegramLinked', { username: telegram.username }) }}</template>
-              <template v-else-if="telegram.linked">{{ t('accountPage.telegramLinkedNoUser') }}</template>
-              <template v-else>{{ t('accountPage.channelTelegramHint') }} · {{ t('accountPage.telegramOpenHint') }}</template>
+              <template v-if="!telegramConfigured">
+                {{ t('accountPage.telegramNotConfigured') }}
+              </template>
+              <template v-else-if="telegram.linked && telegram.username">
+                {{ t('accountPage.telegramLinked', { username: telegram.username }) }}
+              </template>
+              <template v-else-if="telegram.linked">
+                {{ t('accountPage.telegramLinkedNoUser') }}
+              </template>
+              <template v-else>
+                {{ t('accountPage.channelTelegramHint') }} · {{ t('accountPage.telegramOpenHint') }}
+              </template>
             </p>
           </div>
         </div>

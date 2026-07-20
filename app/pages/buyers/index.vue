@@ -39,6 +39,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
+const { track } = useAnalytics()
 
 const PAGE_SIZE = 25
 
@@ -112,6 +113,19 @@ watch([term, sort, currentPage], () => {
   if (currentPage.value > 1) q.page = String(currentPage.value)
   router.replace({ query: q })
 })
+
+// One settled query = one event. Skips the initial fire (arriving from a
+// link/reload isn't "searching").
+let searchTouched = false
+watch(term, (q) => {
+  if (!searchTouched) {
+    searchTouched = true
+    return
+  }
+  if (q) track('search', { search_term: q, location: 'buyers' })
+  else track('filter_clear', { surface: 'buyers' })
+})
+watch(sort, s => track('sort_change', { surface: 'buyers', sort: s }))
 
 function clearSearch() {
   search.value = ''

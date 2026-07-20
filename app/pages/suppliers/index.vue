@@ -31,6 +31,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
+const { track } = useAnalytics()
 
 // ---- State lives in the URL ---------------------------------------
 // A search or a page is the thing someone pastes into a message; keeping
@@ -46,6 +47,7 @@ const departamento = ref((route.query.departamento as string) ?? '')
 const hasFilters = computed(() => deiOnly.value || !!tamano.value || !!departamento.value)
 
 function clearFilters() {
+  track('filter_clear', { surface: 'suppliers' })
   deiOnly.value = false
   tamano.value = ''
   departamento.value = ''
@@ -90,6 +92,19 @@ watch([searchTerm, page, sort, deiOnly, tamano, departamento], () => {
   router.replace({ query: q })
 })
 
+// One settled query/filter set = one event. Skips the initial fire (arriving
+// from a link/reload isn't "searching").
+let searchTouched = false
+watch([searchTerm, deiOnly, tamano, departamento], () => {
+  if (!searchTouched) {
+    searchTouched = true
+    return
+  }
+  if (searchTerm.value) track('search', { search_term: searchTerm.value, location: 'suppliers' })
+  if (hasFilters.value) track('filter_apply', { surface: 'suppliers', active_count: [deiOnly.value, tamano.value, departamento.value].filter(Boolean).length })
+})
+watch(sort, s => track('sort_change', { surface: 'suppliers', sort: s }))
+
 const { data: listRes, pending, error } = await useFetch<any>('/api/suppliers', { query: listQuery })
 
 // The lead states the size of the directory, which must not move when the
@@ -106,6 +121,7 @@ const directoryTotal = computed<number | null>(() => totalRes.value?.data?.pagin
 const totalPages = computed(() => Math.max(1, pagination.value?.totalPages ?? 1))
 
 function clearSearch() {
+  track('filter_clear', { surface: 'suppliers' })
   search.value = ''
   page.value = 1
 }

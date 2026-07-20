@@ -1435,7 +1435,10 @@
     "limitsTitle": "The limits",
     "limitsBody": "Some official records report no amount, and amounts in foreign currency are shown with their original currency. A contract carrying a flag isn't necessarily irregular: it's a contract that departs from the pattern and is worth a look.",
     "linkTitle": "You can always check",
-    "linkBody": "Every contract links to its official record on comprasestatales.gub.uy. If something here doesn't add up, the source wins."
+    "linkBody": "Every contract links to its official record on comprasestatales.gub.uy. If something here doesn't add up, the source wins.",
+    "authorTitle": "Who's behind this",
+    "authorBody": "This is a personal, independent project maintained by Eduardo Airaudo. Non-commercial and open source. It is not an official site of the Uruguayan state. If you'd like to get in touch — a question, a bug, or about your personal data — the address is below.",
+    "authorContact": "Contact"
   },
   "footer": {
     "source": "Data: Compras Estatales (OCDS) via catalogodatos.gub.uy",
@@ -1443,7 +1446,58 @@
     "api": "Public API",
     "developers": "Developers",
     "github": "GitHub",
-    "lastUpdate": "Data as of {date}"
+    "lastUpdate": "Data as of {date}",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "cookies": "Cookies",
+    "legal": "Legal"
+  },
+  "consent": {
+    "aria": "Cookie notice",
+    "text": "We use measurement cookies (Google Analytics) to learn which pages are useful. The site works the same without them.",
+    "more": "Learn more",
+    "accept": "Accept",
+    "reject": "Reject"
+  },
+  "legalPage": {
+    "updated": "Last updated: {date}",
+    "privacyDesc": "What data we process, with whom, and what rights you have. An independent project on Uruguay's public procurement.",
+    "termsDesc": "Terms of use for the site: what it is, what it is not, no warranty, and how to cite the data."
+  },
+  "cookiesPage": {
+    "title": "Cookie policy",
+    "updated": "July 19, 2026",
+    "desc": "What the site stores in your browser, why, and how to change your decision about measurement.",
+    "intro": "We store a few things in your browser. Most are necessary for the site to work (your theme, your session, your progress). Only the measurement ones depend on your consent.",
+    "howTitle": "How consent works",
+    "howUnset": "Undecided: Google Analytics writes no cookie and sends only identifier-less measurement. We show the notice until you choose.",
+    "howGranted": "If you accept: full measurement is enabled and Google Analytics' _ga cookies are written.",
+    "howDenied": "If you reject: the Google Analytics script is not loaded at all and no request is made to Google.",
+    "decisionTitle": "Your decision",
+    "stateLabel": "Current state:",
+    "stateGranted": "Accepted",
+    "stateDenied": "Rejected",
+    "stateUnset": "Undecided",
+    "change": "Change my decision",
+    "tableTitle": "What is stored",
+    "colName": "Name",
+    "colPurpose": "Purpose",
+    "colDuration": "Duration",
+    "colKind": "Type",
+    "kindNecessary": "Necessary",
+    "kindMeasure": "Measurement",
+    "moreTitle": "More information",
+    "moreBody": "The detail of what data we process and your rights is in the"
+  },
+  "errorPage": {
+    "title404": "We couldn't find this page",
+    "titleGeneric": "Something went wrong",
+    "lead404": "The address doesn't exist or has moved. Try searching for a contract or going back home.",
+    "leadGeneric": "We had a problem loading this page. You can retry from the home page.",
+    "searchPlaceholder": "Search a contract, agency or supplier…",
+    "searchBtn": "Search",
+    "home": "Go home",
+    "explore": "Explore contracts"
   },
   "donation": {
     "support": "Support the project",

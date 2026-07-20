@@ -3,6 +3,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
+const { track } = useAnalytics()
 
 const severity = ref((route.query.severity as string) ?? '')
 // Second-stage AI triage filter: '' | unexplained | uncertain | explainable | unscored.
@@ -55,6 +56,7 @@ const drills = computed(() => [
 const advancedCount = computed(() => supplier.value.length + buyer.value.length + rubroName.value.length + product.value.length)
 
 function clearAdvanced() {
+  track('filter_clear', { surface: 'anomalies' })
   supplier.value = []
   buyer.value = []
   rubroName.value = []
@@ -76,6 +78,34 @@ const CURRENCIES = ['UYU', 'USD'] as const
 watch([severity, ai, category, sort, minZ, currency, supplier, buyer, rubroName, product, year], () => {
   page.value = 1
 })
+
+/** Which facet KEYS are on — never the values behind them. */
+const activeFacets = computed(() => {
+  const on: string[] = []
+  if (severity.value) on.push('severity')
+  if (ai.value) on.push('ai')
+  if (category.value) on.push('category')
+  if (minZ.value > 0) on.push('minZ')
+  if (currency.value) on.push('currency')
+  if (supplier.value.length) on.push('supplier')
+  if (buyer.value.length) on.push('buyer')
+  if (rubroName.value.length) on.push('rubroName')
+  if (product.value.length) on.push('product')
+  if (year.value) on.push('year')
+  return on
+})
+
+// One settled facet set = one event. Skips the initial fire (arriving from a
+// link/reload isn't "applying a filter"). Sort is tracked separately.
+let facetsTouched = false
+watch([severity, ai, category, minZ, currency, supplier, buyer, rubroName, product, year], () => {
+  if (!facetsTouched) {
+    facetsTouched = true
+    return
+  }
+  if (activeFacets.value.length) track('filter_apply', { surface: 'anomalies', active_count: activeFacets.value.length, facets: activeFacets.value.join(',') })
+}, { deep: true })
+watch(sort, s => track('sort_change', { surface: 'anomalies', sort: s }))
 
 watch([severity, ai, category, sort, minZ, currency, supplier, buyer, rubroName, product, year, page], () => {
   // Arrays serialise to repeated params (?supplier=A&supplier=B), never comma-joined —

@@ -7,6 +7,7 @@
 // user clicks the DonationLauncher heart next to the nav, which flips the shared
 // `donation:open` state. Closing it just hides it again — no persistence, no nag.
 const { t } = useI18n()
+const { track: trackEvent } = useAnalytics()
 
 const REPO_URL = 'https://github.com/eduair94/gastos-gub-uy'
 
@@ -16,11 +17,8 @@ function close() {
   open.value = false
 }
 
-// Optional analytics hook — matches the reference so a later gtag drop-in works.
 function track(action: string) {
-  if (typeof window !== 'undefined' && 'gtag' in window && typeof (window as any).gtag === 'function') {
-    ;(window as any).gtag('event', 'support_click', { action })
-  }
+  trackEvent('support_click', { action })
 }
 </script>
 

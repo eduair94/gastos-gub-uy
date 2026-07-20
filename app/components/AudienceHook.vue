@@ -9,7 +9,13 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const authEnabled = useAuthEnabled()
-const { audience, setAudience } = useAudience()
+const { audience, setAudience: setAudienceState } = useAudience()
+const { track } = useAnalytics()
+
+function setAudience(next: 'empresa' | 'ciudadano') {
+  track('audience_select', { audience: next })
+  setAudienceState(next)
+}
 
 // Empresa alert CTA reuses the alert-builder deep link (`new=1` auto-opens the form,
 // `keyword=` prefills it). On the band we carry the current search into the alert so

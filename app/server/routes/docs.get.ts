@@ -11,6 +11,52 @@ const html = /* html */ `<!doctype html>
     <title>API Docs · Con la tuya contribuyente — Uruguay Procurement API</title>
     <meta name="description" content="Public API for Uruguay government procurement: contracts, licitaciones (tenders), analytics, alerts, webhooks and an MCP server. Get an API key and try every endpoint live." />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <!-- Google Analytics, hand-rolled and deliberately duplicated. This page is a
+         Nitro route, not a Nuxt page: plugins/analytics.client.ts never runs here,
+         the SPA router never sees the navigation, and /docs therefore recorded zero
+         pageviews. Do NOT delete this as redundant with the app's gtag setup — it is
+         the only measurement the API reference has.
+
+         It honours the same decision the app stores in localStorage 'cltc-consent'
+         (see composables/useConsent.ts): a refusal loads nothing at all, a grant
+         behaves normally, and an undecided reader gets cookieless Consent Mode.
+         There is no banner here on purpose — the banner lives in the Nuxt app, and
+         a developer reading a reference should not be asked twice. -->
+    <script>
+      (function () {
+        var choice = null
+        try {
+          var raw = window.localStorage.getItem('cltc-consent')
+          if (raw) choice = (JSON.parse(raw) || {}).choice
+        }
+        catch (e) { /* localStorage throws in some privacy modes — treat as undecided */ }
+
+        // Refused: never load the tag, so not a single request leaves the browser.
+        if (choice === 'denied') return
+
+        window.dataLayer = window.dataLayer || []
+        function gtag() { window.dataLayer.push(arguments) }
+        window.gtag = gtag
+        gtag('js', new Date())
+        // Consent Mode v2 defaults deny everything: an undecided reader is measured
+        // cookielessly, with nothing written to their device.
+        gtag('consent', 'default', {
+          analytics_storage: 'denied',
+          ad_storage: 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied'
+        })
+        if (choice === 'granted') gtag('consent', 'update', { analytics_storage: 'granted' })
+        gtag('config', 'G-E3V3E1LLC0')
+
+        var tag = document.createElement('script')
+        tag.async = true
+        tag.src = 'https://www.googletagmanager.com/gtag/js?id=G-E3V3E1LLC0'
+        document.head.appendChild(tag)
+      })()
+    </script>
+
     <style>
       body { margin: 0; }
       /* Friendly loading state before Scalar hydrates */

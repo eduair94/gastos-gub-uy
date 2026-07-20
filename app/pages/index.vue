@@ -2,6 +2,7 @@
 const { t } = useI18n()
 const localePath = useLocalePath()
 const router = useRouter()
+const { track } = useAnalytics()
 // Resolved in setup: the useSeo getter below runs lazily, and Nuxt
 // composables throw if first called outside a setup context.
 const siteUrl = useRuntimeConfig().public.siteUrl
@@ -10,6 +11,8 @@ const query = ref('')
 
 function submit() {
   const q = query.value.trim()
+  // An empty box is "take me to the explorer", not a search.
+  if (q) track('search', { search_term: q, location: 'hero' })
   router.push(q
     ? { path: localePath('/contracts'), query: { search: q } }
     : { path: localePath('/contracts') })

@@ -25,6 +25,7 @@ const emit = defineEmits<{ saved: [], cancel: [] }>()
 
 const { t } = useI18n()
 const api = useMonitorApi()
+const { track } = useAnalytics()
 
 const editing = computed(() => Boolean(props.modelValue?._id))
 
@@ -89,6 +90,7 @@ watch(searchQuery, (q) => {
     try { searchResults.value = (await api.categories.search(q.trim(), 40)).data }
     catch { searchResults.value = [] }
     finally { searchLoading.value = false }
+    track('alert_catalog_search')
   }, 250)
 })
 
@@ -109,6 +111,7 @@ function schedulePreview() {
     previewLoading.value = true
     try {
       preview.value = (await api.watches.test(buildPayload())).data
+      track('alert_preview', { matches: preview.value.total })
     }
     catch { preview.value = null }
     finally { previewLoading.value = false }
@@ -156,6 +159,13 @@ async function save() {
     const payload = { ...buildPayload(), name: form.name.trim() }
     if (editing.value && props.modelValue?._id) await api.watches.update(props.modelValue._id, payload as never)
     else await api.watches.create(payload as never)
+    track(editing.value ? 'alert_update' : 'alert_create', {
+      categories: form.categories.length,
+      keywords: form.keywords.length,
+      keyword_mode: form.keywordMode,
+      procurement_methods: form.procurementMethods.length,
+      has_amount_filter: form.minValue != null || form.maxValue != null,
+    })
     emit('saved')
   }
   catch (e) {

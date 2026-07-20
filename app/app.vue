@@ -20,4 +20,9 @@ useHead(() => ({
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
+  <!-- Cookie notice. Client-only: its visibility depends on localStorage, so
+       rendering it on the server would guarantee a hydration mismatch. -->
+  <ClientOnly>
+    <ConsentBanner />
+  </ClientOnly>
 </template>

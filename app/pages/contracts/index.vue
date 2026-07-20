@@ -5,6 +5,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
+const { track } = useAnalytics()
 
 // ---- Filter state lives in the URL --------------------------------
 // A filtered view is the thing people share with a journalist or paste
@@ -101,6 +102,25 @@ const activeCount = computed(() => {
   ].filter(Boolean).length
 })
 
+/** Which facet KEYS are on — never the values behind them: the event describes
+ *  the shape of a query, not what someone was looking for. */
+const activeFacets = computed(() => {
+  const f = filters.value
+  const on: string[] = []
+  if (f.search) on.push('search')
+  if (f.tag.length) on.push('tag')
+  if (f.buyers.length || f.buyerIds.length) on.push('buyer')
+  if (f.suppliers.length) on.push('supplier')
+  if (f.category.length || f.categoryId.length) on.push('product')
+  if (f.procurementMethodDetails.length) on.push('method')
+  if (f.status.length) on.push('status')
+  if (f.currency.length) on.push('currency')
+  if (f.yearFrom || f.yearTo) on.push('year')
+  if (f.amountFrom !== null || f.amountTo !== null) on.push('amount')
+  if (f.hasAmount) on.push('has_amount')
+  return on
+})
+
 /** The params both /contracts and /contracts/stats accept. */
 const apiQueryNow = computed(() => {
   const f = filters.value
@@ -168,6 +188,23 @@ function urlQueryNow(): Record<string, string> {
 watch([apiQuery, page, sort], () => {
   router.replace({ query: urlQueryNow() })
 }, { deep: true })
+
+// One settled filter set = one event. Rides the same debounced signal as the
+// URL writer above, so typing doesn't flood GA — only what actually got fetched
+// does. Skips the very first fire (arriving from a link/reload isn't "applying").
+let filtersTouched = false
+watch(apiQuery, () => {
+  if (!filtersTouched) {
+    filtersTouched = true
+    return
+  }
+  if (activeCount.value > 0) {
+    track('filter_apply', { surface: 'explorer', active_count: activeCount.value, facets: activeFacets.value.join(',') })
+  }
+  if (filters.value.search) track('search', { search_term: filters.value.search, location: 'explorer' })
+})
+
+watch(sort, s => track('sort_change', { surface: 'explorer', sort: s }))
 
 function sameQuery(a: Record<string, unknown>, b: Record<string, unknown>) {
   const ka = Object.keys(a).sort()
@@ -302,6 +339,7 @@ const totalPages = computed(() => {
 })
 
 function clearAll() {
+  track('filter_clear', { surface: 'explorer' })
   filters.value = {
     // Back to the default view, not to an empty one: clearing should
     // land the reader on contracts again, not on a wall of $0 paperwork.
@@ -411,6 +449,7 @@ const itemsFor = ref<ContractLike | null>(null)
 function openItems(c: ContractLike) {
   itemsFor.value = c
   itemsDialog.value = true
+  track('items_preview_open', { source: 'explorer' })
 }
 
 useSeo(() => ({

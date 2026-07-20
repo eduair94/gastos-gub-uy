@@ -5,6 +5,7 @@
 const { t } = useI18n()
 const localePath = useLocalePath()
 const api = useMonitorApi()
+const { track } = useAnalytics()
 
 interface InboxItem {
   id: string
@@ -51,6 +52,7 @@ function closesIn(end?: string): string | null {
 
 async function onItemClick(item: InboxItem) {
   open.value = false
+  track('notification_open')
   if (!item.readAt) {
     item.readAt = new Date().toISOString()
     unread.value = Math.max(0, unread.value - 1)
@@ -62,6 +64,7 @@ async function onItemClick(item: InboxItem) {
 async function markAll() {
   unread.value = 0
   items.value = items.value.map(i => ({ ...i, readAt: i.readAt ?? new Date().toISOString() }))
+  track('notification_mark_all_read')
   await api.notifications.readAll().catch(() => {})
 }
 

@@ -26,11 +26,20 @@ const { user } = useAuth()
 // Firebase isn't configured. Viewing the call detail stays public.
 const authEnabled = useAuthEnabled()
 const api = useMonitorApi()
+const { track } = useAnalytics()
 
 const compraId = computed(() => String(route.params.compraId))
 
 const { data } = await useFetch<{ data: OpenCall }>(() => `/api/open-calls/${compraId.value}`)
 const call = computed<OpenCall>(() => data.value?.data ?? ({} as OpenCall))
+
+// Guard against double-firing between SSR hydration and a later client nav.
+let viewedId = ''
+watch(compraId, (id) => {
+  if (!id || id === viewedId) return
+  viewedId = id
+  track('view_item', { item_type: 'open_call', item_id: id })
+}, { immediate: true })
 
 const { data: benchData } = await useFetch<{ data: { benchmarks: Array<Record<string, unknown>> } }>(
   () => `/api/open-calls/${compraId.value}/benchmarks`,
@@ -82,10 +91,12 @@ async function toggleSave() {
       await api.savedCalls.remove(compraId.value)
       saved.value = false
       reminderDays.value = 0
+      track('call_unsave')
     }
     else {
       await api.savedCalls.save({ compraId: compraId.value })
       saved.value = true
+      track('call_save')
     }
   }
   finally {
@@ -98,6 +109,7 @@ async function setReminder(days: number) {
   if (!user.value) return
   await api.savedCalls.save({ compraId: compraId.value, reminderDaysBefore: days || undefined })
   saved.value = true
+  track('call_reminder_set', { days })
 }
 </script>
 

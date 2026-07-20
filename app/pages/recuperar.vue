@@ -4,6 +4,7 @@ definePageMeta({ middleware: 'guest' })
 const { t } = useI18n()
 const localePath = useLocalePath()
 const { sendReset } = useAuth()
+const { track } = useAnalytics()
 
 useSeo({ title: t('auth.resetTitle'), description: t('auth.resetTitle'), path: '/recuperar', noindex: true })
 
@@ -15,6 +16,9 @@ const error = ref('')
 async function doReset() {
   error.value = ''
   loading.value = true
+  // Measured on the request, not the outcome: the handler reports success either way
+  // so it never reveals whether the address has an account.
+  track('password_reset_request')
   try {
     await sendReset(email.value)
     sent.value = true

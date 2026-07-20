@@ -11,6 +11,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
+const { track } = useAnalytics()
 
 const search = ref((route.query.search as string) ?? '')
 const sort = ref((route.query.sort as string) ?? 'spend')
@@ -37,6 +38,20 @@ watch([debouncedSearch, sort, page, rubro], () => {
   if (rubro.value) q.rubro = rubro.value
   router.replace({ query: q })
 })
+
+// One settled query = one event. Skips the initial fire (arriving from a
+// link/reload isn't "searching" or "filtering").
+let touched = false
+watch([debouncedSearch, rubro], () => {
+  if (!touched) {
+    touched = true
+    return
+  }
+  if (debouncedSearch.value) track('search', { search_term: debouncedSearch.value, location: 'products' })
+  else if (!rubro.value) track('filter_clear', { surface: 'products' })
+  if (rubro.value) track('filter_apply', { surface: 'products', active_count: 1, facets: 'rubro' })
+})
+watch(sort, s => track('sort_change', { surface: 'products', sort: s }))
 
 // Resolve the rubro token to a human label for the active-filter banner.
 watch(rubro, async (tok) => {

@@ -1435,7 +1435,10 @@
     "limitsTitle": "Los límites",
     "limitsBody": "Algunos registros oficiales no informan importe, y los montos en moneda extranjera se convierten a pesos indicando la moneda original. Un contrato marcado con una alerta no es necesariamente irregular: es un contrato que se aparta del patrón y que vale la pena mirar.",
     "linkTitle": "Siempre podés verificar",
-    "linkBody": "Cada contrato enlaza a su ficha oficial en comprasestatales.gub.uy. Si algo acá no cuadra, la fuente manda."
+    "linkBody": "Cada contrato enlaza a su ficha oficial en comprasestatales.gub.uy. Si algo acá no cuadra, la fuente manda.",
+    "authorTitle": "Quién está detrás",
+    "authorBody": "Este es un proyecto personal e independiente, mantenido por Eduardo Airaudo. Sin fines comerciales y con el código abierto. No es un sitio oficial del Estado uruguayo. Si querés escribir —por una consulta, un error o tus datos personales— el correo está abajo.",
+    "authorContact": "Contacto"
   },
   "footer": {
     "source": "Datos: Compras Estatales (OCDS) vía catalogodatos.gub.uy",
@@ -1443,7 +1446,58 @@
     "api": "API pública",
     "developers": "Desarrolladores",
     "github": "GitHub",
-    "lastUpdate": "Datos al {date}"
+    "lastUpdate": "Datos al {date}",
+    "privacy": "Privacidad",
+    "terms": "Términos",
+    "cookies": "Cookies",
+    "legal": "Legal"
+  },
+  "consent": {
+    "aria": "Aviso de cookies",
+    "text": "Usamos cookies de medición (Google Analytics) para saber qué páginas sirven. Sin ellas el sitio funciona igual.",
+    "more": "Más información",
+    "accept": "Aceptar",
+    "reject": "Rechazar"
+  },
+  "legalPage": {
+    "updated": "Última actualización: {date}",
+    "privacyDesc": "Qué datos tratamos, con quién y qué derechos tenés. Proyecto independiente sobre compras del Estado uruguayo.",
+    "termsDesc": "Condiciones de uso del sitio: qué es, qué no es, sin garantías y cómo citar los datos."
+  },
+  "cookiesPage": {
+    "title": "Política de cookies",
+    "updated": "19 de julio de 2026",
+    "desc": "Qué guarda el sitio en tu navegador, para qué y cómo cambiar tu decisión sobre la medición.",
+    "intro": "Guardamos algunas cosas en tu navegador. La mayoría son necesarias para que el sitio funcione (tu tema, tu sesión, tu progreso). Solo las de medición dependen de tu consentimiento.",
+    "howTitle": "Cómo funciona el consentimiento",
+    "howUnset": "Sin decidir: Google Analytics no escribe ninguna cookie y solo envía mediciones sin identificadores. Te mostramos el aviso hasta que elijas.",
+    "howGranted": "Si aceptás: se activa la medición completa y se escriben las cookies _ga de Google Analytics.",
+    "howDenied": "Si rechazás: el script de Google Analytics no se carga en absoluto y no se hace ninguna petición a Google.",
+    "decisionTitle": "Tu decisión",
+    "stateLabel": "Estado actual:",
+    "stateGranted": "Aceptada",
+    "stateDenied": "Rechazada",
+    "stateUnset": "Sin decidir",
+    "change": "Cambiar mi decisión",
+    "tableTitle": "Qué se guarda",
+    "colName": "Nombre",
+    "colPurpose": "Propósito",
+    "colDuration": "Duración",
+    "colKind": "Tipo",
+    "kindNecessary": "Necesaria",
+    "kindMeasure": "Medición",
+    "moreTitle": "Más información",
+    "moreBody": "El detalle de qué datos tratamos y tus derechos está en la"
+  },
+  "errorPage": {
+    "title404": "No encontramos esta página",
+    "titleGeneric": "Algo salió mal",
+    "lead404": "La dirección no existe o se movió. Probá buscar un contrato o volver al inicio.",
+    "leadGeneric": "Tuvimos un problema al cargar esta página. Podés reintentar desde el inicio.",
+    "searchPlaceholder": "Buscar un contrato, organismo o proveedor…",
+    "searchBtn": "Buscar",
+    "home": "Ir al inicio",
+    "explore": "Explorar contratos"
   },
   "donation": {
     "support": "Apoyá el proyecto",

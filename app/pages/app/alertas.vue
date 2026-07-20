@@ -5,6 +5,7 @@ const { t } = useI18n()
 const api = useMonitorApi()
 const route = useRoute()
 const router = useRouter()
+const { track } = useAnalytics()
 
 useSeo({ title: t('alerts.title'), description: t('alerts.lead'), path: '/app/alertas', noindex: true })
 
@@ -31,16 +32,19 @@ onMounted(() => {
   const kw = typeof route.query.keyword === 'string' ? route.query.keyword.trim() : ''
   editing.value = kw ? { name: kw, keywords: [kw] } : null
   showForm.value = true
+  track('alert_builder_open', { source: 'deeplink' })
   router.replace({ query: {} })
 })
 
 function newWatch() {
   editing.value = null
   showForm.value = true
+  track('alert_builder_open', { source: 'button' })
 }
 function editWatch(w: Watch) {
   editing.value = w
   showForm.value = true
+  track('alert_builder_open', { source: 'edit' })
 }
 async function onSaved() {
   showForm.value = false
@@ -50,6 +54,7 @@ async function onSaved() {
 async function remove(w: Watch) {
   if (!window.confirm(t('alerts.deleteConfirm'))) return
   await api.watches.remove(w._id)
+  track('alert_delete')
   await refresh()
 }
 </script>

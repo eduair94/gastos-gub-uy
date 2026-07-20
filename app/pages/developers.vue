@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { t } = useI18n()
 const localePath = useLocalePath()
+const { track } = useAnalytics()
 
 useSeo({
   title: t('developers.title'),
@@ -31,9 +32,12 @@ const integrations = computed(() => [
         {{ t('developers.lead') }}
       </p>
       <div class="dev__cta">
+        <!-- /docs is same-origin, so the global outbound-link delegate ignores it;
+             these two clicks are the only signal that the reference gets read. -->
         <a
           href="/docs"
           class="dev__btn dev__btn--primary"
+          @click="track('docs_open', { source: 'developers_hero' })"
         >
           <v-icon size="18">
             mdi-book-open-variant
@@ -80,6 +84,7 @@ const integrations = computed(() => [
         <a
           href="/docs"
           class="dev__link"
+          @click="track('docs_open', { source: 'developers_step3' })"
         >{{ t('developers.docsCta') }} →</a>
       </div>
     </section>

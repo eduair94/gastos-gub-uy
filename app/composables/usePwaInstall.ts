@@ -21,6 +21,7 @@ export function usePwaInstall() {
     installed.value = true
     canInstall.value = false
     deferred = null
+    useAnalytics().track('pwa_installed')
   }
 
   onMounted(() => {
@@ -42,6 +43,7 @@ export function usePwaInstall() {
     const { outcome } = await deferred.userChoice
     deferred = null
     canInstall.value = false
+    useAnalytics().track('pwa_install_prompt', { outcome })
     return outcome === 'accepted'
   }
 

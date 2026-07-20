@@ -5,20 +5,24 @@ const route = useRoute()
 
 useSeo({ title: t('unsub.title'), description: t('unsub.title'), path: '/unsubscribe', noindex: true })
 
+const { track } = useAnalytics()
 const state = ref<'processing' | 'done' | 'error'>('processing')
 
 onMounted(async () => {
   const token = typeof route.query.token === 'string' ? route.query.token : ''
   if (!token) {
     state.value = 'error'
+    track('email_unsubscribe', { result: 'missing_token' })
     return
   }
   try {
     const res = await $fetch<{ success: boolean }>('/api/unsubscribe', { method: 'POST', body: { token } })
     state.value = res.success ? 'done' : 'error'
+    track('email_unsubscribe', { result: res.success ? 'done' : 'error' })
   }
   catch {
     state.value = 'error'
+    track('email_unsubscribe', { result: 'error' })
   }
 })
 </script>

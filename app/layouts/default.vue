@@ -108,15 +108,28 @@ onMounted(() => {
   applyTheme(saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches)
 })
 
+const { track } = useAnalytics()
+
 function toggleTheme() {
   applyTheme(!isDark.value)
+  // applyTheme has flipped isDark to the new value already.
+  track('theme_toggle', { theme: isDark.value ? 'dark' : 'light' })
 }
 
-function submitSearch() {
+// One handler for both the top-bar and the drawer form; the caller says which.
+function submitSearch(location: 'topbar' | 'drawer' = 'topbar') {
   const q = search.value.trim()
   if (!q) return
+  track('search', { search_term: q, location })
   router.push({ path: localePath('/contracts'), query: { search: q } })
   drawer.value = false
+}
+
+// Wraps i18n's setLocale so the language switch is measured. Both the top-bar
+// and drawer menus route through here.
+function changeLocale(code: string) {
+  track('locale_change', { locale: code })
+  setLocale(code)
 }
 
 const otherLocales = computed(() =>
@@ -472,7 +485,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                 v-for="l in otherLocales"
                 :key="l.code"
                 :title="l.name"
-                @click="setLocale(l.code)"
+                @click="changeLocale(l.code)"
               />
             </v-list>
           </v-menu>
@@ -614,7 +627,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
       <form
         class="drawer__search"
         role="search"
-        @submit.prevent="submitSearch"
+        @submit.prevent="submitSearch('drawer')"
       >
         <label
           class="u-sr-only"
@@ -862,6 +875,20 @@ watch([locale, user], () => nextTick(scheduleRecompute))
           >
             Compras Estatales
           </a>
+        </nav>
+        <nav
+          class="foot__legal"
+          :aria-label="t('footer.legal')"
+        >
+          <NuxtLink :to="localePath('/privacidad')">
+            {{ t('footer.privacy') }}
+          </NuxtLink>
+          <NuxtLink :to="localePath('/terminos')">
+            {{ t('footer.terms') }}
+          </NuxtLink>
+          <NuxtLink :to="localePath('/cookies')">
+            {{ t('footer.cookies') }}
+          </NuxtLink>
         </nav>
       </div>
     </footer>
@@ -1338,6 +1365,26 @@ watch([locale, user], () => nextTick(scheduleRecompute))
 }
 
 .foot__links a:hover { text-decoration: underline; }
+
+/* A quieter legal row on its own line, so it reads as fine print rather than
+   competing with the primary footer nav. */
+.foot__legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  width: 100%;
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}
+
+.foot__legal a {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.foot__legal a:hover { color: var(--celeste-deep); text-decoration: underline; }
 
 .foot__gh {
   display: inline-flex;

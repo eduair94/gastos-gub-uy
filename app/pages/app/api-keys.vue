@@ -3,6 +3,7 @@ definePageMeta({ middleware: 'auth' })
 
 const { t } = useI18n()
 const api = useMonitorApi()
+const { track } = useAnalytics()
 
 useSeo({ title: t('apiKeys.title'), description: t('apiKeys.lead'), path: '/app/api-keys', noindex: true })
 
@@ -60,12 +61,14 @@ async function submitCreate() {
   try {
     const res = await api.apiKeys.create({ label: form.label.trim(), scopes })
     newToken.value = res.data.token
+    track('api_key_create', { scopes: scopes.join(',') })
     createOpen.value = false
     revealOpen.value = true
     await refresh()
   }
   catch {
     createError.value = t('apiKeys.createError')
+    track('api_key_create_error')
   }
   finally {
     creating.value = false
@@ -78,12 +81,14 @@ async function copyToken() {
   if (import.meta.client && navigator.clipboard) {
     await navigator.clipboard.writeText(newToken.value)
     copied.value = true
+    track('api_key_copy')
   }
 }
 
 async function revoke(row: KeyRow) {
   if (import.meta.client && !window.confirm(t('apiKeys.revokeConfirm'))) return
   await api.apiKeys.revoke(row._id)
+  track('api_key_revoke')
   await refresh()
 }
 
@@ -111,11 +116,14 @@ function fmtDate(iso: string | null): string {
       <p class="keys__intro">
         {{ t('apiKeys.intro') }}
       </p>
+      <!-- /docs is same-origin, so the global outbound-link delegate ignores it;
+           this is the only signal that anyone reached the API reference. -->
       <a
         href="/docs"
         target="_blank"
         rel="noopener"
         class="keys__doclink"
+        @click="track('docs_open', { source: 'api_keys' })"
       >
         <v-icon size="16">mdi-book-open-variant</v-icon>
         {{ t('apiKeys.docsLink') }}

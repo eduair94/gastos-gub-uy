@@ -13,6 +13,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 export function useWebPush() {
   const config = useRuntimeConfig()
+  const { track } = useAnalytics()
   const isSupported = ref(false)
   const permission = ref<NotificationPermission>('default')
   const isSubscribed = ref(false)
@@ -59,6 +60,7 @@ export function useWebPush() {
       permission.value = perm
       if (perm !== 'granted') {
         error.value = 'Permiso de notificaciones denegado'
+        track('push_permission_denied')
         return false
       }
       const reg = await navigator.serviceWorker.ready
@@ -75,10 +77,12 @@ export function useWebPush() {
         body: { endpoint: json.endpoint, keys: json.keys },
       })
       isSubscribed.value = true
+      track('push_subscribe')
       return true
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'No se pudo activar el push'
+      track('push_error', { reason: 'subscribe' })
       return false
     }
     finally {
@@ -97,10 +101,12 @@ export function useWebPush() {
       if (sub) await sub.unsubscribe()
       await $fetch('/api/push/unsubscribe', { method: 'POST', body: { endpoint } })
       isSubscribed.value = false
+      track('push_unsubscribe')
       return true
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'No se pudo desactivar el push'
+      track('push_error', { reason: 'unsubscribe' })
       return false
     }
     finally {

@@ -13,6 +13,15 @@ const { data: res, error } = await useFetch<any>(() => `/api/contracts/${encodeU
 
 const contract = computed<ContractLike | null>(() => res.value?.data ?? null)
 
+// Guard against double-firing between SSR hydration and a later client nav.
+const { track } = useAnalytics()
+let viewedId = ''
+watch(id, (v) => {
+  if (!v || v === viewedId) return
+  viewedId = v
+  track('view_item', { item_type: 'contract', item_id: v })
+}, { immediate: true })
+
 // The monthly BCU rate table, so each item price can be shown in UYU at the
 // contract's own month and in today's pesos on click (see MoneyConvert).
 const { data: rateRes } = await useFetch<any>('/api/rates')
@@ -729,6 +738,10 @@ const timeline = computed(() => {
 })
 
 const rawOpen = ref(false)
+function openRawJson() {
+  rawOpen.value = true
+  track('raw_json_view')
+}
 
 // "What else does this agency buy?" is the most common next question.
 // `contract` is already resolved here, so the query is a plain value.
@@ -1905,7 +1918,7 @@ useSeo(() => ({
               <button
                 class="rawbtn"
                 type="button"
-                @click="rawOpen = true"
+                @click="openRawJson"
               >
                 {{ t('contract.sections.raw') }}
               </button>

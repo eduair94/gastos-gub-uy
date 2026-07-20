@@ -5,6 +5,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const { registerEmail, loginGoogle } = useAuth()
+const { track } = useAnalytics()
 
 useSeo({ title: t('auth.registerTitle'), description: t('auth.subtitle'), path: '/registro', noindex: true })
 
@@ -38,6 +39,9 @@ async function preCreateRubroWatch() {
   if (!payload) return
   try {
     await $fetch('/api/watches', { method: 'POST', body: payload })
+    // The ROI signal for the cold-email campaign: fires only when the watch
+    // this landing actually promised was created, not merely requested.
+    track('alert_precreated_from_campaign', { rubro: raw })
   }
   catch {
     // Cap reached or transient — the user can still create it by hand.
@@ -53,6 +57,7 @@ async function doRegister() {
     await navigateTo(redirectTarget())
   }
   catch (e) {
+    track('sign_up_failed', { method: 'password', reason: authErrorCode(e) })
     error.value = authError(e, t)
   }
   finally {
@@ -69,6 +74,7 @@ async function doGoogle() {
     await navigateTo(redirectTarget())
   }
   catch (e) {
+    track('sign_up_failed', { method: 'google', reason: authErrorCode(e) })
     error.value = authError(e, t)
   }
   finally {

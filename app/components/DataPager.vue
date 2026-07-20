@@ -32,10 +32,20 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ 'update:page': [value: number] }>()
 
 const { t } = useI18n()
+const { track } = useAnalytics()
+const route = useRoute()
 
 function go(to: number) {
   const next = Math.min(props.totalPages, Math.max(1, to))
   if (next === props.page) return
+  // Every paginated list on the site pages through here (PaginatedList renders
+  // two of these), so the measurement lives at the choke point rather than
+  // being re-wired — and differently — on each page.
+  track('list_paginate', {
+    surface: route.path,
+    page: next,
+    direction: next > props.page ? 'next' : 'prev',
+  })
   emit('update:page', next)
   // Wait for the page value to propagate before moving the viewport; the
   // anchor sits above the list so its position is stable even before the

@@ -11,17 +11,22 @@ useSeo({ title: t('auth.callbackChecking'), description: t('auth.callbackCheckin
 
 const failed = ref(false)
 
+const { track } = useAnalytics()
+
 onMounted(async () => {
   try {
+    // completeMagicLink() already tracks 'login' { method: 'magic_link' } on success.
     const ok = await completeMagicLink()
     if (ok) {
       await navigateTo(localePath('/app'))
       return
     }
     failed.value = true
+    track('login_failed', { method: 'magic_link', reason: 'not_a_sign_in_link' })
   }
-  catch {
+  catch (e) {
     failed.value = true
+    track('login_failed', { method: 'magic_link', reason: authErrorCode(e) })
   }
 })
 </script>

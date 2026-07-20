@@ -5,6 +5,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const { loginEmail, loginGoogle, sendMagicLink } = useAuth()
+const { track } = useAnalytics()
 
 useSeo({ title: t('auth.loginTitle'), description: t('auth.subtitle'), path: '/login', noindex: true })
 
@@ -33,6 +34,7 @@ async function doLogin() {
     await navigateTo(redirectTarget())
   }
   catch (e) {
+    track('login_failed', { method: 'password', reason: authErrorCode(e) })
     error.value = authError(e, t)
   }
   finally {
@@ -48,6 +50,7 @@ async function doGoogle() {
     await navigateTo(redirectTarget())
   }
   catch (e) {
+    track('login_failed', { method: 'google', reason: authErrorCode(e) })
     error.value = authError(e, t)
   }
   finally {
@@ -64,6 +67,7 @@ async function doMagic() {
   try {
     await sendMagicLink(email.value)
     magicSent.value = true
+    track('magic_link_request')
   }
   catch (e) {
     error.value = authError(e, t)

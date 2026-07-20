@@ -33,7 +33,11 @@ const props = withDefaults(defineProps<{
 })
 
 const { t } = useI18n()
+const { track } = useAnalytics()
 const open = ref(false)
+watch(open, (v) => {
+  if (v) track('money_convert_open')
+})
 
 const conv = computed(() => {
   const a = props.amount

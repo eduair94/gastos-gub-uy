@@ -16,6 +16,7 @@ const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
+const { track } = useAnalytics()
 
 const page = ref(Number(route.query.page ?? 1))
 watch(page, () => {
@@ -93,6 +94,7 @@ const active = ref<any>(null)
 function report(a: any) {
   active.value = a
   dialogOpen.value = true
+  track('report_error_open')
 }
 
 // ---- Live polling ----

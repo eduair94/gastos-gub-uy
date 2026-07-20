@@ -35,10 +35,15 @@ const props = withDefaults(defineProps<{
   minChars?: number
   placeholder?: string
   noDataText?: string
+  /** Names this typeahead in analytics ('product', 'anomaly_supplier', …).
+   *  Optional: without it the surface the field sits on is reported instead. */
+  source?: string
 }>(), { minChars: 2 })
 
 const emit = defineEmits<{ 'update:modelValue': [string[]] }>()
 const { t } = useI18n()
+const { track } = useAnalytics()
+const route = useRoute()
 
 const items = ref<EntityOption[]>([])
 const loading = ref(false)
@@ -97,6 +102,11 @@ const mergedItems = computed<EntityOption[]>(() => {
 })
 
 function onModel(v: string[]) {
+  // A picked value, not a removed chip or a cleared field — and never the
+  // as-you-type queries, which are keystrokes, not decisions.
+  if (v.length > props.modelValue.length) {
+    track('autocomplete_select', { source: props.source ?? route.path })
+  }
   emit('update:modelValue', v)
 }
 

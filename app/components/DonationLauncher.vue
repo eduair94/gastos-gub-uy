@@ -7,10 +7,12 @@ withDefaults(defineProps<{ variant?: 'icon' | 'drawer' }>(), { variant: 'icon' }
 const emit = defineEmits<{ (e: 'activate'): void }>()
 
 const { t } = useI18n()
+const { track } = useAnalytics()
 const open = useState<boolean>('donation:open', () => false)
 
 function activate() {
   open.value = true
+  track('donation_open')
   emit('activate')
 }
 </script>
