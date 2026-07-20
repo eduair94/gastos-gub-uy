@@ -317,6 +317,23 @@ export default defineNuxtConfig({
 
   ssr: true,
 
+  experimental: {
+    defaults: {
+      nuxtLink: {
+        // Prefetch route chunks on hover/focus, NOT when a link scrolls into
+        // view (Nuxt's default). This is a link-dense dashboard — the nav alone
+        // is a dozen links, plus every table row and card — so visibility
+        // prefetch downloaded dozens of route chunks during the idle window
+        // right after load. That was the dominant contributor to bootup-time,
+        // mainthread-work and unused-javascript failing on all 47 routes.
+        // Interaction prefetch keeps navigation instant (the chunk is fetched
+        // the instant a pointer touches the link) while paying for only the
+        // links a reader actually reaches for.
+        prefetchOn: { visibility: false, interaction: true },
+      },
+    },
+  },
+
   eslint: {
     config: {
       stylistic: true,
