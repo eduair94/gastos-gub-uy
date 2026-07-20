@@ -70,6 +70,7 @@ export function createGoogleMapsResolver(deps: GoogleMapsDeps): ContactResolver 
       return {
         emails: [],
         website: d.website ?? null,
+        websiteSource: d.website ? "googleMaps" : null,
         phone: d.phone ?? null,
         phoneSource: d.phone ? "googleMaps" : null,
         place,

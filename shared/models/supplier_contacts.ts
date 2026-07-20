@@ -29,6 +29,8 @@ export interface ISupplierContact {
   emails: IEmailEntry[];
   primaryEmail: string | null;
   website: string | null;
+  /** Provenance of `website`; googleMaps (a Places-listed site) is ToS-restricted like phone. */
+  websiteSource: FieldSource | null;
   phone: string | null;
   /** Provenance of `phone`. */
   phoneSource: FieldSource | null;
@@ -72,6 +74,7 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
   emails: { type: [EmailEntrySchema], default: [] },
   primaryEmail: { type: String, default: null },
   website: { type: String, default: null },
+  websiteSource: { type: String, default: null },
   phone: { type: String, default: null },
   phoneSource: { type: String, default: null },
   address: { type: String, default: null },
@@ -92,6 +95,7 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
 SupplierContactSchema.index({ supplierId: 1 }, { unique: true });
 SupplierContactSchema.index({ rut: 1 });
 SupplierContactSchema.index({ status: 1, priorityScore: -1 });
+SupplierContactSchema.index({ name: 1 });
 SupplierContactSchema.index({ "rubros.classificationId": 1 });
 SupplierContactSchema.index({ placeSource: 1 });
 SupplierContactSchema.index({ locality: 1 });

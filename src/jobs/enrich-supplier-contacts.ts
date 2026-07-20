@@ -106,6 +106,7 @@ async function main() {
       // doesn't lose it.
       const all: ContactCandidate[] = [];
       let website: string | null = existing?.website ?? null;
+      let websiteSource: FieldSource | null = existing?.websiteSource ?? null;
       let phone: string | null = null;
       let phoneSource: FieldSource | null = null;
       let place: PlaceInfo | null = null;
@@ -113,7 +114,7 @@ async function main() {
         const r = resolvers[i];
         const res: ResolverResult = await r.resolve({ ...input, website }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
         all.push(...res.emails);
-        if (!website && res.website) website = res.website;
+        if (!website && res.website) { website = res.website; websiteSource = res.websiteSource ?? null; }
         if (!phone && res.phone) { phone = res.phone; phoneSource = res.phoneSource ?? null; }
         if (!place && res.place) place = res.place;
         // Throttle external calls, but not after the LAST resolver — that
@@ -134,7 +135,7 @@ async function main() {
       await SupplierContactModel.updateOne(
         { supplierId },
         { $set: {
-          supplierId, rut, name, emails, primaryEmail, website, phone, phoneSource,
+          supplierId, rut, name, emails, primaryEmail, website, websiteSource, phone, phoneSource,
           address: place?.address ?? null,
           locality: place?.locality ?? null,
           lat: place?.lat ?? null,

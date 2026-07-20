@@ -19,6 +19,8 @@ export interface PlaceInfo {
 export interface ResolverResult {
   emails: ContactCandidate[];
   website?: string | null;
+  /** Provenance of `website`; set googleMaps when the site came from Google Places (ToS-restricted). */
+  websiteSource?: FieldSource | null;
   phone?: string | null;
   /** Provenance of `phone`, so the orchestrator can tag it on the record. */
   phoneSource?: FieldSource | null;

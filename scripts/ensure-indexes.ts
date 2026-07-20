@@ -559,6 +559,7 @@ async function main(): Promise<void> {
       await sc.createIndex({ supplierId: 1 }, { unique: true, background: true, name: 'supplierId_1' })
       await sc.createIndex({ rut: 1 }, { background: true, name: 'rut_1' })
       await sc.createIndex({ status: 1, priorityScore: -1 }, { background: true, name: 'status_1_priorityScore_-1' })
+      await sc.createIndex({ name: 1 }, { background: true, name: 'name_1' })
       await sc.createIndex({ 'rubros.classificationId': 1 }, { background: true, name: 'rubros.classificationId_1' })
       await sc.createIndex({ placeSource: 1 }, { background: true, name: 'placeSource_1' })
       await sc.createIndex({ locality: 1 }, { background: true, name: 'locality_1' })

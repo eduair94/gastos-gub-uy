@@ -12,6 +12,7 @@
     "contracts": "Contratos",
     "products": "Productos",
     "suppliers": "Proveedores",
+    "contactos": "Contactos",
     "buyers": "Organismos",
     "anomalies": "Alertas",
     "unexplained": "Sin explicación",
@@ -738,6 +739,50 @@
         "body": "Probá buscarlo en el directorio.",
         "action": "Ir al directorio"
       }
+    }
+  },
+  "contacts": {
+    "title": "Directorio de contactos de proveedores",
+    "lead": "Datos de contacto de {total} proveedores del Estado, para investigación y contacto comercial. Descargá la lista filtrada en CSV, Excel, JSON o vCard.",
+    "searchPlaceholder": "Buscar proveedor por nombre…",
+    "resultsSummary": "{count} contactos",
+    "table": {
+      "name": "Proveedor",
+      "rubro": "Rubro",
+      "locality": "Localidad",
+      "email": "Email",
+      "website": "Sitio web",
+      "phone": "Teléfono"
+    },
+    "sort": {
+      "priorityDesc": "Mayor relevancia",
+      "nameAsc": "Nombre (A–Z)"
+    },
+    "filter": {
+      "rubro": "Rubro",
+      "rubroAny": "Todos los rubros",
+      "dept": "Departamento",
+      "deptAny": "Todo el país",
+      "size": "Tamaño",
+      "sizeAny": "Cualquier tamaño",
+      "deiOnly": "Solo registradas (DEI)",
+      "verifiedOnly": "Solo emails verificados",
+      "hasPhone": "Con teléfono",
+      "hasWebsite": "Con sitio web",
+      "clear": "Limpiar filtros"
+    },
+    "download": {
+      "label": "Descargar {count} contactos",
+      "aria": "Descargar en {format}",
+      "capWarning": "La descarga incluye los primeros {cap} contactos. Afiná los filtros para exportar un grupo más chico."
+    },
+    "empty": {
+      "title": "Ningún contacto coincide con esos filtros",
+      "body": "Probá ampliar los filtros o desactivar «solo emails verificados». El filtro por departamento y tamaño usa el registro DEI, que no cubre a todos los proveedores."
+    },
+    "notice": {
+      "source": "Datos reunidos de fuentes públicas: el registro DEI del MIEM, los sitios web de los propios proveedores y datos abiertos de Compras Estatales. Se excluyen los datos de terceros restringidos por sus condiciones de uso.",
+      "optout": "¿Sos un proveedor y querés que quitemos tus datos? Escribinos a"
     }
   },
   "buyers": {
@@ -1545,6 +1590,10 @@
     "suppliers": {
       "title": "Proveedores del Estado uruguayo",
       "description": "Directorio de {total} proveedores del Estado uruguayo, con montos cobrados, organismos compradores y contratos."
+    },
+    "contacts": {
+      "title": "Contactos de proveedores del Estado uruguayo",
+      "description": "Directorio descargable de datos de contacto de {total} proveedores del Estado uruguayo: email, sitio web, teléfono y rubro. CSV, Excel, JSON y vCard."
     },
     "supplierDetail": {
       "title": "{name} — proveedor del Estado",

@@ -58,6 +58,7 @@ const nav = computed(() => [
   ] },
   { key: 'contracts', to: localePath('/contracts'), icon: 'mdi-file-document-outline' },
   { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
+  { key: 'contactos', to: localePath('/proveedores/contactos'), icon: 'mdi-email-outline' },
   { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
   { key: 'products', to: localePath('/products'), icon: 'mdi-package-variant-closed' },
   { key: 'recopilatorios', to: localePath('/recopilatorios'), icon: 'mdi-folder-star-outline' },

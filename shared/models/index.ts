@@ -14,6 +14,7 @@ export * from './product_variants';
 export * from './provider_anomaly_stats';
 export * from './provider_load_error_stats';
 export * from './release';
+export * from './supplier_contacts';
 export * from './supplier_pattern';
 export * from './tender_forecast';
 
