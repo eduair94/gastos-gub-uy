@@ -1,7 +1,7 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { TenderForecastModel } from '../../utils/models'
-import { escapeRegex, sanitizeSearch } from '../../utils/query'
+import { escapeRegex, sanitizeSearch, toArray } from '../../utils/query'
 import { DISPLAY_THRESHOLD } from '../../../../shared/forecast/constants'
 
 /**
@@ -46,8 +46,22 @@ export default defineEventHandler(async (event) => {
     const includeElapsed = q.includeElapsed === '1' || q.includeElapsed === 'true'
 
     const filter: Record<string, unknown> = { confidence: { $gte: minConfidence } }
-    if (q.buyer) filter.buyerId = String(q.buyer)
-    if (q.rubro) filter.rubroAncestors = String(q.rubro)
+
+    // `buyer`/`rubro` accept either a single exact id (back-compat, used by
+    // AnticipatedTenderCard) or a comma-separated / repeated-key list of
+    // exact ids (the page's CheckboxMultiSelect filters) — built into $in.
+    // toArray() (shared/query) normalises both a repeated query key (h3
+    // hands back an array) and a CSV string into a trimmed, non-empty list;
+    // an empty/absent param omits the filter entirely rather than matching
+    // nothing with `$in: []`.
+    const buyerIds = toArray(q.buyer)
+    if (buyerIds.length) filter.buyerId = { $in: buyerIds }
+    // rubroAncestors is an array field on the document — $in matches a doc
+    // if ANY of its ancestor rubro nodes is in the given list, i.e. OR
+    // semantics across the selected rubros (each rubro filters independently,
+    // not requiring a forecast to belong to all of them at once).
+    const rubroTokens = toArray(q.rubro)
+    if (rubroTokens.length) filter.rubroAncestors = { $in: rubroTokens }
 
     // Free-text search over the WHOLE eligible set (not just the fetched page) —
     // for the public page's Organismo/Rubro boxes, where a citizen types a name

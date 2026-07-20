@@ -74,6 +74,7 @@
     "clear": "Limpiar",
     "clearAll": "Limpiar todo",
     "apply": "Aplicar",
+    "moreSelected": "+{n} más",
     "filters": "Filtros",
     "showFilters": "Mostrar filtros",
     "hideFilters": "Ocultar filtros",
@@ -1188,7 +1189,12 @@
       "title": "Es una estimación, no un anuncio",
       "body": "Este cálculo se arma a partir del patrón histórico de compras de cada organismo. No es un anuncio oficial del Estado ni una garantía de que el llamado se vaya a publicar: el sistema de compras uruguayo no anticipa sus licitaciones. Tomalo como una probabilidad, no como un hecho."
     },
-    "filters": { "buyer": "Organismo", "rubro": "Rubro" },
+    "filters": {
+      "buyer": "Organismo",
+      "rubro": "Rubro",
+      "buyerPlaceholder": "Todos los organismos",
+      "rubroPlaceholder": "Todos los rubros"
+    },
     "card": {
       "title": "Próximo llamado probable en este rubro",
       "disclaimer": "Estimación por patrón histórico de compras, no un anuncio oficial."
@@ -1224,8 +1230,8 @@
       "body": "El cálculo se arma con un job mensual; si nunca corrió, todavía no hay datos para mostrar."
     },
     "noMatches": {
-      "title": "No encontramos llamados próximos para esa búsqueda",
-      "body": "Buscamos en todos los llamados esperados y ninguno coincide con ese organismo o rubro. Probá con otro término o limpiá la búsqueda."
+      "title": "No encontramos llamados próximos para esa selección",
+      "body": "Buscamos en todos los llamados esperados y ninguno coincide con los organismos o rubros elegidos. Probá con otra selección o limpiá los filtros."
     }
   },
   "mandate": {

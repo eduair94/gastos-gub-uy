@@ -18,41 +18,48 @@
 import { ALERT_THRESHOLD, DISPLAY_THRESHOLD } from '#shared/forecast/constants'
 import { effectiveWindow } from '#shared/forecast/window-display'
 import { cadenceUnit } from '#shared/forecast/cadence-label'
+import type { CheckboxMultiSelectOption } from '~/components/CheckboxMultiSelect.vue'
 
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
 
 // ---- Filters (server-side, over the WHOLE eligible set — not just the
 // fetched page) -------------------------------------------------------------
-// The endpoint's own `buyer`/`rubro` params expect exact ids (buyerId,
-// rubroAncestors token) that a citizen typing a name would never guess, so
-// the free-text boxes here are wired to the endpoint's separate `buyerText`/
-// `rubroText` params (case-insensitive regex, server-side) instead. Earlier
-// version of this page filtered client-side over only the first 150 fetched
-// rows — a real organism/rubro that wasn't among the 150 globally-soonest
-// forecasts (of ~7,100 eligible) silently read as "nothing coming" even
-// though a match existed further down the sorted set. Debounced so typing
-// doesn't fire a request per keystroke; `useFetch`'s `query` is reactive to
-// the debounced refs, so a filter change re-queries the whole set rather
-// than re-slicing an already-narrow local array.
-const buyerFilter = ref('')
-const rubroFilter = ref('')
-const buyerFilterDebounced = refDebounced(buyerFilter, 300)
-const rubroFilterDebounced = refDebounced(rubroFilter, 300)
+// The endpoint's `buyer`/`rubro` params expect exact ids (buyerId,
+// rubroAncestors token) — not something a citizen could type from memory,
+// which is why this used to be wired to a separate free-text/regex param.
+// Replaced by two CheckboxMultiSelect dropdowns whose options come from
+// /api/analytics/anticipacion/facets (the distinct organismos/rubros that
+// actually have an upcoming forecast right now), so every option a reader
+// can pick is guaranteed to return rows and the exact ids never need to be
+// typed. Selections feed the endpoint's exact-match `buyer`/`rubro` params
+// (now $in-based server-side — see anticipacion.get.ts) as CSV, so a filter
+// change re-queries the whole eligible set rather than re-slicing an
+// already-narrow local array — same "search the whole set" guarantee the
+// old free-text boxes had.
+const selectedBuyers = ref<string[]>([])
+const selectedRubros = ref<string[]>([])
+
+// Facet options — client-only: the list of filter choices isn't part of the
+// page's SEO-relevant content, and fetching it server-side would just add
+// a second blocking round trip to the initial SSR render.
+const { data: facetsRes, pending: facetsPending } = await useFetch<any>('/api/analytics/anticipacion/facets', { server: false })
+const buyerOptions = computed<CheckboxMultiSelectOption[]>(() => facetsRes.value?.data?.buyers ?? [])
+const rubroOptions = computed<CheckboxMultiSelectOption[]>(() => facetsRes.value?.data?.rubros ?? [])
 
 function hasActiveFilters(): boolean {
-  return !!(buyerFilter.value || rubroFilter.value)
+  return !!(selectedBuyers.value.length || selectedRubros.value.length)
 }
 function clearFilters() {
-  buyerFilter.value = ''
-  rubroFilter.value = ''
+  selectedBuyers.value = []
+  selectedRubros.value = []
 }
 
 const { data: res, pending, error } = await useFetch<any>('/api/analytics/anticipacion', {
   query: computed(() => ({
     limit: 200,
-    ...(buyerFilterDebounced.value.trim() ? { buyerText: buyerFilterDebounced.value.trim() } : {}),
-    ...(rubroFilterDebounced.value.trim() ? { rubroText: rubroFilterDebounced.value.trim() } : {}),
+    ...(selectedBuyers.value.length ? { buyer: selectedBuyers.value.join(',') } : {}),
+    ...(selectedRubros.value.length ? { rubro: selectedRubros.value.join(',') } : {}),
   })),
 })
 
@@ -198,24 +205,22 @@ useSeo(() => ({
              the current search matches nothing, so a citizen can see and
              correct/clear the search rather than land on a dead end. -->
         <div class="controls">
-          <v-text-field
-            v-model="buyerFilter"
+          <CheckboxMultiSelect
+            v-model="selectedBuyers"
             :label="t('anticipacion.filters.buyer')"
-            density="comfortable"
-            variant="outlined"
-            hide-details
-            clearable
-            prepend-inner-icon="mdi-bank-outline"
+            :placeholder="t('anticipacion.filters.buyerPlaceholder')"
+            :items="buyerOptions"
+            :loading="facetsPending"
+            icon="mdi-bank-outline"
             class="controls__field"
           />
-          <v-text-field
-            v-model="rubroFilter"
+          <CheckboxMultiSelect
+            v-model="selectedRubros"
             :label="t('anticipacion.filters.rubro')"
-            density="comfortable"
-            variant="outlined"
-            hide-details
-            clearable
-            prepend-inner-icon="mdi-tag-outline"
+            :placeholder="t('anticipacion.filters.rubroPlaceholder')"
+            :items="rubroOptions"
+            :loading="facetsPending"
+            icon="mdi-tag-outline"
             class="controls__field"
           />
         </div>
