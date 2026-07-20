@@ -2,6 +2,11 @@
 import assert from "node:assert";
 import { hasVerifiedOverride } from "../../shared/utils/verified-override";
 import { amountPipelineExpr } from "../../src/uploaders/release-uploader";
+import {
+  isArtifactConfirmed,
+  isLumpsumSuspect,
+  LUMPSUM_DEFAULTS,
+} from "../../src/jobs/lib/lumpsum-candidates";
 
 // hasVerifiedOverride: only true when the audit sub-object is actually present.
 assert.equal(hasVerifiedOverride(null), false);
@@ -62,5 +67,56 @@ assert.deepEqual(unprotectedExpr, {
     { $literal: recomputedAmountData },
   ],
 });
+
+// The real SURYPARK shape must be selected.
+const suryparkRelease = {
+  id: "adjudicacion-53193",
+  tag: ["award"],
+  amount: { primaryAmount: 43_823_788_579.956 },
+  awards: [{
+    items: [{
+      quantity: 330000,
+      classification: { id: "27050" },
+      unit: { name: "UNIDAD", value: { amount: 3316, currency: "USD" } },
+    }],
+  }],
+};
+assert.equal(isLumpsumSuspect(suryparkRelease), true);
+
+// A large but ordinary UYU contract must NOT be selected (wrong currency, and the
+// mislabel we are hunting is concentrated in foreign-currency rows).
+assert.equal(isLumpsumSuspect({
+  ...suryparkRelease,
+  awards: [{ items: [{ quantity: 330000, unit: { name: "UNIDAD", value: { amount: 3316, currency: "UYU" } } }] }],
+}), false);
+
+// Small quantity -> a genuinely expensive unit, not a lump sum.
+assert.equal(isLumpsumSuspect({
+  ...suryparkRelease,
+  awards: [{ items: [{ quantity: 2, unit: { value: { amount: 3316, currency: "USD" } } }] }],
+}), false);
+
+// Below the suspect floor -> ordinary spending, leave it alone.
+assert.equal(isLumpsumSuspect({ ...suryparkRelease, amount: { primaryAmount: 5_000_000 } }), false);
+
+// Above the plausibility ceiling -> already excluded from aggregates elsewhere.
+assert.equal(isLumpsumSuspect({ ...suryparkRelease, amount: { primaryAmount: 60e9 } }), false);
+
+// Many priced lines -> the official single total could not be attributed; skip.
+assert.equal(isLumpsumSuspect({
+  ...suryparkRelease,
+  awards: [{ items: [
+    { quantity: 330000, unit: { value: { amount: 3316, currency: "USD" } } },
+    { quantity: 330000, unit: { value: { amount: 3316, currency: "USD" } } },
+    { quantity: 330000, unit: { value: { amount: 3316, currency: "USD" } } },
+  ] }],
+}), false);
+
+// Confirmation compares the computed total against the official one.
+assert.equal(isArtifactConfirmed(1_094_280_000, 4201), true);  // ~260,000x -> artifact
+assert.equal(isArtifactConfirmed(4300, 4201), false);          // agrees -> not an artifact
+assert.equal(isArtifactConfirmed(9000, 4201), false);          // ~2x -> below ratioMin, not ours
+assert.equal(isArtifactConfirmed(4201, 0), false);             // guard against divide-by-zero
+assert.equal(LUMPSUM_DEFAULTS.ratioMin, 5);
 
 console.log("ok: lumpsum artifacts");
