@@ -7,55 +7,6 @@
  */
 import { ITHG_LEDGER, ITHG_STATS } from '~/data/investigaciones-empresas'
 
-const { locale } = useI18n()
-const c = computed(() => (locale.value === 'en' ? EN : ES))
-
-const personLd = usePersonLd()
-const orgLd = useOrgLd()
-
-// NOT a top-level `const breadcrumbLd = useBreadcrumbLd([...])`: that would
-// read `c.value.title` eagerly, at module-init time — before `ES`/`EN` below
-// are declared ("Cannot access 'ES' before initialization"). Building the
-// plain object inline here (no composable call) is safe both for that and
-// for the usual reason useOrgLd()/usePersonLd() must never be called inside
-// this lazy getter — it does no Nuxt-instance-dependent work at all.
-function breadcrumbLd() {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    'itemListElement': [
-      { '@type': 'ListItem', 'position': 1, 'name': 'Investigaciones', 'item': `${siteUrl}/investigaciones` },
-      { '@type': 'ListItem', 'position': 2, 'name': c.value.title },
-    ],
-  }
-}
-const siteUrl = useRuntimeConfig().public.siteUrl as string
-
-useSeo(() => ({
-  title: c.value.title,
-  description: c.value.dek.slice(0, 155),
-  path: '/investigaciones/asse-ambulancias',
-  type: 'article',
-  kicker: 'Investigación',
-  jsonLd: [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'Article',
-      'headline': c.value.title,
-      'description': c.value.dek.slice(0, 155),
-      'author': personLd,
-      'publisher': orgLd,
-    },
-    breadcrumbLd(),
-  ],
-}))
-
-const gapBars = computed(() => [
-  { label: c.value.gapVisible, value: ITHG_STATS.visibleUYU, color: 'celeste' },
-  { label: c.value.gapDocumentado, value: ITHG_STATS.documentadoUYUmin, color: 'gold' },
-  { label: c.value.gapObservado, value: ITHG_STATS.observadoUYU, color: 'alerta' },
-])
-
 const ES = {
   title: 'ITHG: cinco fichas en la base, veinte millones de dólares en la realidad',
   dek: 'Una sociedad creada en 2020 como «proveedora marítima» pasó a concentrar el 96% de los traslados en ambulancia de ASSE, todo por compra directa. La base de Compras Estatales registra apenas cinco contratos por unos 33 millones de pesos. La auditoría de ASSE y el Tribunal de Cuentas documentan más de dos mil millones. La diferencia es la parte del gasto que la transparencia no ve.',
@@ -121,6 +72,55 @@ const EN: typeof ES = {
     'ITHG is not charged. It is named as a State supplier and as the subject of a public audit and complaint. An observed contract or a direct purchase is not, on its own, proof of a crime. Anyone named may add their response.',
   ],
 }
+
+const { locale } = useI18n()
+const c = computed(() => (locale.value === 'en' ? EN : ES))
+
+const personLd = usePersonLd()
+const orgLd = useOrgLd()
+
+// NOT a top-level `const breadcrumbLd = useBreadcrumbLd([...])`: that would
+// read `c.value.title` eagerly, at module-init time — before `ES`/`EN` below
+// are declared ("Cannot access 'ES' before initialization"). Building the
+// plain object inline here (no composable call) is safe both for that and
+// for the usual reason useOrgLd()/usePersonLd() must never be called inside
+// this lazy getter — it does no Nuxt-instance-dependent work at all.
+function breadcrumbLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      { '@type': 'ListItem', 'position': 1, 'name': 'Investigaciones', 'item': `${siteUrl}/investigaciones` },
+      { '@type': 'ListItem', 'position': 2, 'name': c.value.title },
+    ],
+  }
+}
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+
+useSeo(() => ({
+  title: c.value.title,
+  description: c.value.dek.slice(0, 155),
+  path: '/investigaciones/asse-ambulancias',
+  type: 'article',
+  kicker: 'Investigación',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      'headline': c.value.title,
+      'description': c.value.dek.slice(0, 155),
+      'author': personLd,
+      'publisher': orgLd,
+    },
+    breadcrumbLd(),
+  ],
+}))
+
+const gapBars = computed(() => [
+  { label: c.value.gapVisible, value: ITHG_STATS.visibleUYU, color: 'celeste' },
+  { label: c.value.gapDocumentado, value: ITHG_STATS.documentadoUYUmin, color: 'gold' },
+  { label: c.value.gapObservado, value: ITHG_STATS.observadoUYU, color: 'alerta' },
+])
 
 const SOURCES = [
   { label: 'la diaria — ASSE pagó US$ 20 millones a ITHG por traslados en tres años (compras directas, observadas por el TCR)', url: 'https://ladiaria.com.uy/salud/articulo/2023/5/asse-pago-20-millones-de-dolares-a-la-empresa-maritima-ithg-por-traslados-en-tres-anos-fueron-todas-compras-directas-y-observadas-por-el-tribunal-de-cuentas/' },

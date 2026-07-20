@@ -7,52 +7,6 @@
  */
 import { SATURNO_ARMADA_LEDGER, SATURNO_BY_BUYER, SATURNO_STATS } from '~/data/investigaciones-empresas'
 
-const { locale } = useI18n()
-const c = computed(() => (locale.value === 'en' ? EN : ES))
-
-const personLd = usePersonLd()
-const orgLd = useOrgLd()
-
-// NOT a top-level `const breadcrumbLd = useBreadcrumbLd([...])`: that would
-// read `c.value.title` eagerly, at module-init time — before `ES`/`EN` below
-// are declared ("Cannot access 'ES' before initialization"). Building the
-// plain object inline here (no composable call) is safe both for that and
-// for the usual reason useOrgLd()/usePersonLd() must never be called inside
-// this lazy getter — it does no Nuxt-instance-dependent work at all.
-function breadcrumbLd() {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    'itemListElement': [
-      { '@type': 'ListItem', 'position': 1, 'name': 'Investigaciones', 'item': `${siteUrl}/investigaciones` },
-      { '@type': 'ListItem', 'position': 2, 'name': c.value.title },
-    ],
-  }
-}
-const siteUrl = useRuntimeConfig().public.siteUrl as string
-
-useSeo(() => ({
-  title: c.value.title,
-  description: c.value.dek.slice(0, 155),
-  path: '/investigaciones/frigorifico-saturno',
-  type: 'article',
-  kicker: 'Investigación',
-  jsonLd: [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'Article',
-      'headline': c.value.title,
-      'description': c.value.dek.slice(0, 155),
-      'author': personLd,
-      'publisher': orgLd,
-    },
-    breadcrumbLd(),
-  ],
-}))
-
-const buyerBars = computed(() =>
-  SATURNO_BY_BUYER.map(b => ({ label: b.buyer, value: b.spend, color: b.force ? 'alerta' : 'gold' })))
-
 const ES = {
   title: 'Frigorífico Saturno: la carne de los cuarteles y las toneladas que no llegaron',
   dek: 'Abasto de Carnes Saturno es uno de los grandes proveedores de carne del Estado: 283 contratos por unos 1.140 millones de pesos con el INDA, el Ejército, la Armada y la Fuerza Aérea. En la Armada, una pericia detectó un faltante de unas 57 toneladas de carne, sobreprecios y cortes no licitados. El caso está en la Fiscalía de Delitos Económicos.',
@@ -114,6 +68,52 @@ const EN: typeof ES = {
     'The plant is not charged. It is named as a State supplier and as a questioned party in a public case. A contract or a high price is not, on its own, proof of a crime. Anyone named may add their response.',
   ],
 }
+
+const { locale } = useI18n()
+const c = computed(() => (locale.value === 'en' ? EN : ES))
+
+const personLd = usePersonLd()
+const orgLd = useOrgLd()
+
+// NOT a top-level `const breadcrumbLd = useBreadcrumbLd([...])`: that would
+// read `c.value.title` eagerly, at module-init time — before `ES`/`EN` below
+// are declared ("Cannot access 'ES' before initialization"). Building the
+// plain object inline here (no composable call) is safe both for that and
+// for the usual reason useOrgLd()/usePersonLd() must never be called inside
+// this lazy getter — it does no Nuxt-instance-dependent work at all.
+function breadcrumbLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      { '@type': 'ListItem', 'position': 1, 'name': 'Investigaciones', 'item': `${siteUrl}/investigaciones` },
+      { '@type': 'ListItem', 'position': 2, 'name': c.value.title },
+    ],
+  }
+}
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+
+useSeo(() => ({
+  title: c.value.title,
+  description: c.value.dek.slice(0, 155),
+  path: '/investigaciones/frigorifico-saturno',
+  type: 'article',
+  kicker: 'Investigación',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      'headline': c.value.title,
+      'description': c.value.dek.slice(0, 155),
+      'author': personLd,
+      'publisher': orgLd,
+    },
+    breadcrumbLd(),
+  ],
+}))
+
+const buyerBars = computed(() =>
+  SATURNO_BY_BUYER.map(b => ({ label: b.buyer, value: b.spend, color: b.force ? 'alerta' : 'gold' })))
 
 const SOURCES = [
   { label: 'El Observador — Almirantes encargaban lomo a un frigorífico que había ganado la licitación por bondiola', url: 'https://www.elobservador.com.uy/nacional/almirantes-encargaban-lomo-un-frigorifico-que-habia-ganado-licitacion-bondiola-n6014952' },
