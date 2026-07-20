@@ -23,7 +23,7 @@ import {
 } from 'node:fs'
 import { resolve, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { platform, homedir, hostname } from 'node:os'
+import { platform, homedir, hostname, totalmem } from 'node:os'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(__dirname, '..')
@@ -233,6 +233,30 @@ function safeRename(from, to) {
   }
 }
 
+// V8's default old-space ceiling (~2GB on the 167 box, independent of the box's
+// actual 11GB) OOM-killed the Nitro server build outright — attempt 5/5, staging
+// bundle missing, live site untouched by the guarantee above but no deploy went
+// out either. Give the build half the machine's RAM, capped so a small dev box
+// doesn't get told to reserve more than it has; 2048 MB is the floor a build has
+// ever needed here. An operator's own NODE_OPTIONS (if it already sets
+// --max-old-space-size) wins — this only fills the gap when nothing was asked for.
+function buildHeapMb() {
+  const halfSystemMb = Math.floor(totalmem() / 1024 / 1024 / 2)
+  return Math.max(2048, Math.min(6144, halfSystemMb))
+}
+
+function buildEnv() {
+  const existing = process.env.NODE_OPTIONS || ''
+  if (existing.includes('max-old-space-size')) return { ...process.env, NITRO_OUTPUT_DIR: NEXT }
+  const heapMb = buildHeapMb()
+  log(`build heap: --max-old-space-size=${heapMb} (no NODE_OPTIONS override set)`)
+  return {
+    ...process.env,
+    NITRO_OUTPUT_DIR: NEXT,
+    NODE_OPTIONS: `${existing} --max-old-space-size=${heapMb}`.trim(),
+  }
+}
+
 // -------------------------------------------------------------------- build
 function build(buildNode) {
   const liveEntry = join(OUTPUT, 'server', 'index.mjs')
@@ -244,7 +268,7 @@ function build(buildNode) {
     const r = spawnSync(buildNode, [NUXT_BIN, 'build'], {
       cwd: APP,
       stdio: 'inherit',
-      env: { ...process.env, NITRO_OUTPUT_DIR: NEXT },
+      env: buildEnv(),
     })
     const nextOk = existsSync(join(NEXT, 'server', 'index.mjs'))
     if (r.status === 0 && nextOk) { log(`build succeeded on attempt ${attempt}`); return true }
