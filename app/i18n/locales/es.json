@@ -1203,6 +1203,8 @@
     "confidenceHelp": "Qué tan repetido y regular es el patrón histórico de compra: Alta = cadencia estable y reciente; Media = cadencia visible pero con más variación; Baja = patrón débil, cerca del mínimo para mostrarse.",
     "overdue": "Atrasado",
     "overdueHelp": "El llamado ya debería haberse publicado según la cadencia histórica de este organismo: puede aparecer en cualquier momento, no en la fecha exacta que indica la ventana.",
+    "everyDays": "cada ~{n} día(s)",
+    "everyWeeks": "cada ~{n} semana(s)",
     "everyMonths": "cada ~{n} meses",
     "events": "{n} llamados históricos",
     "perUnit": "por {unit}",

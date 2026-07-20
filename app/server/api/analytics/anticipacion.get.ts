@@ -33,10 +33,13 @@ export default defineEventHandler(async (event) => {
     // negative like -5 does not), and Mongo either rejects a negative .skip()
     // (uncaught 500) or reinterprets a negative .limit() as batch-closing
     // semantics rather than the intended cap.
+    // Math.floor(...) after the clamp: a fractional `?limit=10.9`/`?skip=2.5`
+    // is a valid finite Number in JS but not a valid Mongo skip/limit — floor
+    // it here rather than let a non-integer reach the driver.
     const rawLimit = Number(q.limit)
-    const limit = Math.max(1, Math.min(200, Number.isFinite(rawLimit) && rawLimit ? rawLimit : 50))
+    const limit = Math.floor(Math.max(1, Math.min(200, Number.isFinite(rawLimit) && rawLimit ? rawLimit : 50)))
     const rawSkip = Number(q.skip)
-    const skip = Math.max(0, Number.isFinite(rawSkip) ? rawSkip : 0)
+    const skip = Math.floor(Math.max(0, Number.isFinite(rawSkip) ? rawSkip : 0))
 
     const rawMinConfidence = q.minConfidence != null ? Number(q.minConfidence) : NaN
     const minConfidence = Number.isFinite(rawMinConfidence) ? rawMinConfidence : DISPLAY_THRESHOLD
@@ -77,7 +80,11 @@ export default defineEventHandler(async (event) => {
 
     const [rows, total] = await Promise.all([
       TenderForecastModel.find(filter)
-        .sort({ 'expectedWindow.start': 1 })
+        // Secondary sort key on _id: sorting on expectedWindow.start alone
+        // leaves ties (same start) in Mongo's unspecified natural order,
+        // which is not guaranteed stable across paginated calls — matters
+        // once Fase 2 skips/limits over this same query.
+        .sort({ 'expectedWindow.start': 1, '_id': 1 })
         .skip(skip)
         .limit(limit)
         .maxTimeMS(8000)

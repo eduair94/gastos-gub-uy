@@ -1203,6 +1203,8 @@
     "overdue": "Overdue",
     "overdueHelp": "This tender should already have been published based on the agency's historical cadence: it could appear any time now, not on the window's exact date.",
     "confidenceHelp": "How repeated and regular the historical buying pattern is: High = stable, recent cadence; Medium = a visible cadence with more variation; Low = a weak pattern, close to the display minimum.",
+    "everyDays": "every ~{n} day(s)",
+    "everyWeeks": "every ~{n} week(s)",
     "everyMonths": "every ~{n} months",
     "events": "{n} historical tenders",
     "perUnit": "per {unit}",

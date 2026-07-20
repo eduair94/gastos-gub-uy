@@ -24,6 +24,7 @@
  */
 import { ALERT_THRESHOLD, DISPLAY_THRESHOLD } from '#shared/forecast/constants'
 import { effectiveWindow } from '#shared/forecast/window-display'
+import { cadenceUnit } from '#shared/forecast/cadence-label'
 
 const props = defineProps<{
   /** Exact-match token: a rubroAncestors member (rubro node id OR a leaf classification.id). */
@@ -92,6 +93,18 @@ const windowLabel = computed(() => {
 })
 const isOverdue = computed(() => effWindow.value?.overdue ?? false)
 
+// Cadence label, unit picked by magnitude — same shared helper and same i18n
+// keys as app/pages/analytics/anticipacion.vue, so the two surfaces read
+// identically for the same input (was `Math.round(medianDays / 30)` months,
+// which rendered "every ~0 months" for cadences under ~15 days).
+const cadenceLabel = computed(() => {
+  const f = forecast.value
+  if (!f) return ''
+  const { key, n } = cadenceUnit(f.cadence.medianDays)
+  const i18nKey = key === 'days' ? 'anticipacion.everyDays' : key === 'weeks' ? 'anticipacion.everyWeeks' : 'anticipacion.everyMonths'
+  return t(i18nKey, { n })
+})
+
 const buyerHref = computed(() => {
   const id = forecast.value?.buyerId
   return id ? localePath(`/buyers/${id}`) : null
@@ -123,7 +136,7 @@ const buyerHref = computed(() => {
           v-else
           class="atc__buyer"
         >{{ forecast.buyerName || forecast.buyerId }}</strong>
-        {{ t('anticipacion.everyMonths', { n: Math.round(forecast.cadence.medianDays / 30) }) }}
+        {{ cadenceLabel }}
         <span
           v-if="forecast.rubroLabel"
           class="atc__rubro"

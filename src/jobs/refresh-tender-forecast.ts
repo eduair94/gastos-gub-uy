@@ -312,7 +312,13 @@ async function run(): Promise<void> {
     const confidence = confidenceScore({ cvDays: cadence.cvDays, eventCount: cadence.eventCount, tenderShare });
     if (confidence < DISPLAY_THRESHOLD) continue;
 
-    const top = [...g.leafCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, EVIDENCE_TOP);
+    // Secondary sort key on classificationId: `g.leafCounts` is a Map built
+    // during cursor iteration, so a tie on count alone leaves the order
+    // dependent on cursor/insertion order — which leaf lands first (and so
+    // supplies `expectedAmount` via `.find(Boolean)` below) could vary
+    // run-to-run for the same underlying data. classificationId is stable
+    // and unique per leaf, so this makes the whole sort deterministic.
+    const top = [...g.leafCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, EVIDENCE_TOP);
     if (!top.length) continue;
     const evidenceItems = top.map(([leaf, count]) => ({ classificationId: leaf, label: g.leafLabels.get(leaf) ?? leaf, count }));
     const amount = top.map(([leaf]) => baselineByLeaf.get(leaf)).find(Boolean);

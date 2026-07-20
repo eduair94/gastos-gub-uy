@@ -17,6 +17,7 @@
  */
 import { ALERT_THRESHOLD, DISPLAY_THRESHOLD } from '#shared/forecast/constants'
 import { effectiveWindow } from '#shared/forecast/window-display'
+import { cadenceUnit } from '#shared/forecast/cadence-label'
 
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
@@ -112,6 +113,18 @@ function windowLabel(r: any): string {
 }
 function isOverdue(r: any): boolean {
   return effWindow(r).overdue
+}
+
+// ---- Cadence as a human label, unit picked by magnitude ------------------
+// Was `Math.round(cadence.medianDays / 30)` months unconditionally — the job
+// only gates medianDays >= 1, so a buyer re-tendering every ~7–20 days
+// rounded to 0 and rendered "cada ~0 meses". cadenceUnit() (shared, reused
+// verbatim by AnticipatedTenderCard.vue so both surfaces render identically)
+// picks days/weeks/months by magnitude and never returns n=0.
+function cadenceLabel(r: any): string {
+  const { key, n } = cadenceUnit(r.cadence.medianDays)
+  const i18nKey = key === 'days' ? 'anticipacion.everyDays' : key === 'weeks' ? 'anticipacion.everyWeeks' : 'anticipacion.everyMonths'
+  return t(i18nKey, { n })
 }
 
 function evidenceTitle(r: any): string {
@@ -271,7 +284,7 @@ useSeo(() => ({
                       {{ windowLabel(r) }}
                     </td>
                     <td>
-                      {{ t('anticipacion.everyMonths', { n: Math.round(r.cadence.medianDays / 30) }) }}
+                      {{ cadenceLabel(r) }}
                       <span class="cell-sub u-mono">{{ t('anticipacion.events', { n: r.cadence.eventCount }) }}</span>
                     </td>
                     <td>
