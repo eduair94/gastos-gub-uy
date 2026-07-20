@@ -15,7 +15,7 @@ import { EmailCampaignModel } from "../shared/models/email_campaign";
 import { UserModel } from "../shared/models/user";
 
 const STATUSES: SendStatus[] = [
-  "queued", "sent", "delivered", "opened", "clicked",
+  "queued", "sending", "sent", "delivered", "opened", "clicked",
   "bounced", "complained", "unsubscribed", "failed",
 ];
 
