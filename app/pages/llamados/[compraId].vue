@@ -53,10 +53,36 @@ const { data: estimateData } = await useFetch<{ data: Record<string, unknown> }>
 )
 const estimate = computed(() => estimateData.value?.data ?? null)
 
+const config = useRuntimeConfig()
+const orgLd = useOrgLd()
+
+const seoTitle = call.value.title || t('llamados.title')
+const seoDescription = call.value.description || call.value.title || t('llamados.lead')
+const buyerName = call.value.buyer?.name || call.value.procuringEntity?.name
+
 useSeo({
-  title: call.value.title || t('llamados.title'),
-  description: call.value.description || call.value.title || t('llamados.lead'),
+  title: seoTitle,
+  description: seoDescription,
   path: `/llamados/${compraId.value}`,
+  // No schema.org type honestly fits "open tender" (Event/GovernmentService would be a
+  // forced match and risk a Search Console validation error) — a plain WebPage states the
+  // facts without overclaiming a type.
+  kicker: 'Llamado abierto',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      'name': seoTitle,
+      'description': seoDescription,
+      ...(buyerName ? { about: { '@type': 'Organization', 'name': buyerName } } : {}),
+      ...(call.value.publishDate ? { datePublished: new Date(call.value.publishDate).toISOString() } : {}),
+      'url': `${config.public.siteUrl}/llamados/${compraId.value}`,
+    },
+    {
+      '@context': 'https://schema.org',
+      ...orgLd,
+    },
+  ],
 })
 
 const statusLabel = computed(() => {

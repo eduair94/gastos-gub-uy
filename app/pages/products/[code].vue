@@ -191,6 +191,11 @@ const priceColumns = computed(() => [
   { key: 'n', label: t('contract.reference.comparables'), align: 'end' as const, mono: true },
 ])
 
+const breadcrumbLd = useBreadcrumbLd([
+  { name: 'Productos', path: '/products' },
+  { name: description.value },
+])
+
 useSeo(() => ({
   title: t('seo.productDetail.title', { name: description.value }),
   description: t('seo.productDetail.description', {
@@ -200,16 +205,21 @@ useSeo(() => ({
   }),
   path: `/products/${encodeURIComponent(code.value)}`,
   noindex: notFound.value,
+  kicker: 'Producto',
+  stat: product.value?.contractCount ? formatNumber(product.value.contractCount) : undefined,
   jsonLd: notFound.value
     ? undefined
-    : {
-        '@context': 'https://schema.org',
-        '@type': 'Dataset',
-        'name': t('seo.productDetail.title', { name: description.value }),
-        'identifier': code.value,
-        'url': `${config.public.siteUrl}/products/${encodeURIComponent(code.value)}`,
-        'creator': orgLd,
-      },
+    : [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Dataset',
+          'name': t('seo.productDetail.title', { name: description.value }),
+          'identifier': code.value,
+          'url': `${config.public.siteUrl}/products/${encodeURIComponent(code.value)}`,
+          'creator': orgLd,
+        },
+        breadcrumbLd,
+      ],
 }))
 </script>
 

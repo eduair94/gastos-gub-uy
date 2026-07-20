@@ -131,10 +131,35 @@ function clearSearch() {
   search.value = ''
 }
 
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.buyers.title'),
   description: t('seo.buyers.description'),
   path: '/buyers',
+  kicker: 'Organismos',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': t('seo.buyers.title'),
+      'description': t('seo.buyers.description'),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      // Mirrors what's actually on screen right now (current page/sort/search),
+      // capped well below the PAGE_SIZE=25 rows to keep the node small.
+      'itemListElement': rows.value.slice(0, 20).map((b, i) => ({
+        '@type': 'ListItem',
+        'position': i + 1,
+        'name': b.name,
+        'url': `${siteUrl}/buyers/${encodeURIComponent(b.buyerId)}`,
+      })),
+    },
+    orgLd,
+  ],
 }))
 </script>
 

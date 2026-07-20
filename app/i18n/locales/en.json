@@ -1455,7 +1455,7 @@
   "consent": {
     "aria": "Cookie notice",
     "text": "We use measurement cookies (Google Analytics) to learn which pages are useful. The site works the same without them.",
-    "more": "Learn more",
+    "more": "Learn more about cookies",
     "accept": "Accept",
     "reject": "Reject"
   },

@@ -264,10 +264,25 @@ function profileLink(r: { buyerId: string }): string {
   return localePath(`/buyers/${encodeURIComponent(r.buyerId)}`)
 }
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.intendencias.title'),
   description: t('seo.intendencias.description'),
   path: '/analytics/intendencias',
+  kicker: 'Intendencias',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      'name': t('seo.intendencias.title'),
+      'description': t('seo.intendencias.description'),
+      'creator': orgLd,
+      'isAccessibleForFree': true,
+      'license': 'https://catalogodatos.gub.uy',
+    },
+    orgLd,
+  ],
 }))
 </script>
 

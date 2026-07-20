@@ -197,6 +197,23 @@ export default defineNuxtConfig({
 
   sitemap: {
     autoLastmod: true,
+    // The static page scanner (nuxt:pages, the implicit `pages` sitemap below)
+    // only ever sees the ~50 static routes — every entity detail page
+    // ([id]/[slug]/[code]/[compraId]) has to be listed explicitly. Each is its
+    // own NAMED sitemap (not one combined `sources` array) so @nuxtjs/sitemap
+    // actually auto-chunks past `defaultSitemapsChunkSize` — a single giant
+    // source rendered as one ~45MB, 40s file mixing every entity type, nowhere
+    // near Google's 50k-URLs-per-file limit. See server/api/__sitemap__/*.ts.
+    defaultSitemapsChunkSize: 5000,
+    sitemaps: {
+      pages: {},
+      buyers: { sources: ['/api/__sitemap__/buyers'] },
+      suppliers: { sources: ['/api/__sitemap__/suppliers'] },
+      products: { sources: ['/api/__sitemap__/products'] },
+      contracts: { sources: ['/api/__sitemap__/contracts'] },
+      llamados: { sources: ['/api/__sitemap__/llamados'] },
+      cases: { sources: ['/api/__sitemap__/cases'] },
+    },
   },
 
   robots: {

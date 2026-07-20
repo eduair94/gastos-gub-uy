@@ -133,10 +133,25 @@ const headers = computed(() => [
   { title: t('organismos.col.share'), key: 'share', sortable: false, align: 'end' as const },
 ])
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.organismos.title'),
   description: t('seo.organismos.description'),
   path: '/analytics/organismos',
+  kicker: 'Organismos',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      'name': t('seo.organismos.title'),
+      'description': t('seo.organismos.description'),
+      'creator': orgLd,
+      'isAccessibleForFree': true,
+      'license': 'https://catalogodatos.gub.uy',
+    },
+    orgLd,
+  ],
 }))
 </script>
 
@@ -323,9 +338,9 @@ useSeo(() => ({
               border
               class="panel"
             >
-              <h3 class="panel__t">
+              <h2 class="panel__t">
                 {{ t('organismos.panel.ranking') }}
-              </h3>
+              </h2>
               <p class="panel__s">
                 {{ t('organismos.panel.rankingSub') }}
               </p>
@@ -346,9 +361,9 @@ useSeo(() => ({
               border
               class="panel"
             >
-              <h3 class="panel__t">
+              <h2 class="panel__t">
                 {{ t('organismos.panel.trend') }}
-              </h3>
+              </h2>
               <p class="panel__s">
                 {{ t('organismos.panel.trendSub') }}
               </p>

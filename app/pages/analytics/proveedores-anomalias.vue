@@ -258,10 +258,25 @@ const rubroSelectItems = computed(() => [
   ...rubroOptions.value.map(r => ({ value: r, title: rubroLabel(r) })),
 ])
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.providerAnomalies.title'),
   description: t('seo.providerAnomalies.description'),
   path: '/analytics/proveedores-anomalias',
+  kicker: 'Proveedores',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      'name': t('seo.providerAnomalies.title'),
+      'description': t('seo.providerAnomalies.description'),
+      'creator': orgLd,
+      'isAccessibleForFree': true,
+      'license': 'https://catalogodatos.gub.uy',
+    },
+    orgLd,
+  ],
 }))
 </script>
 

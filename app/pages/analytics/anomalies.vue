@@ -280,10 +280,25 @@ function rangeLabel(a: any): string {
   return [lo, NB, DASH, NB, hiShort].join('').split(' ').join(NB)
 }
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.anomalies.title'),
   description: t('seo.anomalies.description'),
   path: '/analytics/anomalies',
+  kicker: 'Alertas',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      'name': t('seo.anomalies.title'),
+      'description': t('seo.anomalies.description'),
+      'creator': orgLd,
+      'isAccessibleForFree': true,
+      'license': 'https://catalogodatos.gub.uy',
+    },
+    orgLd,
+  ],
 }))
 </script>
 

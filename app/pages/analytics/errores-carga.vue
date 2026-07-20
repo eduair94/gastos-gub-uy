@@ -154,10 +154,25 @@ onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', onVisible)
 })
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.erroresCarga.title'),
   description: t('seo.erroresCarga.description'),
   path: '/analytics/errores-carga',
+  kicker: 'Errores de carga',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      'name': t('seo.erroresCarga.title'),
+      'description': t('seo.erroresCarga.description'),
+      'creator': orgLd,
+      'isAccessibleForFree': true,
+      'license': 'https://catalogodatos.gub.uy',
+    },
+    orgLd,
+  ],
 }))
 </script>
 

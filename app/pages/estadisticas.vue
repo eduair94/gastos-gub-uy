@@ -40,10 +40,27 @@ const topSuppliers = computed<any[]>(() => (suppliersRes.value?.data ?? []).slic
 
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`
 
+const seoTitle = t('seo.estad.title')
+const seoDescription = t('seo.estad.description')
+const orgLd = useOrgLd()
+
 useSeo(() => ({
-  title: t('seo.estad.title'),
-  description: t('seo.estad.description'),
+  title: seoTitle,
+  description: seoDescription,
   path: '/estadisticas',
+  kicker: 'Estadísticas',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      'name': seoTitle,
+      'description': seoDescription,
+      'creator': orgLd,
+      'isAccessibleForFree': true,
+      'license': 'https://catalogodatos.gub.uy',
+    },
+    { '@context': 'https://schema.org', ...orgLd },
+  ],
 }))
 </script>
 

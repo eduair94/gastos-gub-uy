@@ -197,10 +197,25 @@ function contractsLink(buyerId: string) {
   return localePath(`/contracts?${q.toString()}`)
 }
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.partidos.title'),
   description: t('seo.partidos.description'),
   path: '/analytics/partidos',
+  kicker: 'Partidos',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      'name': t('seo.partidos.title'),
+      'description': t('seo.partidos.description'),
+      'creator': orgLd,
+      'isAccessibleForFree': true,
+      'license': 'https://catalogodatos.gub.uy',
+    },
+    orgLd,
+  ],
 }))
 </script>
 

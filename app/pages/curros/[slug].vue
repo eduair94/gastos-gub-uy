@@ -32,10 +32,41 @@ function statusLabel(s: string) {
   return t(`curros.status.${s}`)
 }
 
+const personLd = usePersonLd()
+const orgLd = useOrgLd()
+const breadcrumbLd = text.value
+  ? useBreadcrumbLd([
+      { name: t('nav.curros'), path: '/curros' },
+      { name: text.value.title },
+    ])
+  : null
+
 useSeo(() => ({
   title: text.value ? t('seo.currosDetail.title', { title: text.value.title }) : t('seo.curros.title'),
   description: text.value?.dek ?? t('seo.curros.description'),
   path: `/curros/${slug.value}`,
+  // Only once the case has actually resolved (text.value is null while
+  // loading or on an unknown slug) — otherwise there is no headline/dek to
+  // put in an Article node. Cases carry a free period label ("2010–2011"),
+  // never a real ISO date, so there is no honest publishedTime/modifiedTime
+  // to emit here.
+  ...(text.value
+    ? {
+        type: 'article' as const,
+        kicker: 'Curro',
+        jsonLd: [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            'headline': text.value.title,
+            'description': text.value.dek,
+            'author': personLd,
+            'publisher': orgLd,
+          },
+          breadcrumbLd,
+        ],
+      }
+    : {}),
 }))
 </script>
 

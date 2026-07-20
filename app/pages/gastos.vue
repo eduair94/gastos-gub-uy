@@ -72,10 +72,19 @@ const dataAsOf = computed(() => metrics.value?.calculatedAt ?? null)
 
 const govUrl = 'https://www.comprasestatales.gub.uy'
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.gastos.title'),
   description: t('seo.gastos.description'),
   path: '/gastos',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    'name': t('seo.gastos.title'),
+    'description': t('seo.gastos.description'),
+    'isPartOf': orgLd,
+  },
 }))
 </script>
 
@@ -842,8 +851,10 @@ a.stat:hover { border-color: var(--celeste); transform: translateY(-2px); }
   color: var(--text-muted);
 }
 
-.opac__src { color: var(--celeste-deep); text-decoration: none; }
-.opac__src:hover { text-decoration: underline; }
+/* Underlined at rest: sits inline in a paragraph of muted prose, so color
+   alone isn't enough to mark it as a link (Lighthouse link-in-text-block). */
+.opac__src { color: var(--celeste-deep); text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+.opac__src:hover { text-decoration-color: currentColor; }
 
 /* ---- Explore ---- */
 .explore {

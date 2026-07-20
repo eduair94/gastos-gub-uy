@@ -3,11 +3,19 @@ import { getTerms } from '~/utils/legal-content'
 
 const { locale, t } = useI18n()
 const doc = computed(() => getTerms(locale.value === 'en' ? 'en' : 'es'))
+const orgLd = useOrgLd()
 
 useSeo(() => ({
   title: doc.value.title,
   description: t('legalPage.termsDesc'),
   path: '/terminos',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    'name': doc.value.title,
+    'description': t('legalPage.termsDesc'),
+    'isPartOf': orgLd,
+  },
 }))
 </script>
 

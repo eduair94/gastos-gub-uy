@@ -7,6 +7,8 @@
  */
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
+const orgLd = useOrgLd()
+const siteUrl = useRuntimeConfig().public.siteUrl as string
 
 const { data: res } = await useFetch<any>('/api/recopilatorios')
 const items = computed<any[]>(() => res.value?.data?.items ?? [])
@@ -19,6 +21,29 @@ useSeo(() => ({
   title: t('seo.recop.title'),
   description: t('seo.recop.description'),
   path: '/recopilatorios',
+  kicker: 'Recopilatorios',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': t('seo.recop.title'),
+      'description': t('seo.recop.description'),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      'itemListElement': items.value.slice(0, 20).map((i, idx) => ({
+        '@type': 'ListItem',
+        'position': idx + 1,
+        'name': itemText(i).title,
+        'url': `${siteUrl}/recopilatorios/${i.slug}`,
+      })),
+    },
+    {
+      '@context': 'https://schema.org',
+      ...orgLd,
+    },
+  ],
 }))
 </script>
 

@@ -140,13 +140,48 @@ function supplierPath(id: string) {
   return localePath(`/suppliers/${id.split('/').map(encodeURIComponent).join('/')}`)
 }
 
-useSeo(() => ({
-  title: t('seo.suppliers.title'),
-  description: t('seo.suppliers.description', { total: formatNumber(directoryTotal.value) }),
-  path: '/suppliers',
-  // A search is not its own page — don't ask a crawler to index a query space.
-  noindex: Boolean(searchTerm.value),
-}))
+// JSON-LD ItemList mirrors exactly what the table renders — the current
+// page of results, capped well under the 25/page limit — never a fetch of
+// its own. Absolute path (schema.org url expects one), matching the other
+// index pages' jsonLd.
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+const supplierListItems = computed(() =>
+  suppliers.value.slice(0, 20).map((s, i) => ({
+    '@type': 'ListItem',
+    'position': i + 1,
+    'name': s.name,
+    'url': `${siteUrl}/suppliers/${s.supplierId.split('/').map(encodeURIComponent).join('/')}`,
+  })),
+)
+
+const orgLd = useOrgLd()
+
+useSeo(() => {
+  const title = t('seo.suppliers.title')
+  const description = t('seo.suppliers.description', { total: formatNumber(directoryTotal.value) })
+  return {
+    title,
+    description,
+    path: '/suppliers',
+    // A search is not its own page — don't ask a crawler to index a query space.
+    noindex: Boolean(searchTerm.value),
+    kicker: 'Proveedores',
+    jsonLd: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        'name': title,
+        'description': description,
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        'itemListElement': supplierListItems.value,
+      },
+      orgLd,
+    ],
+  }
+})
 </script>
 
 <template>

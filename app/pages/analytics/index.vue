@@ -9,6 +9,7 @@
  */
 const { t } = useI18n()
 const localePath = useLocalePath()
+const siteUrl = useRuntimeConfig().public.siteUrl as string
 
 // Cheap live counts (limit=1 → pagination.total, an indexed countDocuments). Kept
 // off the render path with lazy fetches so the hub paints immediately.
@@ -36,10 +37,32 @@ const cards = computed(() => [
   { key: 'estadisticas', to: '/estadisticas', icon: 'mdi-chart-box-outline', emoji: '📊' },
 ])
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.analyticsHub.title'),
   description: t('seo.analyticsHub.description'),
   path: '/analytics',
+  kicker: 'Análisis',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': t('seo.analyticsHub.title'),
+      'description': t('seo.analyticsHub.description'),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      'itemListElement': cards.value.map((c, i) => ({
+        '@type': 'ListItem',
+        'position': i + 1,
+        'name': t(`analyticsHub.cards.${c.key}.title`),
+        'url': `${siteUrl}${c.to}`,
+      })),
+    },
+    orgLd,
+  ],
 }))
 </script>
 

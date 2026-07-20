@@ -19,10 +19,33 @@ function statusLabel(s: string) {
   return t(`curros.status.${s}`)
 }
 
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.curros.title'),
   description: t('seo.curros.description'),
   path: '/curros',
+  kicker: 'Curros',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': t('seo.curros.title'),
+      'description': t('seo.curros.description'),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      'itemListElement': items.value.map((i: any, idx: number) => ({
+        '@type': 'ListItem',
+        'position': idx + 1,
+        'name': itemText(i).title,
+        'url': `${siteUrl}/curros/${i.slug}`,
+      })),
+    },
+    orgLd,
+  ],
 }))
 </script>
 

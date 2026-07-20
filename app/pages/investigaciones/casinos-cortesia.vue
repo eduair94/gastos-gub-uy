@@ -16,10 +16,30 @@ const localePath = useLocalePath()
 const c = computed(() => invContent(locale.value))
 const cx = computed(() => c.value.cortesia)
 
+const personLd = usePersonLd()
+const orgLd = useOrgLd()
+const breadcrumbLd = useBreadcrumbLd([
+  { name: 'Investigaciones', path: '/investigaciones' },
+  { name: cx.value.title },
+])
+
 useSeo(() => ({
   title: cx.value.title,
   description: cx.value.dek.slice(0, 155),
   path: '/investigaciones/casinos-cortesia',
+  type: 'article',
+  kicker: 'Investigación',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      'headline': cx.value.title,
+      'description': cx.value.dek.slice(0, 155),
+      'author': personLd,
+      'publisher': orgLd,
+    },
+    breadcrumbLd,
+  ],
 }))
 
 const titn = (s: string) => s.replace(/\s+/g, ' ').trim().split(' ').map(w => w.length > 2 ? w[0] + w.slice(1).toLowerCase() : w).join(' ')
@@ -349,7 +369,7 @@ const ledger = computed(() => CORTESIA_CONTRACTS
         </div>
         <div class="inv-srcgroups">
           <div class="inv-srcgroup">
-            <h4>Compras Estatales</h4>
+            <h3>Compras Estatales</h3>
             <ul class="inv-srclist">
               <li>
                 <a
@@ -368,7 +388,7 @@ const ledger = computed(() => CORTESIA_CONTRACTS
             </ul>
           </div>
           <div class="inv-srcgroup">
-            <h4>Normativa · prensa</h4>
+            <h3>Normativa · prensa</h3>
             <ul class="inv-srclist">
               <li>
                 <a

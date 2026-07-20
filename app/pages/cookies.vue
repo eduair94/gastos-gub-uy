@@ -7,10 +7,19 @@ const { state, reopen } = useConsent()
 
 const rows = computed(() => getCookieRows(locale.value === 'en' ? 'en' : 'es'))
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('cookiesPage.title'),
   description: t('cookiesPage.desc'),
   path: '/cookies',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    'name': t('cookiesPage.title'),
+    'description': t('cookiesPage.desc'),
+    'isPartOf': orgLd,
+  },
 }))
 
 const statusLabel = computed(() => {

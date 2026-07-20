@@ -113,7 +113,13 @@ const roleLabel = computed(() =>
   border: 1px solid var(--rule);
   border-radius: var(--r-md);
 }
-.term--dim { opacity: 0.45; }
+/* Dimming the whole card (including its text) via opacity pushed the
+   already-muted term text below the AA contrast floor at any opacity low
+   enough to read as "de-emphasized" — text and background dim together, so
+   it isn't a simple color swap to fix. The party-colour accents carry the
+   "past term" cue instead; the text itself always stays at full contrast. */
+.term--dim .term__bar,
+.term--dim .term__dot { opacity: 0.5; }
 .term__bar {
   height: 4px;
   border-radius: var(--r-full);

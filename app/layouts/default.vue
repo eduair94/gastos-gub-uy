@@ -218,7 +218,15 @@ function recomputeNav() {
 }
 
 onMounted(() => {
-  scheduleRecompute()
+  // The first measure waits for the browser to go idle, not just a tick:
+  // Vuetify's v-menu activators for the dropdown nav items finish their own
+  // post-mount setup asynchronously, and shrinking `visibleNav` (removing a
+  // <v-menu> from the DOM) while one is still mid-setup threw "Cannot read
+  // properties of null (reading 'ce')" from inside Vue's renderSlot right
+  // after hydration — reproduced under CPU throttling (Lighthouse), not a
+  // plain-speed browser, so a single nextTick wasn't always enough margin.
+  if ('requestIdleCallback' in window) requestIdleCallback(scheduleRecompute, { timeout: 300 })
+  else setTimeout(scheduleRecompute, 50)
   window.addEventListener('resize', scheduleRecompute, { passive: true })
   // Labels shift width once the display/body faces finish loading.
   if (document.fonts?.ready) document.fonts.ready.then(scheduleRecompute)

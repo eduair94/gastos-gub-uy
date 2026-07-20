@@ -10,11 +10,42 @@ const { t, locale } = useI18n()
 const localePath = useLocalePath()
 
 const c = computed(() => invContent(locale.value).hub)
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+const orgLd = useOrgLd()
 
 useSeo(() => ({
   title: c.value.title,
   description: c.value.dek.slice(0, 155),
   path: '/investigaciones',
+  kicker: 'Investigaciones',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': c.value.title,
+      'description': c.value.dek.slice(0, 155),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      // Mirrors the investigation cards actually rendered below, in the same order.
+      'itemListElement': [
+        { name: c.value.cardCasinos.title, url: `${siteUrl}/investigaciones/casinos` },
+        { name: c.value.cardCortesia.title, url: `${siteUrl}/investigaciones/casinos-cortesia` },
+        { name: c.value.cardIm.title, url: `${siteUrl}/investigaciones/intendencia-montevideo` },
+        { name: c.value.cardTvciudad.title, url: `${siteUrl}/investigaciones/tv-ciudad` },
+        { name: c.value.cardEmpresas.title, url: `${siteUrl}/investigaciones/empresas-senaladas` },
+        { name: c.value.cardAsse.title, url: `${siteUrl}/investigaciones/asse-ambulancias` },
+        { name: c.value.cardSaturno.title, url: `${siteUrl}/investigaciones/frigorifico-saturno` },
+      ].map((it, i) => ({
+        '@type': 'ListItem',
+        'position': i + 1,
+        'name': it.name,
+        'url': it.url,
+      })),
+    },
+    orgLd,
+  ],
 }))
 </script>
 

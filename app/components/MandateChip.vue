@@ -67,6 +67,7 @@ const roleLabel = computed(() => m.value.role === 'president' ? t('mandate.role.
       activator="parent"
       location="bottom"
       max-width="320"
+      :aria-label="`${roleLabel} — ${m.holder} (${m.partyLabel})`"
     >
       <div class="mtt">
         <p class="mtt__eyebrow">

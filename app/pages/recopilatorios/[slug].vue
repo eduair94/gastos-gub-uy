@@ -33,10 +33,40 @@ function relText(r: any) {
   return locale.value === 'en' ? r.en : r.es
 }
 
+const personLd = usePersonLd()
+const orgLd = useOrgLd()
+const breadcrumbLd = text.value
+  ? useBreadcrumbLd([
+      { name: 'Recopilatorios', path: '/recopilatorios' },
+      { name: text.value.title },
+    ])
+  : null
+
 useSeo(() => ({
   title: text.value ? t('seo.recopDetail.title', { title: text.value.title }) : t('seo.recop.title'),
   description: text.value?.dek ?? t('seo.recop.description'),
   path: `/recopilatorios/${slug.value}`,
+  kicker: 'Recopilatorio',
+  // Only the resolved compilation gets the rich article treatment — mirrors
+  // how title/description above fall back while `data` is loading or 404s.
+  // `data.period` (e.g. "2015–2026") is a free display label, not an ISO
+  // date, so no article.publishedTime/modifiedTime is claimed here.
+  ...(text.value
+    ? {
+        type: 'article' as const,
+        jsonLd: [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            'headline': text.value.title,
+            'description': text.value.dek,
+            'author': personLd,
+            'publisher': orgLd,
+          },
+          breadcrumbLd,
+        ],
+      }
+    : {}),
 }))
 </script>
 

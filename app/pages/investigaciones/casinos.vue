@@ -15,15 +15,38 @@ import {
   licitadoTotal,
 } from '~/data/investigaciones'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const localePath = useLocalePath()
 const c = computed(() => invContent(locale.value))
 const cc = computed(() => c.value.casinos)
 
+const personLd = usePersonLd()
+const orgLd = useOrgLd()
+const breadcrumbLd = useBreadcrumbLd([
+  { name: t('nav.investigaciones'), path: '/investigaciones' },
+  { name: cc.value.title },
+])
+
+// No reliable single ISO date on this page's data: `filePeriod` ("2002–2026")
+// is a coverage range, not a publish/modify timestamp, so `article` is
+// omitted rather than inventing one — see useSeo's SeoArticle contract.
 useSeo(() => ({
   title: cc.value.title,
   description: cc.value.dek.slice(0, 155),
   path: '/investigaciones/casinos',
+  type: 'article',
+  kicker: 'Investigación',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      'headline': cc.value.title,
+      'description': cc.value.dek.slice(0, 155),
+      'author': personLd,
+      'publisher': orgLd,
+    },
+    breadcrumbLd,
+  ],
 }))
 
 const titn = (s: string) => s.replace(/\s+/g, ' ').trim().split(' ').map(w => w.length > 2 ? w[0] + w.slice(1).toLowerCase() : w).join(' ')
@@ -295,7 +318,7 @@ const fichaUrl = (id: string) => `https://www.comprasestatales.gub.uy/consultas/
         </div>
         <div class="inv-srcgroups">
           <div class="inv-srcgroup">
-            <h4>{{ cc.sourcesLicitado }}</h4>
+            <h3>{{ cc.sourcesLicitado }}</h3>
             <ul class="inv-srclist">
               <li
                 v-for="r in sourcesLicitado"
@@ -313,7 +336,7 @@ const fichaUrl = (id: string) => `https://www.comprasestatales.gub.uy/consultas/
             </ul>
           </div>
           <div class="inv-srcgroup">
-            <h4>{{ cc.sourcesExcepcion }}</h4>
+            <h3>{{ cc.sourcesExcepcion }}</h3>
             <ul class="inv-srclist">
               <li
                 v-for="r in sourcesExcepcion"
@@ -331,7 +354,7 @@ const fichaUrl = (id: string) => `https://www.comprasestatales.gub.uy/consultas/
             </ul>
           </div>
           <div class="inv-srcgroup">
-            <h4>{{ cc.sourcesNorm }}</h4>
+            <h3>{{ cc.sourcesNorm }}</h3>
             <ul class="inv-srclist">
               <li>
                 <a

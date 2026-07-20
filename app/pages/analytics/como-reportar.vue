@@ -20,10 +20,20 @@ const steps = computed(() => [
   t('comoReportar.step5'),
 ])
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.comoReportar.title'),
   description: t('seo.comoReportar.description'),
   path: '/analytics/como-reportar',
+  kicker: 'Cómo reportar',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    'name': t('seo.comoReportar.title'),
+    'description': t('seo.comoReportar.description'),
+    'isPartOf': orgLd,
+  },
 }))
 </script>
 

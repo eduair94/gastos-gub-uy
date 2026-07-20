@@ -4,10 +4,19 @@ import { getPrivacy } from '~/utils/legal-content'
 const { locale, t } = useI18n()
 const doc = computed(() => getPrivacy(locale.value === 'en' ? 'en' : 'es'))
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: doc.value.title,
   description: t('legalPage.privacyDesc'),
   path: '/privacidad',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    'name': doc.value.title,
+    'description': t('legalPage.privacyDesc'),
+    'isPartOf': orgLd,
+  },
 }))
 </script>
 

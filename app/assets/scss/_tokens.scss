@@ -29,8 +29,13 @@
   // --alerta INVERTS to a light salmon in dark mode, so a hardcoded
   // white label washes out. Always pair the fill with this.
   --alerta-fg: #ffffff;
-  --grafito: #64757f;      // secondary text
-  --verde: #3f7d62;        // completed / active status
+  // 4.21:1 on paper at #64757f — under the 4.5:1 AA floor for normal text
+  // (Lighthouse flagged it on MandateTimeline's small mono labels). Darkened
+  // to clear AA (4.88:1) without changing the hue.
+  --grafito: #596b76;      // secondary text
+  // 4.28:1 on paper at #3f7d62 — under 4.5:1 AA (flagged on the "activo" tag,
+  // whose 12%-tint fill sits close to paper). Darkened to 4.57:1.
+  --verde: #3c7860;        // completed / active status
 
   // --- Semantic ------------------------------------------
   --bg: var(--paper);
@@ -150,7 +155,9 @@
   --alerta-wash: #3a1e1c;
   // alerta flips light here, so the label on a filled alerta flips dark.
   --alerta-fg: #2a1210;
-  --verde: #5fa584;
+  // 4.3:1 on the "activo" tag's raised-ink background at #5fa584 — under
+  // 4.5:1 AA. Brightened to 4.92:1.
+  --verde: #6bb090;
   --focus: #6ea8ff;
 
   // On ink, the bright ochre already clears AA (9.9:1) — no need

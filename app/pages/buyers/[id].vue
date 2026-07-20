@@ -241,6 +241,13 @@ const years = computed(() =>
 const firstYear = computed(() => years.value[0] ?? null)
 const lastYear = computed(() => years.value[years.value.length - 1] ?? null)
 
+// Resolved in setup for the same reason as `orgLd` above: the `useSeo` getter
+// can be re-invoked outside the component's active setup context.
+const breadcrumbLd = useBreadcrumbLd([
+  { name: t('nav.buyers'), path: '/buyers' },
+  { name: name.value },
+])
+
 useSeo(() => ({
   title: t('seo.buyerDetail.title', { name: name.value }),
   description: t('seo.buyerDetail.description', {
@@ -251,21 +258,26 @@ useSeo(() => ({
   }),
   path: `/buyers/${encodeURIComponent(buyerId.value)}`,
   noindex: notFound.value,
+  kicker: 'Organismo',
+  stat: formatMoney(buyer.value?.totalSpending, 'UYU', { compact: true }),
   jsonLd: notFound.value
     ? undefined
-    : {
-        '@context': 'https://schema.org',
-        '@type': 'GovernmentOrganization',
-        'name': name.value,
-        'identifier': buyer.value?.buyerId,
-        'url': `${config.public.siteUrl}/buyers/${encodeURIComponent(buyerId.value)}`,
-        'areaServed': { '@type': 'Country', 'name': 'Uruguay' },
-        'subjectOf': {
-          '@type': 'Dataset',
-          'name': t('seo.buyerDetail.title', { name: name.value }),
-          'creator': orgLd,
+    : [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'GovernmentOrganization',
+          'name': name.value,
+          'identifier': buyer.value?.buyerId,
+          'url': `${config.public.siteUrl}/buyers/${encodeURIComponent(buyerId.value)}`,
+          'areaServed': { '@type': 'Country', 'name': 'Uruguay' },
+          'subjectOf': {
+            '@type': 'Dataset',
+            'name': t('seo.buyerDetail.title', { name: name.value }),
+            'creator': orgLd,
+          },
         },
-      },
+        breadcrumbLd,
+      ],
 }))
 </script>
 

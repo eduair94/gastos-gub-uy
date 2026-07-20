@@ -10,10 +10,44 @@ import { ITHG_LEDGER, ITHG_STATS } from '~/data/investigaciones-empresas'
 const { locale } = useI18n()
 const c = computed(() => (locale.value === 'en' ? EN : ES))
 
+const personLd = usePersonLd()
+const orgLd = useOrgLd()
+
+// NOT a top-level `const breadcrumbLd = useBreadcrumbLd([...])`: that would
+// read `c.value.title` eagerly, at module-init time — before `ES`/`EN` below
+// are declared ("Cannot access 'ES' before initialization"). Building the
+// plain object inline here (no composable call) is safe both for that and
+// for the usual reason useOrgLd()/usePersonLd() must never be called inside
+// this lazy getter — it does no Nuxt-instance-dependent work at all.
+function breadcrumbLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      { '@type': 'ListItem', 'position': 1, 'name': 'Investigaciones', 'item': `${siteUrl}/investigaciones` },
+      { '@type': 'ListItem', 'position': 2, 'name': c.value.title },
+    ],
+  }
+}
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+
 useSeo(() => ({
   title: c.value.title,
   description: c.value.dek.slice(0, 155),
   path: '/investigaciones/asse-ambulancias',
+  type: 'article',
+  kicker: 'Investigación',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      'headline': c.value.title,
+      'description': c.value.dek.slice(0, 155),
+      'author': personLd,
+      'publisher': orgLd,
+    },
+    breadcrumbLd(),
+  ],
 }))
 
 const gapBars = computed(() => [

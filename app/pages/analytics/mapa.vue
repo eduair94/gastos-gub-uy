@@ -92,10 +92,25 @@ function onListSelect(i: number) {
   if (key) focus.value = key
 }
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.mapa.title'),
   description: t('seo.mapa.description'),
   path: '/analytics/mapa',
+  kicker: 'Mapa',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      'name': t('seo.mapa.title'),
+      'description': t('seo.mapa.description'),
+      'creator': orgLd,
+      'isAccessibleForFree': true,
+      'license': 'https://catalogodatos.gub.uy',
+    },
+    orgLd,
+  ],
 }))
 </script>
 

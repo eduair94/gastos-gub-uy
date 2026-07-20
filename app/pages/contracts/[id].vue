@@ -814,6 +814,21 @@ function relatedAmount(c: ContractLike): number | null {
   return c.amount?.hasAmounts ? contractAmount(c) : null
 }
 
+// Breadcrumb: Contratos -> buyer (when a clean name/path is on the
+// release) -> this contract's own title. Hoisted above `useSeo` because
+// Unhead can re-invoke the getter outside setup context, where
+// `useBreadcrumbLd` (which calls Nuxt-instance-dependent composables)
+// would throw.
+const breadcrumbLd = contract.value
+  ? useBreadcrumbLd([
+      { name: t('nav.contracts'), path: '/contracts' },
+      ...(contract.value.buyer?.name
+        ? [{ name: contract.value.buyer.name, path: partyPath(contract.value.buyer.id, ['buyer']) ?? undefined }]
+        : []),
+      { name: title.value },
+    ])
+  : undefined
+
 useSeo(() => ({
   title: contract.value
     ? t('seo.contractDetail.title', { title: title.value, buyer: contract.value.buyer?.name ?? '' })
@@ -828,18 +843,23 @@ useSeo(() => ({
     : t('contract.notFound.body'),
   path: `/contracts/${id.value}`,
   noindex: notFound.value,
+  kicker: t('contract.eyebrow'),
+  stat: showsMoney.value ? formatMoney(amount.value, currency.value) : undefined,
   jsonLd: contract.value
-    ? {
-        '@context': 'https://schema.org',
-        '@type': 'Dataset',
-        'name': title.value,
-        'description': contract.value.tender?.description ?? title.value,
-        'identifier': contract.value.ocid,
-        'datePublished': date.value?.toISOString(),
-        'isBasedOn': officialUrl.value,
-        'creator': { '@type': 'GovernmentOrganization', 'name': contract.value.buyer?.name },
-        'license': 'https://catalogodatos.gub.uy',
-      }
+    ? [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Dataset',
+          'name': title.value,
+          'description': contract.value.tender?.description ?? title.value,
+          'identifier': contract.value.ocid,
+          'datePublished': date.value?.toISOString(),
+          'isBasedOn': officialUrl.value,
+          'creator': { '@type': 'GovernmentOrganization', 'name': contract.value.buyer?.name },
+          'license': 'https://catalogodatos.gub.uy',
+        },
+        breadcrumbLd,
+      ]
     : undefined,
 }))
 </script>
@@ -2288,10 +2308,14 @@ a.party__name:hover { text-decoration: underline; }
 
 .reftable__note a {
   color: var(--celeste-deep);
-  text-decoration: none;
+  /* Underlined at rest: this link sits inline in a paragraph of muted
+     prose, so color alone isn't enough to mark it as a link (Lighthouse
+     link-in-text-block). */
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
 }
 
-.reftable__note a:hover { text-decoration: underline; }
+.reftable__note a:hover { text-decoration-color: currentColor; }
 
 .reftable__link {
   display: inline-block;

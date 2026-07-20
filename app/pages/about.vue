@@ -2,10 +2,28 @@
 const { t } = useI18n()
 const localePath = useLocalePath()
 
+const personLd = usePersonLd()
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('about.title'),
   description: t('about.sourceBody').slice(0, 155),
   path: '/about',
+  type: 'article',
+  article: { section: 'About' },
+  kicker: 'Quién está detrás',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'AboutPage',
+      'name': t('about.title'),
+      'description': t('about.sourceBody').slice(0, 155),
+      'about': personLd,
+      'mainEntity': personLd,
+    },
+    { '@context': 'https://schema.org', ...personLd },
+    { '@context': 'https://schema.org', ...orgLd },
+  ],
 }))
 
 // The scale is easier to trust once you've seen it work. These are the

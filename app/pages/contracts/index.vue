@@ -94,8 +94,15 @@ watch(focusCode, (v) => {
 
 const activeCount = computed(() => {
   const f = filters.value
+  // `tag` defaults to `['award']` when the URL carries no `tag` param at
+  // all (see fromRoute() above) — that's the bare explorer's baseline view,
+  // not a filter the reader applied. Counting it here marked the page's own
+  // default landing state as "filtered" and therefore noindex, making the
+  // main /contracts explorer permanently unindexable. Only an EXPLICIT
+  // `tag` param in the URL counts as active.
+  const tagActive = route.query.tag !== undefined ? f.tag.length : 0
   return [
-    f.search, f.tag.length, f.buyers.length, f.buyerIds.length, f.suppliers.length, f.category.length, f.categoryId.length,
+    f.search, tagActive, f.buyers.length, f.buyerIds.length, f.suppliers.length, f.category.length, f.categoryId.length,
     f.procurementMethodDetails.length,
     f.status.length, f.currency.length, f.yearFrom, f.yearTo,
     f.amountFrom, f.amountTo, f.hasAmount || null,
@@ -452,6 +459,9 @@ function openItems(c: ContractLike) {
   track('items_preview_open', { source: 'explorer' })
 }
 
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.contracts.title'),
   description: t('seo.contracts.description'),
@@ -460,6 +470,28 @@ useSeo(() => ({
   // canonicalises to the bare explorer so we don't ask a crawler to
   // index an infinite query space.
   noindex: activeCount.value > 0,
+  kicker: 'Contratos',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': t('seo.contracts.title'),
+      'description': t('seo.contracts.description'),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      // Mirrors what's actually on screen right now (current page/filters/sort),
+      // capped well below the 25-row page size to keep the node small.
+      'itemListElement': contracts.value.slice(0, 20).map((c, i) => ({
+        '@type': 'ListItem',
+        'position': i + 1,
+        'name': rowTitle(c),
+        'url': `${siteUrl}/contracts/${c.id}`,
+      })),
+    },
+    orgLd,
+  ],
 }))
 </script>
 

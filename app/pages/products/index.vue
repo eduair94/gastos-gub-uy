@@ -85,10 +85,33 @@ const columns = computed(() => [
   { key: 'supplierCount', label: t('products.cols.suppliers'), align: 'end' as const, mono: true },
 ])
 
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.products.title'),
   description: t('seo.products.description'),
   path: '/products',
+  kicker: 'Productos',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': t('seo.products.title'),
+      'description': t('seo.products.description'),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      'itemListElement': products.value.map((p: any, i: number) => ({
+        '@type': 'ListItem',
+        'position': i + 1,
+        'name': p.canonicalName || p.description,
+        'url': `${siteUrl}/products/${encodeURIComponent(p.code)}`,
+      })),
+    },
+    orgLd,
+  ],
 }))
 </script>
 

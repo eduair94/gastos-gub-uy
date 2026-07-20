@@ -7,6 +7,13 @@ useSeo({
   title: t('developers.title'),
   description: t('developers.lead'),
   path: '/developers',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    'name': t('developers.title'),
+    'description': t('developers.lead'),
+    'isPartOf': useOrgLd(),
+  },
 })
 
 const curlExample = `curl -H "x-api-key: gk_live_xxx" \\

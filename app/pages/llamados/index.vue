@@ -8,8 +8,6 @@ const router = useRouter()
 const authEnabled = useAuthEnabled()
 const { track } = useAnalytics()
 
-useSeo({ title: t('llamados.title'), description: t('llamados.lead'), path: '/llamados' })
-
 const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const sort = ref(typeof route.query.sort === 'string' ? route.query.sort : 'deadline')
 const page = ref(Number(route.query.page) || 1)
@@ -47,6 +45,37 @@ watch(sort, s => track('sort_change', { surface: 'llamados', sort: s }))
 const createAlertTo = computed(() => ({
   path: localePath('/app/alertas'),
   query: { new: '1', ...(q.value.trim() ? { keyword: q.value.trim() } : {}) },
+}))
+
+const siteUrl = useRuntimeConfig().public.siteUrl as string
+const orgLd = useOrgLd()
+
+useSeo(() => ({
+  title: t('llamados.title'),
+  description: t('llamados.lead'),
+  path: '/llamados',
+  kicker: 'Llamados',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': t('llamados.title'),
+      'description': t('llamados.lead'),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      // Mirrors what's actually on screen right now (current page/search/sort),
+      // capped well below the fetch's limit=24 to keep the node small.
+      'itemListElement': calls.value.slice(0, 20).map((c, i) => ({
+        '@type': 'ListItem',
+        'position': i + 1,
+        'name': c.title as string,
+        'url': `${siteUrl}/llamados/${c.compraId as string}`,
+      })),
+    },
+    orgLd,
+  ],
 }))
 </script>
 

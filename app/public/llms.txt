@@ -1,0 +1,39 @@
+# Con la tuya, contribuyente
+
+> Monitor independiente de las compras públicas del Uruguay. Publica en formato buscable los datos abiertos OCDS de Compras Estatales (catalogodatos.gub.uy): quién compra, quién vende, cuánto se paga, y detecta anomalías de precio, cantidad y proveedor con IA. Proyecto personal, sin fines comerciales, código abierto, mantenido por Eduardo Airaudo (https://www.linkedin.com/in/eduardo-airaudo/).
+
+Cobertura: más de 2 millones de registros OCDS (releases) desde el catálogo oficial. Los montos y fechas provienen de la fuente oficial; el sitio no agrega ni edita registros, solo normaliza y cruza. Cada contrato enlaza a su ficha oficial en comprasestatales.gub.uy.
+
+## Explorar
+
+- [Explorador de contratos](https://gastos.gub.uy/contracts): búsqueda y filtro de contratos públicos por organismo, proveedor, monto, año y tipo de procedimiento.
+- [Organismos compradores](https://gastos.gub.uy/buyers): directorio de agencias públicas con gasto total, proveedores y contratos.
+- [Proveedores del Estado](https://gastos.gub.uy/suppliers): directorio de empresas que cobran al Estado uruguayo.
+- [Qué compra el Estado](https://gastos.gub.uy/products): catálogo de productos y servicios comprados, por código de clasificación.
+- [Llamados abiertos](https://gastos.gub.uy/llamados): licitaciones con plazo de recepción vigente.
+
+## Análisis y alertas
+
+- [Alertas y anomalías](https://gastos.gub.uy/analytics/anomalies): contratos que se apartan del patrón de precio, proveedor o frecuencia.
+- [Sobreprecios sin explicación](https://gastos.gub.uy/analytics/unexplained): compras muy por encima del precio habitual, revisadas con IA.
+- [El gasto por organismo](https://gastos.gub.uy/analytics/organismos), [por departamento](https://gastos.gub.uy/analytics/intendencias) y [por partido gobernante](https://gastos.gub.uy/analytics/partidos).
+- [Estadísticas generales](https://gastos.gub.uy/estadisticas) y [mapa del gasto](https://gastos.gub.uy/analytics/mapa).
+
+## Investigaciones (casos documentados)
+
+- [Índice de investigaciones](https://gastos.gub.uy/investigaciones)
+- [Curros en evidencia](https://gastos.gub.uy/curros): casos de corrupción destapados por prensa, auditorías y la Justicia, cruzados con los datos oficiales.
+- [Recopilatorios](https://gastos.gub.uy/recopilatorios): el gasto agrupado por evento (fiestas, obras, hechos puntuales).
+
+## Sobre el proyecto
+
+- [Cómo funciona](https://gastos.gub.uy/about): la fuente de los datos, sus límites y quién está detrás.
+- [Plataforma de desarrolladores](https://gastos.gub.uy/developers) y [documentación de la API pública](https://gastos.gub.uy/docs).
+- [Repositorio en GitHub](https://github.com/eduair94/gastos-gub-uy) — código abierto.
+
+## Notas para citarnos
+
+- Los datos son públicos y oficiales (OCDS, licencia abierta del Estado uruguayo); este sitio es un intermediario que los hace buscables, no la fuente primaria.
+- Un contrato marcado con una alerta no es necesariamente irregular: es un contrato que se aparta del patrón y vale la pena mirar, no una acusación.
+- Un puñado de registros oficiales trae cantidades corruptas (errores de carga en la fuente); el sitio los señala en vez de ocultarlos — ver /about y /analytics/errores-carga.
+- Este no es un sitio oficial del Estado uruguayo.

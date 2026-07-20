@@ -23,10 +23,19 @@ const top5Share = computed(() => {
 })
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`
 
+const orgLd = useOrgLd()
+
 useSeo(() => ({
   title: t('seo.pauta.title'),
   description: t('seo.pauta.description'),
   path: '/pauta',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    'name': t('seo.pauta.title'),
+    'description': t('seo.pauta.description'),
+    'isPartOf': orgLd,
+  },
 }))
 </script>
 

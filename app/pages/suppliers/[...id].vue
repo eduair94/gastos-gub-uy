@@ -164,6 +164,14 @@ const seoDescription = computed(() => t('seo.supplierDetail.description', {
   buyers: formatNumber(supplier.value?.buyerCount),
 }))
 
+// Resolved in setup scope: the useSeo getter below can be re-invoked outside
+// the component's active setup context, where useBreadcrumbLd's Nuxt-instance
+// dependency is no longer reachable.
+const breadcrumbLd = useBreadcrumbLd([
+  { name: 'Proveedores', path: '/suppliers' },
+  { name: supplier.value?.name ?? '' },
+])
+
 useSeo(() => ({
   title: notFound.value
     ? t('suppliers.detail.notFound.title')
@@ -171,16 +179,23 @@ useSeo(() => ({
   description: notFound.value ? t('suppliers.detail.notFound.body') : seoDescription.value,
   path: pagePath.value,
   noindex: notFound.value,
+  kicker: 'Proveedor',
+  stat: notFound.value || !supplier.value
+    ? undefined
+    : formatMoney(supplier.value.totalValue, 'UYU', { compact: true }),
   jsonLd: notFound.value || !supplier.value
     ? undefined
-    : {
-        '@context': 'https://schema.org',
-        '@type': 'Organization',
-        'name': supplier.value.name,
-        'identifier': supplier.value.supplierId,
-        'description': seoDescription.value,
-        'url': `${siteUrl}${pagePath.value}`,
-      },
+    : [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          'name': supplier.value.name,
+          'identifier': supplier.value.supplierId,
+          'description': seoDescription.value,
+          'url': `${siteUrl}${pagePath.value}`,
+        },
+        breadcrumbLd,
+      ],
 }))
 </script>
 

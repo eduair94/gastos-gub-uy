@@ -18,10 +18,30 @@ const { locale } = useI18n()
 const localePath = useLocalePath()
 const c = computed(() => imContent(locale.value))
 
+const personLd = usePersonLd()
+const orgLd = useOrgLd()
+const breadcrumbLd = useBreadcrumbLd([
+  { name: 'Investigaciones', path: '/investigaciones' },
+  { name: c.value.title },
+])
+
 useSeo(() => ({
   title: c.value.title,
   description: c.value.dek.slice(0, 155),
   path: '/investigaciones/intendencia-montevideo',
+  type: 'article',
+  kicker: 'Investigación',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      'headline': c.value.title,
+      'description': c.value.dek.slice(0, 155),
+      'author': personLd,
+      'publisher': orgLd,
+    },
+    breadcrumbLd,
+  ],
 }))
 
 const sortedCats = computed(() => IM_CATEGORIES.slice().sort((a, b) => b.spend - a.spend))
