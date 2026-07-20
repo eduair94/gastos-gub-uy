@@ -27,9 +27,9 @@
 import { createHash } from "node:crypto";
 import { connectToDatabase, disconnectFromDatabase } from "../../../shared/connection/database";
 import { EmailCampaignModel } from "../../../shared/models/email_campaign";
-import { CampaignSendModel } from "../../../shared/models/campaign_send";
+import { CampaignSendModel, type ICampaignSend } from "../../../shared/models/campaign_send";
 import { SiceCatalogModel } from "../../../shared/models/sice_catalog";
-import { isSuppressed } from "./suppression";
+import { partitionBySuppression, fetchSuppressedSet } from "./suppression";
 import { countOpenCallsByRubro } from "./open-calls-count";
 import { renderCampaignEmail, campaignHeaders } from "../../emails/campaign-templates";
 import { createColdMailer } from "../../services/cold-mailer";
@@ -37,6 +37,14 @@ import { createColdMailer } from "../../services/cold-mailer";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const WARMUP_START = 50;
 const WARMUP_CEILING = 5000;
+
+// A row is claimed (queued -> sending) before its email goes out, so two
+// dispatchers never send the same row. If a dispatcher crashes AFTER claiming
+// but BEFORE recording a terminal status, the row is stranded in "sending";
+// the next run reclaims any such row older than this. Set well above the time a
+// single send can take so a slow-but-live dispatcher is never reclaimed out
+// from under itself.
+const STALE_CLAIM_MS = 15 * 60 * 1000;
 
 // Kill-switch thresholds (see brief: "e.g. complaints/(delivered+sent) > 0.005
 // OR bounces rate > 0.05 with a min sample e.g. >=100 sent").
@@ -66,6 +74,15 @@ export function makeToken(supplierId: string, campaignKey: string): string {
 /** PURE. Days elapsed since the campaign was created, floored, never negative. */
 export function dayIndexSince(createdAt: Date, now: Date): number {
   return Math.max(0, Math.floor((now.getTime() - createdAt.getTime()) / ONE_DAY_MS));
+}
+
+/**
+ * PURE. Filter for rows stranded in `sending` past `cutoff` — a dispatcher that
+ * claimed them and then died before writing a terminal status. The next run
+ * resets these back to `queued`. See `STALE_CLAIM_MS`.
+ */
+export function buildStaleReclaimFilter(campaignKey: string, cutoff: Date): object {
+  return { campaignId: campaignKey, status: "sending", claimedAt: { $lt: cutoff } };
 }
 
 export interface KillSwitchCounts {
@@ -142,9 +159,10 @@ export interface DispatchSummary {
  * Runs one dispatch batch for `campaignKey`. Connects/disconnects the DB
  * itself so it can be invoked standalone via the CLI entrypoint below.
  *
- * NOTE: `queued` rows are not claimed atomically (no scheduler yet) — do not
- * run two instances of this job concurrently for the same campaign, or both
- * could pick up and send the same row.
+ * Rows are claimed atomically (queued -> sending via findOneAndUpdate) before
+ * each email goes out, so running two instances concurrently — or re-running
+ * after a crash — never sends the same row twice. A crash mid-batch strands a
+ * row in "sending"; the next run reclaims any older than STALE_CLAIM_MS.
  */
 export async function main(): Promise<DispatchSummary | void> {
   const log = (m: string) => console.log(`[campaign-send] ${m}`);
@@ -186,21 +204,70 @@ export async function main(): Promise<DispatchSummary | void> {
     return { campaign: campaignKey, dryRun, cap, processed: 0, sent: 0, failed: 0, skippedSuppressed: 0, paused: false };
   }
 
-  const queued = await CampaignSendModel.find({ campaignId: campaignKey, status: "queued" }).limit(cap).lean();
-  if (!queued.length) {
-    log("no queued sends found");
+  // --- Claim the batch atomically. -------------------------------------------
+  // First reclaim any row a previous run left stranded in "sending" (it claimed
+  // the row, then crashed before writing a terminal status).
+  if (!dryRun) {
+    const reclaimed = await CampaignSendModel.updateMany(
+      buildStaleReclaimFilter(campaignKey, new Date(now.getTime() - STALE_CLAIM_MS)),
+      { $set: { status: "queued" }, $unset: { claimedAt: "" } },
+    );
+    if (reclaimed.modifiedCount) log(`reclaimed ${reclaimed.modifiedCount} stale "sending" row(s) from a crashed run`);
+  }
+
+  // Then claim up to `cap` queued rows. Each findOneAndUpdate flips exactly one
+  // row queued->sending atomically, so two concurrent dispatchers never grab the
+  // same row. A dry run only READS the queue (no state change) so a rehearsal
+  // never consumes it.
+  type ClaimRow = Pick<ICampaignSend, "email" | "rubroKey" | "name" | "supplierId" | "token"> & { _id: unknown };
+  let claimed: ClaimRow[];
+  if (dryRun) {
+    claimed = await CampaignSendModel.find({ campaignId: campaignKey, status: "queued" }).limit(cap).lean() as unknown as ClaimRow[];
+  } else {
+    claimed = [];
+    for (let i = 0; i < cap; i++) {
+      const doc = await CampaignSendModel.findOneAndUpdate(
+        { campaignId: campaignKey, status: "queued" },
+        { $set: { status: "sending", claimedAt: new Date() } },
+        { new: true },
+      ).lean() as unknown as ClaimRow | null;
+      if (!doc) break;
+      claimed.push(doc);
+    }
+  }
+
+  if (!claimed.length) {
+    log(dryRun ? "no queued sends found" : "no queued sends to claim");
     await disconnectFromDatabase().catch(() => {});
     return { campaign: campaignKey, dryRun, cap, processed: 0, sent: 0, failed: 0, skippedSuppressed: 0, paused: false };
   }
 
   // Batch the two lookups the whole run needs (open-count hook, rubro label)
   // once per distinct rubro instead of once per recipient.
-  const rubroKeys = [...new Set(queued.map((s) => s.rubroKey).filter((k): k is string => !!k))];
+  const rubroKeys = [...new Set(claimed.map((s) => s.rubroKey).filter((k): k is string => !!k))];
   const [openCounts, catalogDocs] = await Promise.all([
     countOpenCallsByRubro(rubroKeys, now),
     rubroKeys.length ? SiceCatalogModel.find({ code: { $in: rubroKeys } }).select("code canonicalName").lean() : Promise.resolve([]),
   ]);
   const labelByCode = new Map(catalogDocs.map((d) => [d.code, d.canonicalName]));
+
+  // Suppression gate, batched: one $in query for the whole claimed batch, then a
+  // local partition — instead of an exists() round-trip per recipient. Checked
+  // at send time (not just enqueue) because a recipient can unsubscribe/bounce/
+  // complain on an EARLIER campaign in the gap between enqueue and now.
+  const supSet = await fetchSuppressedSet(claimed.map((s) => s.email));
+  const { sendable, suppressed: suppressedRows } = partitionBySuppression(claimed, supSet);
+  const skippedSuppressed = suppressedRows.length;
+  if (suppressedRows.length) {
+    if (dryRun) {
+      for (const s of suppressedRows) log(`[dry-run] would skip ${s.email} (suppressed)`);
+    } else {
+      await CampaignSendModel.updateMany(
+        { _id: { $in: suppressedRows.map((s) => s._id) } },
+        { $set: { status: "failed", error: "suppressed" } },
+      );
+    }
+  }
 
   const base = appBaseUrl();
   const mailer = createColdMailer();
@@ -209,19 +276,8 @@ export async function main(): Promise<DispatchSummary | void> {
 
   let sent = 0;
   let failed = 0;
-  let skippedSuppressed = 0;
 
-  for (const send of queued) {
-    if (await isSuppressed(send.email)) {
-      skippedSuppressed++;
-      if (dryRun) {
-        log(`[dry-run] would skip ${send.email} (suppressed)`);
-      } else {
-        await CampaignSendModel.updateOne({ _id: send._id }, { $set: { status: "failed", error: "suppressed" } });
-      }
-      continue;
-    }
-
+  for (const send of sendable) {
     const token = send.token;
     // Both the visible footer link and the List-Unsubscribe header must point
     // at the real registered route — it lives under /api/campaign/unsubscribe
@@ -271,7 +327,7 @@ export async function main(): Promise<DispatchSummary | void> {
     }
   }
 
-  log(`batch done: processed=${queued.length} sent=${sent} failed=${failed} skippedSuppressed=${skippedSuppressed}`);
+  log(`batch done: processed=${claimed.length} sent=${sent} failed=${failed} skippedSuppressed=${skippedSuppressed}`);
 
   let paused = false;
   if (!dryRun) {
@@ -299,7 +355,7 @@ export async function main(): Promise<DispatchSummary | void> {
   }
 
   await disconnectFromDatabase().catch(() => {});
-  return { campaign: campaignKey, dryRun, cap, processed: queued.length, sent, failed, skippedSuppressed, paused };
+  return { campaign: campaignKey, dryRun, cap, processed: claimed.length, sent, failed, skippedSuppressed, paused };
 }
 
 if (require.main === module) {
