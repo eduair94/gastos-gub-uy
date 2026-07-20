@@ -58,6 +58,31 @@ export function buildCotizacionesEnvelope(codes: number[], from: string, to: str
 </soapenv:Envelope>`;
 }
 
+/**
+ * Read the `<respuestastatus>` block BCU includes in every response.
+ *
+ * BCU returns HTTP 200 even for parameter-level errors (reversed date range,
+ * out-of-range dates): status=0, a codigoerror, a human mensaje, plus a single
+ * degenerate sentinel row (nil Fecha, Moneda 0, TCV 0.000000) that parseCotizaciones
+ * already drops via its `sell <= 0` guard — making an error indistinguishable from
+ * a legitimate no-data period unless this status block is checked separately.
+ *
+ * Returns null when the block is absent (e.g. a non-SOAP body), so callers can
+ * tell "no status reported" apart from "status reported and it's bad".
+ */
+export function parseResponseStatus(
+  xml: string,
+): { status: number; codigoerror: number; mensaje: string } | null {
+  const block = /<respuestastatus>([\s\S]*?)<\/respuestastatus>/.exec(xml)?.[1];
+  if (!block) return null;
+  const status = Number(/<status>([^<]+)<\/status>/.exec(block)?.[1]);
+  const codigoerror = Number(/<codigoerror>([^<]+)<\/codigoerror>/.exec(block)?.[1]);
+  if (!Number.isFinite(status) || !Number.isFinite(codigoerror)) return null;
+  // <mensaje/> self-closes when empty, so an unmatched capture just means "".
+  const mensaje = /<mensaje>([^<]*)<\/mensaje>/.exec(block)?.[1] ?? "";
+  return { status, codigoerror, mensaje };
+}
+
 export function parseCotizaciones(xml: string): BcuRow[] {
   const rows: BcuRow[] = [];
   // Each quote is one <datoscotizaciones.dato> block; split and read the fields we need.
@@ -74,9 +99,20 @@ export function parseCotizaciones(xml: string): BcuRow[] {
 
 /** Average each currency's daily quotes per calendar month, mirroring refresh-exchange-rates.ts. */
 export function monthlyAveragesByCurrency(rows: BcuRow[]): Map<string, MonthFields> {
+  // Collapse to one row per (currency, date) first — last wins — the same guard
+  // refresh-exchange-rates.ts's monthlyAverages applies, since the upstream can
+  // return several near-identical rows for the same day under different type
+  // labels. With the specific codes we request BCU currently returns one row per
+  // (date, currency), so this is latent rather than active, but it keeps the two
+  // averaging paths behaving the same way.
+  const perDay = new Map<string, BcuRow>(); // `${code}|${date}` -> row (last wins)
+  for (const row of rows) {
+    perDay.set(`${row.code}|${row.date}`, row);
+  }
+
   // month -> field -> running mean
   const sums = new Map<string, Record<string, { sum: number; n: number }>>();
-  for (const row of rows) {
+  for (const row of perDay.values()) {
     const field = FIELD_BY_CODE[row.code];
     if (!field) continue;
     const month = row.date.slice(0, 7);
@@ -111,5 +147,15 @@ export async function fetchBcuRange(codes: number[], from: string, to: string): 
     signal: AbortSignal.timeout(60000),
   });
   if (!res.ok) throw new Error(`BCU ${from}..${to}: HTTP ${res.status}`);
-  return parseCotizaciones(await res.text());
+  const text = await res.text();
+  // BCU returns HTTP 200 even for parameter-level errors (reversed range, dates
+  // out of the service's window) — the payload's own status block is the only
+  // signal, and it must not be conflated with a legitimate empty period.
+  const status = parseResponseStatus(text);
+  if (status && status.status !== 1) {
+    throw new Error(
+      `BCU ${from}..${to}: status ${status.status} (codigoerror=${status.codigoerror}): ${status.mensaje}`,
+    );
+  }
+  return parseCotizaciones(text);
 }
