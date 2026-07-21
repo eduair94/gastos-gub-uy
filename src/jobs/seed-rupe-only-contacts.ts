@@ -16,13 +16,17 @@ if (!process.env.MONGO_SOCKET_TIMEOUT_MS) {
   process.env.MONGO_SOCKET_TIMEOUT_MS = String(10 * 60 * 1000);
 }
 import { connectToDatabase, disconnectFromDatabase, mongoose } from "../../shared/connection/database";
-import { SupplierContactModel, type ISupplierContact } from "../../shared/models/supplier_contacts";
-import type { AnyBulkWriteOperation } from "mongoose";
-import { accountUnorderedBulkError, parseSeedLimit } from "./seed-rupe-only/batch";
+import { SupplierContactModel } from "../../shared/models/supplier_contacts";
+import { accountSuccessfulBulkResult, accountUnorderedBulkError, parseSeedLimit } from "./seed-rupe-only/batch";
 import { buildRegistryRow, type RegistryRowSet, type RupeSeedInput } from "./seed-rupe-only/build-row";
+import {
+  buildAwardedReconciliation,
+  buildRegistryUpsert,
+  normalizeRupeRut,
+  seedableRupeRut,
+} from "./seed-rupe-only/operations";
 
 const flag = (name: string) => process.argv.includes(`--${name}`);
-const digits = (s: string) => (s || "").replace(/\D/g, "");
 const BULK_BATCH_SIZE = 500;
 
 interface SeedCandidate {
@@ -52,7 +56,7 @@ async function main() {
     const awardedRuts = new Set<string>();
     const patternsCursor = db.collection("supplier_patterns").find({}, { projection: { supplierId: 1 } });
     for await (const doc of patternsCursor as AsyncIterable<{ supplierId?: string }>) {
-      const rut = digits(doc.supplierId ?? "");
+      const rut = normalizeRupeRut(doc.supplierId);
       if (rut) awardedRuts.add(rut);
     }
     console.log(`   ${awardedRuts.size} awarded RUTs`);
@@ -65,57 +69,41 @@ async function main() {
       },
     });
 
-    let seen = 0, seeded = 0, skippedAwarded = 0, errors = 0;
+    let seen = 0, processed = 0, upserted = 0, matchedExisting = 0, unclassified = 0;
+    let skippedAwarded = 0, errors = 0;
     let pending: SeedCandidate[] = [];
 
     const flushPending = async () => {
       if (!pending.length) return;
       const batch = pending;
       pending = [];
-      const ops: AnyBulkWriteOperation<ISupplierContact>[] = batch.map(({ row }) => ({
-        updateOne: {
-          filter: { supplierId: row.supplierId },
-          update: {
-            $set: row,
-            $setOnInsert: {
-              status: "registry",
-              priorityScore: 0,
-              emails: [],
-              primaryEmail: null,
-              website: null,
-              websiteSource: null,
-              phone: null,
-              phoneSource: null,
-              hours: null,
-              mapsUrl: null,
-              rubros: [],
-              enrichedAt: null,
-            },
-          },
-          upsert: true,
-        },
-      }));
+      const ops = batch.map(({ row }) => buildRegistryUpsert(row));
 
       try {
-        await SupplierContactModel.bulkWrite(ops, { ordered: false, throwOnValidationError: true });
-        seeded += batch.length;
+        const result = await SupplierContactModel.bulkWrite(ops, { ordered: false, throwOnValidationError: true });
+        const accounting = accountSuccessfulBulkResult(result, batch.length);
+        processed += accounting.processed;
+        upserted += accounting.upserted;
+        matchedExisting += accounting.matchedExisting;
+        unclassified += accounting.unclassified;
       } catch (error) {
         const accounting = accountUnorderedBulkError(error, batch.length);
         if (!accounting) throw error;
-        seeded += accounting.successful;
+        processed += accounting.successful;
+        unclassified += accounting.successful;
         errors += accounting.failures.length;
         for (const failure of accounting.failures) {
           console.error(`   ⚠️ rut ${batch[failure.index]!.rut} failed, skipping: ${failure.message}`);
         }
       }
-      console.log(`   …${seeded} seeded (${seen} scanned, ${errors} error(s))`);
+      console.log(`   …${processed} processed: ${upserted} inserted/upserted, ${matchedExisting} matched existing, ${unclassified} unclassified (${seen} scanned, ${errors} error(s))`);
     };
 
     for await (const doc of rupeCursor as AsyncIterable<RupeSeedInput>) {
-      if (seeded >= limit) break;
+      if (processed >= limit) break;
       seen++;
-      const rut = digits(doc.rut);
-      if (!rut || awardedRuts.has(rut)) { skippedAwarded++; continue; }
+      const rut = seedableRupeRut(doc.rut, awardedRuts);
+      if (!rut) { skippedAwarded++; continue; }
 
       let row: RegistryRowSet;
       try {
@@ -126,16 +114,19 @@ async function main() {
         continue;
       }
       if (dryRun) {
-        seeded++;
-        if (seeded <= 10) console.log(`   would seed: ${row.name} (${row.supplierId}) — ${row.address ?? "(sin dirección)"}`);
+        processed++;
+        if (processed <= 10) console.log(`   would seed: ${row.name} (${row.supplierId}) — ${row.address ?? "(sin dirección)"}`);
         continue;
       }
       pending.push({ rut: doc.rut, row });
-      const remaining = limit - seeded;
+      const remaining = limit - processed;
       if (pending.length >= Math.min(BULK_BATCH_SIZE, remaining)) await flushPending();
     }
     if (!dryRun) await flushPending();
-    console.log(`✅ scan complete: ${seen} RUPE rows scanned, ${seeded} seeded, ${skippedAwarded} already-awarded (skipped), ${errors} error(s)`);
+    const outcome = dryRun
+      ? `${processed} would seed`
+      : `${processed} processed (${upserted} inserted/upserted, ${matchedExisting} matched existing, ${unclassified} unclassified)`;
+    console.log(`✅ scan complete: ${seen} RUPE rows scanned, ${outcome}, ${skippedAwarded} already-awarded (skipped), ${errors} error(s)`);
     if (errors) throw new Error(`RUPE-only contact seeding completed with ${errors} row error(s)`);
 
     // Reconcile the reverse case: a row seeded as neverAwarded whose company has
@@ -144,9 +135,10 @@ async function main() {
       console.log("🔄 reconciling neverAwarded → false for RUTs that now have an award...");
       let flipped = 0;
       for (const batch of chunk([...awardedRuts], 5000)) {
+        const reconciliation = buildAwardedReconciliation(batch);
         const res = await SupplierContactModel.updateMany(
-          { neverAwarded: true, rut: { $in: batch } },
-          { $set: { neverAwarded: false } },
+          reconciliation.filter,
+          reconciliation.update,
         );
         flipped += res.modifiedCount;
       }

@@ -8,6 +8,13 @@ export interface BulkWriteAccounting {
   failures: BulkWriteFailure[];
 }
 
+export interface SuccessfulBulkAccounting {
+  processed: number;
+  upserted: number;
+  matchedExisting: number;
+  unclassified: number;
+}
+
 function hasEntries(value: unknown): boolean {
   if (Array.isArray(value)) return value.length > 0;
   if (value instanceof Map || value instanceof Set) return value.size > 0;
@@ -48,6 +55,32 @@ export function parseSeedLimit(args: readonly string[]): number {
     throw new Error(`--limit must be a non-negative integer; received ${JSON.stringify(raw)}`);
   }
   return value;
+}
+
+/** Classify an acknowledged successful batch without guessing missing counts. */
+export function accountSuccessfulBulkResult(result: unknown, batchSize: number): SuccessfulBulkAccounting {
+  let upserted: unknown;
+  let matchedExisting: unknown;
+  try {
+    if (result && typeof result === "object") {
+      upserted = (result as { upsertedCount?: unknown }).upsertedCount;
+      matchedExisting = (result as { matchedCount?: unknown }).matchedCount;
+    }
+  } catch {
+    return { processed: batchSize, upserted: 0, matchedExisting: 0, unclassified: batchSize };
+  }
+
+  const validUpserted = Number.isInteger(upserted) && (upserted as number) >= 0;
+  const validMatched = Number.isInteger(matchedExisting) && (matchedExisting as number) >= 0;
+  if (!validUpserted || !validMatched || (upserted as number) + (matchedExisting as number) > batchSize) {
+    return { processed: batchSize, upserted: 0, matchedExisting: 0, unclassified: batchSize };
+  }
+  return {
+    processed: batchSize,
+    upserted: upserted as number,
+    matchedExisting: matchedExisting as number,
+    unclassified: batchSize - (upserted as number) - (matchedExisting as number),
+  };
 }
 
 /**

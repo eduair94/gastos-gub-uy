@@ -1,5 +1,9 @@
 import assert from "node:assert";
-import { accountUnorderedBulkError, parseSeedLimit } from "../../src/jobs/seed-rupe-only/batch";
+import {
+  accountSuccessfulBulkResult,
+  accountUnorderedBulkError,
+  parseSeedLimit,
+} from "../../src/jobs/seed-rupe-only/batch";
 
 assert.equal(parseSeedLimit([]), Infinity);
 assert.equal(parseSeedLimit(["--limit=0"]), 0);
@@ -7,6 +11,25 @@ assert.equal(parseSeedLimit(["--dry-run", "--limit=500"]), 500);
 for (const invalid of ["--limit", "--limit=", "--limit=-1", "--limit=1.5", "--limit=Infinity", "--limit=NaN"]) {
   assert.throws(() => parseSeedLimit([invalid]), /non-negative integer/);
 }
+
+assert.deepEqual(accountSuccessfulBulkResult({ upsertedCount: 3, matchedCount: 2 }, 5), {
+  processed: 5,
+  upserted: 3,
+  matchedExisting: 2,
+  unclassified: 0,
+});
+assert.deepEqual(accountSuccessfulBulkResult({ upsertedCount: 1, matchedCount: 2 }, 5), {
+  processed: 5,
+  upserted: 1,
+  matchedExisting: 2,
+  unclassified: 2,
+});
+assert.deepEqual(accountSuccessfulBulkResult({ upsertedCount: 6, matchedCount: 0 }, 5), {
+  processed: 5,
+  upserted: 0,
+  matchedExisting: 0,
+  unclassified: 5,
+});
 
 const accounted = accountUnorderedBulkError({
   writeErrors: [
