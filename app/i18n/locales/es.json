@@ -1786,14 +1786,25 @@
     "resultsSummary": "{count} organismos",
     "searchPlaceholder": "Buscar organismo, persona o correo…",
     "colOrganism": "Organismo",
+    "colGroup": "Grupo",
     "colContact": "Contacto",
     "colEmail": "Correo",
     "colPhone": "Teléfono",
     "colCalls": "Llamados",
+    "download": "Descargar",
+    "filter": {
+      "group": "Grupo de organismo",
+      "groupAny": "Todos los organismos",
+      "sort": "Ordenar",
+      "sortCalls": "Más activos",
+      "sortName": "Nombre (A–Z)",
+      "hasEmail": "Con correo",
+      "hasPhone": "Con teléfono"
+    },
     "empty": {
       "title": "Ningún contacto coincide con esa búsqueda",
       "body": "Probá con parte del nombre del organismo, la persona o el correo.",
-      "action": "Limpiar búsqueda"
+      "action": "Limpiar filtros"
     },
     "note": "Datos de contacto oficiales publicados por los organismos en comprasestatales.gub.uy."
   },

@@ -1786,14 +1786,25 @@
     "resultsSummary": "{count} agencies",
     "searchPlaceholder": "Search agency, person or email…",
     "colOrganism": "Agency",
+    "colGroup": "Group",
     "colContact": "Contact",
     "colEmail": "Email",
     "colPhone": "Phone",
     "colCalls": "Calls",
+    "download": "Download",
+    "filter": {
+      "group": "Agency group",
+      "groupAny": "All agencies",
+      "sort": "Sort",
+      "sortCalls": "Most active",
+      "sortName": "Name (A–Z)",
+      "hasEmail": "Has email",
+      "hasPhone": "Has phone"
+    },
     "empty": {
       "title": "No contact matches that search",
       "body": "Try part of the agency name, the person, or the email.",
-      "action": "Clear search"
+      "action": "Clear filters"
     },
     "note": "Official contact data published by the agencies on comprasestatales.gub.uy."
   },
