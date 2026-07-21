@@ -21,6 +21,15 @@ interface Row {
   contacts: Array<{ name?: string, email?: string, telephone?: string, faxNumber?: string, date?: Date | null }>
 }
 
+// Some agencies enter a placeholder instead of a real address ("no tiene mail").
+// Publishing those as a contact would mislead — treat them as absent.
+const JUNK_EMAIL = /no[_\s.]?tiene|sin[_\s.]?mail|no[_\s.]?mail|notiene|^n\/?a$|^s\/?d$|ejemplo|example|noreply|no-reply/i
+function realEmail(e?: string | null): string | undefined {
+  const v = (e ?? '').trim()
+  if (!v || !v.includes('@') || JUNK_EMAIL.test(v)) return undefined
+  return v
+}
+
 async function run(): Promise<void> {
   const started = Date.now()
   if (!process.env.MONGO_SOCKET_TIMEOUT_MS) {
@@ -87,25 +96,31 @@ async function run(): Promise<void> {
   const now = new Date()
   for (const r of rows) {
     if (!r._id) continue
-    // Newest contact wins as primary; the rest become distinct variants.
-    const sorted = [...r.contacts].sort((a, b) => (new Date(b.date ?? 0).getTime()) - (new Date(a.date ?? 0).getTime()))
+    // Primary = the most recent contact that has a real email; if none do, the
+    // most recent overall. Real-email contacts sort first, then by date desc.
+    const sorted = [...r.contacts].sort((a, b) => {
+      const ra = realEmail(a.email) ? 1 : 0
+      const rb = realEmail(b.email) ? 1 : 0
+      if (ra !== rb) return rb - ra
+      return (new Date(b.date ?? 0).getTime()) - (new Date(a.date ?? 0).getTime())
+    })
     const primary = sorted[0]
     const tel = (primary?.telephone ?? '').trim() || undefined
     const fax = (primary?.faxNumber ?? '').trim() || undefined
     const seen = new Set<string>()
     const variants: IContactVariant[] = []
     for (const c of sorted) {
-      const email = (c.email ?? '').trim()
+      const email = realEmail(c.email)
       const name = (c.name ?? '').trim()
-      const key = `${name}|${email}`
+      const key = `${name}|${email ?? ''}`
       if (seen.has(key)) continue
       seen.add(key)
       if (c === primary) continue
-      variants.push({ name: name || undefined, email: email || undefined, telephone: (c.telephone ?? '').trim() || undefined })
+      variants.push({ name: name || undefined, email, telephone: (c.telephone ?? '').trim() || undefined })
     }
     const organismName = (r.organismName ?? '').trim() || r._id
     const contactName = (primary?.name ?? '').trim() || undefined
-    const email = (primary?.email ?? '').trim() || undefined
+    const email = realEmail(primary?.email)
     const searchText = [organismName, contactName, email].filter(Boolean).join(' ').toLowerCase()
 
     await ProcurementContactModel.replaceOne(
