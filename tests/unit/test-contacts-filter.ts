@@ -30,6 +30,20 @@ async function main(): Promise<void> {
   )
   assert.deepEqual(empty, { empty: true })
 
+  const allDimensions = await buildContactFilter(
+    { dei: '1', rupeEstado: 'ACTIVO', onlyDirect: '1' },
+    {
+      resolveDeiSupplierIds: async () => ['R/1', 'R/2', 'R/3'],
+      resolveRupeSupplierIds: async (estado) => {
+        assert.equal(estado, 'ACTIVO')
+        return ['R/2', 'R/3', 'R/4']
+      },
+      resolveOnlyDirectSupplierIds: async () => ['R/3', 'R/4'],
+    },
+  )
+  assert.ok('filter' in allDimensions)
+  assert.deepEqual(allDimensions.filter.supplierId, { $in: ['R/3'] })
+
   console.log('ok: contacts filter')
 }
 

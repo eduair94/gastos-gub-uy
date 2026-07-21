@@ -6,7 +6,7 @@
  * can only ever live in one place and cannot be bypassed by one endpoint.
  */
 import type { ISupplierContact } from './models'
-import { DeiCompanyModel, SupplierPatternModel } from './models'
+import { DeiCompanyModel, RupeRegistryModel, SupplierPatternModel } from './models'
 import { escapeRegex, sanitizeSearch } from './query'
 import { fetchNamesByCategory, CATEGORIES } from './enrichment'
 
@@ -76,6 +76,7 @@ export type FilterResult = { filter: Record<string, unknown> } | { empty: true }
 
 export interface ContactFilterResolvers {
   resolveDeiSupplierIds?: (query: Record<string, unknown>) => Promise<string[]>
+  resolveRupeSupplierIds?: (estado: string) => Promise<string[]>
   resolveOnlyDirectSupplierIds?: () => Promise<string[]>
 }
 
@@ -125,9 +126,6 @@ export async function buildContactFilter(
   const search = sanitizeSearch(query.search)
   if (search) andConditions.push({ name: { $regex: escapeRegex(search), $options: 'i' } })
 
-  const rupeEstado = String(query.rupeEstado ?? '').toUpperCase()
-  if (RUPE_ESTADOS.has(rupeEstado)) andConditions.push({ rupeEstado })
-
   // Company TYPE (AI-classified enrichment category) → resolve matching names,
   // gated the same way the chip is (confidence >= 0.5). No names → no rows.
   const categoria = query.categoria ? String(query.categoria) : ''
@@ -169,6 +167,21 @@ export async function buildContactFilter(
       ? await resolvers.resolveDeiSupplierIds(deiQuery)
       : candidateIds((await DeiCompanyModel.find(deiQuery, { rut: 1, _id: 0 }).lean())
           .map(r => (r as { rut: string }).rut))
+    if (!ids.length) return { empty: true }
+    supplierIdSets.push(ids)
+  }
+
+  // RUPE is the source of truth for registry state. Do not filter the stale
+  // denormalized supplier_contacts.rupeEstado field: awarded suppliers may
+  // have a current RUPE row without a recent contact-enrichment pass.
+  const rupeEstado = String(query.rupeEstado ?? '').toUpperCase()
+  if (RUPE_ESTADOS.has(rupeEstado)) {
+    const ids = resolvers.resolveRupeSupplierIds
+      ? await resolvers.resolveRupeSupplierIds(rupeEstado)
+      : candidateIds((await RupeRegistryModel.find(
+          { estado: rupeEstado },
+          { rut: 1, _id: 0 },
+        ).lean()).map(r => (r as { rut: string }).rut))
     if (!ids.length) return { empty: true }
     supplierIdSets.push(ids)
   }
@@ -342,6 +355,7 @@ function pickDisplayEmail(primary: string | null, emails: PublicEmail[]): string
 export function sanitizeContact(
   doc: Partial<ISupplierContact> & {
     dei?: { estado?: string | null } | null
+    rupe?: { estado?: string | null } | null
     onlyDirectAward?: boolean
     directAwardCount?: number
   },
@@ -401,7 +415,7 @@ export function sanitizeContact(
     methods: contactMethods(doc),
     priorityScore: doc.priorityScore ?? 0,
     neverAwarded: !!doc.neverAwarded,
-    rupeEstado: doc.rupeEstado ?? null,
+    rupeEstado: doc.rupe?.estado ?? doc.rupeEstado ?? null,
     onlyDirectAward: doc.onlyDirectAward ?? false,
     directAwardCount: doc.directAwardCount ?? 0,
     ...(doc.dei !== undefined ? { dei: doc.dei ? { estado: doc.dei.estado ?? null } : null } : {}),

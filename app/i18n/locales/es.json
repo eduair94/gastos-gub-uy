@@ -770,6 +770,7 @@
     "resultsSummary": "{count} contactos",
     "table": {
       "name": "Proveedor",
+      "rupeStatus": "Estado RUPE",
       "rubro": "Rubro",
       "locality": "Localidad",
       "email": "Email",

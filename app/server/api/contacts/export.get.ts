@@ -14,6 +14,7 @@ import {
   type ExportFormat,
 } from '../../utils/contacts'
 import { attachOnlyDirectAward } from '../../utils/only-direct-award'
+import { attachRupe } from '../../utils/rupe'
 import { SupplierContactModel } from '../../utils/models'
 
 const FORMATS: ExportFormat[] = ['csv', 'xlsx', 'json', 'vcf']
@@ -45,12 +46,13 @@ export default defineEventHandler(async (event) => {
 
     const truncated = rows.length > EXPORT_CAP
     const selectedRows = truncated ? rows.slice(0, EXPORT_CAP) : rows
+    const withRupe = await attachRupe(selectedRows, r => (r as { supplierId?: string }).supplierId ?? '')
     // Tabular/vCard exports deliberately omit the UI-only signal. JSON exposes
     // the PublicContact shape, so decorate it first rather than serialising a
     // contradictory false/0 for rows selected by onlyDirect=1.
     const exportRows = format === 'json'
-      ? await attachOnlyDirectAward(selectedRows, r => (r as { supplierId?: string }).supplierId ?? '')
-      : selectedRows
+      ? await attachOnlyDirectAward(withRupe, r => (r as { supplierId?: string }).supplierId ?? '')
+      : withRupe
     const contacts = exportRows.map(r => sanitizeContact(r as never))
     if (truncated) {
       console.warn(`[contacts/export] result exceeded EXPORT_CAP=${EXPORT_CAP}; truncated`)

@@ -103,6 +103,20 @@ function fakeDb(rows: any[]) {
   console.log("ok: website contact details");
 })();
 
+(() => {
+  // Production regression: Grupo Vía Central groups the last four landline
+  // digits as 2+2 and wraps the country code, while exposing a canonical tel:.
+  const html = `
+    <section class="intro-sec contacto-page">
+      <p><a href="mailto:contacto@grupoviacentral.com">contacto@grupoviacentral.com</a></p>
+      <p><a href="tel:+59829148414">(+598) 2914 84 14</a></p>
+    </section>`;
+  const details = extractWebsiteContactDetails(html, "https://grupoviacentral.com/contacto/");
+  assert.equal(details.phone, "(+598) 2914 84 14");
+  assert.deepEqual(details.phones, ["(+598) 2914 84 14"]);
+  console.log("ok: website grouped Uruguay phone");
+})();
+
 (async () => {
   const search = async (_q: string) => [{ url: "https://empresa.uy/contacto", title: "Empresa", snippet: "escribinos a hola@empresa.uy" }];
   const fetchHtml = async (_u: string) => `<a href="mailto:hola@empresa.uy">x</a>`;

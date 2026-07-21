@@ -88,6 +88,7 @@ const RupeRegistrySchema = new Schema<IRupeRegistry>(
 // Declared for parity; BUILT by scripts/ensure-indexes.ts (autoIndex is off).
 RupeRegistrySchema.index({ rut: 1 }, { unique: true });
 RupeRegistrySchema.index({ normalizedName: 1 });
+RupeRegistrySchema.index({ estado: 1 });
 RupeRegistrySchema.index({ geocodeStatus: 1 });
 RupeRegistrySchema.index({ departamento: 1 });
 

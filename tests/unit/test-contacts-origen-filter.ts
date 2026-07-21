@@ -43,10 +43,16 @@ import { buildContactFilter } from "../../app/server/utils/contacts";
   assert.ok(and4.some(c => c.neverAwarded === true));
   assert.ok(and4.some(c => !!(c.name as { $regex?: string } | undefined)?.$regex));
 
-  const withRupeState = await buildContactFilter({ origen: "sin-adjudicaciones", rupeEstado: "BAJA DGI" });
+  const withRupeState = await buildContactFilter(
+    { origen: "sin-adjudicaciones", rupeEstado: "BAJA DGI" },
+    { resolveRupeSupplierIds: async estado => {
+      assert.equal(estado, "BAJA DGI");
+      return ["R/1"];
+    } },
+  );
   const f5 = (withRupeState as { filter: Record<string, unknown> }).filter;
-  assert.ok(Array.isArray(f5.$and));
-  assert.ok((f5.$and as Record<string, unknown>[]).some(c => c.rupeEstado === "BAJA DGI"));
+  assert.equal(f5.neverAwarded, true);
+  assert.deepEqual(f5.supplierId, { $in: ["R/1"] });
 
   const invalidRupeState = await buildContactFilter({ origen: "sin-adjudicaciones", rupeEstado: "inventado" });
   assert.deepEqual((invalidRupeState as { filter: Record<string, unknown> }).filter, { neverAwarded: true });

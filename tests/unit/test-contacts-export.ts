@@ -142,6 +142,12 @@ assert.equal(registryDoc.rupeEstado, "ACTIVO");
 assert.equal(registryDoc.address, "Ruta 5 km 30", "RUPE address is surfaced");
 assert.equal(registryDoc.email, null);
 
+const awardedWithLiveRupe = sanitizeContact({
+  supplierId: "R301", rut: "301", name: "DELTA SA", emails: [], neverAwarded: false,
+  rupeEstado: null, rupe: { estado: "ACTIVO" },
+} as never);
+assert.equal(awardedWithLiveRupe.rupeEstado, "ACTIVO", "live RUPE state overrides a missing denormalized contact value");
+
 // --- CSV: "Adjudicó" column reflects neverAwarded (Sí = won an award, No = registry-only) ---
 const csv2 = toCsv([webDoc, registryDoc]);
 const [header2, row1, row2] = csv2.split("\r\n");

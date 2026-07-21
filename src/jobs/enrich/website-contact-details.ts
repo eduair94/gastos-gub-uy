@@ -23,7 +23,10 @@ const SOCIAL_HOSTS: Array<[RegExp, SocialPlatform]> = [
   [/(^|\.)bsky\.app$/i, "bluesky"],
 ];
 
-const PHONE_RE = /(?:\+?598[\s().-]*)?(?:(?:0?9\d)[\s.-]*\d{3}[\s.-]*\d{3}|(?:2|4)\d{3}[\s.-]*\d{4})/g;
+// Uruguay numbers appear with many visual groupings: 2914 8414, 2914 84 14,
+// 099 123 456, and (+598) 2914 84 14 are all common. Allow separators between
+// individual subscriber digits, then validate the normalized digit shape below.
+const PHONE_RE = /(?<!\d)(?:(?:\(\s*)?\+?598\s*\)?[\s().-]*)?(?:(?:0?9\d)(?:[\s.-]*\d){6}|(?:2|4)\d{3}(?:[\s.-]*\d){4})(?!\d)/g;
 const ADDRESS_HINT = /\b(?:av(?:da)?\.?|avenida|calle|ruta|camino|rambla|bvar\.?|boulevard|cnel\.?|coronel|pasaje|pje\.?|plaza)\b/i;
 const CONTACT_SCOPE = "footer, address, #contact, #contacto, [id*='contact' i], [class*='contact' i]";
 
@@ -33,6 +36,12 @@ function cleanText(value: string): string {
 
 function cleanPhone(value: string): string {
   return cleanText(value).replace(/^[\s:|,-]+|[\s:|,-]+$/g, "");
+}
+
+function isUruguayPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  const local = digits.startsWith("598") ? digits.slice(3) : digits;
+  return /^(?:0?9\d{7}|[24]\d{7})$/.test(local);
 }
 
 function formLink(pageUrl: string, id: string | undefined): string {
@@ -53,10 +62,23 @@ function platformFor(url: URL): SocialPlatform | null {
 export function extractWebsiteContactDetails(html: string, pageUrl: string): WebsiteContactDetails {
   const $ = load(html || "");
   const socialLinks = new Map<string, ISocialLink>();
+  const phonesByDigits = new Map<string, string>();
+  const rememberPhone = (raw: string): void => {
+    const value = cleanPhone(raw);
+    if (!value || !isUruguayPhone(value)) return;
+    const key = value.replace(/\D/g, "") || value;
+    if (!phonesByDigits.has(key)) phonesByDigits.set(key, value);
+  };
 
   $("a[href]").each((_index, element) => {
     const href = $(element).attr("href");
     if (!href) return;
+    if (/^tel:/i.test(href)) {
+      let hrefPhone = href.replace(/^tel:/i, "");
+      try { hrefPhone = decodeURIComponent(hrefPhone); } catch { /* malformed encoding */ }
+      const label = cleanText($(element).text());
+      rememberPhone(isUruguayPhone(label) ? label : hrefPhone);
+    }
     try {
       const url = new URL(href, pageUrl);
       const platform = platformFor(url);
@@ -114,12 +136,9 @@ export function extractWebsiteContactDetails(html: string, pageUrl: string): Web
   });
   if (!fragments.length) fragments.push(cleanText($.root().text()));
 
-  const phonesByDigits = new Map<string, string>();
   for (const fragment of fragments) {
     for (const match of fragment.matchAll(PHONE_RE)) {
-      const value = cleanPhone(match[0]);
-      const key = value.replace(/\D/g, "") || value;
-      if (!phonesByDigits.has(key)) phonesByDigits.set(key, value);
+      rememberPhone(match[0]);
     }
   }
   const phones = [...phonesByDigits.values()];
