@@ -563,6 +563,7 @@ async function main(): Promise<void> {
       await sc.createIndex({ 'rubros.classificationId': 1 }, { background: true, name: 'rubros.classificationId_1' })
       await sc.createIndex({ placeSource: 1 }, { background: true, name: 'placeSource_1' })
       await sc.createIndex({ locality: 1 }, { background: true, name: 'locality_1' })
+      await sc.createIndex({ neverAwarded: 1, priorityScore: -1 }, { background: true, name: 'neverAwarded_1_priorityScore_-1' })
       console.log('✅ supplier_contacts indexes ensured')
 
       // --- rupe_registry (RUPE supplier registry + geocode cache) ---
@@ -640,7 +641,7 @@ async function main(): Promise<void> {
       console.log('   plan: webhook_deliveries.{dedupeKey unique, status+nextAttemptAt}')
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
-      console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality}')
+      console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality, neverAwarded+priorityScore}')
       console.log('   plan: rupe_registry.{rut unique, normalizedName, geocodeStatus, departamento}')
       console.log('   plan: procurement_contacts.{organismId unique, llamadosCount, dataVersion, searchText text}')
       console.log('   plan: supplier_patterns.{name, totalContracts, totalValue, buyerCount, avgContractValue}')
