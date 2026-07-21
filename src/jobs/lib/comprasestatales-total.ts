@@ -17,11 +17,23 @@ export { parseOfficialTotal, parseUyNumber, type OfficialTotal };
 
 const BASE = "https://www.comprasestatales.gub.uy/consultas/detalle/id";
 
-/** `ocds-yfs5dr-53193` -> `53193`. */
+/**
+ * `ocds-yfs5dr-53193` -> `53193`, `ocds-yfs5dr-a6005` -> `a6005`.
+ *
+ * The tail is used verbatim as the `/consultas/detalle/id/<tail>` path segment.
+ * Older records (mostly pre-2010) carry an alphanumeric purchase id — `a6005`,
+ * `a27187`, `i292944` — and those pages resolve on the government site exactly
+ * like the numeric ones, so the tail is NOT required to be all digits. The only
+ * requirement is that the string actually had the canonical `ocds-<pub>-<tail>`
+ * shape with a non-empty alphanumeric tail; anything else (no prefix, empty or
+ * hyphenated tail) yields null. A tail that looks valid but points at nothing is
+ * still safe: fetchOfficialTotal's parser returns null on any page without the
+ * exact "Monto Total de la Compra" sibling-<li>, so a bad id is skipped, never
+ * guessed at.
+ */
 export function idCompraFromOcid(ocid: string): string | null {
-  if (!ocid) return null;
-  const stripped = ocid.replace(/^ocds-[a-z0-9]+-/i, "");
-  return /^\d+$/.test(stripped) ? stripped : null;
+  const m = /^ocds-[a-z0-9]+-([a-z0-9]+)$/i.exec(ocid ?? "");
+  return m ? m[1]! : null;
 }
 
 export function detalleUrl(idCompra: string): string {

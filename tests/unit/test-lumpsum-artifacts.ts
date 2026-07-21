@@ -83,12 +83,23 @@ const suryparkRelease = {
 };
 assert.equal(isLumpsumSuspect(suryparkRelease), true);
 
-// A large but ordinary UYU contract must NOT be selected (wrong currency, and the
-// mislabel we are hunting is concentrated in foreign-currency rows).
+// A UYU lump-sum shape IS now selected: the mislabel is not exclusive to foreign
+// currencies (adjudicacion-a6005, 2002: 66.837 units x a stored 56.672 UYU "unit
+// price" = 3.79B UYU, against an official 66.837 UYU total). isLumpsumSuspect only
+// screens structure; whether it is truly inflated is decided later by
+// isArtifactConfirmed against the scraped official total.
 assert.equal(isLumpsumSuspect({
   ...suryparkRelease,
   awards: [{ items: [{ quantity: 330000, unit: { name: "UNIDAD", value: { amount: 3316, currency: "UYU" } } }] }],
-}), false);
+}), true);
+
+// The real adjudicacion-a6005 shape (UYU, single priced line, in-band) is selected.
+assert.equal(isLumpsumSuspect({
+  id: "adjudicacion-a6005",
+  tag: ["award"],
+  amount: { primaryAmount: 3_787_786_464 },
+  awards: [{ items: [{ quantity: 66837, unit: { name: "pesos", value: { amount: 56672, currency: "UYU" } } }] }],
+}), true);
 
 // Small quantity -> a genuinely expensive unit, not a lump sum.
 assert.equal(isLumpsumSuspect({

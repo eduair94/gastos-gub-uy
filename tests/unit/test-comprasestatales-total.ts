@@ -17,10 +17,18 @@ assert.equal(parseUyNumber("330.000,00"), 330000);
 assert.equal(parseUyNumber("no hay monto"), null);
 assert.equal(parseUyNumber(""), null);
 
-// ocid -> the numeric id the detalle page is keyed on.
+// ocid -> the id the detalle page is keyed on. The tail is used verbatim as the
+// /consultas/detalle/id/<tail> path segment: numeric ids AND the alphanumeric
+// ones the older records carry (e.g. a6005, a27187, i292944) both resolve on the
+// government site, so both are accepted. Only a string that never had a real
+// `ocds-<pub>-<tail>` shape yields null.
 assert.equal(idCompraFromOcid("ocds-yfs5dr-53193"), "53193");
 assert.equal(idCompraFromOcid("ocds-abc123-1307206"), "1307206");
+assert.equal(idCompraFromOcid("ocds-yfs5dr-a6005"), "a6005");
+assert.equal(idCompraFromOcid("ocds-yfs5dr-i292944"), "i292944");
 assert.equal(idCompraFromOcid("garbage"), null);
+assert.equal(idCompraFromOcid("ocds-yfs5dr-"), null); // empty tail -> not scrapeable
+assert.equal(idCompraFromOcid(""), null);
 assert.equal(
   detalleUrl("53193"),
   "https://www.comprasestatales.gub.uy/consultas/detalle/id/53193",

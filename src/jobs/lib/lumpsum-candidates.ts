@@ -47,10 +47,11 @@
  * a future, separate investigation rather than auto-corrected here.
  *
  * KNOWN LATENT GAP — currency casing: `isLumpsumSuspect()` upper-cases the
- * item currency before comparing against FOREIGN; the Mongo `$in: FOREIGN` in
- * `candidateMatchStage()` is case-sensitive and does NOT upper-case. All live
- * data observed so far stores currency codes upper-case, so the two encodings
- * agree in practice, but a future lower-/mixed-case `unit.value.currency` would
+ * item currency before comparing against ELIGIBLE_CURRENCIES; the Mongo
+ * `$in: ELIGIBLE_CURRENCIES` in `candidateMatchStage()` is case-sensitive and
+ * does NOT upper-case. All live data observed so far stores currency codes
+ * upper-case, so the two encodings agree in practice, but a future
+ * lower-/mixed-case `unit.value.currency` would
  * be picked up by `isLumpsumSuspect()` and silently dropped by the Mongo stage.
  * Left as-is deliberately (not worth an index-hostile $toUpper in the $match).
  */
@@ -72,7 +73,14 @@ export const LUMPSUM_DEFAULTS = {
 
 export type LumpsumOptions = Partial<typeof LUMPSUM_DEFAULTS>;
 
-const FOREIGN = ["USD", "EUR"];
+// The currencies a lump-sum-in-unit-price artifact can appear in. USD/EUR were
+// the first cases found, but the same mislabel exists in domestic UYU rows
+// (adjudicacion-a6005: 66.837 units x 56.672 UYU "unit price" = 3.79B UYU vs an
+// official 66.837 UYU total), so UYU is eligible too. This only widens the
+// STRUCTURAL suspect pool; whether a suspect is actually inflated is still
+// decided downstream by isArtifactConfirmed() against the scraped official total,
+// so an ordinary large UYU contract whose total agrees is left untouched.
+const ELIGIBLE_CURRENCIES = ["USD", "EUR", "UYU"];
 
 /**
  * The `$match` for stage 1 — a cheap, indexed PRE-FILTER, not the full rule.
@@ -97,7 +105,7 @@ export function candidateMatchStage(o: LumpsumOptions = {}): Record<string, unkn
         items: {
           $elemMatch: {
             quantity: { $gte: opts.qtyThreshold },
-            "unit.value.currency": { $in: FOREIGN },
+            "unit.value.currency": { $in: ELIGIBLE_CURRENCIES },
             "unit.value.amount": { $gt: 0 },
           },
         },
@@ -150,7 +158,7 @@ export function isLumpsumSuspect(release: AnyRelease, o: LumpsumOptions = {}): b
   return priced.some((i) => {
     const qty = num(i?.quantity);
     const currency = typeof i?.unit?.value?.currency === "string" ? i.unit!.value!.currency : "";
-    return qty !== null && qty >= opts.qtyThreshold && FOREIGN.includes(currency.toUpperCase());
+    return qty !== null && qty >= opts.qtyThreshold && ELIGIBLE_CURRENCIES.includes(currency.toUpperCase());
   });
 }
 
