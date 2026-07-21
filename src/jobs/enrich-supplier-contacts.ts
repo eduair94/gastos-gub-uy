@@ -14,6 +14,8 @@ import { createImpoResolver } from "./enrich/resolvers/impo";
 import { createGoogleMapsResolver } from "./enrich/resolvers/google-maps";
 import { createGeminiJudge } from "./enrich/match-judge";
 import { fetchHtml, search, searchGazette, findPlace, placeDetails } from "./enrich/backends";
+import { crawl4aiBaseUrl, createCrawl4aiTransport } from "./enrich/crawl4ai";
+import { createWebsiteVerifier } from "./enrich/website-verify";
 import type { PlaceInfo } from "./enrich/types";
 import type { FieldSource } from "../../shared/models/supplier_contacts";
 
@@ -59,14 +61,35 @@ async function main() {
   // that website then deep-crawls; the { ...input, website } threading below
   // carries it forward, and mergeCandidates keeps whichever source has the
   // higher confidence regardless of resolve order.
+  // Fetch/search transport: crawl4ai (headless, server-side, JS-capable, paced to
+  // avoid rate-limits) when CRAWL4AI_BASE_URL is set; else the direct axios backends.
+  const c4Base = crawl4aiBaseUrl();
+  const transport = c4Base ? createCrawl4aiTransport({ baseUrl: c4Base }) : null;
+  const fetchHtmlX = transport?.fetchHtml ?? fetchHtml;
+  const searchX = transport?.search ?? search;
+  if (c4Base) console.log(`🕷️  crawl4ai transport: ${c4Base} (min interval ${process.env.CRAWL4AI_MIN_INTERVAL_MS ?? 1500}ms)`);
+  else console.warn("⚠️ CRAWL4AI_BASE_URL unset — using direct axios fetch (no JS render; DuckDuckGo rate-limits sooner).");
+
   const resolvers: ContactResolver[] = [];
   if (wanted.has("dei")) resolvers.push(createDeiResolver(db));
   // rupe runs right after dei: both are official, in-Mongo, false-positive-free by
   // RUT. DEI's place still wins the first-non-null race for its 2.4k suppliers;
   // rupe fills the ~90% DEI never covers. Emits no emails/website — never clobbers those.
   if (wanted.has("rupe")) resolvers.push(createRupeResolver(db));
-  if (wanted.has("webSearch")) resolvers.push(createWebSearchResolver({ search, fetchHtml }));
-  if (wanted.has("website")) resolvers.push(createWebsiteResolver(fetchHtml));
+  if (wanted.has("webSearch")) {
+    // Website discovery is verified when a Gemini key is present (match-score
+    // prefilter → judge, fails closed); without it, discovery runs UNVERIFIED
+    // (first hit that loads) rather than silently accepting a wrong domain.
+    const apiKey = process.env.GEMINI_API_KEY;
+    const verifyWebsite = apiKey ? createWebsiteVerifier({ judge: createGeminiJudge({ apiKey }) }) : undefined;
+    if (!apiKey) console.warn("⚠️ webSearch: GEMINI_API_KEY unset — discovered websites are UNVERIFIED (first hit that loads).");
+    resolvers.push(createWebSearchResolver({
+      search: searchX,
+      fetchHtml: fetchHtmlX,
+      ...(verifyWebsite ? { verifyWebsite } : {}),
+    }));
+  }
+  if (wanted.has("website")) resolvers.push(createWebsiteResolver(fetchHtmlX));
   if (wanted.has("impo")) resolvers.push(createImpoResolver(searchGazette));
   // googleMaps runs LAST so DEI's official address/geo/phone win the first-non-null
   // race; Maps only fills the gap. Needs GEMINI_API_KEY for the match judge.

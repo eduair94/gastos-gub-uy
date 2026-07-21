@@ -204,6 +204,7 @@ const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined', header: string
   { key: 'website', header: 'Sitio web', width: 28 },
   { key: 'phone', header: 'Teléfono', width: 16 },
   { key: 'locality', header: 'Localidad', width: 20 },
+  { key: 'address', header: 'Dirección', width: 34 },
   { key: 'rubro', header: 'Rubro', width: 32 },
   { key: 'supplierId', header: 'ID proveedor', width: 18 },
 ]
