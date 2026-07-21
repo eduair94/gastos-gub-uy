@@ -329,6 +329,16 @@
         "mapTitle": "Mapa de empresas industriales proveedoras",
         "mapHelp": "Cada punto es una empresa industrial registrada que le vende al Estado, ubicada según su establecimiento principal."
       }
+    },
+    "rupe": {
+      "title": "Registro de Proveedores del Estado (RUPE)",
+      "source": "Fuente: ARCE — Registro Único de Proveedores del Estado (RUPE), datos abiertos. El cruce con el proveedor se hace por RUT.",
+      "f": {
+        "razonSocial": "Razón social",
+        "pais": "País",
+        "ubicacion": "Domicilio fiscal",
+        "mapLink": "Ver en Google Maps"
+      }
     }
   },
   "estad": {
