@@ -57,6 +57,8 @@ export interface Crawl4aiOptions {
   minIntervalMs?: number;
   /** Per-request timeout. Default 30 s (crawl4ai renders a page, so it is slow). */
   timeoutMs?: number;
+  /** Maximum in-flight crawl4ai calls. Default CRAWL4AI_MAX_CONCURRENCY or 3. */
+  maxConcurrency?: number;
   /** Injectable for tests; defaults to global fetch. */
   fetchImpl?: FetchLike;
 }
@@ -72,17 +74,37 @@ export function createCrawl4aiTransport(opts: Crawl4aiOptions): Crawl4aiTranspor
   const baseUrl = opts.baseUrl.replace(/\/+$/, "");
   const minIntervalMs = opts.minIntervalMs ?? Number(process.env.CRAWL4AI_MIN_INTERVAL_MS ?? 1500);
   const timeoutMs = opts.timeoutMs ?? 30_000;
+  const maxConcurrency = Math.max(1, opts.maxConcurrency ?? Number(process.env.CRAWL4AI_MAX_CONCURRENCY ?? 3));
   const doFetch: FetchLike = opts.fetchImpl ?? ((url, init) => (globalThis.fetch as any)(url, init));
 
-  // Global pacer: chain every call so the next one only starts once the
-  // previous has finished AND minIntervalMs has elapsed. A failed call still
-  // advances the gate (its .then/.catch both schedule the delay) so one error
-  // never stalls the queue.
-  let gate: Promise<void> = Promise.resolve();
+  // Global start-rate gate + semaphore. The old implementation waited for a
+  // render to finish before starting the delay, serialising network/render time.
+  // Calls now retain the same minimum spacing between starts while using the
+  // bounded concurrency supported by the crawler.
+  let active = 0;
+  let nextStartAt = 0;
+  const slotWaiters: Array<() => void> = [];
+  async function acquire(): Promise<void> {
+    if (active >= maxConcurrency) {
+      await new Promise<void>((resolve) => slotWaiters.push(resolve));
+    } else {
+      active++;
+    }
+    const now = Date.now();
+    const startAt = Math.max(now, nextStartAt);
+    nextStartAt = startAt + Math.max(0, minIntervalMs);
+    if (startAt > now) await sleep(startAt - now);
+  }
+  function release(): void {
+    const next = slotWaiters.shift();
+    if (next) next(); // transfer the occupied slot directly to the next waiter
+    else active--;
+  }
   function paced<T>(fn: () => Promise<T>): Promise<T> {
-    const run = gate.then(fn);
-    gate = run.then(() => sleep(minIntervalMs), () => sleep(minIntervalMs));
-    return run;
+    return acquire().then(async () => {
+      try { return await fn(); }
+      finally { release(); }
+    });
   }
 
   async function post(path: string, body: Record<string, unknown>): Promise<any | null> {

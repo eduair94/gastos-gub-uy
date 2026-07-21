@@ -75,14 +75,16 @@ module.exports = {
       // restarts and deploys resume safely without repeating the current pass.
       name: 'gastos-gub-contact-enrichment',
       script: './node_modules/tsx/dist/cli.mjs',
-      args: 'src/jobs/enrich-supplier-contacts.ts --all-populations --loop --limit=100 --stale-days=365 --pause-ms=60000 --require-crawl4ai --require-google-maps',
+      args: 'src/jobs/enrich-supplier-contacts.ts --all-populations --loop --limit=100 --concurrency=6 --stale-days=365 --pause-ms=10000 --require-crawl4ai --require-google-maps',
       instances: 1,
       exec_mode: 'fork',
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        CRAWL4AI_MAX_CONCURRENCY: '3'
       },
       env_production: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        CRAWL4AI_MAX_CONCURRENCY: '3'
       },
       watch: false,
       max_memory_restart: '1G',

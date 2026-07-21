@@ -110,6 +110,38 @@ async function main() {
     assert.ok(gap >= 45, `expected >=~50ms between paced calls, got ${gap}ms`);
   }
 
+  // The pacer spaces request starts but allows bounded overlap while a render
+  // is still in flight. This is the throughput property used by the worker.
+  {
+    const starts: number[] = [];
+    let active = 0;
+    let maxActive = 0;
+    const t = createCrawl4aiTransport({
+      baseUrl: "https://c4.test",
+      minIntervalMs: 15,
+      maxConcurrency: 2,
+      fetchImpl: async (_url, init) => {
+        starts.push(Date.now());
+        active++;
+        maxActive = Math.max(maxActive, active);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        active--;
+        const body = JSON.parse(init.body);
+        return { ok: true, status: 200, json: async () => ({ results: [{ url: body.urls[0], html: "x" }] }) } as any;
+      },
+    });
+    await Promise.all([
+      t.fetchHtml("https://a.uy"),
+      t.fetchHtml("https://b.uy"),
+      t.fetchHtml("https://c.uy"),
+      t.fetchHtml("https://d.uy"),
+    ]);
+    assert.equal(maxActive, 2, `expected exactly 2 in-flight calls, got ${maxActive}`);
+    for (let i = 1; i < starts.length; i++) {
+      assert.ok(starts[i]! - starts[i - 1]! >= 10, "request starts must remain paced");
+    }
+  }
+
   console.log("ok: crawl4ai backend");
 }
 main().catch((e) => { console.error(e); process.exit(1); });

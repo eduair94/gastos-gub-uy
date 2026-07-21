@@ -27,6 +27,19 @@ function arg(name: string): string | undefined {
 const flag = (name: string) => process.argv.includes(`--${name}`);
 const digits = (s: string) => (s || "").replace(/\D/g, "");
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const POPULATION_STATE_ID = "supplier-contact-enrichment-population-v1";
+
+async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    while (true) {
+      const index = next++;
+      if (index >= items.length) return;
+      await fn(items[index]!);
+    }
+  });
+  await Promise.all(workers);
+}
 
 function enrichmentMethod(name: ContactResolver["name"]): EnrichmentMethod | null {
   if (name === "website" || name === "webSearch") return "crawl4ai";
@@ -51,6 +64,7 @@ async function main() {
   const loop = flag("loop");
   const requireCrawl4ai = flag("require-crawl4ai");
   const requireGoogleMaps = flag("require-google-maps");
+  const concurrency = Math.max(1, Number(arg("concurrency") ?? process.env.CONTACT_ENRICHMENT_CONCURRENCY ?? "6"));
   const pauseMs = Math.max(1_000, Number(arg("pause-ms") ?? "60000"));
   const wanted = new Set((arg("sources") ?? "dei,rupe,website,webSearch,impo,googleMaps").split(","));
 
@@ -124,9 +138,23 @@ async function main() {
     }
   }
 
-  let batchNumber = 0;
   do {
-  const processRegistry = registryOnly || (allPopulations && batchNumber % 2 === 0);
+  let processRegistry = registryOnly;
+  if (allPopulations && !registryOnly) {
+    const state = await db.collection("contact_enrichment_state").findOne({ _id: POPULATION_STATE_ID as any });
+    if (state?.nextPopulation === "registry" || state?.nextPopulation === "awarded") {
+      processRegistry = state.nextPopulation === "registry";
+    } else {
+      // Start with whichever population has fewer v4 checkpoints. Subsequent
+      // batches persist their successor so PM2/deploy restarts cannot starve
+      // one population by resetting an in-memory counter.
+      const [registryDone, awardedDone] = await Promise.all([
+        db.collection("supplier_contacts").countDocuments({ neverAwarded: true, enrichmentVersion: CONTACT_ENRICHMENT_VERSION }),
+        db.collection("supplier_contacts").countDocuments({ neverAwarded: { $ne: true }, enrichmentVersion: CONTACT_ENRICHMENT_VERSION }),
+      ]);
+      processRegistry = registryDone <= awardedDone;
+    }
+  }
   // Awarded suppliers retain spend-priority ordering. RUPE-only suppliers are
   // read directly from supplier_contacts because they have no supplier_pattern.
   const staleBefore = new Date(Date.now() - staleDays * 864e5);
@@ -161,11 +189,10 @@ async function main() {
 
   let processed = 0;
   let errors = 0;
-  for (const s of suppliers) {
-    if (processed >= limit) break;
+  await mapLimit(suppliers, concurrency, async (s) => {
     const supplierId = String(s.supplierId);
     const priorityScore = Number(s.totalValue ?? 0) / Math.max(1, Number(s.totalContracts ?? 1));
-    if (priorityScore < minPriority) continue;
+    if (priorityScore < minPriority) return;
 
     // Resolvers are already individually guarded (the .catch below); this
     // guards the DB ops so a transient Mongo error on ONE supplier doesn't
@@ -178,7 +205,7 @@ async function main() {
         enrichmentMethods: 1, rupeEstado: 1, enrichmentVersion: 1,
       }).lean();
       if (existing && existing.enrichmentVersion === CONTACT_ENRICHMENT_VERSION
-        && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore) continue;
+        && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore) return;
 
       const rut = digits(supplierId);
       const name = String(s.name ?? "");
@@ -263,11 +290,8 @@ async function main() {
         if (res.rupeEstado) rupeEstado = res.rupeEstado;
         if (res.place?.source === "googleMaps") mapsEvidence = res.place;
         if (!place && res.place) place = res.place;
-        // Throttle external calls, but not after the LAST resolver — that
-        // sleep was pure dead time, wasting ~1/3 of runtime at full scale.
-        // dei + rupe are in-Mongo lookups (no external call) → no throttle.
-        const inMongo = r.name === "dei" || r.name === "rupe";
-        if (i < resolvers.length - 1) await sleep(inMongo ? 0 : 800);
+        // Crawl4AI owns its global start-rate gate; the supplier worker pool
+        // bounds the remaining backends, so no completed-request delay is needed.
       }
 
       const emails = await mergeCandidates(all);
@@ -287,7 +311,7 @@ async function main() {
       processed++;
       if (dryRun) {
         console.log(`${processed}. ${name} — ${primaryEmail ?? "(none)"} [${emails.length} email(s), ${rubros.length} rubro(s)]${place ? ` 📍${place.source}${phone ? " 📞" : ""}` : ""}`);
-        continue;
+        return;
       }
       await SupplierContactModel.updateOne(
         { supplierId },
@@ -310,15 +334,21 @@ async function main() {
       ).catch(() => undefined);
       console.error(`   ⚠️ supplier ${supplierId} failed, skipping:`, e instanceof Error ? e.message : e);
     }
-  }
+  });
 
   const withEmail = await SupplierContactModel.countDocuments({ primaryEmail: { $ne: null } });
   console.log(`✅ processed ${processed} ${processRegistry ? "RUPE-only" : "awarded"}; supplier_contacts with a primary email: ${withEmail}; errors: ${errors}`);
+  if (allPopulations && !registryOnly) {
+    await db.collection("contact_enrichment_state").updateOne(
+      { _id: POPULATION_STATE_ID as any },
+      { $set: { nextPopulation: processRegistry ? "awarded" : "registry", updatedAt: new Date() } },
+      { upsert: true },
+    );
+  }
   if (loop) {
     console.log(`⏳ next enrichment batch in ${Math.round(pauseMs / 1000)}s`);
     await sleep(pauseMs);
   }
-  batchNumber++;
   } while (loop);
   await disconnectFromDatabase();
 }
