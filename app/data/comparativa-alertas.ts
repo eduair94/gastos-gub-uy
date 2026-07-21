@@ -84,9 +84,20 @@ export interface Provider {
 /** Fecha de verificación de todos los datos. */
 export const VERIFIED_ON = '2026-07-21'
 
-/** Referencia SÓLO para una nota aproximada de conversión (no se usa en la tabla,
- *  que siempre muestra la moneda original). Actualizable. */
+/** Tipo de cambio de referencia para la conversión APROXIMADA a pesos. La moneda
+ *  original siempre se muestra al lado; el peso es un valor derivado y referencial.
+ *  Actualizable (jul-2026). */
 export const USD_UYU_REF = 40
+export const EUR_UYU_REF = 44
+
+/** Convierte un monto a pesos con el tipo de cambio de referencia. Devuelve el
+ *  mismo monto si ya es UYU, y 0 si la moneda es desconocida. */
+export function toPesos(amount: number, currency: Currency): number {
+  if (currency === 'UYU') return amount
+  if (currency === 'USD') return Math.round(amount * USD_UYU_REF)
+  if (currency === 'EUR') return Math.round(amount * EUR_UYU_REF)
+  return 0
+}
 
 export const PROVIDERS: Provider[] = [
   // ─── Núcleo comparable: UY-native, alcanzables, precio público ───────────────
