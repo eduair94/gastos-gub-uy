@@ -95,7 +95,7 @@ export interface OpenCallProjection {
   // the pure projection itself. Absent here → the sync leaves the stored value
   // untouched on re-sync.
   documentsProbedAt?: Date | undefined;
-  // Signature of the final pliego PDFs (feed + probed), set by the sync after the
+  // Signature of the final supported pliego documents (feed + probed), set by the sync after the
   // probe so a modified pliego invalidates a stale AI summary. See sync.ts.
   pliegoDocsSignature?: string | undefined;
   awardRef?: { releaseId: string; ocid: string; awardedAt?: Date | undefined } | undefined;

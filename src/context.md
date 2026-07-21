@@ -44,7 +44,7 @@ Everything that gets Uruguayan OCDS procurement data **into** Mongo and turns it
 | [jobs/matching/](jobs/matching/) | `match.ts` is a 3-line re-export of `shared/matching/match`; `run.ts` inserts one idempotent `notifications` row per enabled channel. |
 | [jobs/alerts/](jobs/alerts/) | `dispatch.ts` (email + shared primitives), `dispatch-push.ts`, `dispatch-telegram.ts`. |
 | [jobs/webhooks/](jobs/webhooks/) | `produce.ts` (rolling-window scan → `webhook_deliveries`), `dispatch.ts` (HMAC POST + backoff), `run.ts`. |
-| [jobs/pliego/summarize.ts](jobs/pliego/summarize.ts) | PDF → text → Gemini summary. Deadlines always come from OCDS `tenderPeriod`, never from this. |
+| [jobs/pliego/summarize.ts](jobs/pliego/summarize.ts) | PDF/Word + later clarifications → text → AI summary. Deadlines always come from OCDS `tenderPeriod`, never from this. |
 | [jobs/sice/](jobs/sice/) | `untar.ts` (dependency-free tgz), `parse.ts` (Latin-1 ANSI-SQL INSERT parser). |
 | [jobs/variants/rollup.ts](jobs/variants/rollup.ts) | PURE `rollupVariants()` over a fixed axes table. |
 | [jobs/enrich/](jobs/enrich/) | Contact-enrichment library + `resolvers/{dei,website,web-search,impo,google-maps}.ts`. |
@@ -59,7 +59,7 @@ Everything that gets Uruguayan OCDS procurement data **into** Mongo and turns it
 | [services/mailer.ts](services/mailer.ts) | Resend behind a `Mailer` interface; `NoopMailer` when `RESEND_API_KEY` is absent. |
 | [services/cold-mailer.ts](services/cold-mailer.ts) | Separate nodemailer SMTP (`COLD_SMTP_*`) for the campaign — deliberately NOT Resend. |
 | [services/telegram.ts](services/telegram.ts) · [services/webpush.ts](services/webpush.ts) | Bot-API and VAPID transports; both no-op without their env vars. |
-| [services/pliego-extractor.ts](services/pliego-extractor.ts) | Downloads a pliego PDF, extracts text with `unpdf`; returns `null` instead of throwing. |
+| [services/pliego-extractor.ts](services/pliego-extractor.ts) | Re-exports the shared PDF/Word pliego extractor; returns `null` instead of throwing. |
 | [services/file-service.ts](services/file-service.ts) | Recursive `*.json` finder/reader for the legacy `db/` tree. |
 | [emails/templates.ts](emails/templates.ts) · [emails/campaign-templates.ts](emails/campaign-templates.ts) | LIVE HTML/text renderers for alerts, reminders and campaign mail. |
 

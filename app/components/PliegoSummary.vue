@@ -11,6 +11,7 @@ interface Summary {
   montoReferencia?: string
   observaciones?: string[]
   model?: string
+  sourceDocs?: string[]
   disclaimer?: string
 }
 
@@ -187,7 +188,14 @@ async function generate() {
       </div>
 
       <p class="pliego__disc u-muted">
-        {{ s.disclaimer || 'Resumen generado por IA. Verificá siempre el pliego oficial.' }}
+        {{ s.disclaimer || t('llamados.summaryDisclaimer') }}
+      </p>
+      <p
+        v-if="s.model"
+        class="pliego__meta u-muted u-mono"
+      >
+        <span>{{ t('llamados.summaryModel', { model: s.model }) }}</span>
+        <span v-if="s.sourceDocs?.length">{{ t('llamados.summarySources', { n: s.sourceDocs.length }) }}</span>
       </p>
     </template>
 
@@ -248,6 +256,13 @@ async function generate() {
 .pliego__block li { margin-bottom: var(--s-1); line-height: 1.45; }
 .pliego__block p { margin: 0; line-height: 1.5; }
 .pliego__disc { font-size: var(--t-xs); margin: var(--s-4) 0 0; }
+.pliego__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-3);
+  font-size: var(--t-xs);
+  margin: var(--s-1) 0 0;
+}
 .pliego__muted { font-size: var(--t-sm); margin: 0 0 var(--s-3); }
 .pliego__gen, .pliego__refresh {
   display: inline-flex;
@@ -265,7 +280,7 @@ async function generate() {
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.pliego__gen:hover:not(:disabled), .pliego__refresh:hover:not(:disabled) { background: var(--celeste); color: #fff; }
+.pliego__gen:hover:not(:disabled), .pliego__refresh:hover:not(:disabled) { background: var(--cta-fill); color: var(--cta-fg); }
 .pliego__gen:disabled, .pliego__refresh:disabled { opacity: 0.6; cursor: default; }
 .pliego__stale {
   display: flex;

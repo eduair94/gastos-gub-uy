@@ -163,7 +163,7 @@ export interface IOpenCall extends Document {
   // carried no documents. Set once (success or miss) so re-syncs don't re-probe
   // a call that has no pliego. See src/jobs/open-calls/pliego-probe.ts.
   documentsProbedAt?: Date | undefined
-  // Deterministic signature of the current pliego PDFs, written by the projection
+  // Deterministic signature of the current supported pliego documents (PDF/Word), written by the projection
   // every sync. Compared against aiSummary.docsSignature to detect a modified
   // pliego and invalidate a stale AI summary. See shared/pliego/docs-signature.ts.
   pliegoDocsSignature?: string | undefined

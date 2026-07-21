@@ -1,6 +1,7 @@
 /**
  * AI pliego summarizer (importable from both the batch jobs and the Nitro API).
- * Downloads a call's pliego PDFs, extracts text, and asks a free-tier model
+ * Downloads all supported pliego documents (PDF/Word), extracts their text,
+ * and asks a free-tier model
  * (Gemini → Groq ladder, see ProviderRotator) for a structured Spanish summary
  * cached on `open_calls.aiSummary`.
  *
@@ -9,13 +10,13 @@
  */
 import { OpenCallModel } from "../models/open_call";
 import type { IOpenCall, IPliegoSummary } from "../types/monitor";
-import { extractPdfText, isPdfDocument } from "../services/pliego-extractor";
+import { extractPliegoText, isSupportedPliegoDocument } from "../services/pliego-extractor";
 import { pliegoDocsSignature } from "./docs-signature";
+import { buildPliegoCorpus } from "./document-corpus";
 import type { GeminiSchema } from "../ai/gemini-client";
 import { ProviderRotator } from "../ai/rotator";
 
 const DISCLAIMER = "Resumen generado por IA. Verificá siempre el pliego oficial.";
-const MAX_PDFS = 3;
 const MAX_INPUT_CHARS = 60_000;
 
 type GeneratedSummary = Omit<IPliegoSummary, "model" | "generatedAt" | "sourceDocs" | "disclaimer">;
@@ -53,6 +54,11 @@ const SYSTEM_INSTRUCTION =
 function csv(v: string | undefined): string[] {
   return (v ?? "").split(",").map(s => s.trim()).filter(Boolean);
 }
+
+const DOCUMENT_PRECEDENCE_INSTRUCTION =
+  " Analizá TODOS los documentos provistos en orden cronológico. "
+  + "Las aclaraciones y ajustes posteriores complementan o corrigen el pliego base y prevalecen si hay contradicciones; "
+  + "no presentes como vigente una condición sustituida.";
 
 /**
  * Builds a rotator from env. Gemini prefers the free key; Groq uses its free key.
@@ -96,24 +102,26 @@ export async function summarizeOpenCall(compraId: string, rotator?: ProviderRota
     return call.aiSummary;
   }
 
-  const pdfs = (call.documents ?? []).filter(isPdfDocument).slice(0, MAX_PDFS);
-  if (!pdfs.length) return null;
+  const documents = (call.documents ?? []).filter(isSupportedPliegoDocument);
+  if (!documents.length) return null;
 
-  const texts: string[] = [];
-  for (const doc of pdfs) {
-    const text = await extractPdfText(doc.url);
-    if (text) texts.push(text);
+  const extracted: Array<{ document: (typeof documents)[number]; text: string }> = [];
+  for (const document of documents) {
+    const text = await extractPliegoText(document);
+    if (text) extracted.push({ document, text });
   }
-  if (!texts.length) return null;
+  // Never cache a partial analysis as if it covered the whole publication set.
+  // A transient download/parser miss can be retried on the next run.
+  if (extracted.length !== documents.length) return null;
 
-  const combined = texts.join("\n\n---\n\n").slice(0, MAX_INPUT_CHARS);
+  const combined = buildPliegoCorpus(extracted, MAX_INPUT_CHARS);
   const prompt = `Título del llamado: ${call.title}\n\nTexto del/los pliego(s):\n${combined}`;
 
   let generated: GeneratedSummary;
   let modelUsed: string;
   try {
     const res = await rot.generateStructured<GeneratedSummary>({
-      systemInstruction: SYSTEM_INSTRUCTION,
+      systemInstruction: SYSTEM_INSTRUCTION + DOCUMENT_PRECEDENCE_INSTRUCTION,
       prompt,
       schema: SUMMARY_SCHEMA,
       temperature: 0,
@@ -129,7 +137,7 @@ export async function summarizeOpenCall(compraId: string, rotator?: ProviderRota
     ...generated,
     model: modelUsed,
     generatedAt: new Date(),
-    sourceDocs: pdfs.map(d => d.url),
+    sourceDocs: documents.map(d => d.url),
     disclaimer: DISCLAIMER,
     docsSignature: currentSig,
   };

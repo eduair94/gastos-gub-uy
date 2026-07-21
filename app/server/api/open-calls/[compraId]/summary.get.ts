@@ -1,6 +1,8 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { connectToDatabase } from '../../../utils/database'
 import { OpenCallModel } from '../../../../../shared/models/open_call'
+import { isSupportedPliegoDocument } from '../../../../../shared/services/pliego-extractor'
+import { pliegoDocsSignature } from '../../../../../shared/pliego/docs-signature'
 
 // Read-only cached AI pliego summary. Generation runs on the cron/root side
 // (eager for matched calls + the pliego-summary job), which keeps the PDF
@@ -12,7 +14,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Falta compraId' })
   }
   await connectToDatabase()
-  const call = await OpenCallModel.findOne({ compraId }).select('aiSummary documents pliegoDocsSignature').lean()
+  const call = await OpenCallModel.findOne({ compraId }).select('aiSummary documents').lean()
   if (!call) {
     throw createError({ statusCode: 404, statusMessage: 'Llamado no encontrado' })
   }
@@ -21,9 +23,9 @@ export default defineEventHandler(async (event) => {
     // Stale = the pliego was modified after this summary was generated. The cached
     // summary is still returned (better than nothing); the UI can offer to refresh.
     const sig = call.aiSummary.docsSignature
-    const stale = sig !== undefined && sig !== call.pliegoDocsSignature
+    const stale = sig !== undefined && sig !== pliegoDocsSignature(call.documents)
     return { success: true, data: { available: true, summary: call.aiSummary, stale } }
   }
-  const hasPliego = (call.documents ?? []).length > 0
+  const hasPliego = (call.documents ?? []).some(isSupportedPliegoDocument)
   return { success: true, data: { available: false, hasPliego } }
 })

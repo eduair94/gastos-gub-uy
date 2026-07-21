@@ -52,7 +52,7 @@ const base: ReleaseLike = {
       { description: "EQUIPO DE AIRE ACONDICIONADO SPLIT", quantity: 2, classification: { id: "4472", description: "EQUIPO DE AIRE ACONDICIONADO SPLIT" } },
       { description: "Instalación", quantity: 1, classification: { id: "4472", description: "EQUIPO DE AIRE ACONDICIONADO SPLIT" } },
     ],
-    documents: [{ url: "https://x/pliego.pdf", format: "application/pdf", documentType: "biddingDocuments" }],
+    documents: [{ url: "https://x/pliego.doc", format: "application/msword", documentType: "biddingDocuments" }],
   },
 };
 const aclar: ReleaseLike = {

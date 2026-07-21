@@ -1,17 +1,47 @@
 /**
- * Downloads a pliego PDF and extracts its text with unpdf. Degrades gracefully:
- * non-PDF, zipped, unreachable or unparseable documents return null with a reason
+ * Downloads a pliego PDF or Word document and extracts its text. Degrades
+ * gracefully: unsupported, unreachable or unparseable documents return null
  * rather than throwing, so a bad pliego never breaks the summary job.
  *
  * Lives in shared/ (moved from src/services) so BOTH the batch summarizer and the
  * Nitro on-demand endpoint can use it. unpdf is bundle-safe for Nitro (unjs).
  */
 import { extractText, getDocumentProxy } from "unpdf";
+import WordExtractor from "word-extractor";
+
+export interface PliegoDocumentLike {
+  url?: string | undefined;
+  format?: string | undefined;
+}
+
+function normalizedUrl(url: string | undefined): string {
+  return (url ?? "").toLowerCase().split(/[?#]/, 1)[0] ?? "";
+}
 
 export function isPdfDocument(doc: { url?: string | undefined; format?: string | undefined }): boolean {
-  const url = (doc.url ?? "").toLowerCase();
+  const url = normalizedUrl(doc.url);
   const format = (doc.format ?? "").toLowerCase();
   return url.endsWith(".pdf") || format.includes("pdf") || format === "application/pdf";
+}
+
+export function isWordDocument(doc: PliegoDocumentLike): boolean {
+  const url = normalizedUrl(doc.url);
+  const format = (doc.format ?? "").toLowerCase();
+  return url.endsWith(".doc")
+    || url.endsWith(".docx")
+    || format.includes("msword")
+    || format.includes("wordprocessingml");
+}
+
+export function isSupportedPliegoDocument(doc: PliegoDocumentLike): boolean {
+  return isPdfDocument(doc) || isWordDocument(doc);
+}
+
+function cleanText(text: string, maxChars: number): string | null {
+  // Binary Word documents and a few PDFs can leave NULs in otherwise valid text.
+  // Preserve ordinary spaces: removing them makes the model see concatenated words.
+  const cleaned = text.replace(/\u0000/g, "").replace(/[ \t]+\n/g, "\n").trim();
+  return cleaned ? cleaned.slice(0, maxChars) : null;
 }
 
 export async function extractPdfText(url: string, maxChars = 60_000, timeoutMs = 30_000): Promise<string | null> {
@@ -22,9 +52,31 @@ export async function extractPdfText(url: string, maxChars = 60_000, timeoutMs =
     const pdf = await getDocumentProxy(buf);
     const { text } = await extractText(pdf, { mergePages: true });
     const joined = Array.isArray(text) ? text.join("\n") : text;
-    const cleaned = joined.replace(/ /g, "").replace(/[ \t]+\n/g, "\n").trim();
-    return cleaned ? cleaned.slice(0, maxChars) : null;
+    return cleanText(joined, maxChars);
   } catch {
     return null;
   }
+}
+
+export async function extractWordText(url: string, maxChars = 60_000, timeoutMs = 30_000): Promise<string | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    if (!res.ok) return null;
+    const extractor = new WordExtractor();
+    const doc = await extractor.extract(Buffer.from(await res.arrayBuffer()));
+    return cleanText(doc.getBody(), maxChars);
+  } catch {
+    return null;
+  }
+}
+
+export async function extractPliegoText(
+  doc: PliegoDocumentLike,
+  maxChars = 60_000,
+  timeoutMs = 30_000,
+): Promise<string | null> {
+  if (!doc.url) return null;
+  if (isPdfDocument(doc)) return extractPdfText(doc.url, maxChars, timeoutMs);
+  if (isWordDocument(doc)) return extractWordText(doc.url, maxChars, timeoutMs);
+  return null;
 }

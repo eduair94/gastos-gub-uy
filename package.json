@@ -91,6 +91,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/stream-json": "^1.7.8",
     "@types/web-push": "^3.6.4",
+    "@types/word-extractor": "^1.0.6",
     "@types/yauzl": "^2.10.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
@@ -122,6 +123,7 @@
     "stream-json": "^1.9.1",
     "unpdf": "^0.12.1",
     "web-push": "^3.6.7",
+    "word-extractor": "^1.0.4",
     "xml2js": "^0.6.2",
     "yauzl": "^3.0.0"
   },
