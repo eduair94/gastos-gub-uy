@@ -593,7 +593,7 @@ async function main(): Promise<void> {
       await sp.createIndex({ buyerCount: -1 }, { background: true, name: 'buyerCount_-1' })
       await sp.createIndex({ avgContractValue: -1 }, { background: true, name: 'avgContractValue_-1' })
       await sp.createIndex({ onlyDirectAward: 1, supplierId: 1 }, { background: true, name: 'onlyDirectAward_1_supplierId_1' })
-      console.log('✅ supplier_patterns indexes ensured (name, totalContracts, totalValue, buyerCount, avgContractValue)')
+      console.log('✅ supplier_patterns indexes ensured (name, totalContracts, totalValue, buyerCount, avgContractValue, onlyDirectAward+supplierId)')
 
       // --- campaign collections (Phase B) ---
       const sup = db.collection('email_suppressions')
@@ -645,7 +645,7 @@ async function main(): Promise<void> {
       console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality, neverAwarded+priorityScore}')
       console.log('   plan: rupe_registry.{rut unique, normalizedName, geocodeStatus, departamento}')
       console.log('   plan: procurement_contacts.{organismId unique, llamadosCount, dataVersion, searchText text}')
-      console.log('   plan: supplier_patterns.{name, totalContracts, totalValue, buyerCount, avgContractValue}')
+      console.log('   plan: supplier_patterns.{name, totalContracts, totalValue, buyerCount, avgContractValue, onlyDirectAward+supplierId}')
       console.log('   plan: tender_forecast.{buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, expectedWindow.end, rubroAncestors, confidence}')
     }
 

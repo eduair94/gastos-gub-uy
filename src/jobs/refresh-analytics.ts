@@ -63,6 +63,13 @@ const TOP_N_CATEGORIES_PER_YEAR = 20
 const BULK_BATCH = 1000
 
 const AGG = { allowDiskUse: true } as const
+// Method history is independent of money. AWARD_MATCH deliberately excludes
+// zero/missing/implausible amounts for financial rollups; using it here would
+// hide real tender awards and create false "direct only" positives.
+const AWARD_HISTORY_MATCH: Record<string, unknown> = {
+  tag: 'award',
+  'awards.suppliers.id': { $exists: true, $ne: null },
+}
 
 interface SupplierRow {
   _id: string
@@ -74,7 +81,7 @@ interface SupplierRow {
 }
 
 export interface SupplierMethodRow {
-  _id: { supplier: string, method: string | null }
+  _id: { supplier: string, method?: string | null }
   count: number
 }
 
@@ -156,23 +163,83 @@ export class AnalyticsRefresher {
       AGG,
     )
 
-    // Method lives on the release, not the item. Count each supplier/release once,
-    // then classify the compact result in JS with the shared canonical classifier.
+    // Award-phase releases carry the suppliers but, in the live feed, no `tender`
+    // object (5000/5000 sampled adjudicacion-* rows). Tender-phase siblings carry
+    // procurementMethodDetails and share the award's ocid. Collapse both sides by
+    // ocid in Mongo, count each supplier/release once, and only pull the compact
+    // supplier/method result into JS for the canonical methodClass classifier.
     const methodRows: SupplierMethodRow[] = await ReleaseModel.aggregate(
       [
-        { $match: AWARD_MATCH },
-        { $unwind: { path: '$awards', preserveNullAndEmptyArrays: false } },
         {
-          $group: {
-            _id: { supplier: AWARD_SUPPLIER_ID, release: '$id' },
-            method: { $first: '$tender.procurementMethodDetails' },
+          $match: {
+            'ocid': { $type: 'string', $ne: '' },
+            'tender.procurementMethodDetails': { $type: 'string', $ne: '' },
           },
         },
-        { $match: { '_id.supplier': { $ne: null } } },
+        {
+          $project: {
+            _id: 0,
+            ocid: 1,
+            method: '$tender.procurementMethodDetails',
+            date: 1,
+          },
+        },
+        // Prefer the latest non-empty method when a llamado has updates.
+        { $sort: { ocid: 1, date: -1 } },
         {
           $group: {
-            _id: { supplier: '$_id.supplier', method: '$method' },
-            count: { $sum: 1 },
+            _id: '$ocid',
+            method: { $first: '$method' },
+          },
+        },
+        { $project: { _id: 0, ocid: '$_id', method: 1 } },
+        {
+          $unionWith: {
+            coll: 'releases',
+            pipeline: [
+              { $match: AWARD_HISTORY_MATCH },
+              { $unwind: { path: '$awards', preserveNullAndEmptyArrays: false } },
+              {
+                $group: {
+                  _id: { supplier: AWARD_SUPPLIER_ID, release: '$id' },
+                  ocid: { $first: '$ocid' },
+                },
+              },
+              {
+                $match: {
+                  '_id.supplier': { $type: 'string', $ne: '' },
+                  'ocid': { $type: 'string', $ne: '' },
+                },
+              },
+              {
+                $group: {
+                  _id: { supplier: '$_id.supplier', ocid: '$ocid' },
+                  count: { $sum: 1 },
+                },
+              },
+              {
+                $project: {
+                  _id: 0,
+                  ocid: '$_id.ocid',
+                  supplierCount: { supplier: '$_id.supplier', count: '$count' },
+                },
+              },
+            ],
+          },
+        },
+        {
+          $group: {
+            _id: '$ocid',
+            method: { $max: '$method' },
+            supplierCounts: { $addToSet: '$supplierCount' },
+          },
+        },
+        { $unwind: { path: '$supplierCounts', preserveNullAndEmptyArrays: false } },
+        { $match: { 'supplierCounts.supplier': { $type: 'string', $ne: '' } } },
+        {
+          $group: {
+            _id: { supplier: '$supplierCounts.supplier', method: '$method' },
+            count: { $sum: '$supplierCounts.count' },
           },
         },
       ],
