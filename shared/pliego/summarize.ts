@@ -22,6 +22,9 @@ import type { ModelGenerationProgress } from "../ai/rotator";
 
 const DISCLAIMER = "Resumen generado por IA. Verificá siempre el pliego oficial.";
 const MAX_INPUT_CHARS = 60_000;
+// Groq's smallest free-tier TPM bucket rejects the 60k-char corpus (~15k
+// tokens). Keep enough headroom for instructions/schema under its 6k TPM cap.
+const GROQ_MAX_INPUT_CHARS = 16_000;
 
 type GeneratedSummary = Omit<IPliegoSummary, "model" | "generatedAt" | "sourceDocs" | "disclaimer">;
 
@@ -183,7 +186,9 @@ export async function summarizeOpenCall(
   }
 
   const combined = buildPliegoCorpus(extracted, MAX_INPUT_CHARS);
+  const groqCombined = buildPliegoCorpus(extracted, GROQ_MAX_INPUT_CHARS);
   const prompt = `Título del llamado: ${call.title}\n\nTexto del/los pliego(s):\n${combined}`;
+  const groqPrompt = `Título del llamado: ${call.title}\n\nTexto del/los pliego(s):\n${groqCombined}`;
 
   let generated: GeneratedSummary;
   let modelUsed: string;
@@ -191,6 +196,7 @@ export async function summarizeOpenCall(
     const res = await rot.generateStructured<GeneratedSummary>({
       systemInstruction: SYSTEM_INSTRUCTION + DOCUMENT_PRECEDENCE_INSTRUCTION,
       prompt,
+      groqPrompt,
       schema: SUMMARY_SCHEMA,
       temperature: 0,
       timeoutMs: generationOptions.timeoutMs ?? 45_000,

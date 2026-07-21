@@ -47,4 +47,17 @@ assert.ok(corpus.includes("PLIEGO BASE"), "base pliego must contribute text");
 assert.ok(corpus.includes("CORRECCIÓN POSTERIOR"), "later clarification must contribute text");
 assert.ok(corpus.indexOf("PLIEGO BASE") < corpus.indexOf("CORRECCIÓN POSTERIOR"), "documents must be chronological");
 
+const longText = `INICIO-${"A".repeat(1_000)}-MEDIO-${"B".repeat(1_000)}-FINAL`;
+const sampled = buildPliegoCorpus([{ document: baseDoc, text: longText }], 500);
+assert.ok(sampled.includes("INICIO"), "a long document must retain its beginning");
+assert.ok(sampled.includes("MEDIO"), "a long document must retain representative middle content");
+assert.ok(sampled.includes("FINAL"), "a long document must retain its end");
+
+const relevantClause = "GARANTÍA DE MANTENIMIENTO: el oferente deberá presentar 5% del monto.";
+const clauseText = Array.from({ length: 30 }, (_, index) => index === 17
+  ? relevantClause
+  : `Sección narrativa ${index}. ${"texto general ".repeat(60)}`).join("\n\n");
+const compressedClause = buildPliegoCorpus([{ document: baseDoc, text: clauseText }], 5_000);
+assert.ok(compressedClause.includes(relevantClause), "task-relevant clauses must survive compression");
+
 console.log("ok: Word pliegos + correction-aware corpus");

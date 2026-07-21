@@ -192,6 +192,27 @@ async function run() {
     assert.deepStrictEqual(data, VALID);
     assert.ok(progress.some(chars => chars > 0), "partial model output must be observable before completion");
   }
+
+  // 8) Gemini keeps the full corpus while Groq receives its TPM-safe variant.
+  let providerPrompt = "";
+  mockFetch((url, init) => {
+    const body = JSON.parse(String(init?.body));
+    if (url.includes("generativelanguage.googleapis.com")) {
+      providerPrompt = body.contents[0].parts[0].text;
+      return geminiOk();
+    }
+    providerPrompt = body.messages[1].content;
+    return groqOk();
+  });
+  {
+    const gemini = new ProviderRotator({ geminiApiKey: "g", geminiModels: ["gemini"] });
+    await gemini.generateStructured({ systemInstruction: "s", prompt: "full", groqPrompt: "compact", schema: SCHEMA });
+    assert.strictEqual(providerPrompt, "full");
+
+    const groq = new ProviderRotator({ groqApiKey: "q", groqModels: ["groq"] });
+    await groq.generateStructured({ systemInstruction: "s", prompt: "full", groqPrompt: "compact", schema: SCHEMA });
+    assert.strictEqual(providerPrompt, "compact");
+  }
 }
 
 run()

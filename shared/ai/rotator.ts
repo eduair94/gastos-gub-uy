@@ -32,6 +32,8 @@ export interface RotatorOptions {
 export interface GenerateArgs {
   systemInstruction: string;
   prompt: string;
+  /** Smaller provider-specific corpus for Groq free-tier TPM limits. */
+  groqPrompt?: string | undefined;
   schema: GeminiSchema;
   temperature?: number | undefined;
   timeoutMs?: number | undefined;
@@ -163,7 +165,7 @@ export class ProviderRotator {
             apiKey: this.groqApiKey!,
             model: m.model,
             systemInstruction: args.systemInstruction,
-            prompt: args.prompt,
+            prompt: args.groqPrompt ?? args.prompt,
             schema: args.schema,
             temperature: args.temperature ?? 0,
             timeoutMs: requestTimeoutMs ?? 45_000,
