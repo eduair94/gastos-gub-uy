@@ -449,7 +449,7 @@ useSeo(() => ({
           <h2>{{ t('suppliers.detail.contractsTitle') }}</h2>
           <NuxtLink
             v-if="contracts.length"
-            :to="localePath({ path: '/contracts', query: { suppliers: supplier.name } })"
+            :to="localePath({ path: '/contracts', query: { suppliers: supplier.supplierId } })"
             class="block__all"
           >
             {{ t('common.viewAll') }}
