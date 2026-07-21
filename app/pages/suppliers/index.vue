@@ -27,7 +27,39 @@ const DEPARTAMENTOS = [
   'SALTO', 'SAN JOSE', 'SORIANO', 'TACUAREMBO', 'TREINTA Y TRES',
 ]
 
+/** The `sup.cat.*` values a supplier can be filtered by (mirrors SupplierChip; excludes 'otro', which never renders as a chip). */
+const CATEGORIAS = [
+  'empresa', 'organismo-publico', 'persona', 'cooperativa', 'agencia-publicidad', 'productora',
+  'medio-tv', 'medio-radio', 'medio-prensa', 'medio-digital', 'medio-via-publica',
+]
+
 const { t } = useI18n()
+
+// v-select item lists (title/value pairs so translated labels can differ from
+// the query-string value the API expects).
+const SORT_ITEMS = computed(() => [
+  { title: t('suppliers.sort.totalDesc'), value: 'totalDesc' },
+  { title: t('suppliers.sort.totalAsc'), value: 'totalAsc' },
+  { title: t('suppliers.sort.contractsDesc'), value: 'contractsDesc' },
+])
+
+const TAMANO_ITEMS = computed(() => [
+  { title: t('sup.dei.filter.sizeAny'), value: '' },
+  { title: t('sup.dei.size.micro'), value: 'micro' },
+  { title: t('sup.dei.size.pequena'), value: 'pequena' },
+  { title: t('sup.dei.size.mediana'), value: 'mediana' },
+  { title: t('sup.dei.size.gran'), value: 'gran' },
+])
+
+const DEPARTAMENTO_ITEMS = computed(() => [
+  { title: t('sup.dei.filter.deptAny'), value: '' },
+  ...DEPARTAMENTOS.map(d => ({ title: d, value: d })),
+])
+
+const CATEGORIA_ITEMS = computed(() => [
+  { title: t('sup.filter.categoryAny'), value: '' },
+  ...CATEGORIAS.map(c => ({ title: t(`sup.cat.${c}`), value: c })),
+])
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
@@ -44,13 +76,15 @@ const sort = ref((route.query.sort as string) ?? 'totalDesc')
 const deiOnly = ref(route.query.dei === '1')
 const tamano = ref((route.query.tamano as string) ?? '')
 const departamento = ref((route.query.departamento as string) ?? '')
-const hasFilters = computed(() => deiOnly.value || !!tamano.value || !!departamento.value)
+const categoria = ref((route.query.categoria as string) ?? '')
+const hasFilters = computed(() => deiOnly.value || !!tamano.value || !!departamento.value || !!categoria.value)
 
 function clearFilters() {
   track('filter_clear', { surface: 'suppliers' })
   deiOnly.value = false
   tamano.value = ''
   departamento.value = ''
+  categoria.value = ''
   page.value = 1
 }
 
@@ -73,15 +107,16 @@ const listQuery = computed(() => ({
   ...(deiOnly.value ? { dei: '1' } : {}),
   ...(tamano.value ? { tamano: tamano.value } : {}),
   ...(departamento.value ? { departamento: departamento.value } : {}),
+  ...(categoria.value ? { categoria: categoria.value } : {}),
   ...(SORTS[sort.value] ?? SORTS.totalDesc),
 }))
 
 // Page 7 of a different result set is meaningless.
-watch([searchTerm, sort, deiOnly, tamano, departamento], () => {
+watch([searchTerm, sort, deiOnly, tamano, departamento, categoria], () => {
   page.value = 1
 })
 
-watch([searchTerm, page, sort, deiOnly, tamano, departamento], () => {
+watch([searchTerm, page, sort, deiOnly, tamano, departamento, categoria], () => {
   const q: Record<string, string> = {}
   if (searchTerm.value) q.search = searchTerm.value
   if (page.value > 1) q.page = String(page.value)
@@ -89,19 +124,20 @@ watch([searchTerm, page, sort, deiOnly, tamano, departamento], () => {
   if (deiOnly.value) q.dei = '1'
   if (tamano.value) q.tamano = tamano.value
   if (departamento.value) q.departamento = departamento.value
+  if (categoria.value) q.categoria = categoria.value
   router.replace({ query: q })
 })
 
 // One settled query/filter set = one event. Skips the initial fire (arriving
 // from a link/reload isn't "searching").
 let searchTouched = false
-watch([searchTerm, deiOnly, tamano, departamento], () => {
+watch([searchTerm, deiOnly, tamano, departamento, categoria], () => {
   if (!searchTouched) {
     searchTouched = true
     return
   }
   if (searchTerm.value) track('search', { search_term: searchTerm.value, location: 'suppliers' })
-  if (hasFilters.value) track('filter_apply', { surface: 'suppliers', active_count: [deiOnly.value, tamano.value, departamento.value].filter(Boolean).length })
+  if (hasFilters.value) track('filter_apply', { surface: 'suppliers', active_count: [deiOnly.value, tamano.value, departamento.value, categoria.value].filter(Boolean).length })
 })
 watch(sort, s => track('sort_change', { surface: 'suppliers', sort: s }))
 
@@ -233,77 +269,45 @@ useSeo(() => {
         </button>
       </form>
 
-      <label class="toolbar__sort">
-        <span class="u-sr-only">{{ t('common.sortBy') }}</span>
-        <select
-          v-model="sort"
-          class="toolbar__select"
-        >
-          <option value="totalDesc">
-            {{ t('suppliers.sort.totalDesc') }}
-          </option>
-          <option value="totalAsc">
-            {{ t('suppliers.sort.totalAsc') }}
-          </option>
-          <option value="contractsDesc">
-            {{ t('suppliers.sort.contractsDesc') }}
-          </option>
-        </select>
-      </label>
+      <v-select
+        v-model="sort"
+        :items="SORT_ITEMS"
+        :label="t('common.sortBy')"
+        class="toolbar__vsel"
+      />
     </div>
 
     <!-- ===== DEI cross-reference filters ===== -->
     <div class="filters">
-      <label class="filters__toggle">
-        <input
-          v-model="deiOnly"
-          type="checkbox"
-        >
-        <span>{{ t('sup.dei.filter.only') }}</span>
-      </label>
+      <v-checkbox
+        v-model="deiOnly"
+        :label="t('sup.dei.filter.only')"
+        density="compact"
+        hide-details
+        color="success"
+        class="filters__toggle"
+      />
 
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('sup.dei.filter.size') }}</span>
-        <select
-          v-model="tamano"
-          class="toolbar__select"
-        >
-          <option value="">
-            {{ t('sup.dei.filter.sizeAny') }}
-          </option>
-          <option value="micro">
-            {{ t('sup.dei.size.micro') }}
-          </option>
-          <option value="pequena">
-            {{ t('sup.dei.size.pequena') }}
-          </option>
-          <option value="mediana">
-            {{ t('sup.dei.size.mediana') }}
-          </option>
-          <option value="gran">
-            {{ t('sup.dei.size.gran') }}
-          </option>
-        </select>
-      </label>
+      <v-select
+        v-model="tamano"
+        :items="TAMANO_ITEMS"
+        :label="t('sup.dei.filter.size')"
+        class="filters__vsel"
+      />
 
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('sup.dei.filter.dept') }}</span>
-        <select
-          v-model="departamento"
-          class="toolbar__select"
-        >
-          <option value="">
-            {{ t('sup.dei.filter.deptAny') }}
-          </option>
-          <option
-            v-for="d in DEPARTAMENTOS"
-            :key="d"
-            :value="d"
-          >
-            {{ d }}
-          </option>
-        </select>
-      </label>
+      <v-select
+        v-model="departamento"
+        :items="DEPARTAMENTO_ITEMS"
+        :label="t('sup.dei.filter.dept')"
+        class="filters__vsel"
+      />
+
+      <v-select
+        v-model="categoria"
+        :items="CATEGORIA_ITEMS"
+        :label="t('sup.filter.category')"
+        class="filters__vsel"
+      />
 
       <button
         v-if="hasFilters"
@@ -556,18 +560,7 @@ useSeo(() => {
 
 .find__x:hover { color: var(--text); }
 
-.toolbar__sort { margin-left: auto; }
-
-.toolbar__select {
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--t-sm);
-  cursor: pointer;
-}
+.toolbar__vsel { flex: 0 0 auto; max-width: 220px; margin-left: auto; }
 
 /* ---- DEI filters ---- */
 .filters {
@@ -578,16 +571,9 @@ useSeo(() => {
   margin-bottom: var(--s-3);
 }
 
-.filters__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  font-size: var(--t-sm);
-  color: var(--text);
-  cursor: pointer;
-}
+.filters__toggle { flex: 0 0 auto; }
 
-.filters__toggle input { accent-color: var(--verde); cursor: pointer; }
+.filters__vsel { flex: 0 1 200px; }
 
 .filters__clear {
   padding: var(--s-1) var(--s-3);
@@ -738,7 +724,6 @@ useSeo(() => {
 @media (max-width: 640px) {
   .toolbar { flex-direction: column; align-items: stretch; }
   .find { max-width: none; }
-  .toolbar__sort { margin-left: 0; }
-  .toolbar__select { width: 100%; }
+  .toolbar__vsel { max-width: none; margin-left: 0; }
 }
 </style>

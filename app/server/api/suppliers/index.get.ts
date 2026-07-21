@@ -1,8 +1,14 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { attachDei } from '../../utils/dei'
-import { attachEnrichment } from '../../utils/enrichment'
+import { attachEnrichment, fetchNamesByCategory } from '../../utils/enrichment'
 import { DeiCompanyModel, SupplierPatternModel } from '../../utils/models'
+
+/** The `sup.cat.*` values a supplier can actually be filtered by (mirrors SupplierChip; excludes 'otro', which `fetchEnrichment` always nulls out). */
+const CATEGORIES = new Set([
+  'medio-tv', 'medio-radio', 'medio-prensa', 'medio-digital', 'medio-via-publica',
+  'agencia-publicidad', 'productora', 'organismo-publico', 'empresa', 'cooperativa', 'persona',
+])
 
 /** Size-token → the regex that matches the DEI `tamano` free text. */
 const TAMANO_RX: Record<string, RegExp> = {
@@ -37,14 +43,38 @@ export default defineEventHandler(async (event) => {
       dei,
       tamano,
       departamento,
+      categoria,
     } = query
 
     // Build query filter
     const filter: Record<string, unknown> = {}
 
+    // `search` and `categoria` both constrain `name`; assigning both to
+    // `filter.name` directly would let the second silently clobber the first
+    // (same trap as two dotted-key filters), so combine them with `$and`
+    // whenever more than one `name` condition is in play.
+    const nameConditions: Record<string, unknown>[] = []
     if (search) {
-      filter.name = { $regex: search, $options: 'i' }
+      nameConditions.push({ name: { $regex: search, $options: 'i' } })
     }
+
+    if (categoria && CATEGORIES.has(String(categoria))) {
+      const names = await fetchNamesByCategory(String(categoria))
+      // No enriched supplier carries this category → no rows can match.
+      if (!names.length) {
+        return {
+          success: true,
+          data: {
+            suppliers: [],
+            pagination: { page: Number(page), limit: Number(limit), total: 0, totalPages: 0 },
+          },
+        }
+      }
+      nameConditions.push({ name: { $in: names } })
+    }
+
+    if (nameConditions.length === 1) Object.assign(filter, nameConditions[0])
+    else if (nameConditions.length > 1) filter.$and = nameConditions
 
     // ---- DEI cross-reference filters ----
     // "Only registered industrial companies", optionally narrowed by size or
