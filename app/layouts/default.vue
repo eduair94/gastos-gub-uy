@@ -14,6 +14,7 @@ const router = useRouter()
 const theme = useTheme()
 
 const drawer = ref(false)
+const overflowMenuOpen = ref(false)
 const search = ref('')
 
 // The box mirrors the explorer's current term — landing on
@@ -155,6 +156,7 @@ async function onLogout() {
 // page is the classic drawer bug.
 watch(() => route.fullPath, () => {
   drawer.value = false
+  overflowMenuOpen.value = false
 })
 
 // ---- Priority overflow nav ----
@@ -366,7 +368,11 @@ watch([locale, user], () => nextTick(scheduleRecompute))
           <!-- Sections that don't fit fold in here rather than overflowing
                the bar. Active state bubbles up so the menu is highlighted
                when the current page lives inside it. -->
-          <v-menu v-if="overflowNav.length">
+          <v-menu
+            v-if="overflowNav.length"
+            v-model="overflowMenuOpen"
+            :close-on-content-click="false"
+          >
             <template #activator="{ props }">
               <button
                 v-bind="props"
@@ -405,6 +411,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                     :to="n.to"
                     :title="t('nav.viewAll')"
                     :active="isActive(n.to)"
+                    @click="overflowMenuOpen = false"
                   />
                   <v-list-item
                     v-for="c in n.children"
@@ -413,6 +420,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                     :prepend-icon="c.icon"
                     :title="t(`nav.${c.key}`)"
                     :active="isActive(c.to)"
+                    @click="overflowMenuOpen = false"
                   />
                 </v-list-group>
 
@@ -425,6 +433,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                   :prepend-icon="n.icon"
                   :title="t(`nav.${n.key}`)"
                   :active="!n.external && isActive(n.to)"
+                  @click="overflowMenuOpen = false"
                 />
               </template>
             </v-list>
@@ -1467,11 +1476,19 @@ watch([locale, user], () => nextTick(scheduleRecompute))
 
 .navmenu .v-list-item {
   min-height: 38px;
+  padding: var(--s-1) var(--s-4);
 }
 
 .navmenu .v-list-item__prepend > .v-icon {
   font-size: 20px;
   opacity: 0.85;
-  margin-inline-end: var(--s-2);
+  margin-inline-end: 0;
+}
+
+/* Vuetify reserves a 40px spacer after a prepend icon. Together with the
+   previous icon margin this left a 40px visual hole before every label.
+   Keep the framework's prepend slot, but size its spacer to our rhythm. */
+.navmenu .v-list-item__prepend > .v-list-item__spacer {
+  width: var(--s-3);
 }
 </style>

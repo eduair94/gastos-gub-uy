@@ -751,6 +751,8 @@ button.chip:disabled { cursor: default; }
   white-space: nowrap;
   // Vuetify packs header + rows tight; give them real vertical rhythm so a
   // table never reads as "aplastado". Applied globally to every v-data-table.
+  padding-right: var(--s-4) !important;
+  padding-left: var(--s-4) !important;
   padding-top: var(--s-4) !important;
   padding-bottom: var(--s-3) !important;
   height: auto !important;
@@ -758,6 +760,8 @@ button.chip:disabled { cursor: default; }
 
 .v-data-table__td,
 .v-data-table td {
+  padding-right: var(--s-4) !important;
+  padding-left: var(--s-4) !important;
   padding-top: var(--s-4) !important;
   padding-bottom: var(--s-4) !important;
   height: auto !important;
