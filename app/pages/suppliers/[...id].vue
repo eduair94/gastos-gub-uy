@@ -80,7 +80,7 @@ const { data: detailRes, error: detailError } = await useFetch<any>(
 const supplier = computed<SupplierPattern | null>(() => detailRes.value?.data?.supplier ?? null)
 /** DEI industrial-registry record when this supplier's RUT is registered (else null). */
 const dei = computed(() => detailRes.value?.data?.dei ?? null)
-/** RUPE state-provider record (91.7% coverage). Shown only when DEI isn't (DEI is richer). */
+/** RUPE state-provider record (91.7% coverage), including the literal registration state. */
 const rupe = computed(() => detailRes.value?.data?.rupe ?? null)
 /** Sanitized contact enrichment (email/website/phone) + the METHOD provenance. */
 const contact = computed(() => detailRes.value?.data?.contact ?? null)
@@ -347,7 +347,7 @@ useSeo(() => ({
            Fallback location card for the ~85% of suppliers in RUPE but not DEI.
            Official ARCE open data, cross-referenced by RUT — a fact of record. -->
       <RupePanel
-        v-if="rupe && !dei"
+        v-if="rupe"
         :rupe="rupe"
         :supplier-name="supplier.name"
         :supplier-id="supplier.supplierId"

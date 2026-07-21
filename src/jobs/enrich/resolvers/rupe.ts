@@ -22,9 +22,10 @@ interface RupeDoc {
   lat?: number | null;
   lng?: number | null;
   placeId?: string | null;
+  estado?: string | null;
 }
 
-const PROJECTION = { domicilioFiscal: 1, localidad: 1, departamento: 1, lat: 1, lng: 1, placeId: 1 } as const;
+const PROJECTION = { domicilioFiscal: 1, localidad: 1, departamento: 1, lat: 1, lng: 1, placeId: 1, estado: 1 } as const;
 
 export function createRupeResolver(db: Db): ContactResolver {
   return {
@@ -53,7 +54,8 @@ export function createRupeResolver(db: Db): ContactResolver {
       const lat = typeof row.lat === "number" ? row.lat : null;
       const lng = typeof row.lng === "number" ? row.lng : null;
       const hasPlace = row.domicilioFiscal || locality || lat !== null;
-      if (!hasPlace) return { emails: [] };
+      const rupeEstado = row.estado ? String(row.estado).trim() : null;
+      if (!hasPlace) return { emails: [], rupeEstado };
 
       const place: PlaceInfo = {
         address: row.domicilioFiscal ? String(row.domicilioFiscal) : null,
@@ -63,7 +65,7 @@ export function createRupeResolver(db: Db): ContactResolver {
         placeId: row.placeId ? String(row.placeId) : null,
         source: "rupe",
       };
-      return { emails: [], place };
+      return { emails: [], place, rupeEstado };
     },
   };
 }

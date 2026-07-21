@@ -18,6 +18,8 @@ interface SupplierRow {
   category?: string | null
   /** DEI industrial-registry record when registered (null otherwise). */
   dei?: { estado?: string | null } | null
+  /** RUPE registration and its literal CSV status. */
+  rupe?: { estado?: string | null } | null
 }
 
 /** Uruguay's 19 departments, value = DB form (uppercase), matched case-insensitively. */
@@ -476,6 +478,10 @@ useSeo(() => {
                   <DeiChip
                     v-if="s.dei"
                     :estado="s.dei.estado"
+                  />
+                  <RupeStatusChip
+                    v-if="s.rupe?.estado"
+                    :status="s.rupe.estado"
                   />
                 </div>
                 <span class="ctable__id">{{ s.supplierId }}</span>

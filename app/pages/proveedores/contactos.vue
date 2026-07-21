@@ -22,6 +22,7 @@ interface ContactRow {
   emails: EmailEntry[]
   website: string | null
   websiteSource: string | null
+  websiteSourceUrl: string | null
   phone: string | null
   phoneSource: string | null
   phones: PhoneEntry[]
@@ -32,6 +33,10 @@ interface ContactRow {
   locality: string | null
   address: string | null
   placeSource: string | null
+  mapsUrl: string | null
+  hours: string | null
+  lat: number | null
+  lng: number | null
   rubro: string | null
   methods: string[]
   neverAwarded: boolean
@@ -80,6 +85,7 @@ const CATEGORIAS = [
   'empresa', 'organismo-publico', 'persona', 'cooperativa', 'agencia-publicidad', 'productora',
   'medio-tv', 'medio-radio', 'medio-prensa', 'medio-digital', 'medio-via-publica',
 ]
+const RUPE_ESTADOS = ['ACTIVO', 'BAJA DGI', 'BAJA VOLUNTARIA', 'EN INGRESO']
 
 /** How each enrichment method is badged (label + css modifier). */
 const METHOD_BADGES: Record<string, { label: string, cls: string }> = {
@@ -113,6 +119,7 @@ const rubro = ref((route.query.rubro as string) ?? '')
 const departamento = ref((route.query.departamento as string) ?? '')
 const tamano = ref((route.query.tamano as string) ?? '')
 const categoria = ref((route.query.categoria as string) ?? '')
+const rupeEstado = ref((route.query.rupeEstado as string) ?? '')
 const deiOnly = ref(route.query.dei === '1')
 const onlyDirect = ref(route.query.onlyDirect === '1')
 // Which population to include: todas (default) | con-email | sin-adjudicaciones.
@@ -129,7 +136,7 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
 }
 
 const hasFilters = computed(() =>
-  !!rubro.value || !!departamento.value || !!tamano.value || !!categoria.value || deiOnly.value || onlyDirect.value
+  !!rubro.value || !!departamento.value || !!tamano.value || !!categoria.value || !!rupeEstado.value || deiOnly.value || onlyDirect.value
   || !verifiedOnly.value || hasPhone.value || hasWebsite.value || origen.value !== 'todas')
 
 function clearFilters() {
@@ -138,6 +145,7 @@ function clearFilters() {
   departamento.value = ''
   tamano.value = ''
   categoria.value = ''
+  rupeEstado.value = ''
   deiOnly.value = false
   onlyDirect.value = false
   origen.value = 'todas'
@@ -158,6 +166,7 @@ const filterQuery = computed(() => ({
   ...(onlyDirect.value ? { onlyDirect: '1' } : {}),
   ...(tamano.value ? { tamano: tamano.value } : {}),
   ...(categoria.value ? { categoria: categoria.value } : {}),
+  ...(rupeEstado.value ? { rupeEstado: rupeEstado.value } : {}),
   ...(departamento.value ? { departamento: departamento.value } : {}),
   ...(origen.value !== 'todas' ? { origen: origen.value } : {}),
   ...(verifiedOnly.value ? {} : { verified: '0' }),
@@ -168,11 +177,11 @@ const filterQuery = computed(() => ({
 
 const listQuery = computed(() => ({ page: page.value, limit: 25, ...filterQuery.value }))
 
-watch([searchTerm, rubro, departamento, tamano, categoria, deiOnly, onlyDirect, origen, verifiedOnly, hasPhone, hasWebsite, sort], () => {
+watch([searchTerm, rubro, departamento, tamano, categoria, rupeEstado, deiOnly, onlyDirect, origen, verifiedOnly, hasPhone, hasWebsite, sort], () => {
   page.value = 1
 })
 
-watch([searchTerm, page, rubro, departamento, tamano, categoria, deiOnly, onlyDirect, origen, verifiedOnly, hasPhone, hasWebsite, sort], () => {
+watch([searchTerm, page, rubro, departamento, tamano, categoria, rupeEstado, deiOnly, onlyDirect, origen, verifiedOnly, hasPhone, hasWebsite, sort], () => {
   const q: Record<string, string> = {}
   if (searchTerm.value) q.search = searchTerm.value
   if (page.value > 1) q.page = String(page.value)
@@ -180,6 +189,7 @@ watch([searchTerm, page, rubro, departamento, tamano, categoria, deiOnly, onlyDi
   if (departamento.value) q.departamento = departamento.value
   if (tamano.value) q.tamano = tamano.value
   if (categoria.value) q.categoria = categoria.value
+  if (rupeEstado.value) q.rupeEstado = rupeEstado.value
   if (deiOnly.value) q.dei = '1'
   if (onlyDirect.value) q.onlyDirect = '1'
   if (origen.value !== 'todas') q.origen = origen.value
@@ -245,6 +255,7 @@ const CATEGORIA_ITEMS = computed(() => [
 
 const columns = computed<DataColumn<ContactRow>[]>(() => [
   { key: 'name', label: t('contacts.table.name'), primary: true },
+  { key: 'rupeEstado', label: t('contacts.table.rupeStatus') },
   { key: 'rubro', label: t('contacts.table.rubro') },
   { key: 'locality', label: t('contacts.table.locality') },
   { key: 'email', label: t('contacts.table.email') },
@@ -346,6 +357,25 @@ useSeo(() => ({
           </option>
           <option value="sin-adjudicaciones">
             {{ t('contacts.filter.originSinAdjudicaciones') }}
+          </option>
+        </select>
+      </label>
+
+      <label class="filters__sel">
+        <span class="u-sr-only">{{ t('contacts.filter.rupeStatus') }}</span>
+        <select
+          v-model="rupeEstado"
+          class="sel"
+        >
+          <option value="">
+            {{ t('contacts.filter.rupeStatusAny') }}
+          </option>
+          <option
+            v-for="estado in RUPE_ESTADOS"
+            :key="estado"
+            :value="estado"
+          >
+            {{ estado }}
           </option>
         </select>
       </label>
@@ -582,10 +612,6 @@ useSeo(() => ({
               >
                 {{ row.name }}
               </NuxtLink>
-              <span
-                v-if="row.neverAwarded && row.rupeEstado"
-                class="namecell__rupe"
-              >RUPE · {{ row.rupeEstado }}</span>
             </div>
             <DeiChip
               v-if="row.dei"
@@ -613,6 +639,13 @@ useSeo(() => ({
         <template #cell:rubro="{ row }">
           {{ row.rubro || '—' }}
         </template>
+        <template #cell:rupeEstado="{ row }">
+          <RupeStatusChip
+            v-if="row.rupeEstado"
+            :status="row.rupeEstado"
+          />
+          <span v-else>—</span>
+        </template>
         <template #cell:locality="{ row }">
           <div>{{ row.locality || '—' }}</div>
           <div
@@ -620,11 +653,29 @@ useSeo(() => ({
             class="fielddetail"
           >
             {{ row.address }}
+            <a
+              v-if="row.placeSource === 'googleMaps' && row.mapsUrl"
+              :href="row.mapsUrl"
+              target="_blank"
+              rel="nofollow noopener"
+              class="fieldsrc fieldsrc--link"
+            >{{ originLabel(row.placeSource) }}</a>
             <span
-              v-if="originLabel(row.placeSource)"
+              v-else-if="originLabel(row.placeSource)"
               class="fieldsrc"
             >{{ originLabel(row.placeSource) }}</span>
           </div>
+          <div
+            v-if="row.hours"
+            class="fielddetail"
+          >{{ t('contacts.businessHours') }}: {{ row.hours }}</div>
+          <a
+            v-if="row.mapsUrl"
+            :href="row.mapsUrl"
+            target="_blank"
+            rel="nofollow noopener"
+            class="link"
+          >{{ t('contacts.mapsLink') }}</a>
           <div
             v-if="row.websiteAddress && row.websiteAddress !== row.address"
             class="fielddetail"
@@ -674,12 +725,16 @@ useSeo(() => ({
               rel="nofollow noopener"
               class="link"
             >{{ hostname(row.website) }}</a>
-            <div
+            <a
               v-if="websiteOriginLabel(row.websiteSource)"
-              style="font-size:0.8em;opacity:0.7"
+              :href="row.websiteSourceUrl || undefined"
+              :target="row.websiteSourceUrl ? '_blank' : undefined"
+              :rel="row.websiteSourceUrl ? 'nofollow noopener' : undefined"
+              class="fieldsrc"
+              :class="{ 'fieldsrc--link': row.websiteSourceUrl }"
             >
               {{ websiteOriginLabel(row.websiteSource) }}
-            </div>
+            </a>
           </template>
           <span v-else>—</span>
         </template>
@@ -962,14 +1017,6 @@ useSeo(() => ({
 }
 
 .namecell__link:hover { color: var(--celeste-deep); text-decoration: underline; }
-
-.namecell__rupe {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--t-xs);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.3;
-}
 
 .link { color: var(--celeste-deep); text-decoration: none; }
 .fieldstack { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }

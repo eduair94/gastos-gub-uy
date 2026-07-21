@@ -718,6 +718,7 @@
     "resultsSummary": "{count} proveedores",
     "table": {
       "name": "Proveedor",
+      "rupeStatus": "Estado RUPE",
       "contracts": "Contratos",
       "buyers": "Organismos",
       "total": "Total cobrado",
@@ -785,6 +786,8 @@
       "manual": "Validación manual"
     },
     "contactForm": "Formulario de contacto",
+    "mapsLink": "Ver ficha en Google Maps",
+    "businessHours": "Horarios",
     "sort": {
       "priorityDesc": "Mayor relevancia",
       "nameAsc": "Nombre (A–Z)"
@@ -794,6 +797,8 @@
       "originTodas": "Todas",
       "originConEmail": "Con email",
       "originSinAdjudicaciones": "Sin adjudicaciones",
+      "rupeStatus": "Estado RUPE",
+      "rupeStatusAny": "Cualquier estado RUPE",
       "rubro": "Rubro",
       "rubroAny": "Todos los rubros",
       "dept": "Departamento",
@@ -824,7 +829,7 @@
       "body": "Probá ampliar los filtros o desactivar «solo emails verificados». El filtro por departamento y tamaño usa el registro DEI, que no cubre a todos los proveedores."
     },
     "notice": {
-      "source": "Datos reunidos de fuentes públicas: el registro DEI del MIEM, los sitios web de los propios proveedores y datos abiertos de Compras Estatales. Se excluyen los datos de terceros restringidos por sus condiciones de uso.",
+      "source": "Datos reunidos de fuentes públicas: DEI, RUPE, sitios web de proveedores, Compras Estatales y fichas de Google Maps. Cada dato enriquecido conserva su origen y, cuando existe, un enlace de evidencia.",
       "optout": "¿Sos un proveedor y querés que quitemos tus datos? Escribinos a"
     }
   },
@@ -1588,7 +1593,7 @@
     },
     "comparativa": {
       "title": "Comparativa de servicios de alertas de licitaciones en Uruguay",
-      "description": "Comparación objetiva y con fuentes de los servicios de alertas de licitaciones para proveedores del Estado uruguayo (Gubly, ProveedorUY, ClearBid y más): precios, funciones y qué elegir."
+      "description": "Comparación objetiva y con fuentes de los servicios de alertas de licitaciones para proveedores del Estado uruguayo (Gubly, ProveedorUY, ClearBid, Tenderis y más): precios, funciones y qué elegir."
     },
     "mapa": {
       "title": "El mapa del gasto público del Uruguay",

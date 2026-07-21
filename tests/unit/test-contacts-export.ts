@@ -1,8 +1,7 @@
 // tests/unit/test-contacts-export.ts
 // The public contact directory's serialize layer: every displayable/exportable
 // field is surfaced (email + ALL emails, website, phone, locality, ADDRESS,
-// rubro), and the ToS strip (googleMaps-sourced phone/website/place) is enforced
-// in the one choke point before any export.
+// rubro), including Google Maps values with explicit provenance.
 import assert from "node:assert";
 import { sanitizeContact, toCsv, toJsonExport, toVcard, contactMethods, type PublicContact } from "../../app/server/utils/contacts";
 
@@ -14,7 +13,12 @@ assert.deepEqual(
 );
 assert.deepEqual(contactMethods({ emails: [{ source: "website" } as never] } as never), ["crawl4ai"]);
 assert.deepEqual(contactMethods({ phoneSource: "rupe" } as never), ["rupe"]);
-// a Maps-only record (all its fields get ToS-stripped) still reports the method
+assert.deepEqual(
+  contactMethods({ enrichmentMethods: ["crawl4ai", "googleMaps"] } as never),
+  ["crawl4ai", "googleMaps"],
+  "attempted methods remain visible even when a resolver produced no contact field",
+);
+// a Maps-only legacy record still reports the method
 assert.deepEqual(contactMethods({ placeSource: "googleMaps" } as never), ["googleMaps"]);
 assert.deepEqual(contactMethods({ emails: [{ source: "impo" } as never] } as never), ["impo"]);
 // Retained history survives source ranking: Maps may have returned evidence even
@@ -26,7 +30,7 @@ assert.deepEqual(
 // Existing rows can be recognized without a backfill when a stable place id remains.
 assert.deepEqual(contactMethods({ placeId: "ChIJ-test", placeSource: "dei" } as never), ["dei", "googleMaps"]);
 
-// --- sanitizeContact: web/DEI fields shown, googleMaps fields stripped ---
+// --- sanitizeContact: web/DEI/Google Maps fields shown with provenance ---
 const webDoc = sanitizeContact({
   supplierId: "R100", rut: "100", name: "ACME SA",
   primaryEmail: "info@acme.uy",
@@ -71,18 +75,24 @@ assert.ok(webDoc.emails.some(e => e.email === "ventas@acme.uy"));
 assert.equal(webDoc.emails.find(e => e.email === "ventas@acme.uy")?.sourceUrl, "https://directorio.example/acme");
 assert.ok(!webDoc.emails.some(e => e.email === "bounced@acme.uy"));
 
-// googleMaps-sourced phone/website/place must be stripped before display/export
+// Google Maps phone/website/place remain visible with their listing URL.
 const gmapsDoc = sanitizeContact({
   supplierId: "R200", rut: "200", name: "BETA SA",
   emails: [], website: "https://beta.example", websiteSource: "googleMaps",
   phone: "+59824445555", phoneSource: "googleMaps",
   address: "Rambla 100", locality: "Punta del Este", placeSource: "googleMaps",
+  mapsUrl: "https://maps.google.com/?cid=123", hours: "lunes: 09:00-18:00",
+  enrichmentMethods: ["crawl4ai", "googleMaps"],
 } as never);
-assert.equal(gmapsDoc.website, null, "googleMaps website stripped");
-assert.equal(gmapsDoc.websiteSource, null, "stripped website carries no origin");
-assert.equal(gmapsDoc.phone, null, "googleMaps phone stripped");
-assert.equal(gmapsDoc.phoneSource, null, "stripped phone carries no origin");
-assert.equal(gmapsDoc.address, null, "googleMaps address stripped");
+assert.equal(gmapsDoc.website, "https://beta.example", "googleMaps website is useful contact evidence");
+assert.equal(gmapsDoc.websiteSource, "googleMaps");
+assert.equal(gmapsDoc.websiteSourceUrl, "https://maps.google.com/?cid=123");
+assert.equal(gmapsDoc.phone, "+59824445555", "googleMaps phone is visible with provenance");
+assert.equal(gmapsDoc.phoneSource, "googleMaps");
+assert.equal(gmapsDoc.address, "Rambla 100");
+assert.equal(gmapsDoc.mapsUrl, "https://maps.google.com/?cid=123");
+assert.equal(gmapsDoc.hours, "lunes: 09:00-18:00");
+assert.deepEqual(gmapsDoc.methods, ["crawl4ai", "googleMaps"]);
 
 // --- CSV: address column present; all emails joined ---
 const csv = toCsv([webDoc]);
@@ -118,7 +128,7 @@ assert.ok(vcf.includes("X-SOCIALPROFILE;TYPE=instagram:"), "vCard carries social
 const _typed: PublicContact = webDoc;
 void _typed;
 
-// --- RUPE-only "never awarded" row: address-only, chip data present, not ToS-stripped ---
+// --- RUPE-only "never awarded" row: address-only and registry-state data present ---
 const registryDoc = sanitizeContact({
   supplierId: "R300", rut: "300", name: "GAMMA SA",
   emails: [], website: null, websiteSource: null, phone: null, phoneSource: null,
@@ -127,14 +137,16 @@ const registryDoc = sanitizeContact({
 } as never);
 assert.equal(registryDoc.neverAwarded, true);
 assert.equal(registryDoc.rupeEstado, "ACTIVO");
-assert.equal(registryDoc.address, "Ruta 5 km 30", "rupe placeSource is not ToS-stripped");
+assert.equal(registryDoc.address, "Ruta 5 km 30", "RUPE address is surfaced");
 assert.equal(registryDoc.email, null);
 
 // --- CSV: "Adjudicó" column reflects neverAwarded (Sí = won an award, No = registry-only) ---
 const csv2 = toCsv([webDoc, registryDoc]);
 const [header2, row1, row2] = csv2.split("\r\n");
 assert.ok(header2.includes("Adjudicó"), "CSV must carry the Adjudicó column");
+assert.ok(header2.includes("Estado RUPE"), "CSV must carry the literal registry state");
 assert.ok(row1.includes(",Sí,"), "an awarded row shows Adjudicó=Sí");
 assert.ok(row2.includes(",No,"), "a never-awarded row shows Adjudicó=No");
+assert.ok(row2.includes("ACTIVO"), "RUPE state is exported with its supplier");
 
 console.log("ok: contacts export");

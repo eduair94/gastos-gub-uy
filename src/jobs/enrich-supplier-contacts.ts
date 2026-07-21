@@ -175,7 +175,7 @@ async function main() {
         enrichedAt: 1, status: 1, emails: 1, website: 1, websiteSource: 1, phone: 1, phoneSource: 1,
         address: 1, locality: 1, lat: 1, lng: 1, hours: 1, mapsUrl: 1, placeId: 1, placeSource: 1,
         phones: 1, websitePhone: 1, websiteAddress: 1, contactFormUrl: 1, socialLinks: 1,
-        enrichmentMethods: 1, enrichmentVersion: 1,
+        enrichmentMethods: 1, rupeEstado: 1, enrichmentVersion: 1,
       }).lean();
       if (existing && existing.enrichmentVersion === CONTACT_ENRICHMENT_VERSION
         && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore) continue;
@@ -225,7 +225,15 @@ async function main() {
         sourceUrl: link.sourceUrl ?? existing?.website ?? null,
       }]));
       const enrichmentMethods = new Set<EnrichmentMethod>(existing?.enrichmentMethods ?? []);
+      let rupeEstado: string | null = existing?.rupeEstado ?? null;
+      for (const resolver of resolvers) {
+        if (resolver.name === "webSearch" || resolver.name === "website") enrichmentMethods.add("crawl4ai");
+        else if (resolver.name === "googleMaps" || resolver.name === "dei" || resolver.name === "rupe" || resolver.name === "impo") {
+          enrichmentMethods.add(resolver.name);
+        }
+      }
       let place: PlaceInfo | null = null;
+      let mapsEvidence: PlaceInfo | null = null;
       for (let i = 0; i < resolvers.length; i++) {
         const r = resolvers[i];
         const res: ResolverResult = await r.resolve({ ...input, website }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
@@ -252,6 +260,8 @@ async function main() {
         websiteAddress = res.websiteAddress ?? websiteAddress;
         contactFormUrl = res.contactFormUrl ?? contactFormUrl;
         for (const link of res.socialLinks ?? []) socialLinks.set(link.url, link);
+        if (res.rupeEstado) rupeEstado = res.rupeEstado;
+        if (res.place?.source === "googleMaps") mapsEvidence = res.place;
         if (!place && res.place) place = res.place;
         // Throttle external calls, but not after the LAST resolver — that
         // sleep was pure dead time, wasting ~1/3 of runtime at full scale.
@@ -266,6 +276,13 @@ async function main() {
       const hasContact = emails.length > 0 || phones.size > 0 || !!website || !!phone || !!websitePhone || !!websiteAddress || !!contactFormUrl || socialLinks.size > 0;
       const status = hasContact ? "enriched" : "no_contact";
       const storedPlace = mergeStoredPlace(place, existing ?? {});
+      // RUPE/DEI remain the authoritative address, but a confirmed Places
+      // listing still adds useful hours and a clickable Maps evidence URL.
+      if (mapsEvidence) {
+        storedPlace.mapsUrl = mapsEvidence.mapsUrl ?? storedPlace.mapsUrl ?? null;
+        storedPlace.hours = mapsEvidence.hours ?? storedPlace.hours ?? null;
+        storedPlace.placeId = mapsEvidence.placeId ?? storedPlace.placeId ?? null;
+      }
 
       processed++;
       if (dryRun) {
@@ -278,6 +295,7 @@ async function main() {
           supplierId, rut, name, emails, primaryEmail, website, websiteSource, phone, phoneSource,
           phones: [...phones.values()], websitePhone, websiteAddress, contactFormUrl, socialLinks: [...socialLinks.values()],
           enrichmentMethods: [...enrichmentMethods],
+          rupeEstado,
           ...storedPlace,
           rubros, status, priorityScore, enrichedAt: new Date(), enrichmentVersion: CONTACT_ENRICHMENT_VERSION,
         } },

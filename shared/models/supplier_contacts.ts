@@ -6,16 +6,16 @@ import { mongoose } from "../connection/database";
 export type EmailSource = "dei" | "website" | "webSearch" | "impo" | "rupe" | "manual" | "googleMaps";
 export type EmailStatus = "candidate" | "valid" | "invalid" | "suppressed";
 export type ContactStatus = "pending" | "enriched" | "no_contact" | "error" | "registry";
-/** Provenance for phone/place fields → gates public display (dei/rupe/website are displayable; googleMaps is ToS-restricted). */
+/** Provenance for phone/place fields, surfaced beside each contact value. */
 export type FieldSource = "dei" | "googleMaps" | "rupe" | "website";
 /**
  * Provenance for `website`. Adds `webSearch` — a domain confirmed to be the
  * supplier's own by the crawl4ai discovery + verification path (match-score +
  * Gemini judge) — so a VERIFIED site is distinguishable from an official
- * registry one (dei/rupe) or a ToS-restricted Places one (googleMaps).
+ * registry one (dei/rupe) or a Places one (googleMaps).
  */
 export type WebsiteSource = FieldSource | "webSearch";
-/** Enrichment paths that returned evidence for this supplier. */
+/** Resolver paths attempted for a supplier, even when a path finds no match. */
 export type EnrichmentMethod = "crawl4ai" | "googleMaps" | "dei" | "rupe" | "impo";
 
 export interface IEmailEntry {
@@ -59,7 +59,7 @@ export interface ISupplierContact {
   emails: IEmailEntry[];
   primaryEmail: string | null;
   website: string | null;
-  /** Provenance of `website`; googleMaps (a Places-listed site) is ToS-restricted like phone. `webSearch` = crawl4ai-verified. */
+  /** Provenance of `website`; googleMaps = Places-listed and `webSearch` = Crawl4AI-verified. */
   websiteSource: WebsiteSource | null;
   phone: string | null;
   /** Provenance of `phone`. */
@@ -74,7 +74,7 @@ export interface ISupplierContact {
   contactFormUrl: string | null;
   /** First-party social profiles found on the supplier's website. */
   socialLinks: ISocialLink[];
-  /** Successful enrichment paths, retained even when a higher-ranked source replaces a field. */
+  /** Enrichment paths attempted in the latest/additive runs (for method chips). */
   enrichmentMethods: EnrichmentMethod[];
   // Knowledge-panel location data (from DEI open data or the Google Maps proxy).
   address: string | null;

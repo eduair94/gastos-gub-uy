@@ -769,6 +769,7 @@
     "resultsSummary": "{count} contacts",
     "table": {
       "name": "Provider",
+      "rupeStatus": "RUPE status",
       "rubro": "Category",
       "locality": "Locality",
       "email": "Email",
@@ -785,6 +786,8 @@
       "manual": "Manual validation"
     },
     "contactForm": "Contact form",
+    "mapsLink": "View listing on Google Maps",
+    "businessHours": "Business hours",
     "sort": {
       "priorityDesc": "Most relevant",
       "nameAsc": "Name (A–Z)"
@@ -794,6 +797,8 @@
       "originTodas": "All",
       "originConEmail": "With email",
       "originSinAdjudicaciones": "Never awarded",
+      "rupeStatus": "RUPE status",
+      "rupeStatusAny": "Any RUPE status",
       "rubro": "Category",
       "rubroAny": "All categories",
       "dept": "Department",
@@ -824,7 +829,7 @@
       "body": "Try widening the filters or turning off “verified emails only”. The department and size filters use the DEI registry, which does not cover every provider."
     },
     "notice": {
-      "source": "Data gathered from public sources: the MIEM DEI registry, providers' own websites, and open data from Compras Estatales. Third-party data restricted by its terms of use is excluded.",
+      "source": "Data gathered from public sources: DEI, RUPE, provider websites, Compras Estatales, and Google Maps listings. Each enriched value retains its origin and, when available, an evidence link.",
       "optout": "Are you a provider and want your data removed? Email us at"
     }
   },
@@ -1588,7 +1593,7 @@
     },
     "comparativa": {
       "title": "Comparison of tender-alert services in Uruguay",
-      "description": "An objective, sourced comparison of tender-alert services for Uruguayan state suppliers (Gubly, ProveedorUY, ClearBid and more): prices, features and what to choose."
+      "description": "An objective, sourced comparison of tender-alert services for Uruguayan state suppliers (Gubly, ProveedorUY, ClearBid, Tenderis and more): prices, features and what to choose."
     },
     "mapa": {
       "title": "Uruguay's public spending map",

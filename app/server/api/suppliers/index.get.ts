@@ -2,6 +2,7 @@ import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { attachDei } from '../../utils/dei'
 import { attachEnrichment, fetchNamesByCategory } from '../../utils/enrichment'
+import { attachRupe } from '../../utils/rupe'
 import { DeiCompanyModel, SupplierPatternModel } from '../../utils/models'
 
 /** The `sup.cat.*` values a supplier can actually be filtered by (mirrors SupplierChip; excludes 'otro', which `fetchEnrichment` always nulls out). */
@@ -125,11 +126,12 @@ export default defineEventHandler(async (event) => {
     // AI category chip + DEI registry badge, both keyed off the page rows only.
     const enriched = await attachEnrichment(suppliers, (s: { name?: string }) => s.name ?? '')
     const withDei = await attachDei(enriched, (s: { supplierId?: string }) => s.supplierId ?? '')
+    const withRupe = await attachRupe(withDei, (s: { supplierId?: string }) => s.supplierId ?? '')
 
     return {
       success: true,
       data: {
-        suppliers: withDei,
+        suppliers: withRupe,
         pagination: {
           page: Number(page),
           limit: Number(limit),

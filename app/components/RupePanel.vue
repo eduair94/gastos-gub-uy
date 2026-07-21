@@ -2,8 +2,8 @@
 /**
  * The "Registro de Proveedores del Estado (RUPE)" card on a supplier profile —
  * official ARCE open data cross-referenced by RUT (91.7% of suppliers match).
- * Shown when the supplier is in RUPE but NOT in DEI (DEI is the richer record and
- * supersedes this on location). A fact of record, cited to source, not hedged.
+ * Shown whenever the supplier is in RUPE so its registration state is visible,
+ * independently of the richer DEI location record. A fact of record, cited to source.
  * No gold here: this card carries no money (DESIGN.md).
  *
  * The address text is always present; the map pin appears only once geocode-rupe
@@ -25,9 +25,6 @@ interface RupeInfo {
 
 const props = defineProps<{ rupe: RupeInfo, supplierName?: string, supplierId?: string }>()
 const { t } = useI18n()
-
-/** ACTIVO reads as a live registration; anything else stays neutral. */
-const isActive = computed(() => props.rupe.estado?.trim().toUpperCase() === 'ACTIVO')
 
 /** Show country only when it adds something (i.e. not Uruguay). */
 const foreignCountry = computed(() => {
@@ -63,11 +60,10 @@ const mapPoints = computed<DeiMapPoint[]>(() => {
   <section class="block">
     <div class="block__head">
       <h2>{{ t('sup.rupe.title') }}</h2>
-      <span
+      <RupeStatusChip
         v-if="rupe.estado"
-        class="tag"
-        :class="isActive ? 'tag--activo' : 'tag--neutral'"
-      >{{ rupe.estado }}</span>
+        :status="rupe.estado"
+      />
     </div>
 
     <div class="panel rupe">

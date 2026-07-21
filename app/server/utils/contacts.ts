@@ -2,7 +2,7 @@
  * Shared read/serialize layer for the public provider contact directory
  * (`supplier_contacts`). Every read path — the paginated list, the export, and
  * the rubro facet — goes through the SAME filter builder and the SAME
- * `sanitizeContact`, so a compliance rule (ToS strip, suppressed-email drop)
+ * `sanitizeContact`, so contact visibility and suppressed-email handling
  * can only ever live in one place and cannot be bypassed by one endpoint.
  */
 import type { ISupplierContact } from './models'
@@ -14,9 +14,8 @@ import { fetchNamesByCategory, CATEGORIES } from './enrichment'
 export type ContactMethod = 'crawl4ai' | 'googleMaps' | 'dei' | 'rupe' | 'impo'
 
 /**
- * Which methods touched this record, from the RAW per-field provenance (before the
- * ToS strip) — so a Maps-only record still shows a "Maps" badge even though its
- * fields are hidden. A record can carry several.
+ * Which methods touched this record. Explicit attempted-method history is merged
+ * with legacy per-field provenance so old and new rows both get correct chips.
  */
 export function contactMethods(
   doc: Partial<Pick<ISupplierContact,
@@ -57,6 +56,7 @@ const TAMANO_RX: Record<string, RegExp> = {
   mediana: /median/i,
   gran: /gran/i,
 }
+const RUPE_ESTADOS = new Set(['ACTIVO', 'BAJA DGI', 'BAJA VOLUNTARIA', 'EN INGRESO'])
 
 /**
  * The DEI `rut` is digits only; a `supplierId` carries an `R` and maybe a slash
@@ -110,9 +110,10 @@ export async function buildContactFilter(
   else andConditions.push({ $or: [
     hasUsableEmail,
     { neverAwarded: true },
-    { website: { $nin: [null, ''] }, websiteSource: { $ne: 'googleMaps' } },
-    { phone: { $nin: [null, ''] }, phoneSource: { $ne: 'googleMaps' } },
-    { phones: { $elemMatch: { phone: { $nin: [null, ''] }, source: { $ne: 'googleMaps' } } } },
+    { website: { $nin: [null, ''] } },
+    { phone: { $nin: [null, ''] } },
+    { phones: { $elemMatch: { phone: { $nin: [null, ''] } } } },
+    { mapsUrl: { $nin: [null, ''] } },
     { contactFormUrl: { $nin: [null, ''] } },
     { 'socialLinks.0': { $exists: true } },
   ] })
@@ -123,6 +124,9 @@ export async function buildContactFilter(
   // (ReDoS guard; the repo-wide rule, see app/server/context.md).
   const search = sanitizeSearch(query.search)
   if (search) andConditions.push({ name: { $regex: escapeRegex(search), $options: 'i' } })
+
+  const rupeEstado = String(query.rupeEstado ?? '').toUpperCase()
+  if (RUPE_ESTADOS.has(rupeEstado)) andConditions.push({ rupeEstado })
 
   // Company TYPE (AI-classified enrichment category) → resolve matching names,
   // gated the same way the chip is (confidence >= 0.5). No names → no rows.
@@ -137,8 +141,8 @@ export async function buildContactFilter(
   // backwards-compatible primary field.
   if (String(query.hasPhone ?? '') === '1') {
     andConditions.push({ $or: [
-      { phone: { $nin: [null, ''] }, phoneSource: { $ne: 'googleMaps' } },
-      { phones: { $elemMatch: { phone: { $nin: [null, ''] }, source: { $ne: 'googleMaps' } } } },
+      { phone: { $nin: [null, ''] } },
+      { phones: { $elemMatch: { phone: { $nin: [null, ''] } } } },
     ] })
   }
 
@@ -149,7 +153,6 @@ export async function buildContactFilter(
 
   if (String(query.hasWebsite ?? '') === '1') {
     filter.website = { $nin: [null, ''] }
-    filter.websiteSource = { $ne: 'googleMaps' }
   }
 
   const tamano = query.tamano ? String(query.tamano) : ''
@@ -238,6 +241,8 @@ export interface PublicContact {
   website: string | null
   /** Origin of `website`: "dei"|"rupe" (official registry), "webSearch" (crawl4ai-verified), or null (unverified). */
   websiteSource: string | null
+  /** Evidence page for the website value (Maps listing for Places-derived sites). */
+  websiteSourceUrl: string | null
   phone: string | null
   /** Origin of `phone` (e.g. "dei"), or null. */
   phoneSource: string | null
@@ -249,6 +254,10 @@ export interface PublicContact {
   locality: string | null
   address: string | null
   placeSource: string | null
+  mapsUrl: string | null
+  hours: string | null
+  lat: number | null
+  lng: number | null
   /** Top rubro label (highest share). */
   rubro: string | null
   rubros: PublicRubro[]
@@ -306,7 +315,7 @@ function pickPhones(doc: Partial<ISupplierContact>): PublicPhone[] {
   }
   const seen = new Set<string>()
   return raw
-    .filter(entry => entry.source !== 'googleMaps' && !!entry.phone?.trim())
+    .filter(entry => !!entry.phone?.trim())
     .map(entry => ({
       phone: entry.phone.trim(),
       source: entry.source,
@@ -329,12 +338,7 @@ function pickDisplayEmail(primary: string | null, emails: PublicEmail[]): string
   return emails[0]?.email ?? null
 }
 
-/**
- * Strip ToS-restricted, Google-Maps-sourced fields before ANY display or export.
- * `phone` when its provenance is googleMaps; the location block (address/locality)
- * when the place provenance is googleMaps. DEI open-data and provider-website
- * fields pass through. This is the compliance choke point.
- */
+/** Build the public contact shape while retaining each value's provenance. */
 export function sanitizeContact(
   doc: Partial<ISupplierContact> & {
     dei?: { estado?: string | null } | null
@@ -348,14 +352,14 @@ export function sanitizeContact(
     .map(r => ({ classificationId: r.classificationId, label: r.label ?? '', share: r.share ?? 0 }))
     .sort((a, b) => b.share - a.share)
 
-  const legacyPhone = doc.phoneSource === 'googleMaps' ? null : (doc.phone ?? null)
+  const legacyPhone = doc.phone ?? null
   const phone = legacyPhone ?? phones[0]?.phone ?? null
-  // A Places-listed website is Google-Maps content under the same ToS as phone.
-  const website = doc.websiteSource === 'googleMaps' ? null : (doc.website ?? null)
-  const placeRestricted = doc.placeSource === 'googleMaps'
-  // Provenance travels with the field it describes: null once the field itself is
-  // stripped/absent, so the origin shown always matches a visible value.
+  const website = doc.website ?? null
   const websiteSource = website ? (doc.websiteSource ?? null) : null
+  const mapsUrl = publicSourceUrl(doc.mapsUrl)
+  const websiteSourceUrl = website
+    ? (websiteSource === 'googleMaps' ? mapsUrl : publicSourceUrl(website))
+    : null
   const phoneSource = phone
     ? (legacyPhone ? (doc.phoneSource ?? null) : (phones[0]?.source ?? null))
     : null
@@ -375,6 +379,7 @@ export function sanitizeContact(
     emails,
     website,
     websiteSource,
+    websiteSourceUrl,
     phone,
     phoneSource,
     phones,
@@ -382,9 +387,13 @@ export function sanitizeContact(
     websiteAddress: doc.websiteAddress ?? null,
     contactFormUrl: doc.contactFormUrl ?? null,
     socialLinks,
-    locality: placeRestricted ? null : (doc.locality ?? null),
-    address: placeRestricted ? null : (doc.address ?? null),
-    placeSource: placeRestricted ? null : (doc.placeSource ?? null),
+    locality: doc.locality ?? null,
+    address: doc.address ?? null,
+    placeSource: doc.placeSource ?? null,
+    mapsUrl,
+    hours: doc.hours ?? null,
+    lat: doc.lat ?? null,
+    lng: doc.lng ?? null,
     rubro: rubros[0]?.label || null,
     rubros,
     methods: contactMethods(doc),
@@ -404,14 +413,18 @@ const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'phonesJoined
   { key: 'name', header: 'Nombre', width: 42 },
   { key: 'rut', header: 'RUT', width: 14 },
   { key: 'awarded', header: 'Adjudicó', width: 10 },
+  { key: 'rupeEstado', header: 'Estado RUPE', width: 18 },
   { key: 'email', header: 'Email', width: 30 },
   { key: 'emailsJoined', header: 'Emails', width: 40 },
   { key: 'website', header: 'Sitio web', width: 28 },
   { key: 'websiteSource', header: 'Origen sitio', width: 14 },
+  { key: 'websiteSourceUrl', header: 'Evidencia sitio', width: 34 },
   { key: 'phone', header: 'Teléfono', width: 16 },
   { key: 'phonesJoined', header: 'Teléfonos y origen', width: 48 },
   { key: 'websitePhone', header: 'Teléfono del sitio', width: 18 },
   { key: 'locality', header: 'Localidad', width: 20 },
+  { key: 'hours', header: 'Horarios', width: 30 },
+  { key: 'mapsUrl', header: 'Google Maps', width: 34 },
   { key: 'address', header: 'Dirección', width: 34 },
   { key: 'websiteAddress', header: 'Dirección del sitio', width: 34 },
   { key: 'contactFormUrl', header: 'Formulario de contacto', width: 32 },

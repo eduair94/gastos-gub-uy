@@ -23,14 +23,14 @@ export interface PlaceInfo {
   hours?: string | null;
   mapsUrl?: string | null;
   placeId?: string | null;
-  /** Provenance — gates public display (dei = free, googleMaps = ToS-restricted). */
+  /** Provenance displayed beside the location and its evidence link. */
   source: FieldSource;
 }
 
 export interface ResolverResult {
   emails: ContactCandidate[];
   website?: string | null;
-  /** Provenance of `website`: "webSearch" (crawl4ai-verified), "dei"/"rupe" (registry), "googleMaps" (Places, ToS-restricted). Lets the orchestrator rank a verified site over a stale unverified one. */
+  /** Provenance of `website`: "webSearch" (crawl4ai-verified), "dei"/"rupe" (registry), or "googleMaps" (Places). Lets the orchestrator rank a verified site over a stale unverified one. */
   websiteSource?: WebsiteSource | null;
   phone?: string | null;
   /** Provenance of `phone`, so the orchestrator can tag it on the record. */
@@ -41,6 +41,8 @@ export interface ResolverResult {
   contactFormUrl?: string | null;
   socialLinks?: ISocialLink[];
   place?: PlaceInfo | null;
+  /** Literal ARCE RUPE CSV registration state, when the RUT matched. */
+  rupeEstado?: string | null;
 }
 export interface ResolverInput { supplierId: string; rut: string; name: string; website?: string | null }
 export interface ContactResolver { name: EmailSource; resolve(input: ResolverInput): Promise<ResolverResult> }

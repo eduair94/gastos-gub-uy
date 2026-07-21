@@ -77,8 +77,7 @@ export default defineEventHandler(async (event) => {
     const [dei, rupe, contactDoc] = await Promise.all([
       fetchDei([decodedSupplierId]).then(m => m.get(decodedSupplierId) ?? null),
       fetchRupe([decodedSupplierId]).then(m => m.get(decodedSupplierId) ?? null),
-      // Contact enrichment (email/website/phone + the METHOD provenance badges);
-      // sanitized through the same ToS choke point as the directory.
+      // Contact enrichment (email/website/phone + method and evidence provenance).
       SupplierContactModel.findOne({ supplierId: decodedSupplierId }).lean(),
     ])
     const contact = contactDoc ? sanitizeContact(contactDoc as never) : null

@@ -30,7 +30,7 @@ Every offline computation in gastos-gub. Jobs turn the raw OCDS `releases` colle
 | [backfill-pliego-docs.ts](backfill-pliego-docs.ts) | One-off: HEAD-probes `/Pliegos/pliego_{compraId}.pdf` for active docs-empty `open_calls`. Resumable via `documentsProbedAt`. No npm script. |
 | [backfill-reiteracion-docs.ts](backfill-reiteracion-docs.ts) | One-off: probes `/Resoluciones/reiter_{compraId}.doc` for releases with an awardNotice but no reiteración. Resumable via `reiteracionProbedAt`. ~500k eligible — run bounded. No npm script. |
 | [enrich-suppliers.ts](enrich-suppliers.ts) | Supplier category + one-line description (~97% free name rules, LLM only for the tail) → `supplier_enrichment`. No npm script. |
-| [enrich-supplier-contacts.ts](enrich-supplier-contacts.ts) | Cold-email Phase A: additively resolves emails, phones, address, contact form and social profiles from DEI, own site via Crawl4AI, web search, IMPO and Google Maps → `supplier_contacts`; every observable channel retains its evidence `sourceUrl`, and later runs never erase previously valid emails. No npm script. |
+| [enrich-supplier-contacts.ts](enrich-supplier-contacts.ts) | Cold-email Phase A: additively resolves emails, phones, address, hours, contact form and social profiles from DEI, own site via Crawl4AI, web search, IMPO and Google Maps → `supplier_contacts`; every observable channel retains its evidence `sourceUrl`, attempted paths are saved in `enrichmentMethods`, and later runs never erase previously valid emails. No npm script. |
 
 ### Libraries (subdirectories + pure top-level modules)
 

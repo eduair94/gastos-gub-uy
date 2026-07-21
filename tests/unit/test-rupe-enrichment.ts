@@ -41,7 +41,7 @@ function fakeDb(rows: Row[]): any {
     domicilioFiscal: "CARAGUATAY 2080",
     localidad: "Montevideo",
     departamento: "Montevideo",
-    lat: -34.9, lng: -56.18, placeId: "px",
+    lat: -34.9, lng: -56.18, placeId: "px", estado: "ACTIVO",
   };
 
   // 1. RUT-exact hit.
@@ -55,6 +55,7 @@ function fakeDb(rows: Row[]): any {
   assert.equal(out.place!.locality, "Montevideo, Montevideo");
   assert.equal(out.place!.lat, -34.9);
   assert.equal(out.place!.placeId, "px");
+  assert.equal(out.rupeEstado, "ACTIVO");
 
   // 2. Name-fallback, unique match (RUT misses).
   const nameOnly = createRupeResolver(fakeDb([base]));
@@ -75,9 +76,10 @@ function fakeDb(rows: Row[]): any {
   assert.equal(outM.emails.length, 0);
 
   // 5. Row with no address and no coords → no place block.
-  const empty = { rut: "222222222222", denominacionSocial: "X", normalizedName: "x", domicilioFiscal: null, localidad: null, departamento: null, lat: null, lng: null, placeId: null };
+  const empty = { rut: "222222222222", denominacionSocial: "X", normalizedName: "x", domicilioFiscal: null, localidad: null, departamento: null, lat: null, lng: null, placeId: null, estado: "BAJA DGI" };
   const noPlace = createRupeResolver(fakeDb([empty]));
   const outE = await noPlace.resolve({ supplierId: "R/222222222222", rut: "222222222222", name: "X" });
+  assert.equal(outE.rupeEstado, "BAJA DGI", "registry state survives even without a place");
   assert.equal(outE.place ?? null, null, "no address + no coords → nothing to add");
 
   // 6. Not-yet-geocoded row still returns the address (coords null).
