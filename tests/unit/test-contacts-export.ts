@@ -17,6 +17,14 @@ assert.deepEqual(contactMethods({ phoneSource: "rupe" } as never), ["rupe"]);
 // a Maps-only record (all its fields get ToS-stripped) still reports the method
 assert.deepEqual(contactMethods({ placeSource: "googleMaps" } as never), ["googleMaps"]);
 assert.deepEqual(contactMethods({ emails: [{ source: "impo" } as never] } as never), ["impo"]);
+// Retained history survives source ranking: Maps may have returned evidence even
+// when an official field eventually became the displayed value.
+assert.deepEqual(
+  contactMethods({ enrichmentMethods: ["googleMaps"], placeSource: "dei" } as never),
+  ["dei", "googleMaps"],
+);
+// Existing rows can be recognized without a backfill when a stable place id remains.
+assert.deepEqual(contactMethods({ placeId: "ChIJ-test", placeSource: "dei" } as never), ["dei", "googleMaps"]);
 
 // --- sanitizeContact: web/DEI fields shown, googleMaps fields stripped ---
 const webDoc = sanitizeContact({

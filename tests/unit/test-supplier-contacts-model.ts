@@ -19,6 +19,7 @@ const doc = new SupplierContactModel({
   websiteAddress: "Cnel. Brandzen 1956",
   contactFormUrl: "https://example.uy/#contact",
   socialLinks: [{ platform: "instagram", url: "https://instagram.com/example/", label: "@example", source: "website", sourceUrl: "https://example.uy/contacto" }],
+  enrichmentMethods: ["crawl4ai", "googleMaps"],
   enrichmentVersion: 3,
 });
 const err = doc.validateSync();
@@ -28,6 +29,7 @@ assert.equal(doc.collection.name, "supplier_contacts");
 assert.equal(doc.socialLinks[0].platform, "instagram");
 assert.equal(doc.emails[0].sourceUrl, "https://example.uy/contacto");
 assert.equal(doc.phones.length, 2);
+assert.deepEqual(doc.enrichmentMethods, ["crawl4ai", "googleMaps"]);
 console.log("ok: supplier_contacts model");
 
 // A RUPE-only ("registered, never awarded") seed row must also validate.

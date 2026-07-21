@@ -18,7 +18,7 @@ import { crawl4aiBaseUrl, createCrawl4aiTransport } from "./enrich/crawl4ai";
 import { createWebsiteVerifier, createWebsiteJudge, isDirectoryUrl, websiteSourceRank } from "./enrich/website-verify";
 import { CONTACT_ENRICHMENT_VERSION, mergeStoredPlace, registryContactQuery, registryContactToSupplier, type EnrichmentSupplier } from "./enrich/candidates";
 import type { PlaceInfo } from "./enrich/types";
-import type { FieldSource, IPhoneEntry, ISocialLink, WebsiteSource } from "../../shared/models/supplier_contacts";
+import type { EnrichmentMethod, FieldSource, IPhoneEntry, ISocialLink, WebsiteSource } from "../../shared/models/supplier_contacts";
 
 function arg(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -27,6 +27,18 @@ function arg(name: string): string | undefined {
 const flag = (name: string) => process.argv.includes(`--${name}`);
 const digits = (s: string) => (s || "").replace(/\D/g, "");
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+function enrichmentMethod(name: ContactResolver["name"]): EnrichmentMethod | null {
+  if (name === "website" || name === "webSearch") return "crawl4ai";
+  if (name === "googleMaps" || name === "dei" || name === "rupe" || name === "impo") return name;
+  return null;
+}
+
+function hasResolverEvidence(result: ResolverResult): boolean {
+  return result.emails.length > 0 || !!result.website || !!result.phone
+    || !!result.phones?.length || !!result.websitePhone || !!result.websiteAddress
+    || !!result.contactFormUrl || !!result.socialLinks?.length || !!result.place;
+}
 
 async function main() {
   const dryRun = flag("dry-run");
@@ -162,7 +174,8 @@ async function main() {
       const existing = await SupplierContactModel.findOne({ supplierId }, {
         enrichedAt: 1, status: 1, emails: 1, website: 1, websiteSource: 1, phone: 1, phoneSource: 1,
         address: 1, locality: 1, lat: 1, lng: 1, hours: 1, mapsUrl: 1, placeId: 1, placeSource: 1,
-        phones: 1, websitePhone: 1, websiteAddress: 1, contactFormUrl: 1, socialLinks: 1, enrichmentVersion: 1,
+        phones: 1, websitePhone: 1, websiteAddress: 1, contactFormUrl: 1, socialLinks: 1,
+        enrichmentMethods: 1, enrichmentVersion: 1,
       }).lean();
       if (existing && existing.enrichmentVersion === CONTACT_ENRICHMENT_VERSION
         && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore) continue;
@@ -211,10 +224,13 @@ async function main() {
         source: link.source ?? "website",
         sourceUrl: link.sourceUrl ?? existing?.website ?? null,
       }]));
+      const enrichmentMethods = new Set<EnrichmentMethod>(existing?.enrichmentMethods ?? []);
       let place: PlaceInfo | null = null;
       for (let i = 0; i < resolvers.length; i++) {
         const r = resolvers[i];
         const res: ResolverResult = await r.resolve({ ...input, website }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
+        const method = enrichmentMethod(r.name);
+        if (method && hasResolverEvidence(res)) enrichmentMethods.add(method);
         all.push(...res.emails);
         if (res.website && !isDirectoryUrl(res.website)) {
           const rr = websiteSourceRank(res.websiteSource);
@@ -261,6 +277,7 @@ async function main() {
         { $set: {
           supplierId, rut, name, emails, primaryEmail, website, websiteSource, phone, phoneSource,
           phones: [...phones.values()], websitePhone, websiteAddress, contactFormUrl, socialLinks: [...socialLinks.values()],
+          enrichmentMethods: [...enrichmentMethods],
           ...storedPlace,
           rubros, status, priorityScore, enrichedAt: new Date(), enrichmentVersion: CONTACT_ENRICHMENT_VERSION,
         } },

@@ -21,9 +21,10 @@ export type ContactMethod = 'crawl4ai' | 'googleMaps' | 'dei' | 'rupe' | 'impo'
 export function contactMethods(
   doc: Partial<Pick<ISupplierContact,
   'emails' | 'websiteSource' | 'phoneSource' | 'phones' | 'placeSource'
+  | 'placeId' | 'mapsUrl' | 'enrichmentMethods'
   | 'websitePhone' | 'websiteAddress' | 'contactFormUrl' | 'socialLinks'>>,
 ): ContactMethod[] {
-  const found = new Set<ContactMethod>()
+  const found = new Set<ContactMethod>(doc.enrichmentMethods ?? [])
   const emailSources = (doc.emails ?? []).map(e => e.source)
   const fieldSources = [
     doc.websiteSource, doc.phoneSource, doc.placeSource,
@@ -33,7 +34,9 @@ export function contactMethods(
   const has = (s: string) => emailSources.includes(s as never) || fieldSources.includes(s as never)
   if (has('webSearch') || has('website')) found.add('crawl4ai')
   if (doc.websitePhone || doc.websiteAddress || doc.contactFormUrl || doc.socialLinks?.length) found.add('crawl4ai')
-  if (has('googleMaps')) found.add('googleMaps')
+  // placeId/mapsUrl backfill the badge for legacy rows where Maps evidence was
+  // later superseded by a higher-ranked DEI/RUPE field.
+  if (has('googleMaps') || doc.placeId || doc.mapsUrl) found.add('googleMaps')
   if (has('dei')) found.add('dei')
   if (has('rupe')) found.add('rupe')
   if (has('impo')) found.add('impo')

@@ -15,6 +15,8 @@ export type FieldSource = "dei" | "googleMaps" | "rupe" | "website";
  * registry one (dei/rupe) or a ToS-restricted Places one (googleMaps).
  */
 export type WebsiteSource = FieldSource | "webSearch";
+/** Enrichment paths that returned evidence for this supplier. */
+export type EnrichmentMethod = "crawl4ai" | "googleMaps" | "dei" | "rupe" | "impo";
 
 export interface IEmailEntry {
   email: string;
@@ -72,6 +74,8 @@ export interface ISupplierContact {
   contactFormUrl: string | null;
   /** First-party social profiles found on the supplier's website. */
   socialLinks: ISocialLink[];
+  /** Successful enrichment paths, retained even when a higher-ranked source replaces a field. */
+  enrichmentMethods: EnrichmentMethod[];
   // Knowledge-panel location data (from DEI open data or the Google Maps proxy).
   address: string | null;
   locality: string | null;
@@ -142,6 +146,7 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
   websiteAddress: { type: String, default: null },
   contactFormUrl: { type: String, default: null },
   socialLinks: { type: [SocialLinkSchema], default: [] },
+  enrichmentMethods: { type: [String], default: [] },
   address: { type: String, default: null },
   locality: { type: String, default: null },
   lat: { type: Number, default: null },
