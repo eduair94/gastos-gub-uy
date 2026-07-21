@@ -91,7 +91,7 @@ if (typeof window === 'undefined') {
  * "No encontramos ese contrato"). So: prefer the IP the edge actually forwards,
  * and never rate-limit our own internal render traffic.
  */
-function getClientId(event: any): string | null {
+export function getClientId(event: any): string | null {
   const cf = getHeader(event, 'cf-connecting-ip')
   if (cf) return cf.trim()
   const xff = getHeader(event, 'x-forwarded-for')

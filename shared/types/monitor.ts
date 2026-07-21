@@ -123,6 +123,10 @@ export interface IPliegoSummary {
   generatedAt: Date
   sourceDocs: string[]
   disclaimer: string
+  // Signature of the pliego documents this summary was built from. When the call's
+  // current pliegoDocsSignature differs (a modification/aclaración added or changed
+  // a pliego), the summary is stale and gets regenerated. Optional for legacy rows.
+  docsSignature?: string | undefined
 }
 
 export interface IOpenCall extends Document {
@@ -153,6 +157,10 @@ export interface IOpenCall extends Document {
   // carried no documents. Set once (success or miss) so re-syncs don't re-probe
   // a call that has no pliego. See src/jobs/open-calls/pliego-probe.ts.
   documentsProbedAt?: Date | undefined
+  // Deterministic signature of the current pliego PDFs, written by the projection
+  // every sync. Compared against aiSummary.docsSignature to detect a modified
+  // pliego and invalidate a stale AI summary. See shared/pliego/docs-signature.ts.
+  pliegoDocsSignature?: string | undefined
   aiSummary?: IPliegoSummary | undefined
   awardRef?: { releaseId: string, ocid: string, awardedAt?: Date | undefined } | undefined
   // $setOnInsert only — "is this NEW?" (drives alerts). Never updated on resync.

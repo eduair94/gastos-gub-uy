@@ -14,6 +14,7 @@ import { enrichProjectionWithCatalog, projectOpenCall } from "./project";
 import type { CatalogLookupEntry, OpenCallProjection, ReleaseLike } from "./project";
 import { attachProbedPliegos } from "./pliego-probe";
 import type { ProbeBudget } from "./pliego-probe";
+import { pliegoDocsSignature } from "../../../shared/pliego/docs-signature";
 
 const TENDER_ID_REGEX = /^(llamado|aclar_llamado|ajuste_llamado)-/;
 const LLAMADO_ID_REGEX = /^llamado-/;
@@ -121,6 +122,11 @@ export async function syncOpenCalls(options: SyncOptions = {}): Promise<SyncResu
 
     for (const proj of projections) {
       processed++;
+
+      // Refresh the pliego signature over the FINAL document set (feed + probed).
+      // Stored every sync; a change vs aiSummary.docsSignature marks the cached
+      // summary stale so the eager job regenerates it (pliego was modified).
+      proj.pliegoDocsSignature = pliegoDocsSignature(proj.documents);
 
       const { compraId, ...rest } = proj;
       ops.push({

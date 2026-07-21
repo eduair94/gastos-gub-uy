@@ -66,6 +66,7 @@ const nav = computed(() => [
   { key: 'estadisticas', to: localePath('/estadisticas'), icon: 'mdi-chart-box-outline' },
   { key: 'curros', to: localePath('/curros'), icon: 'mdi-scale-balance' },
   { key: 'llamados', to: localePath('/llamados'), icon: 'mdi-bullhorn-outline' },
+  { key: 'comparativa', to: localePath('/comparativa'), icon: 'mdi-compare' },
   // Developer platform front door (a real Nuxt page): quickstart + how to integrate,
   // which then links onward to /docs. Kept next to `docs` so the overflow menu folds
   // the API family together.
