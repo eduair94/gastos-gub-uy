@@ -30,6 +30,7 @@
 
 import type { PipelineStage } from 'mongoose'
 import { connectToDatabase } from '../../shared/connection/database'
+import { methodClass } from '../../shared/procurement-method'
 import {
   AnomalyModel,
   BuyerPatternModel,
@@ -70,6 +71,36 @@ interface SupplierRow {
   totalContracts: number
   years: number[]
   buyers: string[]
+}
+
+export interface SupplierMethodRow {
+  _id: { supplier: string, method: string | null }
+  count: number
+}
+
+export interface SupplierMethodMix {
+  directAwardCount: number
+  tenderAwardCount: number
+  onlyDirectAward: boolean
+}
+
+/** Fold the compact aggregation result in JS so methodClass stays canonical. */
+export function reduceSupplierMethodMix(rows: SupplierMethodRow[]): Map<string, SupplierMethodMix> {
+  const counts = new Map<string, { directAwardCount: number, tenderAwardCount: number }>()
+  for (const row of rows) {
+    const supplierId = row._id.supplier
+    if (!supplierId) continue
+    const current = counts.get(supplierId) ?? { directAwardCount: 0, tenderAwardCount: 0 }
+    const cls = methodClass(row._id.method)
+    if (cls === 'direct') current.directAwardCount += row.count
+    else if (cls === 'tender') current.tenderAwardCount += row.count
+    counts.set(supplierId, current)
+  }
+
+  return new Map([...counts].map(([supplierId, count]) => [supplierId, {
+    ...count,
+    onlyDirectAward: count.tenderAwardCount === 0 && count.directAwardCount >= 1,
+  }]))
 }
 
 interface BuyerRow {
@@ -125,6 +156,30 @@ export class AnalyticsRefresher {
       AGG,
     )
 
+    // Method lives on the release, not the item. Count each supplier/release once,
+    // then classify the compact result in JS with the shared canonical classifier.
+    const methodRows: SupplierMethodRow[] = await ReleaseModel.aggregate(
+      [
+        { $match: AWARD_MATCH },
+        { $unwind: { path: '$awards', preserveNullAndEmptyArrays: false } },
+        {
+          $group: {
+            _id: { supplier: AWARD_SUPPLIER_ID, release: '$id' },
+            method: { $first: '$tender.procurementMethodDetails' },
+          },
+        },
+        { $match: { '_id.supplier': { $ne: null } } },
+        {
+          $group: {
+            _id: { supplier: '$_id.supplier', method: '$method' },
+            count: { $sum: 1 },
+          },
+        },
+      ],
+      AGG,
+    )
+    const methodMix = reduceSupplierMethodMix(methodRows)
+
     await this.bulkUpsert(
       SupplierPatternModel,
       suppliers.map(s => ({
@@ -139,6 +194,11 @@ export class AnalyticsRefresher {
           yearCount: (s.years ?? []).filter(y => y != null).length,
           buyers: (s.buyers ?? []).filter(b => b != null),
           buyerCount: (s.buyers ?? []).filter(b => b != null).length,
+          ...(methodMix.get(s._id) ?? {
+            directAwardCount: 0,
+            tenderAwardCount: 0,
+            onlyDirectAward: false,
+          }),
           lastUpdated: new Date(),
         },
       })),

@@ -33,6 +33,9 @@ interface SupplierPattern {
   buyerCount: number
   totalValue: number
   avgContractValue: number
+  directAwardCount: number
+  tenderAwardCount: number
+  onlyDirectAward: boolean
   yearCount: number
   years: number[]
   topCategories?: { category: string, totalAmount: number, contractCount: number }[]
@@ -244,6 +247,12 @@ useSeo(() => ({
           <p class="head__rut u-mono">
             {{ supplier.supplierId }}
           </p>
+          <div
+            v-if="supplier.onlyDirectAward"
+            class="head__signals"
+          >
+            <OnlyDirectAwardChip :count="supplier.directAwardCount" />
+          </div>
           <div
             v-if="contactMethods.length"
             class="head__src srcbadges"
@@ -613,6 +622,13 @@ useSeo(() => ({
   margin: var(--s-2) 0 0;
   font-size: var(--t-xs);
   color: var(--text-muted);
+}
+
+.head__signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
 }
 
 .head__money {

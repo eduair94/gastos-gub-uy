@@ -788,10 +788,15 @@
       "size": "Tamaño",
       "sizeAny": "Cualquier tamaño",
       "deiOnly": "Solo registradas (DEI)",
+      "onlyDirect": "Sin licitaciones (con compra directa)",
       "verifiedOnly": "Solo emails verificados",
       "hasPhone": "Con teléfono",
       "hasWebsite": "Con sitio web",
       "clear": "Limpiar filtros"
+    },
+    "chip": {
+      "onlyDirectAward": "Solo compra directa",
+      "onlyDirectAwardTitle": "{count} adjudicaciones, todas por compra directa"
     },
     "download": {
       "label": "Descargar {count} contactos",

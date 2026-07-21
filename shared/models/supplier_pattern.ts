@@ -14,6 +14,9 @@ const SupplierPatternSchema = new Schema<ISupplierPattern>(
     buyerCount: { type: Number, required: true, default: 0 },
     avgContractValue: { type: Number, required: true, default: 0 },
     totalValue: { type: Number, required: true, default: 0 },
+    directAwardCount: { type: Number, required: true, default: 0 },
+    tenderAwardCount: { type: Number, required: true, default: 0 },
+    onlyDirectAward: { type: Boolean, required: true, default: false },
     items: [
       {
         description: { type: String, required: true },
@@ -52,5 +55,6 @@ SupplierPatternSchema.index({ lastUpdated: -1 });
 // Sort columns on the /suppliers directory (built in scripts/ensure-indexes.ts).
 SupplierPatternSchema.index({ buyerCount: -1 });
 SupplierPatternSchema.index({ avgContractValue: -1 });
+SupplierPatternSchema.index({ onlyDirectAward: 1, supplierId: 1 });
 
 export const SupplierPatternModel = mongoose.model<ISupplierPattern>("SupplierPattern", SupplierPatternSchema);

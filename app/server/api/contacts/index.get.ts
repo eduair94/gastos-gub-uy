@@ -2,6 +2,7 @@ import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { buildContactFilter, contactSort, CONTACTS_MAX_TIME_MS, sanitizeContact } from '../../utils/contacts'
 import { attachDei } from '../../utils/dei'
+import { attachOnlyDirectAward } from '../../utils/only-direct-award'
 import { SupplierContactModel } from '../../utils/models'
 
 /**
@@ -35,7 +36,8 @@ export default defineEventHandler(async (event) => {
 
     // DEI badge keyed off the page rows only, then ToS-sanitize each.
     const withDei = await attachDei(rows, r => (r as { supplierId?: string }).supplierId ?? '')
-    const contacts = withDei.map(r => sanitizeContact(r as never))
+    const decorated = await attachOnlyDirectAward(withDei, r => (r as { supplierId?: string }).supplierId ?? '')
+    const contacts = decorated.map(r => sanitizeContact(r as never))
 
     return {
       success: true,

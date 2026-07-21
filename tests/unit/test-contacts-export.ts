@@ -30,6 +30,7 @@ const webDoc = sanitizeContact({
   website: "https://acme.uy", websiteSource: "webSearch",
   phone: "+59829001234", phoneSource: "dei",
   address: "Av. Siempreviva 742", locality: "Montevideo", placeSource: "dei",
+  onlyDirectAward: true, directAwardCount: 4,
 } as never);
 assert.equal(webDoc.website, "https://acme.uy");
 assert.equal(webDoc.websiteSource, "webSearch", "provenance of a verified website is surfaced");
@@ -37,6 +38,8 @@ assert.equal(webDoc.phone, "+59829001234");
 assert.equal(webDoc.phoneSource, "dei", "provenance of phone is surfaced");
 assert.equal(webDoc.address, "Av. Siempreviva 742");
 assert.equal(webDoc.email, "info@acme.uy");
+assert.equal(webDoc.onlyDirectAward, true);
+assert.equal(webDoc.directAwardCount, 4);
 // suppressed email is dropped; both valid ones remain
 assert.equal(webDoc.emails.length, 2);
 assert.ok(webDoc.emails.some(e => e.email === "ventas@acme.uy"));
@@ -61,6 +64,7 @@ const [header, row] = csv.split("\r\n");
 assert.ok(header.includes("Dirección"), "CSV must carry a Dirección column");
 assert.ok(header.includes("Origen sitio"), "CSV must carry the website-origin column");
 assert.ok(!/Fuentes|methods/i.test(header), "method badges are UI-only — never in the export");
+assert.ok(!/compra directa|onlyDirectAward/i.test(header), "direct-award badge is UI-only — never in tabular exports");
 assert.ok(row.includes("webSearch"), "CSV row carries the website origin");
 assert.ok(header.includes("Sitio web") && header.includes("Teléfono"), "website + phone columns");
 assert.ok(row.includes("Av. Siempreviva 742"), "CSV row carries the address");

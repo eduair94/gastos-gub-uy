@@ -788,10 +788,15 @@
       "size": "Size",
       "sizeAny": "Any size",
       "deiOnly": "Registered only (DEI)",
+      "onlyDirect": "No tenders (has direct awards)",
       "verifiedOnly": "Verified emails only",
       "hasPhone": "Has phone",
       "hasWebsite": "Has website",
       "clear": "Clear filters"
+    },
+    "chip": {
+      "onlyDirectAward": "Direct awards only",
+      "onlyDirectAwardTitle": "{count} awards, all through direct award"
     },
     "download": {
       "label": "Download {count} contacts",

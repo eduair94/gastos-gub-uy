@@ -27,6 +27,8 @@ interface ContactRow {
   rubro: string | null
   methods: string[]
   dei?: { estado?: string | null } | null
+  onlyDirectAward: boolean
+  directAwardCount: number
 }
 
 /** Short, language-neutral origin tag for a contact field ("DEI"/"RUPE" are proper nouns). */
@@ -84,6 +86,7 @@ const departamento = ref((route.query.departamento as string) ?? '')
 const tamano = ref((route.query.tamano as string) ?? '')
 const categoria = ref((route.query.categoria as string) ?? '')
 const deiOnly = ref(route.query.dei === '1')
+const onlyDirect = ref(route.query.onlyDirect === '1')
 // Verified-only is the default; the URL only records the widening (verified=0).
 const verifiedOnly = ref(route.query.verified !== '0')
 const hasPhone = ref(route.query.hasPhone === '1')
@@ -96,7 +99,7 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
 }
 
 const hasFilters = computed(() =>
-  !!rubro.value || !!departamento.value || !!tamano.value || !!categoria.value || deiOnly.value
+  !!rubro.value || !!departamento.value || !!tamano.value || !!categoria.value || deiOnly.value || onlyDirect.value
   || !verifiedOnly.value || hasPhone.value || hasWebsite.value)
 
 function clearFilters() {
@@ -106,6 +109,7 @@ function clearFilters() {
   tamano.value = ''
   categoria.value = ''
   deiOnly.value = false
+  onlyDirect.value = false
   verifiedOnly.value = true
   hasPhone.value = false
   hasWebsite.value = false
@@ -120,6 +124,7 @@ const filterQuery = computed(() => ({
   ...(searchTerm.value ? { search: searchTerm.value } : {}),
   ...(rubro.value ? { rubro: rubro.value } : {}),
   ...(deiOnly.value ? { dei: '1' } : {}),
+  ...(onlyDirect.value ? { onlyDirect: '1' } : {}),
   ...(tamano.value ? { tamano: tamano.value } : {}),
   ...(categoria.value ? { categoria: categoria.value } : {}),
   ...(departamento.value ? { departamento: departamento.value } : {}),
@@ -131,11 +136,11 @@ const filterQuery = computed(() => ({
 
 const listQuery = computed(() => ({ page: page.value, limit: 25, ...filterQuery.value }))
 
-watch([searchTerm, rubro, departamento, tamano, categoria, deiOnly, verifiedOnly, hasPhone, hasWebsite, sort], () => {
+watch([searchTerm, rubro, departamento, tamano, categoria, deiOnly, onlyDirect, verifiedOnly, hasPhone, hasWebsite, sort], () => {
   page.value = 1
 })
 
-watch([searchTerm, page, rubro, departamento, tamano, categoria, deiOnly, verifiedOnly, hasPhone, hasWebsite, sort], () => {
+watch([searchTerm, page, rubro, departamento, tamano, categoria, deiOnly, onlyDirect, verifiedOnly, hasPhone, hasWebsite, sort], () => {
   const q: Record<string, string> = {}
   if (searchTerm.value) q.search = searchTerm.value
   if (page.value > 1) q.page = String(page.value)
@@ -144,6 +149,7 @@ watch([searchTerm, page, rubro, departamento, tamano, categoria, deiOnly, verifi
   if (tamano.value) q.tamano = tamano.value
   if (categoria.value) q.categoria = categoria.value
   if (deiOnly.value) q.dei = '1'
+  if (onlyDirect.value) q.onlyDirect = '1'
   if (!verifiedOnly.value) q.verified = '0'
   if (hasPhone.value) q.hasPhone = '1'
   if (hasWebsite.value) q.hasWebsite = '1'
@@ -380,6 +386,13 @@ useSeo(() => ({
       </label>
       <label class="chk">
         <input
+          v-model="onlyDirect"
+          type="checkbox"
+        >
+        <span>{{ t('contacts.filter.onlyDirect') }}</span>
+      </label>
+      <label class="chk">
+        <input
           v-model="verifiedOnly"
           type="checkbox"
         >
@@ -516,6 +529,10 @@ useSeo(() => ({
               v-if="row.dei"
               :estado="row.dei.estado"
             />
+            <OnlyDirectAwardChip
+              v-if="row.onlyDirectAward"
+              :count="row.directAwardCount"
+            />
           </div>
         </template>
         <template #cell:rubro="{ row }">
@@ -526,7 +543,9 @@ useSeo(() => ({
           <div
             v-if="row.address"
             style="font-size:0.85em;opacity:0.7"
-          >{{ row.address }}</div>
+          >
+            {{ row.address }}
+          </div>
         </template>
         <template #cell:email="{ row }">
           <div
@@ -553,7 +572,9 @@ useSeo(() => ({
             <div
               v-if="originLabel(row.websiteSource)"
               style="font-size:0.8em;opacity:0.7"
-            >{{ originLabel(row.websiteSource) }}</div>
+            >
+              {{ originLabel(row.websiteSource) }}
+            </div>
           </template>
           <span v-else>—</span>
         </template>

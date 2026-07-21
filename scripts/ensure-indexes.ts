@@ -592,6 +592,7 @@ async function main(): Promise<void> {
       await sp.createIndex({ totalValue: -1 }, { background: true, name: 'totalValue_-1' })
       await sp.createIndex({ buyerCount: -1 }, { background: true, name: 'buyerCount_-1' })
       await sp.createIndex({ avgContractValue: -1 }, { background: true, name: 'avgContractValue_-1' })
+      await sp.createIndex({ onlyDirectAward: 1, supplierId: 1 }, { background: true, name: 'onlyDirectAward_1_supplierId_1' })
       console.log('✅ supplier_patterns indexes ensured (name, totalContracts, totalValue, buyerCount, avgContractValue)')
 
       // --- campaign collections (Phase B) ---

@@ -39,6 +39,9 @@ export interface ISupplierPattern extends Document {
   buyerCount: number
   avgContractValue: number
   totalValue: number
+  directAwardCount: number
+  tenderAwardCount: number
+  onlyDirectAward: boolean
   items: Array<{
     description: string
     category?: string

@@ -1348,6 +1348,9 @@ export const openApiDocument = {
           totalContracts: { type: 'integer', example: 12 },
           totalValue: { type: 'number', example: 4520000 },
           avgContractValue: { type: 'number' },
+          directAwardCount: { type: 'integer' },
+          tenderAwardCount: { type: 'integer' },
+          onlyDirectAward: { type: 'boolean' },
         },
       },
       BuyerPattern: {

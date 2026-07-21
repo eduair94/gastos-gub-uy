@@ -6,7 +6,7 @@
  * can only ever live in one place and cannot be bypassed by one endpoint.
  */
 import type { ISupplierContact } from './models'
-import { DeiCompanyModel } from './models'
+import { DeiCompanyModel, SupplierPatternModel } from './models'
 import { escapeRegex, sanitizeSearch } from './query'
 import { fetchNamesByCategory, CATEGORIES } from './enrichment'
 
@@ -64,13 +64,21 @@ export type ContactQuery = Record<string, unknown>
 /** A DEI filter that resolves to zero RUTs means "no rows can match" — signalled explicitly. */
 export type FilterResult = { filter: Record<string, unknown> } | { empty: true }
 
+export interface ContactFilterResolvers {
+  resolveDeiSupplierIds?: (query: Record<string, unknown>) => Promise<string[]>
+  resolveOnlyDirectSupplierIds?: () => Promise<string[]>
+}
+
 /**
- * The one Mongo filter for the contact directory. Async because the DEI
- * cross-reference (dei / tamano / departamento) resolves RUTs from
- * `dei_companies` first, exactly like /api/suppliers.
+ * The one Mongo filter for the contact directory. Async because DEI and
+ * supplier-pattern filters resolve supplier ids before narrowing contacts.
  */
-export async function buildContactFilter(query: ContactQuery): Promise<FilterResult> {
+export async function buildContactFilter(
+  query: ContactQuery,
+  resolvers: ContactFilterResolvers = {},
+): Promise<FilterResult> {
   const filter: Record<string, unknown> = { status: 'enriched' }
+  const supplierIdSets: string[][] = []
 
   // Default = deliverable list: at least one MX-validated, valid email.
   // verified=0 widens to any surfaceable email — but still excludes suppressed/
@@ -126,10 +134,31 @@ export async function buildContactFilter(query: ContactQuery): Promise<FilterRes
     if (rx) deiQuery.tamano = { $regex: rx }
     if (departamento) deiQuery.departamento = { $regex: `^${departamento}$`, $options: 'i' }
 
-    const deiRows = await DeiCompanyModel.find(deiQuery, { rut: 1, _id: 0 }).lean()
-    const ruts = deiRows.map(r => (r as { rut: string }).rut)
-    if (!ruts.length) return { empty: true }
-    filter.supplierId = { $in: candidateIds(ruts) }
+    const ids = resolvers.resolveDeiSupplierIds
+      ? await resolvers.resolveDeiSupplierIds(deiQuery)
+      : candidateIds((await DeiCompanyModel.find(deiQuery, { rut: 1, _id: 0 }).lean())
+          .map(r => (r as { rut: string }).rut))
+    if (!ids.length) return { empty: true }
+    supplierIdSets.push(ids)
+  }
+
+  if (query.onlyDirect === '1' || query.onlyDirect === 'true') {
+    const ids = resolvers.resolveOnlyDirectSupplierIds
+      ? await resolvers.resolveOnlyDirectSupplierIds()
+      : (await SupplierPatternModel.find(
+          { onlyDirectAward: true },
+          { supplierId: 1, _id: 0 },
+        ).lean()).map(r => (r as { supplierId: string }).supplierId)
+    if (!ids.length) return { empty: true }
+    supplierIdSets.push(ids)
+  }
+
+  if (supplierIdSets.length) {
+    const [first, ...rest] = supplierIdSets
+    const restSets = rest.map(ids => new Set(ids))
+    const intersection = [...new Set(first)].filter(id => restSets.every(ids => ids.has(id)))
+    if (!intersection.length) return { empty: true }
+    filter.supplierId = { $in: intersection }
   }
 
   return { filter }
@@ -178,6 +207,8 @@ export interface PublicContact {
   methods: ContactMethod[]
   priorityScore: number
   dei?: { estado: string | null } | null
+  onlyDirectAward: boolean
+  directAwardCount: number
 }
 
 /**
@@ -211,7 +242,11 @@ function pickDisplayEmail(primary: string | null, emails: PublicEmail[]): string
  * fields pass through. This is the compliance choke point.
  */
 export function sanitizeContact(
-  doc: Partial<ISupplierContact> & { dei?: { estado?: string | null } | null },
+  doc: Partial<ISupplierContact> & {
+    dei?: { estado?: string | null } | null
+    onlyDirectAward?: boolean
+    directAwardCount?: number
+  },
 ): PublicContact {
   const emails = pickEmails(doc.emails ?? [])
   const rubros: PublicRubro[] = (doc.rubros ?? [])
@@ -243,6 +278,8 @@ export function sanitizeContact(
     rubros,
     methods: contactMethods(doc),
     priorityScore: doc.priorityScore ?? 0,
+    onlyDirectAward: doc.onlyDirectAward ?? false,
+    directAwardCount: doc.directAwardCount ?? 0,
     ...(doc.dei !== undefined ? { dei: doc.dei ? { estado: doc.dei.estado ?? null } : null } : {}),
   }
 }
