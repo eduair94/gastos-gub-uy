@@ -44,7 +44,19 @@ export interface GenerateResult<T> {
   modelUsed: string;
 }
 
-const DEFAULT_GEMINI_MODELS = ["gemini-3.0-flash-lite", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"];
+// All free-tier Gemini text models available to the key (ListModels-verified,
+// 2026-07-21), ordered by daily-quota headroom: lite first (cheapest/highest RPD),
+// then flash, then pro (best quality, lowest free RPD) as the last Gemini resort.
+// Each id is a SEPARATE per-model-per-project free quota, so listing more = more
+// total daily budget. gemini-3.0-flash-lite is intentionally absent — it 404s
+// (not GA under that id); add it back here when it lists for the key.
+const DEFAULT_GEMINI_MODELS = [
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-2.5-pro",
+];
 const DEFAULT_GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-20b"];
 
 /** A back-off this long means a daily/quota wall, not a per-minute blip → bench the model. */
