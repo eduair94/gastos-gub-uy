@@ -959,6 +959,9 @@ class CronServer {
           this.logger.info("RUPE load complete; geocoding new/changed addresses...");
           await this.runJobProcess("jobs/geocode-rupe", ["--limit=5000"]);
           this.logger.info("RUPE registry refresh completed successfully");
+          this.logger.info("Seeding registered-never-awarded companies into supplier_contacts...");
+          await this.runJobProcess("jobs/seed-rupe-only-contacts");
+          this.logger.info("RUPE-only contact seeding completed successfully");
         } catch (error) {
           this.logger.error("RUPE registry refresh failed:", error instanceof Error ? error : String(error));
         }
