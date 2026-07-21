@@ -51,6 +51,7 @@ async function runGeneration(compraId: string, leaseId: string, startedAt: Date)
       maxRetriesPerModel: 0,
       totalTimeoutMs: INTERACTIVE_TOTAL_TIMEOUT_MS,
       stream: true,
+      throwOnFailure: true,
       onProgress: progress => persistProgress(progress.modelUsed, progress.receivedChars),
     })
     if (!summary) throw new Error('No provider produced a complete summary')

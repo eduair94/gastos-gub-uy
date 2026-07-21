@@ -8,6 +8,9 @@
  * GUARDRAIL: the deadline shown to users always comes from the OCDS tenderPeriod,
  * never from this summary. `plazos` here are informational and labeled as such.
  */
+import { existsSync, readFileSync } from "node:fs";
+import { basename, resolve } from "node:path";
+import { parse } from "dotenv";
 import { OpenCallModel } from "../models/open_call";
 import type { IOpenCall, IPliegoSummary } from "../types/monitor";
 import { extractPliegoText, isSupportedPliegoDocument } from "../services/pliego-extractor";
@@ -28,6 +31,41 @@ export interface PliegoGenerationOptions {
   totalTimeoutMs?: number | undefined;
   stream?: boolean | undefined;
   onProgress?: ((progress: ModelGenerationProgress) => void) | undefined;
+  /** Preserve the concrete failure for interactive diagnostics. */
+  throwOnFailure?: boolean | undefined;
+}
+
+const AI_ENV_KEYS = [
+  "FREE_GEMINI_API_KEY",
+  "GEMINI_API_KEY",
+  "GOOGLE_API_KEY",
+  "FREE_GROQ_API_KEY",
+  "PLIEGO_GEMINI_MODELS",
+  "PLIEGO_GROQ_MODELS",
+  "PLIEGO_AI_MODEL",
+] as const;
+let aiEnvironmentLoaded = false;
+
+/** Load repo-root AI secrets at runtime when PM2 runs the dashboard from app/. */
+function loadAiEnvironment(): void {
+  if (aiEnvironmentLoaded) return;
+  aiEnvironmentLoaded = true;
+  const cwd = process.cwd();
+  const candidates = basename(cwd).toLowerCase() === "app"
+    ? [resolve(cwd, "../.env"), resolve(cwd, ".env")]
+    : [resolve(cwd, ".env")];
+
+  for (const file of candidates) {
+    if (!existsSync(file)) continue;
+    try {
+      const values = parse(readFileSync(file));
+      for (const key of AI_ENV_KEYS) {
+        if (!process.env[key] && values[key]) process.env[key] = values[key];
+      }
+    } catch {
+      // Explicit process env remains usable when an optional file is unreadable.
+    }
+  }
 }
 
 const SUMMARY_SCHEMA: GeminiSchema = {
@@ -74,6 +112,7 @@ const DOCUMENT_PRECEDENCE_INSTRUCTION =
  * Legacy PLIEGO_AI_MODEL, if set, becomes the first Gemini model tried.
  */
 export function buildPliegoRotator(): ProviderRotator {
+  loadAiEnvironment();
   const geminiApiKey = process.env.FREE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   const groqApiKey = process.env.FREE_GROQ_API_KEY;
 
@@ -100,10 +139,16 @@ export async function summarizeOpenCall(
   generationOptions: PliegoGenerationOptions = {},
 ): Promise<IPliegoSummary | null> {
   const rot = rotator ?? buildPliegoRotator();
-  if (!rot.available) return null;
+  if (!rot.available) {
+    if (generationOptions.throwOnFailure) throw new Error("No AI provider is configured in the dashboard runtime");
+    return null;
+  }
 
   const call = (await OpenCallModel.findOne({ compraId }).lean()) as unknown as IOpenCall | null;
-  if (!call) return null;
+  if (!call) {
+    if (generationOptions.throwOnFailure) throw new Error(`Open call ${compraId} was not found`);
+    return null;
+  }
 
   const currentSig = pliegoDocsSignature(call.documents);
 
@@ -116,7 +161,10 @@ export async function summarizeOpenCall(
   }
 
   const documents = (call.documents ?? []).filter(isSupportedPliegoDocument);
-  if (!documents.length) return null;
+  if (!documents.length) {
+    if (generationOptions.throwOnFailure) throw new Error("No supported pliego documents were found");
+    return null;
+  }
 
   const extracted: Array<{ document: (typeof documents)[number]; text: string }> = [];
   for (const document of documents) {
@@ -125,7 +173,14 @@ export async function summarizeOpenCall(
   }
   // Never cache a partial analysis as if it covered the whole publication set.
   // A transient download/parser miss can be retried on the next run.
-  if (extracted.length !== documents.length) return null;
+  if (extracted.length !== documents.length) {
+    if (generationOptions.throwOnFailure) {
+      const extractedUrls = new Set(extracted.map(item => item.document.url));
+      const failed = documents.filter(document => !extractedUrls.has(document.url)).map(document => document.url);
+      throw new Error(`Could not extract every pliego document: ${failed.join(", ")}`);
+    }
+    return null;
+  }
 
   const combined = buildPliegoCorpus(extracted, MAX_INPUT_CHARS);
   const prompt = `Título del llamado: ${call.title}\n\nTexto del/los pliego(s):\n${combined}`;
@@ -146,7 +201,8 @@ export async function summarizeOpenCall(
     });
     generated = res.data;
     modelUsed = res.modelUsed;
-  } catch {
+  } catch (error) {
+    if (generationOptions.throwOnFailure) throw error;
     return null; // whole ladder exhausted — retried on a later run
   }
 
