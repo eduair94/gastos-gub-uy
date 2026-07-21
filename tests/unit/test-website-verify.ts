@@ -41,6 +41,7 @@ assert.equal(isAggregatorHost("emis.com"), true);
 assert.equal(isDirectoryUrl("https://www.dnb.com/business-directory/company-profiles.x.html"), true);
 assert.equal(isDirectoryUrl("https://www.emis.com/php/company-profile/UY/x_en_9918878.html"), true);
 assert.equal(isDirectoryUrl("https://www.uruguayxxi.gub.uy/en/service-directory/teyma-uruguay-sa/"), true);
+assert.equal(isDirectoryUrl("https://www.veritradecorp.com/es/uruguay/importaciones-circuito-vial-tres-sa/rut-21815398001"), true);
 // the company's OWN gov page (no directory path) is NOT a directory
 assert.equal(isDirectoryUrl("https://www.gub.uy/ministerio-economia-finanzas/direccion-general-casinos"), false);
 assert.equal(isDirectoryUrl("https://ciemsa.com.uy/"), false);

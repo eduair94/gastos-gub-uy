@@ -15,7 +15,7 @@ import { createGoogleMapsResolver } from "./enrich/resolvers/google-maps";
 import { createGeminiJudge } from "./enrich/match-judge";
 import { fetchHtml, search, searchGazette, findPlace, placeDetails } from "./enrich/backends";
 import { crawl4aiBaseUrl, createCrawl4aiTransport } from "./enrich/crawl4ai";
-import { createWebsiteVerifier, isDirectoryUrl, websiteSourceRank } from "./enrich/website-verify";
+import { createWebsiteVerifier, createWebsiteJudge, isDirectoryUrl, websiteSourceRank } from "./enrich/website-verify";
 import type { PlaceInfo } from "./enrich/types";
 import type { FieldSource, WebsiteSource } from "../../shared/models/supplier_contacts";
 
@@ -81,7 +81,7 @@ async function main() {
     // prefilter → judge, fails closed); without it, discovery runs UNVERIFIED
     // (first hit that loads) rather than silently accepting a wrong domain.
     const apiKey = process.env.GEMINI_API_KEY;
-    const verifyWebsite = apiKey ? createWebsiteVerifier({ judge: createGeminiJudge({ apiKey }) }) : undefined;
+    const verifyWebsite = apiKey ? createWebsiteVerifier({ judge: createWebsiteJudge({ apiKey }) }) : undefined;
     if (!apiKey) console.warn("⚠️ webSearch: GEMINI_API_KEY unset — discovered websites are UNVERIFIED (first hit that loads).");
     resolvers.push(createWebSearchResolver({
       search: searchX,

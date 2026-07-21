@@ -15,9 +15,10 @@
 //     score alone cannot tell a company from its foreign namesake.
 
 import type { SearchHit } from "./resolvers/web-search";
-import type { JudgeFn } from "./match-judge";
+import type { JudgeFn, MatchPair, MatchVerdict } from "./match-judge";
 import type { WebsiteSource } from "../../../shared/models/supplier_contacts";
 import { scoreMatch, contentTokens, LOW_SCORE } from "./match-score";
+import { callGeminiStructured, type GeminiSchema } from "../ai/gemini-client";
 
 /**
  * Trust ranking of a website's provenance — higher wins when the orchestrator
@@ -52,9 +53,11 @@ const AGGREGATOR_SUFFIXES = [
   // contact-data brokers (list a supplier, are not its site)
   "contactout.com", "rocketreach.co", "zoominfo.com", "apollo.io",
   "signalhire.com", "lusha.com", "leadiq.com", "kaspr.io",
-  // company-info / financial directories (a PROFILE of the firm, not its site)
+  // company-info / financial / trade-data directories (a PROFILE of the firm, not its site)
   "dnb.com", "emis.com", "bloomberg.com", "crunchbase.com", "opencorporates.com",
   "kompass.com", "europages.com", "companywall.com.uy", "expouy.com", "guiauruguay.com.uy",
+  "veritradecorp.com", "importgenius.com", "panjiva.com", "seair.co.in", "tradeindia.com",
+  "exportgenius.in", "volza.com", "connect2india.com", "zauba.com", "infobel.com",
   // encyclopedias / search / jobs
   "wikipedia.org", "google.com", "bing.com",
   "computrabajo.com.uy", "buscojobs.com.uy",
@@ -176,5 +179,68 @@ export function createWebsiteVerifier(deps: WebsiteVerifierDeps) {
       .filter((x) => x.v && x.v.match && x.v.conf >= minConf)
       .sort((a, b) => (b.v!.conf) - (a.v!.conf));
     return accepted.length ? accepted[0]!.url : null;
+  };
+}
+
+// A WEBSITE-SPECIFIC judge (distinct from match-judge's "same company?"). A
+// directory/data-broker page IS "about" the firm, so the same-company judge
+// waves it through (a live run stored veritradecorp.com for CIRCUITO VIAL). This
+// one is told to accept ONLY the company's OWN official domain and reject any
+// third-party listing/portal/marketplace/news, so a supplier with no site of its
+// own correctly resolves to null rather than a directory. Same JudgeFn shape as
+// createGeminiJudge, so createWebsiteVerifier takes either.
+const WEBSITE_SYSTEM =
+  "Sos un verificador de SITIOS WEB OFICIALES de empresas uruguayas. Te doy la razon social de un " +
+  "proveedor del Estado y un CANDIDATO (dominio + titulo de pagina). match=true SOLO si el candidato es el " +
+  "sitio web PROPIO y oficial de esa empresa (su dominio corporativo). match=false si es un directorio, " +
+  "listado o portal de datos comerciales/aduaneros (dnb, emis, veritradecorp, guias de empresas), una red " +
+  "social, un marketplace, una noticia, un organismo distinto, o cualquier pagina de un TERCERO que solo " +
+  "menciona a la empresa. Ante la duda, match=false. Un veredicto por item, con su indice i.";
+
+const WEBSITE_SCHEMA: GeminiSchema = {
+  type: "OBJECT",
+  properties: {
+    verdicts: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: { i: { type: "INTEGER" }, match: { type: "BOOLEAN" }, conf: { type: "NUMBER" } },
+        required: ["i", "match", "conf"],
+      },
+    },
+  },
+  required: ["verdicts"],
+};
+
+export interface WebsiteJudgeDeps {
+  apiKey: string;
+  model?: string;
+  call?: typeof callGeminiStructured;
+  batchSize?: number;
+}
+
+/** Build a website-ownership judge bound to a Gemini key. Empty input → empty map (no call). */
+export function createWebsiteJudge(deps: WebsiteJudgeDeps): JudgeFn {
+  const model = deps.model ?? "gemini-2.5-flash-lite";
+  const call = deps.call ?? callGeminiStructured;
+  const batchSize = deps.batchSize ?? 25;
+  return async (pairs: MatchPair[]): Promise<Map<number, MatchVerdict>> => {
+    const out = new Map<number, MatchVerdict>();
+    if (!pairs.length) return out;
+    for (let i = 0; i < pairs.length; i += batchSize) {
+      const group = pairs.slice(i, i + batchSize);
+      const prompt = group.map((p) => `${p.i}. razon_social="${p.name}" | candidato="${p.candidate}"`).join("\n");
+      try {
+        const res = await call<{ verdicts: MatchVerdict[] }>({
+          apiKey: deps.apiKey, model, systemInstruction: WEBSITE_SYSTEM, prompt, schema: WEBSITE_SCHEMA, temperature: 0,
+        });
+        for (const v of res.data?.verdicts ?? []) {
+          if (typeof v?.i === "number") out.set(v.i, { i: v.i, match: !!v.match, conf: Number(v.conf) || 0 });
+        }
+      } catch {
+        // Judge failure must not accept a match — leave unresolved (absent = not confirmed).
+      }
+    }
+    return out;
   };
 }
