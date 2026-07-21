@@ -16,22 +16,18 @@ if (!process.env.MONGO_SOCKET_TIMEOUT_MS) {
   process.env.MONGO_SOCKET_TIMEOUT_MS = String(10 * 60 * 1000);
 }
 import { connectToDatabase, disconnectFromDatabase, mongoose } from "../../shared/connection/database";
-import { SupplierContactModel } from "../../shared/models/supplier_contacts";
-import { buildRegistryRow, type RupeSeedInput } from "./seed-rupe-only/build-row";
+import { SupplierContactModel, type ISupplierContact } from "../../shared/models/supplier_contacts";
+import type { AnyBulkWriteOperation } from "mongoose";
+import { accountUnorderedBulkError, parseSeedLimit } from "./seed-rupe-only/batch";
+import { buildRegistryRow, type RegistryRowSet, type RupeSeedInput } from "./seed-rupe-only/build-row";
 
 const flag = (name: string) => process.argv.includes(`--${name}`);
 const digits = (s: string) => (s || "").replace(/\D/g, "");
+const BULK_BATCH_SIZE = 500;
 
-function parseLimit(): number {
-  const hit = process.argv.find(a => a === "--limit" || a.startsWith("--limit="));
-  if (!hit) return Infinity;
-
-  const raw = hit === "--limit" ? "" : hit.slice("--limit=".length);
-  const value = Number(raw);
-  if (!raw.trim() || !Number.isFinite(value) || value < 0 || !Number.isInteger(value)) {
-    throw new Error(`--limit must be a non-negative integer; received ${JSON.stringify(raw)}`);
-  }
-  return value;
+interface SeedCandidate {
+  rut: string;
+  row: RegistryRowSet;
 }
 
 /** Chunk an array for a bounded `$in` (avoids one huge round-trip). */
@@ -44,7 +40,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
 async function main() {
   const dryRun = flag("dry-run");
   const onlyActive = flag("only-active");
-  const limit = parseLimit();
+  const limit = parseSeedLimit(process.argv.slice(2));
   let connected = false;
 
   try {
@@ -70,22 +66,16 @@ async function main() {
     });
 
     let seen = 0, seeded = 0, skippedAwarded = 0, errors = 0;
-    for await (const doc of rupeCursor as AsyncIterable<RupeSeedInput>) {
-      if (seeded >= limit) break;
-      seen++;
-      const rut = digits(doc.rut);
-      if (!rut || awardedRuts.has(rut)) { skippedAwarded++; continue; }
+    let pending: SeedCandidate[] = [];
 
-      try {
-        const row = buildRegistryRow({ ...doc, rut });
-        if (dryRun) {
-          seeded++;
-          if (seeded <= 10) console.log(`   would seed: ${row.name} (${row.supplierId}) — ${row.address ?? "(sin dirección)"}`);
-          continue;
-        }
-        await SupplierContactModel.updateOne(
-          { supplierId: row.supplierId },
-          {
+    const flushPending = async () => {
+      if (!pending.length) return;
+      const batch = pending;
+      pending = [];
+      const ops: AnyBulkWriteOperation<ISupplierContact>[] = batch.map(({ row }) => ({
+        updateOne: {
+          filter: { supplierId: row.supplierId },
+          update: {
             $set: row,
             $setOnInsert: {
               status: "registry",
@@ -102,15 +92,49 @@ async function main() {
               enrichedAt: null,
             },
           },
-          { upsert: true },
-        );
-        seeded++;
-        if (seeded % 5000 === 0) console.log(`   …${seeded} seeded (${seen} scanned)`);
+          upsert: true,
+        },
+      }));
+
+      try {
+        await SupplierContactModel.bulkWrite(ops, { ordered: false, throwOnValidationError: true });
+        seeded += batch.length;
+      } catch (error) {
+        const accounting = accountUnorderedBulkError(error, batch.length);
+        if (!accounting) throw error;
+        seeded += accounting.successful;
+        errors += accounting.failures.length;
+        for (const failure of accounting.failures) {
+          console.error(`   ⚠️ rut ${batch[failure.index]!.rut} failed, skipping: ${failure.message}`);
+        }
+      }
+      console.log(`   …${seeded} seeded (${seen} scanned, ${errors} error(s))`);
+    };
+
+    for await (const doc of rupeCursor as AsyncIterable<RupeSeedInput>) {
+      if (seeded >= limit) break;
+      seen++;
+      const rut = digits(doc.rut);
+      if (!rut || awardedRuts.has(rut)) { skippedAwarded++; continue; }
+
+      let row: RegistryRowSet;
+      try {
+        row = buildRegistryRow({ ...doc, rut });
       } catch (e) {
         errors++;
         console.error(`   ⚠️ rut ${doc.rut} failed, skipping:`, e instanceof Error ? e.message : e);
+        continue;
       }
+      if (dryRun) {
+        seeded++;
+        if (seeded <= 10) console.log(`   would seed: ${row.name} (${row.supplierId}) — ${row.address ?? "(sin dirección)"}`);
+        continue;
+      }
+      pending.push({ rut: doc.rut, row });
+      const remaining = limit - seeded;
+      if (pending.length >= Math.min(BULK_BATCH_SIZE, remaining)) await flushPending();
     }
+    if (!dryRun) await flushPending();
     console.log(`✅ scan complete: ${seen} RUPE rows scanned, ${seeded} seeded, ${skippedAwarded} already-awarded (skipped), ${errors} error(s)`);
     if (errors) throw new Error(`RUPE-only contact seeding completed with ${errors} row error(s)`);
 
