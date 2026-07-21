@@ -174,3 +174,34 @@ export function allIncisos(): string[] {
       if (m.inciso) inc.add(m.inciso)
   return [...inc]
 }
+
+/** Top-level group options for a UI selector (key + both labels). */
+export function organismGroupOptions(): { key: string, label: string, labelEn: string }[] {
+  return ORGANISM_GROUPS.map(g => ({ key: g.key, label: g.label, labelEn: g.labelEn }))
+}
+
+/**
+ * A Mongo clause matching every `organismId` (= buyer.id) in a top-level group:
+ * exact-id members via `$in`, inciso members via an anchored `^<inciso>-` regex
+ * (both can use the unique `organismId` index). Null for an unknown group key.
+ */
+export function groupOrganismClause(groupKey: string): Record<string, unknown> | null {
+  const spec = organismGroup(groupKey)
+  if (!spec) return null
+  const exact: string[] = []
+  const or: Record<string, unknown>[] = []
+  for (const m of spec.members) {
+    if (m.buyerId) exact.push(m.buyerId)
+    else if (m.inciso) or.push({ organismId: { $regex: `^${m.inciso}-` } })
+  }
+  if (exact.length) or.push({ organismId: { $in: exact } })
+  return or.length ? { $or: or } : null
+}
+
+/** Which top-level group an organismId belongs to (label), or null — for display. */
+export function organismGroupLabel(organismId: string): string | null {
+  for (const g of ORGANISM_GROUPS)
+    for (const m of g.members)
+      if (memberMatchesBuyerId(m, organismId)) return g.label
+  return null
+}
