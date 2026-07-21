@@ -280,6 +280,10 @@ async function setReminder(days: number) {
       </div>
 
       <aside class="calldetail__aside">
+        <CallContact
+          :contact="(call as any).contact"
+          :organism="call.buyer?.name"
+        />
         <section
           v-if="call.documents?.length"
           class="panel calldetail__section"

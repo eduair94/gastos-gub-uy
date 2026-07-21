@@ -285,6 +285,10 @@
     },
     "aiNote": "Each supplier's category is AI-generated (Gemini) from the name: it's indicative, can be wrong, verify against the source.",
     "aiTitle": "AI-generated category",
+    "filter": {
+      "category": "Type",
+      "categoryAny": "Any type"
+    },
     "dei": {
       "badge": "DEI",
       "badgeTitle": "Industrial company listed in the Directory of Industrial Companies (MIEM)",
@@ -1689,6 +1693,14 @@
     "notConfigured": "Authentication is unavailable right now.",
     "genericError": "We couldn't complete that. Check your details and try again.",
     "verifyNotice": "We sent a verification email. Verify your account to activate alerts."
+  },
+  "contactPanel": {
+    "title": "Contracting unit contact",
+    "note": "Official contact published by the agency on comprasestatales.gub.uy.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "srEmail": "Email {v}",
+    "srPhone": "Call {v}"
   },
   "llamados": {
     "title": "Open calls",

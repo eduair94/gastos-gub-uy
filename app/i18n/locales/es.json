@@ -285,6 +285,10 @@
     },
     "aiNote": "La categoría de cada proveedor la genera una IA (Gemini) a partir del nombre: es orientativa, puede equivocarse, verificá contra la fuente.",
     "aiTitle": "Categoría generada por IA",
+    "filter": {
+      "category": "Tipo",
+      "categoryAny": "Cualquier tipo"
+    },
     "dei": {
       "badge": "DEI",
       "badgeTitle": "Empresa industrial registrada en el Directorio de Empresas Industriales (MIEM)",
@@ -1689,6 +1693,14 @@
     "notConfigured": "La autenticación no está disponible en este momento.",
     "genericError": "No pudimos completar la operación. Revisá los datos e intentá de nuevo.",
     "verifyNotice": "Te enviamos un email para verificar tu cuenta. Verificala para activar las alertas."
+  },
+  "contactPanel": {
+    "title": "Contacto de la unidad compradora",
+    "note": "Dato de contacto oficial publicado por el organismo en comprasestatales.gub.uy.",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "srEmail": "Enviar correo a {v}",
+    "srPhone": "Llamar al {v}"
   },
   "llamados": {
     "title": "Llamados abiertos",
