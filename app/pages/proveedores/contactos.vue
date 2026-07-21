@@ -19,10 +19,21 @@ interface ContactRow {
   email: string | null
   emails: EmailEntry[]
   website: string | null
+  websiteSource: string | null
   phone: string | null
+  phoneSource: string | null
   locality: string | null
+  address: string | null
   rubro: string | null
   dei?: { estado?: string | null } | null
+}
+
+/** Short, language-neutral origin tag for a contact field ("DEI"/"RUPE" are proper nouns). */
+function originLabel(src: string | null): string {
+  if (src === 'webSearch') return '✓ verificado'
+  if (src === 'dei') return 'DEI'
+  if (src === 'rupe') return 'RUPE'
+  return ''
 }
 interface RubroFacet { classificationId: string, label: string, count: number }
 
@@ -469,24 +480,39 @@ useSeo(() => ({
           {{ row.rubro || '—' }}
         </template>
         <template #cell:locality="{ row }">
-          {{ row.locality || '—' }}
+          <div>{{ row.locality || '—' }}</div>
+          <div
+            v-if="row.address"
+            style="font-size:0.85em;opacity:0.7"
+          >{{ row.address }}</div>
         </template>
         <template #cell:email="{ row }">
-          <a
-            v-if="row.email"
-            :href="`mailto:${row.email}`"
-            class="link"
-          >{{ row.email }}</a>
+          <div
+            v-if="row.emails.length"
+            style="display:flex;flex-direction:column;gap:2px"
+          >
+            <a
+              v-for="e in row.emails"
+              :key="e.email"
+              :href="`mailto:${e.email}`"
+              class="link"
+            >{{ e.email }}</a>
+          </div>
           <span v-else>—</span>
         </template>
         <template #cell:website="{ row }">
-          <a
-            v-if="row.website"
-            :href="websiteHref(row.website)"
-            target="_blank"
-            rel="nofollow noopener"
-            class="link"
-          >{{ hostname(row.website) }}</a>
+          <template v-if="row.website">
+            <a
+              :href="websiteHref(row.website)"
+              target="_blank"
+              rel="nofollow noopener"
+              class="link"
+            >{{ hostname(row.website) }}</a>
+            <div
+              v-if="originLabel(row.websiteSource)"
+              style="font-size:0.8em;opacity:0.7"
+            >{{ originLabel(row.websiteSource) }}</div>
+          </template>
           <span v-else>—</span>
         </template>
         <template #cell:phone="{ row }">

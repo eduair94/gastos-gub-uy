@@ -14,8 +14,10 @@ import { createImpoResolver } from "./enrich/resolvers/impo";
 import { createGoogleMapsResolver } from "./enrich/resolvers/google-maps";
 import { createGeminiJudge } from "./enrich/match-judge";
 import { fetchHtml, search, searchGazette, findPlace, placeDetails } from "./enrich/backends";
+import { crawl4aiBaseUrl, createCrawl4aiTransport } from "./enrich/crawl4ai";
+import { createWebsiteVerifier, createWebsiteJudge, isDirectoryUrl, websiteSourceRank } from "./enrich/website-verify";
 import type { PlaceInfo } from "./enrich/types";
-import type { FieldSource } from "../../shared/models/supplier_contacts";
+import type { FieldSource, WebsiteSource } from "../../shared/models/supplier_contacts";
 
 function arg(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -59,14 +61,35 @@ async function main() {
   // that website then deep-crawls; the { ...input, website } threading below
   // carries it forward, and mergeCandidates keeps whichever source has the
   // higher confidence regardless of resolve order.
+  // Fetch/search transport: crawl4ai (headless, server-side, JS-capable, paced to
+  // avoid rate-limits) when CRAWL4AI_BASE_URL is set; else the direct axios backends.
+  const c4Base = crawl4aiBaseUrl();
+  const transport = c4Base ? createCrawl4aiTransport({ baseUrl: c4Base }) : null;
+  const fetchHtmlX = transport?.fetchHtml ?? fetchHtml;
+  const searchX = transport?.search ?? search;
+  if (c4Base) console.log(`🕷️  crawl4ai transport: ${c4Base} (min interval ${process.env.CRAWL4AI_MIN_INTERVAL_MS ?? 1500}ms)`);
+  else console.warn("⚠️ CRAWL4AI_BASE_URL unset — using direct axios fetch (no JS render; DuckDuckGo rate-limits sooner).");
+
   const resolvers: ContactResolver[] = [];
   if (wanted.has("dei")) resolvers.push(createDeiResolver(db));
   // rupe runs right after dei: both are official, in-Mongo, false-positive-free by
   // RUT. DEI's place still wins the first-non-null race for its 2.4k suppliers;
   // rupe fills the ~90% DEI never covers. Emits no emails/website — never clobbers those.
   if (wanted.has("rupe")) resolvers.push(createRupeResolver(db));
-  if (wanted.has("webSearch")) resolvers.push(createWebSearchResolver({ search, fetchHtml }));
-  if (wanted.has("website")) resolvers.push(createWebsiteResolver(fetchHtml));
+  if (wanted.has("webSearch")) {
+    // Website discovery is verified when a Gemini key is present (match-score
+    // prefilter → judge, fails closed); without it, discovery runs UNVERIFIED
+    // (first hit that loads) rather than silently accepting a wrong domain.
+    const apiKey = process.env.GEMINI_API_KEY;
+    const verifyWebsite = apiKey ? createWebsiteVerifier({ judge: createWebsiteJudge({ apiKey }) }) : undefined;
+    if (!apiKey) console.warn("⚠️ webSearch: GEMINI_API_KEY unset — discovered websites are UNVERIFIED (first hit that loads).");
+    resolvers.push(createWebSearchResolver({
+      search: searchX,
+      fetchHtml: fetchHtmlX,
+      ...(verifyWebsite ? { verifyWebsite } : {}),
+    }));
+  }
+  if (wanted.has("website")) resolvers.push(createWebsiteResolver(fetchHtmlX));
   if (wanted.has("impo")) resolvers.push(createImpoResolver(searchGazette));
   // googleMaps runs LAST so DEI's official address/geo/phone win the first-non-null
   // race; Maps only fills the gap. Needs GEMINI_API_KEY for the match judge.
@@ -99,19 +122,25 @@ async function main() {
     // guards the DB ops so a transient Mongo error on ONE supplier doesn't
     // abort the whole batch.
     try {
-      const existing = await SupplierContactModel.findOne({ supplierId }, { enrichedAt: 1, status: 1, website: 1 }).lean();
+      const existing = await SupplierContactModel.findOne({ supplierId }, { enrichedAt: 1, status: 1, website: 1, websiteSource: 1 }).lean();
       if (existing && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore) continue;
 
       const rut = digits(supplierId);
       const name = String(s.name ?? "");
       const input = { supplierId, rut, name, website: null as string | null };
 
-      // DEI first (may supply the website the later resolvers use); a
-      // domain found on an earlier run is reused too, so a stale re-run
-      // doesn't lose it.
+      // Website reconciliation by PROVENANCE (see websiteSourceRank): a
+      // previously-stored domain is reused as deep-crawl input AND a starting
+      // point — but only if it is not a third-party directory (those are dropped
+      // so this run re-derives a real site), and a higher-provenance domain
+      // (official dei/rupe, or a crawl4ai-VERIFIED one) OVERRIDES a stale,
+      // unverified seed. This is what stops a re-run from re-stamping an old
+      // "first hit that loaded" directory URL forever.
       const all: ContactCandidate[] = [];
-      let website: string | null = existing?.website ?? null;
-      let websiteSource: FieldSource | null = existing?.websiteSource ?? null;
+      const seededSite = existing?.website && !isDirectoryUrl(existing.website) ? existing.website : null;
+      let website: string | null = seededSite;
+      let websiteSource: WebsiteSource | null = seededSite ? (existing?.websiteSource ?? null) : null;
+      let websiteRank = seededSite ? websiteSourceRank(websiteSource) : -1;
       let phone: string | null = null;
       let phoneSource: FieldSource | null = null;
       let place: PlaceInfo | null = null;
@@ -119,7 +148,10 @@ async function main() {
         const r = resolvers[i];
         const res: ResolverResult = await r.resolve({ ...input, website }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
         all.push(...res.emails);
-        if (!website && res.website) { website = res.website; websiteSource = res.websiteSource ?? null; }
+        if (res.website && !isDirectoryUrl(res.website)) {
+          const rr = websiteSourceRank(res.websiteSource);
+          if (rr > websiteRank) { website = res.website; websiteSource = res.websiteSource ?? null; websiteRank = rr; }
+        }
         if (!phone && res.phone) { phone = res.phone; phoneSource = res.phoneSource ?? null; }
         if (!place && res.place) place = res.place;
         // Throttle external calls, but not after the LAST resolver — that

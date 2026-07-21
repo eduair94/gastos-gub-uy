@@ -1,5 +1,5 @@
 // src/jobs/enrich/types.ts
-import type { EmailSource, FieldSource } from "../../../shared/models/supplier_contacts";
+import type { EmailSource, FieldSource, WebsiteSource } from "../../../shared/models/supplier_contacts";
 
 export interface ContactCandidate { email: string; source: EmailSource; confidence: number }
 
@@ -19,8 +19,8 @@ export interface PlaceInfo {
 export interface ResolverResult {
   emails: ContactCandidate[];
   website?: string | null;
-  /** Provenance of `website`; set googleMaps when the site came from Google Places (ToS-restricted). */
-  websiteSource?: FieldSource | null;
+  /** Provenance of `website`: "webSearch" (crawl4ai-verified), "dei"/"rupe" (registry), "googleMaps" (Places, ToS-restricted). Lets the orchestrator rank a verified site over a stale unverified one. */
+  websiteSource?: WebsiteSource | null;
   phone?: string | null;
   /** Provenance of `phone`, so the orchestrator can tag it on the record. */
   phoneSource?: FieldSource | null;

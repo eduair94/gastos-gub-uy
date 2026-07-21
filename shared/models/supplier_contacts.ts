@@ -7,6 +7,13 @@ export type EmailStatus = "candidate" | "valid" | "invalid" | "suppressed";
 export type ContactStatus = "pending" | "enriched" | "no_contact" | "error";
 /** Provenance for phone/place fields → gates public display (dei/rupe = official open data, freely displayable; googleMaps = ToS-restricted). */
 export type FieldSource = "dei" | "googleMaps" | "rupe";
+/**
+ * Provenance for `website`. Adds `webSearch` — a domain confirmed to be the
+ * supplier's own by the crawl4ai discovery + verification path (match-score +
+ * Gemini judge) — so a VERIFIED site is distinguishable from an official
+ * registry one (dei/rupe) or a ToS-restricted Places one (googleMaps).
+ */
+export type WebsiteSource = FieldSource | "webSearch";
 
 export interface IEmailEntry {
   email: string;
@@ -29,8 +36,8 @@ export interface ISupplierContact {
   emails: IEmailEntry[];
   primaryEmail: string | null;
   website: string | null;
-  /** Provenance of `website`; googleMaps (a Places-listed site) is ToS-restricted like phone. */
-  websiteSource: FieldSource | null;
+  /** Provenance of `website`; googleMaps (a Places-listed site) is ToS-restricted like phone. `webSearch` = crawl4ai-verified. */
+  websiteSource: WebsiteSource | null;
   phone: string | null;
   /** Provenance of `phone`. */
   phoneSource: FieldSource | null;
