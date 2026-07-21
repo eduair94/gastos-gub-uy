@@ -1424,6 +1424,14 @@ watch([locale, user], () => nextTick(scheduleRecompute))
 @media (max-width: 620px) {
   .topsearch { display: none; }
   .brand__name { font-size: 0.875rem; }
+  .brand { flex: 1 1 auto; }
+  .brand, .brand__text { min-width: 0; }
+  .brand__name {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .foot__links { margin-left: 0; }
 
   /* 96px above the footer plus the page's own bottom padding left a
