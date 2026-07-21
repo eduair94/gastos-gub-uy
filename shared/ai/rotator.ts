@@ -57,7 +57,19 @@ const DEFAULT_GEMINI_MODELS = [
   "gemini-2.0-flash",
   "gemini-2.5-pro",
 ];
-const DEFAULT_GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-20b"];
+// Free-tier Groq chat models (ListModels-verified for the key, 2026-07-21),
+// ordered best-quality first, 8b-instant last as the fast fallback. All have a
+// 131k context (fits a pliego) and support response_format json_object. Excluded:
+// allam-2-7b (4k ctx — too small for a pliego), orpheus/whisper/tts (audio), and
+// groq/compound* (agentic tool-use systems, not plain structured chat). Each id
+// is its own free quota, so this widens the daily budget after Gemini.
+const DEFAULT_GROQ_MODELS = [
+  "llama-3.3-70b-versatile",
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "qwen/qwen3.6-27b",
+  "llama-3.1-8b-instant",
+];
 
 /** A back-off this long means a daily/quota wall, not a per-minute blip → bench the model. */
 const DAILY_WALL_MS = 60_000;
