@@ -544,12 +544,23 @@ useSeo(() => ({
       >
         <template #cell:name="{ row }">
           <div class="namecell">
-            <NuxtLink
-              :to="supplierPath(row.supplierId)"
-              class="namecell__link"
-            >
-              {{ row.name }}
-            </NuxtLink>
+            <div class="namecell__identity">
+              <span
+                v-if="row.neverAwarded"
+                class="namecell__name"
+              >{{ row.name }}</span>
+              <NuxtLink
+                v-else
+                :to="supplierPath(row.supplierId)"
+                class="namecell__link"
+              >
+                {{ row.name }}
+              </NuxtLink>
+              <span
+                v-if="row.neverAwarded && row.rupeEstado"
+                class="namecell__rupe"
+              >RUPE · {{ row.rupeEstado }}</span>
+            </div>
             <DeiChip
               v-if="row.dei"
               :estado="row.dei.estado"
@@ -819,18 +830,36 @@ useSeo(() => ({
 /* ---- Cells ---- */
 .namecell {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--s-2);
 }
 
-.namecell__link {
+.namecell__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.namecell__link, .namecell__name {
   font-weight: 600;
   color: var(--text);
+}
+
+.namecell__link {
   text-decoration: none;
 }
 
 .namecell__link:hover { color: var(--celeste-deep); text-decoration: underline; }
+
+.namecell__rupe {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
 
 .link { color: var(--celeste-deep); text-decoration: none; }
 
