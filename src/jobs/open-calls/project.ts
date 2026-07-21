@@ -11,6 +11,8 @@
  */
 import { normalizeText } from "../../../shared/utils/text";
 import { compraIdFromOcid } from "../../../shared/utils/ocid";
+import { pickPartyContact } from "../../../shared/utils/contact-point";
+import type { IContactPoint } from "../../../shared/types/database";
 import type { IOpenCallDocument, IOpenCallItem, OpenCallStatus } from "../../../shared/types/monitor";
 
 export type ReleaseKind =
@@ -40,6 +42,7 @@ export interface ReleaseLike {
   date?: Date | string | null;
   tag?: string[];
   buyer?: { id?: string; name?: string } | null;
+  parties?: Array<{ roles?: string[]; name?: string; contactPoint?: IContactPoint | null }> | null;
   tender?: {
     id?: string;
     title?: string;
@@ -77,6 +80,7 @@ export interface OpenCallProjection {
   description?: string | undefined;
   buyer: { id?: string | undefined; name?: string | undefined };
   procuringEntity: { id?: string | undefined; name?: string | undefined };
+  contact?: IContactPoint | undefined;
   procurementMethod?: string | undefined;
   procurementMethodDetails?: string | undefined;
   status: OpenCallStatus;
@@ -255,6 +259,9 @@ export function projectOpenCall(releases: ReleaseLike[], now: Date = new Date())
 
   const buyer = latestFirst.find(r => r.buyer)?.buyer || releases.find(r => r.buyer)?.buyer || {};
   const procuringEntity = pick(t => t.procuringEntity) || {};
+  // Contact lives on parties[].contactPoint (procuringEntity/buyer role), not on
+  // the denormalized buyer/procuringEntity. Gather across the group's releases.
+  const contact = pickPartyContact(releases.flatMap(r => r.parties ?? []));
 
   const awardRelease = releases.find(r => AWARD_KINDS.includes(releaseKind(r.id)));
   const awardRef = awardRelease
@@ -292,6 +299,7 @@ export function projectOpenCall(releases: ReleaseLike[], now: Date = new Date())
     description,
     buyer: { id: buyer.id, name: buyer.name },
     procuringEntity: { id: procuringEntity.id, name: procuringEntity.name },
+    ...(contact ? { contact } : {}),
     procurementMethod: pick(t => t.procurementMethod),
     procurementMethodDetails: pick(t => t.procurementMethodDetails),
     status,

@@ -44,7 +44,7 @@ export interface SyncResult {
   newlyOpenedCompraIds: string[];
 }
 
-const RELEASE_FIELDS = "id ocid date tag buyer tender awards";
+const RELEASE_FIELDS = "id ocid date tag buyer tender awards parties";
 const OCID_BATCH = 500;
 
 /**
