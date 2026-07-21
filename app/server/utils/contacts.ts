@@ -8,6 +8,31 @@
 import type { ISupplierContact } from './models'
 import { DeiCompanyModel } from './models'
 import { escapeRegex, sanitizeSearch } from './query'
+import { fetchNamesByCategory, CATEGORIES } from './enrichment'
+
+/** The enrichment METHOD(s) that produced a record — shown as badges (never exported). */
+export type ContactMethod = 'crawl4ai' | 'googleMaps' | 'dei' | 'rupe' | 'impo'
+
+/**
+ * Which methods touched this record, from the RAW per-field provenance (before the
+ * ToS strip) — so a Maps-only record still shows a "Maps" badge even though its
+ * fields are hidden. A record can carry several.
+ */
+export function contactMethods(
+  doc: Partial<Pick<ISupplierContact, 'emails' | 'websiteSource' | 'phoneSource' | 'placeSource'>>,
+): ContactMethod[] {
+  const found = new Set<ContactMethod>()
+  const emailSources = (doc.emails ?? []).map(e => e.source)
+  const fieldSources = [doc.websiteSource, doc.phoneSource, doc.placeSource]
+  const has = (s: string) => emailSources.includes(s as never) || fieldSources.includes(s as never)
+  if (has('webSearch') || has('website')) found.add('crawl4ai')
+  if (has('googleMaps')) found.add('googleMaps')
+  if (has('dei')) found.add('dei')
+  if (has('rupe')) found.add('rupe')
+  if (has('impo')) found.add('impo')
+  // Stable, official-first order.
+  return (['dei', 'rupe', 'crawl4ai', 'googleMaps', 'impo'] as ContactMethod[]).filter(m => found.has(m))
+}
 
 /** Shared ceiling for the list/export DB reads so a pathological query can't pin a mongod thread. */
 export const CONTACTS_MAX_TIME_MS = 15_000
@@ -57,10 +82,26 @@ export async function buildContactFilter(query: ContactQuery): Promise<FilterRes
     filter.emails = { $elemMatch: { mxValid: true, status: 'valid' } }
   }
 
+  // `search` and `categoria` both constrain `name`; assigning both to `filter.name`
+  // directly would let the second clobber the first, so combine them with `$and`
+  // when more than one name condition is in play (mirrors /api/suppliers).
+  const nameConditions: Record<string, unknown>[] = []
   // User input → escaped literal + length cap before it reaches the regex engine
   // (ReDoS guard; the repo-wide rule, see app/server/context.md).
   const search = sanitizeSearch(query.search)
-  if (search) filter.name = { $regex: escapeRegex(search), $options: 'i' }
+  if (search) nameConditions.push({ name: { $regex: escapeRegex(search), $options: 'i' } })
+
+  // Company TYPE (AI-classified enrichment category) → resolve matching names,
+  // gated the same way the chip is (confidence >= 0.5). No names → no rows.
+  const categoria = query.categoria ? String(query.categoria) : ''
+  if (categoria && CATEGORIES.has(categoria)) {
+    const names = await fetchNamesByCategory(categoria)
+    if (!names.length) return { empty: true }
+    nameConditions.push({ name: { $in: names } })
+  }
+
+  if (nameConditions.length === 1) Object.assign(filter, nameConditions[0])
+  else if (nameConditions.length > 1) filter.$and = nameConditions
 
   if (query.rubro) filter['rubros.classificationId'] = String(query.rubro)
 
@@ -133,6 +174,8 @@ export interface PublicContact {
   /** Top rubro label (highest share). */
   rubro: string | null
   rubros: PublicRubro[]
+  /** Enrichment methods that produced this record (badges only — not exported). */
+  methods: ContactMethod[]
   priorityScore: number
   dei?: { estado: string | null } | null
 }
@@ -198,6 +241,7 @@ export function sanitizeContact(
     address: placeRestricted ? null : (doc.address ?? null),
     rubro: rubros[0]?.label || null,
     rubros,
+    methods: contactMethods(doc),
     priorityScore: doc.priorityScore ?? 0,
     ...(doc.dei !== undefined ? { dei: doc.dei ? { estado: doc.dei.estado ?? null } : null } : {}),
   }

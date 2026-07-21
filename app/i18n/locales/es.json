@@ -772,7 +772,8 @@
       "locality": "Localidad",
       "email": "Email",
       "website": "Sitio web",
-      "phone": "Teléfono"
+      "phone": "Teléfono",
+      "sources": "Fuentes"
     },
     "sort": {
       "priorityDesc": "Mayor relevancia",

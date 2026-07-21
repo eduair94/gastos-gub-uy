@@ -2,7 +2,8 @@ import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { fetchDei } from '../../utils/dei'
 import { fetchRupe } from '../../utils/rupe'
-import { ReleaseModel, SupplierPatternModel } from '../../utils/models'
+import { ReleaseModel, SupplierPatternModel, SupplierContactModel } from '../../utils/models'
+import { sanitizeContact } from '../../utils/contacts'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -73,10 +74,14 @@ export default defineEventHandler(async (event) => {
     // Cross-reference the state-provider registry (RUPE) by RUT — 91.7% coverage,
     // so this fills the location gap DEI leaves. Both queried; the UI shows the
     // RUPE card only when DEI isn't present (DEI is the richer record).
-    const [dei, rupe] = await Promise.all([
+    const [dei, rupe, contactDoc] = await Promise.all([
       fetchDei([decodedSupplierId]).then(m => m.get(decodedSupplierId) ?? null),
       fetchRupe([decodedSupplierId]).then(m => m.get(decodedSupplierId) ?? null),
+      // Contact enrichment (email/website/phone + the METHOD provenance badges);
+      // sanitized through the same ToS choke point as the directory.
+      SupplierContactModel.findOne({ supplierId: decodedSupplierId }).lean(),
     ])
+    const contact = contactDoc ? sanitizeContact(contactDoc as never) : null
 
     return {
       success: true,
@@ -84,6 +89,7 @@ export default defineEventHandler(async (event) => {
         supplier: supplierPattern,
         dei,
         rupe,
+        contact,
         recentContracts: contractsWithSupplierAwards,
         meta: {
           totalContractsFound: contractsWithSupplierAwards.length,

@@ -4,7 +4,19 @@
 // rubro), and the ToS strip (googleMaps-sourced phone/website/place) is enforced
 // in the one choke point before any export.
 import assert from "node:assert";
-import { sanitizeContact, toCsv, toVcard, type PublicContact } from "../../app/server/utils/contacts";
+import { sanitizeContact, toCsv, toVcard, contactMethods, type PublicContact } from "../../app/server/utils/contacts";
+
+// --- contactMethods: which enrichment methods touched a record (from RAW sources) ---
+assert.deepEqual(contactMethods({} as never), []);
+assert.deepEqual(
+  contactMethods({ emails: [{ source: "dei" } as never], websiteSource: "webSearch", placeSource: "googleMaps" } as never),
+  ["dei", "crawl4ai", "googleMaps"], // stable official-first order
+);
+assert.deepEqual(contactMethods({ emails: [{ source: "website" } as never] } as never), ["crawl4ai"]);
+assert.deepEqual(contactMethods({ phoneSource: "rupe" } as never), ["rupe"]);
+// a Maps-only record (all its fields get ToS-stripped) still reports the method
+assert.deepEqual(contactMethods({ placeSource: "googleMaps" } as never), ["googleMaps"]);
+assert.deepEqual(contactMethods({ emails: [{ source: "impo" } as never] } as never), ["impo"]);
 
 // --- sanitizeContact: web/DEI fields shown, googleMaps fields stripped ---
 const webDoc = sanitizeContact({
@@ -48,6 +60,7 @@ const csv = toCsv([webDoc]);
 const [header, row] = csv.split("\r\n");
 assert.ok(header.includes("Dirección"), "CSV must carry a Dirección column");
 assert.ok(header.includes("Origen sitio"), "CSV must carry the website-origin column");
+assert.ok(!/Fuentes|methods/i.test(header), "method badges are UI-only — never in the export");
 assert.ok(row.includes("webSearch"), "CSV row carries the website origin");
 assert.ok(header.includes("Sitio web") && header.includes("Teléfono"), "website + phone columns");
 assert.ok(row.includes("Av. Siempreviva 742"), "CSV row carries the address");
