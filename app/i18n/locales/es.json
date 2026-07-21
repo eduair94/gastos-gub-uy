@@ -12,6 +12,7 @@
     "contracts": "Contratos",
     "products": "Productos",
     "suppliers": "Proveedores",
+    "contactos": "Contactos",
     "buyers": "Organismos",
     "anomalies": "Alertas",
     "unexplained": "Sin explicación",
@@ -1542,6 +1543,10 @@
       "title": "Proveedores del Estado uruguayo",
       "description": "Directorio de {total} proveedores del Estado uruguayo, con montos cobrados, organismos compradores y contratos."
     },
+    "contactos": {
+      "title": "Contactos de compras del Estado uruguayo",
+      "description": "Directorio de contactos oficiales de compras por organismo del Estado uruguayo: a quién escribirle en cada unidad compradora."
+    },
     "supplierDetail": {
       "title": "{name} — proveedor del Estado",
       "description": "{name} cobró {amount} del Estado uruguayo en {contracts} contratos con {buyers} organismos."
@@ -1701,6 +1706,23 @@
     "copied": "Copiado",
     "srEmail": "Enviar correo a {v}",
     "srPhone": "Llamar al {v}"
+  },
+  "contactos": {
+    "title": "Contactos de compras del Estado",
+    "lead": "A quién escribirle en cada organismo: el contacto oficial de compras publicado en los llamados.",
+    "resultsSummary": "{count} organismos",
+    "searchPlaceholder": "Buscar organismo, persona o correo…",
+    "colOrganism": "Organismo",
+    "colContact": "Contacto",
+    "colEmail": "Correo",
+    "colPhone": "Teléfono",
+    "colCalls": "Llamados",
+    "empty": {
+      "title": "Ningún contacto coincide con esa búsqueda",
+      "body": "Probá con parte del nombre del organismo, la persona o el correo.",
+      "action": "Limpiar búsqueda"
+    },
+    "note": "Datos de contacto oficiales publicados por los organismos en comprasestatales.gub.uy."
   },
   "llamados": {
     "title": "Llamados abiertos",

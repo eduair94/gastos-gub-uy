@@ -1702,6 +1702,23 @@
     "srEmail": "Email {v}",
     "srPhone": "Call {v}"
   },
+  "contactos": {
+    "title": "State purchasing contacts",
+    "lead": "Who to write to at each agency: the official purchasing contact published in the open calls.",
+    "resultsSummary": "{count} agencies",
+    "searchPlaceholder": "Search agency, person or email…",
+    "colOrganism": "Agency",
+    "colContact": "Contact",
+    "colEmail": "Email",
+    "colPhone": "Phone",
+    "colCalls": "Calls",
+    "empty": {
+      "title": "No contact matches that search",
+      "body": "Try part of the agency name, the person, or the email.",
+      "action": "Clear search"
+    },
+    "note": "Official contact data published by the agencies on comprasestatales.gub.uy."
+  },
   "llamados": {
     "title": "Open calls",
     "lead": "State tenders and purchases whose submission deadline is still open.",
