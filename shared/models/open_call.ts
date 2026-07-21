@@ -53,6 +53,9 @@ const PliegoSummarySchema = new Schema(
     generatedAt: { type: Date },
     sourceDocs: { type: [String], default: undefined },
     disclaimer: { type: String },
+    // Signature of the pliego PDFs this summary was built from; compared against
+    // the call's pliegoDocsSignature to invalidate a stale summary on modification.
+    docsSignature: { type: String },
   },
   { _id: false }
 );
@@ -118,6 +121,9 @@ const OpenCallSchema = new Schema<IOpenCall>(
     // OR miss so a docs-empty call is never re-probed every sync. Never blocks a
     // real feed document — feed docs always win. See jobs/open-calls/pliego-probe.
     documentsProbedAt: { type: Date },
+    // Current pliego-PDF signature, refreshed by the projection every sync. A
+    // change vs aiSummary.docsSignature means the pliego was modified → regenerate.
+    pliegoDocsSignature: { type: String },
     aiSummary: { type: PliegoSummarySchema, default: undefined },
     awardRef: {
       releaseId: { type: String },

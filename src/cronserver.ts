@@ -85,6 +85,10 @@ class CronServer {
   // (no pre-publication signal exists in the feed).
   private tenderForecastStatus: CronJobStatus;
   private isTenderForecastRunning: boolean = false;
+  // AI pliego summaries — independent (reads open_calls, writes their aiSummary).
+  // Self-paced under the free-tier per-model RPM ceiling; a slow (rate-limited)
+  // run must not overlap the next, hence its own guard.
+  private isPliegoSummaryRunning: boolean = false;
 
   constructor() {
     this.app = express();
@@ -778,6 +782,34 @@ class CronServer {
       { scheduled: true, timezone: "America/Montevideo" }
     );
     this.logger.info(`Alert digest scheduled with expression: ${digestExpression} (Uruguay timezone)`);
+
+    // AI pliego summaries (eager), every 4 hours at :40 — offset from the :20
+    // open-calls sync so fresh llamados already have their pliegos. Prioritizes
+    // still-biddable calls closing soonest and regenerates on pliego modifications.
+    // Self-paced under the free per-model RPM ceiling (Gemini → Groq ladder), and
+    // per-run capped (PLIEGO_EAGER_LIMIT) to stay well within the 1000 RPD/model.
+    const pliegoSummaryExpression = "40 */4 * * *";
+    cron.schedule(
+      pliegoSummaryExpression,
+      async () => {
+        if (this.isPliegoSummaryRunning) {
+          this.logger.warn("Pliego AI summary already running, skipping this tick");
+          return;
+        }
+        this.isPliegoSummaryRunning = true;
+        try {
+          this.logger.info("Starting pliego AI summary (eager)...");
+          await this.runJobProcess("jobs/pliego-summary", ["--eager"]);
+          this.logger.info("Pliego AI summary completed successfully");
+        } catch (error) {
+          this.logger.error("Pliego AI summary failed:", error instanceof Error ? error : String(error));
+        } finally {
+          this.isPliegoSummaryRunning = false;
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Pliego AI summary scheduled with expression: ${pliegoSummaryExpression} (Uruguay timezone)`);
 
     // SICE catalog import, weekly Monday 03:00. The ACCE catalog dump regenerates
     // ~daily but changes slowly; weekly is ample and the job self-skips when the

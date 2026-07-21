@@ -28,6 +28,7 @@
     "investigaciones": "Investigations",
     "tvciudad": "TV Ciudad",
     "llamados": "Open calls",
+    "comparativa": "Comparison",
     "more": "More",
     "login": "Sign in",
     "account": "My account",
@@ -1564,6 +1565,10 @@
       "title": "State advertising — Uruguay's public advertising and who collects it",
       "description": "How much the Uruguayan state spends on advertising and propaganda, which bodies pay for it, and which media and agencies receive it. Official open data from Compras Estatales."
     },
+    "comparativa": {
+      "title": "Comparison of tender-alert services in Uruguay",
+      "description": "An objective, sourced comparison of tender-alert services for Uruguayan state suppliers (Gubly, ProveedorUY, ClearBid and more): prices, features and what to choose."
+    },
     "mapa": {
       "title": "Uruguay's public spending map",
       "description": "A treemap of Uruguayan state spending: each public body dimensioned by what it spends, grouped by type. Official data from Compras Estatales."
@@ -1808,6 +1813,40 @@
     },
     "note": "Official contact data published by the agencies on comprasestatales.gub.uy."
   },
+  "comparativa": {
+    "eyebrow": "Comparison · for suppliers",
+    "title": "Tender-alert services in Uruguay",
+    "lead": "Which service is right for finding and bidding on state tenders? An objective, sourced comparison of the paid and free services in the Uruguayan market.",
+    "verifiedLabel": "Verified {date}",
+    "matrixTitle": "Feature comparison",
+    "matrixHelp": "Uruguayan services with public pricing, side by side. Every fact comes from the official sites; prices are shown in their original currency, not converted.",
+    "priceCaveat": "Prices are not directly comparable: they mix currencies (USD, pesos), some quote “+ VAT” and others by credits. They are shown as-is, in their currency.",
+    "chartsTitle": "Entry price (cheapest paid plan)",
+    "chartUsd": "In dollars (USD/mo)",
+    "chartUyu": "In pesos ($U/mo)",
+    "chartHelp": "Cheapest paid plan of each service.",
+    "chartNote": "Shown separately by currency because they are not comparable. For reference only, ~USD 25 ≈ ~$U 1,000 at the current exchange rate.",
+    "providersTitle": "Each service in detail",
+    "regionalTitle": "Regional aggregators",
+    "regionalLead": "Multi-country platforms where Uruguay is just one jurisdiction and the official Uruguayan source is not always named. Useful, but with secondary Uruguay coverage.",
+    "outOfScopeTitle": "Does not apply to Uruguay",
+    "unverifiedTitle": "Unverifiable",
+    "methodologyTitle": "Methodology and objectivity",
+    "coverageLabel": "Coverage",
+    "legalLabel": "Legal",
+    "sourcesLabel": "Sources",
+    "consultar": "Contact",
+    "currencyInferred": "inferred currency",
+    "featAi": "AI document summary",
+    "featLegal": "Legal advisory",
+    "featBid": "Bid tooling",
+    "backToLlamados": "← See open calls on conlatuya",
+    "confidence": {
+      "alta": "verified",
+      "media": "partly verified",
+      "baja": "unverified"
+    }
+  },
   "llamados": {
     "title": "Open calls",
     "lead": "State tenders and purchases whose submission deadline is still open.",
@@ -1819,6 +1858,7 @@
     "sortBy": "Sort",
     "sortDeadline": "Closing soon",
     "sortNewest": "Newest",
+    "showExpired": "Show expired",
     "empty": "No calls match those filters.",
     "closes": "Closes",
     "noDeadline": "No closing date",
@@ -1846,6 +1886,12 @@
     "summaryMonto": "Reference amount",
     "summaryObservaciones": "Notes",
     "summarySoon": "Coming soon: AI bidding-document summary.",
+    "summaryOnDemand": "We haven't generated a summary for this document yet. You can request one with AI (takes a few seconds).",
+    "summaryGenerate": "Generate AI summary",
+    "summaryGenerating": "Generating summary…",
+    "summaryError": "We couldn't generate the summary right now. Please try again later.",
+    "summaryStale": "The bidding document changed after this summary was generated.",
+    "summaryRefresh": "Refresh",
     "benchmarksTitle": "Historical prices and who won",
     "benchmarksLead": "What the State awarded these categories for, which firms won before, and where to see the detail — to prepare your bid.",
     "benchmarksEmpty": "No price history for these categories.",

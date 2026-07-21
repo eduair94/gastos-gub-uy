@@ -28,6 +28,7 @@
     "investigaciones": "Investigaciones",
     "tvciudad": "TV Ciudad",
     "llamados": "Llamados",
+    "comparativa": "Comparativa",
     "more": "Más",
     "login": "Ingresar",
     "account": "Mi cuenta",
@@ -1564,6 +1565,10 @@
       "title": "Pauta oficial — la publicidad del Estado uruguayo y quién la cobra",
       "description": "Cuánto gasta el Estado uruguayo en publicidad y propaganda, qué organismos la pagan y qué medios y agencias la reciben. Datos abiertos oficiales de Compras Estatales."
     },
+    "comparativa": {
+      "title": "Comparativa de servicios de alertas de licitaciones en Uruguay",
+      "description": "Comparación objetiva y con fuentes de los servicios de alertas de licitaciones para proveedores del Estado uruguayo (Gubly, ProveedorUY, ClearBid y más): precios, funciones y qué elegir."
+    },
     "mapa": {
       "title": "El mapa del gasto público del Uruguay",
       "description": "Un treemap del gasto del Estado uruguayo: cada organismo dimensionado por lo que gasta, agrupado por tipo de organismo. Datos oficiales de Compras Estatales."
@@ -1808,6 +1813,40 @@
     },
     "note": "Datos de contacto oficiales publicados por los organismos en comprasestatales.gub.uy."
   },
+  "comparativa": {
+    "eyebrow": "Comparativa · para proveedores",
+    "title": "Servicios de alertas de licitaciones en Uruguay",
+    "lead": "¿Qué servicio te conviene para enterarte y presentarte a licitaciones del Estado? Comparación objetiva, con fuentes, de los servicios pagos y gratuitos del mercado uruguayo.",
+    "verifiedLabel": "Verificado {date}",
+    "matrixTitle": "Comparación por función",
+    "matrixHelp": "Servicios uruguayos con precio público, lado a lado. Cada dato surge de los sitios oficiales; los precios se muestran en su moneda original, sin convertir.",
+    "priceCaveat": "Los precios no son directamente comparables: mezclan monedas (USD, pesos), algunos cotizan “+ IVA” y otros por créditos. Se muestran tal cual, en su moneda.",
+    "chartsTitle": "Precio de entrada (plan pago más barato)",
+    "chartUsd": "En dólares (USD/mes)",
+    "chartUyu": "En pesos ($U/mes)",
+    "chartHelp": "Plan pago más barato de cada servicio.",
+    "chartNote": "Se muestran por separado por moneda porque no son comparables entre sí. A modo referencial, ~USD 25 ≈ ~$U 1.000 al tipo de cambio del momento.",
+    "providersTitle": "Ficha de cada servicio",
+    "regionalTitle": "Agregadores regionales",
+    "regionalLead": "Plataformas de varios países donde Uruguay es una jurisdicción más y no siempre nombran la fuente oficial uruguaya. Útiles, pero con cobertura de Uruguay secundaria.",
+    "outOfScopeTitle": "No aplica a Uruguay",
+    "unverifiedTitle": "No verificables",
+    "methodologyTitle": "Metodología y objetividad",
+    "coverageLabel": "Cobertura",
+    "legalLabel": "Jurídica",
+    "sourcesLabel": "Fuentes",
+    "consultar": "Consultar",
+    "currencyInferred": "moneda inferida",
+    "featAi": "Resumen IA de pliego",
+    "featLegal": "Asesoría jurídica",
+    "featBid": "Gestión de ofertas",
+    "backToLlamados": "← Ver los llamados abiertos en conlatuya",
+    "confidence": {
+      "alta": "verificado",
+      "media": "verif. parcial",
+      "baja": "sin verificar"
+    }
+  },
   "llamados": {
     "title": "Llamados abiertos",
     "lead": "Licitaciones y compras del Estado con el plazo de recepción todavía abierto.",
@@ -1819,6 +1858,7 @@
     "sortBy": "Ordenar",
     "sortDeadline": "Cierra antes",
     "sortNewest": "Más nuevos",
+    "showExpired": "Mostrar vencidas",
     "empty": "No encontramos llamados con esos filtros.",
     "closes": "Cierra",
     "noDeadline": "Sin fecha de cierre",
@@ -1846,6 +1886,12 @@
     "summaryMonto": "Monto de referencia",
     "summaryObservaciones": "Observaciones",
     "summarySoon": "Próximamente: resumen del pliego con IA.",
+    "summaryOnDemand": "Todavía no generamos un resumen de este pliego. Podés pedirlo con IA (demora unos segundos).",
+    "summaryGenerate": "Generar resumen con IA",
+    "summaryGenerating": "Generando resumen…",
+    "summaryError": "No pudimos generar el resumen ahora. Probá de nuevo más tarde.",
+    "summaryStale": "El pliego cambió desde que se generó este resumen.",
+    "summaryRefresh": "Actualizar",
     "benchmarksTitle": "Precios históricos y quién ganó",
     "benchmarksLead": "A cuánto adjudicó el Estado estos rubros, qué empresas ganaron antes y dónde ver el detalle — para preparar tu oferta.",
     "benchmarksEmpty": "No hay historial de precios para estos rubros.",

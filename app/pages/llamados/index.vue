@@ -11,12 +11,16 @@ const { track } = useAnalytics()
 const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
 const sort = ref(typeof route.query.sort === 'string' ? route.query.sort : 'deadline')
 const page = ref(Number(route.query.page) || 1)
+// Off by default: the list hides calls whose reception deadline already passed
+// (a still-'open' status lags the sync). Toggle on to also see expired ones.
+const includeExpired = ref(route.query.includeExpired === '1')
 
 const query = computed(() => ({
   q: q.value || undefined,
   sort: sort.value,
   page: page.value,
   limit: 24,
+  includeExpired: includeExpired.value ? '1' : undefined,
 }))
 
 const { data, pending } = await useFetch<{ data: { calls: Array<Record<string, unknown>>, pagination: { total: number | null, hasMore: boolean } } }>(
@@ -27,8 +31,17 @@ const { data, pending } = await useFetch<{ data: { calls: Array<Record<string, u
 const calls = computed(() => data.value?.data?.calls ?? [])
 const pagination = computed(() => data.value?.data?.pagination)
 
-watch([q, sort, page], () => {
-  router.replace({ query: { q: q.value || undefined, sort: sort.value, page: page.value > 1 ? page.value : undefined } })
+watch([q, sort, page, includeExpired], () => {
+  router.replace({ query: {
+    q: q.value || undefined,
+    sort: sort.value,
+    page: page.value > 1 ? page.value : undefined,
+    includeExpired: includeExpired.value ? '1' : undefined,
+  } })
+})
+watch(includeExpired, (v) => {
+  page.value = 1
+  track('filter_change', { surface: 'llamados', filter: 'includeExpired', value: v })
 })
 
 function submitSearch() {
@@ -117,6 +130,13 @@ useSeo(() => ({
         hide-details
         density="comfortable"
         class="llamados__sort"
+      />
+      <v-checkbox
+        v-model="includeExpired"
+        :label="t('llamados.showExpired')"
+        hide-details
+        density="comfortable"
+        class="llamados__expired"
       />
       <NuxtLink
         v-if="authEnabled"
