@@ -26,6 +26,8 @@ interface ContactRow {
   address: string | null
   rubro: string | null
   methods: string[]
+  neverAwarded: boolean
+  rupeEstado: string | null
   dei?: { estado?: string | null } | null
   onlyDirectAward: boolean
   directAwardCount: number
@@ -87,6 +89,8 @@ const tamano = ref((route.query.tamano as string) ?? '')
 const categoria = ref((route.query.categoria as string) ?? '')
 const deiOnly = ref(route.query.dei === '1')
 const onlyDirect = ref(route.query.onlyDirect === '1')
+// Which population to include: todas (default) | con-email | sin-adjudicaciones.
+const origen = ref((route.query.origen as string) ?? 'todas')
 // Verified-only is the default; the URL only records the widening (verified=0).
 const verifiedOnly = ref(route.query.verified !== '0')
 const hasPhone = ref(route.query.hasPhone === '1')
@@ -100,7 +104,7 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
 
 const hasFilters = computed(() =>
   !!rubro.value || !!departamento.value || !!tamano.value || !!categoria.value || deiOnly.value || onlyDirect.value
-  || !verifiedOnly.value || hasPhone.value || hasWebsite.value)
+  || !verifiedOnly.value || hasPhone.value || hasWebsite.value || origen.value !== 'todas')
 
 function clearFilters() {
   track('filter_clear', { surface: 'contacts' })
@@ -110,6 +114,7 @@ function clearFilters() {
   categoria.value = ''
   deiOnly.value = false
   onlyDirect.value = false
+  origen.value = 'todas'
   verifiedOnly.value = true
   hasPhone.value = false
   hasWebsite.value = false
@@ -128,6 +133,7 @@ const filterQuery = computed(() => ({
   ...(tamano.value ? { tamano: tamano.value } : {}),
   ...(categoria.value ? { categoria: categoria.value } : {}),
   ...(departamento.value ? { departamento: departamento.value } : {}),
+  ...(origen.value !== 'todas' ? { origen: origen.value } : {}),
   ...(verifiedOnly.value ? {} : { verified: '0' }),
   ...(hasPhone.value ? { hasPhone: '1' } : {}),
   ...(hasWebsite.value ? { hasWebsite: '1' } : {}),
@@ -136,11 +142,11 @@ const filterQuery = computed(() => ({
 
 const listQuery = computed(() => ({ page: page.value, limit: 25, ...filterQuery.value }))
 
-watch([searchTerm, rubro, departamento, tamano, categoria, deiOnly, onlyDirect, verifiedOnly, hasPhone, hasWebsite, sort], () => {
+watch([searchTerm, rubro, departamento, tamano, categoria, deiOnly, onlyDirect, origen, verifiedOnly, hasPhone, hasWebsite, sort], () => {
   page.value = 1
 })
 
-watch([searchTerm, page, rubro, departamento, tamano, categoria, deiOnly, onlyDirect, verifiedOnly, hasPhone, hasWebsite, sort], () => {
+watch([searchTerm, page, rubro, departamento, tamano, categoria, deiOnly, onlyDirect, origen, verifiedOnly, hasPhone, hasWebsite, sort], () => {
   const q: Record<string, string> = {}
   if (searchTerm.value) q.search = searchTerm.value
   if (page.value > 1) q.page = String(page.value)
@@ -150,6 +156,7 @@ watch([searchTerm, page, rubro, departamento, tamano, categoria, deiOnly, onlyDi
   if (categoria.value) q.categoria = categoria.value
   if (deiOnly.value) q.dei = '1'
   if (onlyDirect.value) q.onlyDirect = '1'
+  if (origen.value !== 'todas') q.origen = origen.value
   if (!verifiedOnly.value) q.verified = '0'
   if (hasPhone.value) q.hasPhone = '1'
   if (hasWebsite.value) q.hasWebsite = '1'
@@ -299,6 +306,24 @@ useSeo(() => ({
 
     <!-- ===== Segment filters ===== -->
     <div class="filters">
+      <label class="filters__sel">
+        <span class="u-sr-only">{{ t('contacts.filter.origin') }}</span>
+        <select
+          v-model="origen"
+          class="sel"
+        >
+          <option value="todas">
+            {{ t('contacts.filter.originTodas') }}
+          </option>
+          <option value="con-email">
+            {{ t('contacts.filter.originConEmail') }}
+          </option>
+          <option value="sin-adjudicaciones">
+            {{ t('contacts.filter.originSinAdjudicaciones') }}
+          </option>
+        </select>
+      </label>
+
       <label class="filters__sel">
         <span class="u-sr-only">{{ t('contacts.filter.rubro') }}</span>
         <select
@@ -529,6 +554,7 @@ useSeo(() => ({
               v-if="row.dei"
               :estado="row.dei.estado"
             />
+            <NeverAwardedChip v-if="row.neverAwarded" />
             <OnlyDirectAwardChip
               v-if="row.onlyDirectAward"
               :count="row.directAwardCount"
@@ -559,6 +585,10 @@ useSeo(() => ({
               class="link"
             >{{ e.email }}</a>
           </div>
+          <span
+            v-else-if="row.neverAwarded"
+            style="opacity:0.7"
+          >{{ t('contacts.noPublicEmail') }}</span>
           <span v-else>—</span>
         </template>
         <template #cell:website="{ row }">
