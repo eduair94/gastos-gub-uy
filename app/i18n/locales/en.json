@@ -12,7 +12,8 @@
     "contracts": "Contracts",
     "products": "Products",
     "suppliers": "Suppliers",
-    "contactos": "Contacts",
+    "contactos": "Provider contacts",
+    "contactosCompras": "Purchasing contacts",
     "buyers": "Agencies",
     "anomalies": "Flags",
     "unexplained": "Unexplained",
@@ -286,6 +287,10 @@
     },
     "aiNote": "Each supplier's category is AI-generated (Gemini) from the name: it's indicative, can be wrong, verify against the source.",
     "aiTitle": "AI-generated category",
+    "filter": {
+      "category": "Type",
+      "categoryAny": "Any type"
+    },
     "dei": {
       "badge": "DEI",
       "badgeTitle": "Industrial company listed in the Directory of Industrial Companies (MIEM)",
@@ -1595,6 +1600,10 @@
       "title": "Contacts of suppliers to the Uruguayan state",
       "description": "Downloadable directory of contact data for {total} suppliers to the Uruguayan state: email, website, phone and category. CSV, Excel, JSON and vCard."
     },
+    "contactos": {
+      "title": "State purchasing contacts of Uruguay",
+      "description": "Directory of official purchasing contacts by agency of the Uruguayan state: who to write to at each contracting unit."
+    },
     "supplierDetail": {
       "title": "{name} — state supplier",
       "description": "{name} received {amount} from the Uruguayan state across {contracts} contracts with {buyers} agencies."
@@ -1746,6 +1755,31 @@
     "notConfigured": "Authentication is unavailable right now.",
     "genericError": "We couldn't complete that. Check your details and try again.",
     "verifyNotice": "We sent a verification email. Verify your account to activate alerts."
+  },
+  "contactPanel": {
+    "title": "Contracting unit contact",
+    "note": "Official contact published by the agency on comprasestatales.gub.uy.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "srEmail": "Email {v}",
+    "srPhone": "Call {v}"
+  },
+  "contactos": {
+    "title": "State purchasing contacts",
+    "lead": "Who to write to at each agency: the official purchasing contact published in the open calls.",
+    "resultsSummary": "{count} agencies",
+    "searchPlaceholder": "Search agency, person or email…",
+    "colOrganism": "Agency",
+    "colContact": "Contact",
+    "colEmail": "Email",
+    "colPhone": "Phone",
+    "colCalls": "Calls",
+    "empty": {
+      "title": "No contact matches that search",
+      "body": "Try part of the agency name, the person, or the email.",
+      "action": "Clear search"
+    },
+    "note": "Official contact data published by the agencies on comprasestatales.gub.uy."
   },
   "llamados": {
     "title": "Open calls",

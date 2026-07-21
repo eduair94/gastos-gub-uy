@@ -1867,6 +1867,10 @@ useSeo(() => ({
 
         <!-- ===== Aside ===== -->
         <aside class="grid__side">
+          <CallContact
+            :contact="(contract as any)?.contact"
+            :organism="(contract as any)?.buyer?.name"
+          />
           <!-- A genuine ordered sequence, so it is ordered by date —
                not numbered for decoration. -->
           <section

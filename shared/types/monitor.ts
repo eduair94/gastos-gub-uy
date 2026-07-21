@@ -134,6 +134,9 @@ export interface IOpenCall extends Document {
   description?: string | undefined
   buyer: { id?: string | undefined, name?: string | undefined }
   procuringEntity: { id?: string | undefined, name?: string | undefined }
+  // The contracting unit's official contact (name/email/phone), from the tender
+  // release's parties[].contactPoint. Public data from comprasestatales.
+  contact?: import('./database').IContactPoint | undefined
   procurementMethod?: string | undefined
   procurementMethodDetails?: string | undefined
   status: OpenCallStatus
