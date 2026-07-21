@@ -28,19 +28,19 @@ feature is tiered:
 - **Tier 2 (follow-on):** run the existing web/website/crawl4ai/impo resolvers over a
   prioritized subset to *discover* emails, upgrading those rows to contactable.
 
-## Sizing (memory-verified 2026-07-20; RE-CONFIRM on 167 at implementation)
+## Sizing (live-verified 2026-07-21)
 
-The dev box cannot reach the DB (its IP is not in the 27017 allowlist), so these are from
-the RUPE-enrichment measurement, not a fresh count:
+The Task 11 live seed run confirmed these counts against the production database:
 
 | Quantity | Value |
 |---|---|
 | `rupe_registry` unique RUTs | 116,692 |
-| RUPE ⋂ awarded suppliers (`digits(supplierId)===rut`) | 39,020 (91.7% of 42,530) |
-| **RUPE-only (never won) ≈** | **77,672** |
+| RUPE ⋂ awarded suppliers (`digits(supplierId)===rut`) | 33,325 |
+| **RUPE-only (never won)** | **83,367** |
 | Currently contactable directory rows | ~2,200 |
 
-The seeding job (T4) prints the real counts on first run — treat the table as an estimate.
+The awarded-supplier set contained 36,775 unique RUTs. The initial seed and a full idempotence
+rerun both produced 83,367 RUPE-only rows with zero errors and zero reconciliation flips.
 
 ## Decisions (from brainstorming)
 
