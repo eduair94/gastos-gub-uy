@@ -9,7 +9,7 @@
  * así que se muestran en celeste — el oro queda reservado para el dinero del Estado.
  */
 import {
-  PROVIDERS, DIMENSIONS, METHODOLOGY, NEUTRALITY, RECOMMENDATION, VERIFIED_ON,
+  PROVIDERS, DIMENSIONS, ESTABLISHED, METHODOLOGY, NEUTRALITY, RECOMMENDATION, VERIFIED_ON,
   USD_UYU_REF, toPesos,
   type Provider, type Tri, type Currency,
 } from '~/data/comparativa-alertas'
@@ -61,8 +61,16 @@ function triValue(p: Provider, key: string): Tri {
   if (key === 'freeTier') return p.hasFreeTier ? 'si' : 'no'
   return 'desconocido'
 }
+function established(p: Provider): { year: number | null, basis: string } {
+  const e = ESTABLISHED[p.id]
+  return { year: e?.year ?? null, basis: e ? bi(e.basis) : '' }
+}
 function textValue(p: Provider, key: string): string {
   if (key === 'countryFocus') return bi(p.countryFocus)
+  if (key === 'established') {
+    const y = established(p).year
+    return y ? String(y) : t('comparativa.noDate')
+  }
   if (key === 'entryPaid') {
     if (!p.entryPaid) return t('comparativa.consultar')
     const approx = pesoText(p.entryPaid.amount, p.entryPaid.currency)
@@ -289,6 +297,13 @@ useSeo(() => ({
             </p>
             <p class="pcard__focus u-muted">
               {{ bi(p.countryFocus) }}
+            </p>
+            <p class="pcard__age u-muted">
+              <v-icon size="13">
+                mdi-calendar-clock
+              </v-icon>
+              <span>{{ established(p).year ? t('comparativa.onlineSince', { year: established(p).year }) : t('comparativa.noDate') }}</span>
+              <span class="pcard__agebasis">· {{ established(p).basis }}</span>
             </p>
 
             <ul class="pcard__plans">
@@ -524,7 +539,9 @@ useSeo(() => ({
 .pcard__conf--media { background: var(--celeste-wash); color: var(--celeste-deep); }
 .pcard__conf--baja { background: var(--surface-sunken); color: var(--text-muted); }
 .pcard__tag { font-size: var(--t-sm); margin: var(--s-2) 0 var(--s-1); }
-.pcard__focus { font-size: var(--t-xs); margin: 0 0 var(--s-3); }
+.pcard__focus { font-size: var(--t-xs); margin: 0 0 var(--s-1); }
+.pcard__age { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: var(--t-xs); margin: 0 0 var(--s-3); }
+.pcard__agebasis { opacity: 0.75; }
 .pcard__plans { list-style: none; margin: 0 0 var(--s-3); padding: 0; }
 .pcard__plans li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); padding: var(--s-1) 0; border-bottom: 1px dashed var(--rule); }
 .pcard__plan { font-family: var(--font-mono); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); min-width: 84px; }

@@ -147,6 +147,7 @@ export const PROVIDERS: Provider[] = [
     sources: ['https://proveedoruy.com/', 'https://proveedoruy.com/#planes', 'https://proveedoruy.com/#asesoria'],
     confidence: 'media',
     caveats: [
+      { es: 'Servicio nuevo: el dominio se registró en 2026 (RDAP). Tené en cuenta la corta trayectoria al evaluarlo.', en: 'New service: the domain was registered in 2026 (RDAP). Weigh its short track record when evaluating it.' },
       { es: 'El sitio muestra "$ 990" / "$ 1.990" con "+ IVA" pero no etiqueta la moneda: pesos es una inferencia por contexto, no un dato confirmado en pantalla.', en: 'The site shows "$ 990" / "$ 1,990" with "+ VAT" but does not label the currency: pesos is inferred from context, not confirmed on screen.' },
       { es: 'La asesoría jurídica es un servicio complementario que se coordina con el estudio; sus costos NO están incluidos en la suscripción.', en: 'Legal advice is a complementary service coordinated with the firm; its cost is NOT included in the subscription.' },
     ],
@@ -409,10 +410,34 @@ export const PROVIDERS: Provider[] = [
   },
 ]
 
+/**
+ * Antigüedad corroborada de cada dominio. Fuentes: RDAP (fecha de registro del
+ * dominio) y Wayback Machine (primer archivo web). Verificado 2026-07-21. Los
+ * dominios .uy no tienen whois público (NIC.uy no lo publica) y varios sitios
+ * nuevos aún no tienen snapshots en Wayback → "sin dato" (año null). Que un .uy
+ * figure "s/d" NO implica que sea antiguo: solo que su fecha no es pública.
+ */
+export const ESTABLISHED: Record<string, { year: number | null, basis: Bi }> = {
+  gubly: { year: null, basis: { es: '.uy sin whois público; sin archivo en Wayback', en: '.uy has no public whois; no Wayback archive' } },
+  proveedoruy: { year: 2026, basis: { es: 'dominio registrado el 2026-05-17 (RDAP)', en: 'domain registered 2026-05-17 (RDAP)' } },
+  clearbid: { year: null, basis: { es: '.uy sin whois público; sin archivo web', en: '.uy has no public whois; no web archive' } },
+  licitapro: { year: null, basis: { es: '.uy sin whois público; sin archivo web', en: '.uy has no public whois; no web archive' } },
+  licitaya: { year: null, basis: { es: 'marca Portal Genial (Brasil, 2004); dominio .uy sin fecha pública', en: 'Portal Genial brand (Brazil, 2004); .uy domain has no public date' } },
+  dsoluciones: { year: 2024, basis: { es: 'primer archivo web 2024 (Wayback)', en: 'first web archive 2024 (Wayback)' } },
+  trexia: { year: 2025, basis: { es: 'dominio registrado en 2025 (RDAP)', en: 'domain registered 2025 (RDAP)' } },
+  latamcompra: { year: 2015, basis: { es: 'dominio registrado en 2015 (RDAP)', en: 'domain registered 2015 (RDAP)' } },
+  b2btenders: { year: 2001, basis: { es: 'dominio activo desde 2001 (Wayback); registro actual 2021', en: 'domain active since 2001 (Wayback); current registration 2021' } },
+  licitacionespublica: { year: 2021, basis: { es: 'primer archivo web 2021 (Wayback)', en: 'first web archive 2021 (Wayback)' } },
+  ialicitaciones: { year: 2025, basis: { es: 'dominio registrado en 2025 (RDAP)', en: 'domain registered 2025 (RDAP)' } },
+  licitaia: { year: null, basis: { es: '.uy sin whois; sitio caído', en: '.uy no whois; site down' } },
+  neuratek: { year: 2024, basis: { es: 'dominio registrado en 2024 (RDAP)', en: 'domain registered 2024 (RDAP)' } },
+}
+
 /** Filas de la matriz objetiva, en orden. */
 export interface Dimension { key: string, label: Bi, help?: Bi }
 export const DIMENSIONS: Dimension[] = [
   { key: 'countryFocus', label: { es: 'Foco y fuente', en: 'Focus & source' }, help: { es: 'País y feed oficial que cubre.', en: 'Country and official feed covered.' } },
+  { key: 'established', label: { es: 'En línea desde', en: 'Online since' }, help: { es: 'Antigüedad del dominio (RDAP / archivo web). "s/d" = .uy sin whois público.', en: 'Domain age (RDAP / web archive). "s/d" = .uy with no public whois.' } },
   { key: 'entryPaid', label: { es: 'Precio de entrada', en: 'Entry price' }, help: { es: 'Plan pago más barato, en su moneda original (sin convertir).', en: 'Cheapest paid plan, in its original currency (no conversion).' } },
   { key: 'freeTier', label: { es: 'Gratis / prueba', en: 'Free / trial' } },
   { key: 'aiPliego', label: { es: 'Resumen IA de pliego', en: 'AI document summary' } },
@@ -423,8 +448,8 @@ export const DIMENSIONS: Dimension[] = [
 ]
 
 export const METHODOLOGY: Bi = {
-  es: `Datos relevados de los sitios oficiales de cada servicio en ${VERIFIED_ON}, con fuente por dato. Los precios se muestran tal cual (en su moneda: USD, pesos o euros) y NO se convierten entre sí: mezclan monedas, algunos cotizan "+ IVA" y otros por créditos, así que las cifras no son directamente comparables. Lo no publicado figura como "Consultar"; lo que no se pudo confirmar se marca como tal. Ningún proveedor cubre de forma verificable BPS ni intendencias: donde nombran la fuente, es ARCE/comprasestatales. Las cifras de volumen que cada empresa afirma no fueron verificadas de forma independiente.`,
-  en: `Data gathered from each service's official site on ${VERIFIED_ON}, sourced per fact. Prices are shown as-is (in their currency: USD, pesos or euros) and are NOT converted between each other: they mix currencies, some quote "+ VAT" and others by credits, so the figures are not directly comparable. Unpublished prices read "Consultar"; anything unconfirmable is marked. No provider verifiably covers BPS or municipalities: where a source is named, it is ARCE/comprasestatales. Volume figures each company claims were not independently verified.`,
+  es: `Datos relevados de los sitios oficiales de cada servicio en ${VERIFIED_ON}, con fuente por dato. Los precios se muestran tal cual (en su moneda: USD, pesos o euros) y NO se convierten entre sí: mezclan monedas, algunos cotizan "+ IVA" y otros por créditos, así que las cifras no son directamente comparables. Lo no publicado figura como "Consultar"; lo que no se pudo confirmar se marca como tal. La antigüedad ("en línea desde") se corroboró con RDAP (fecha de registro del dominio) y la Wayback Machine (primer archivo web); los dominios .uy no tienen whois público, así que varios figuran "s/d" —eso no significa que sean antiguos, sino que su fecha no es pública. Ningún proveedor cubre de forma verificable BPS ni intendencias: donde nombran la fuente, es ARCE/comprasestatales. Las cifras de volumen que cada empresa afirma no fueron verificadas de forma independiente.`,
+  en: `Data gathered from each service's official site on ${VERIFIED_ON}, sourced per fact. Prices are shown as-is (in their currency: USD, pesos or euros) and are NOT converted between each other: they mix currencies, some quote "+ VAT" and others by credits, so the figures are not directly comparable. Unpublished prices read "Consultar"; anything unconfirmable is marked. Age ("online since") was corroborated with RDAP (domain registration date) and the Wayback Machine (first web archive); .uy domains have no public whois, so several read "s/d" — that does not mean they are old, only that their date is not public. No provider verifiably covers BPS or municipalities: where a source is named, it is ARCE/comprasestatales. Volume figures each company claims were not independently verified.`,
 }
 
 export const NEUTRALITY: Bi = {
@@ -442,7 +467,7 @@ export const RECOMMENDATION = {
     en: 'For those just starting to bid on state tenders — the most common profile among Uruguayan SMEs — our recommendation is ProveedorUY. It is the only service in the survey that adds legal advice from a firm (Grupo Deana): RUPE registration and management, prior review of offers, clarifications and challenges before the Court of Accounts. It also adds a bid-management layer (item-by-item builder, compliance checklist, deadline calendar) that aggregators lack, AI document summaries and a 10-day no-card trial. For a supplier without an in-house legal team, that support cuts a tender\'s biggest risk: being disqualified over a formal error.',
   },
   caveat: {
-    es: 'Con dos salvedades objetivas: el sitio no etiqueta la moneda de sus precios (se infiere pesos) y la asesoría jurídica es un servicio aparte, con costo no incluido en la suscripción.',
-    en: 'With two objective caveats: the site does not label its price currency (pesos is inferred) and the legal advice is a separate service, at a cost not included in the subscription.',
+    es: 'Con salvedades objetivas: es un servicio nuevo (dominio registrado en 2026), el sitio no etiqueta la moneda de sus precios (se infiere pesos) y la asesoría jurídica es un servicio aparte, con costo no incluido en la suscripción.',
+    en: 'With objective caveats: it is a new service (domain registered in 2026), the site does not label its price currency (pesos is inferred) and the legal advice is a separate service, at a cost not included in the subscription.',
   },
 }

@@ -1828,6 +1828,8 @@
     "chartNote": "Los montos en dólares se convirtieron a pesos con un tipo de cambio de referencia para poder compararlos. Es una aproximación: la moneda y el precio originales figuran al lado en cada caso.",
     "visitSite": "Visitar sitio",
     "visitSiteNamed": "Ir a {name}",
+    "onlineSince": "En línea desde {year}",
+    "noDate": "s/d",
     "providersTitle": "Ficha de cada servicio",
     "regionalTitle": "Agregadores regionales",
     "regionalLead": "Plataformas de varios países donde Uruguay es una jurisdicción más y no siempre nombran la fuente oficial uruguaya. Útiles, pero con cobertura de Uruguay secundaria.",

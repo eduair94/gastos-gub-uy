@@ -1828,6 +1828,8 @@
     "chartNote": "Dollar amounts were converted to pesos at a reference exchange rate to compare them. It is an approximation: the original currency and price are shown alongside in each case.",
     "visitSite": "Visit site",
     "visitSiteNamed": "Go to {name}",
+    "onlineSince": "Online since {year}",
+    "noDate": "n/a",
     "providersTitle": "Each service in detail",
     "regionalTitle": "Regional aggregators",
     "regionalLead": "Multi-country platforms where Uruguay is just one jurisdiction and the official Uruguayan source is not always named. Useful, but with secondary Uruguay coverage.",
