@@ -12,6 +12,8 @@
  * mocked fetch.
  */
 
+import { readSseData } from "./sse";
+
 /** Gemini's Schema `type` enum is UPPERCASE (OpenAPI 3 proto). */
 export type GeminiType = "OBJECT" | "ARRAY" | "STRING" | "NUMBER" | "INTEGER" | "BOOLEAN";
 
@@ -51,6 +53,11 @@ export interface GeminiCallOptions {
   timeoutMs?: number;
   /** Attempts on 429 / 5xx / network error before giving up. */
   maxRetries?: number;
+  /** Stream response fragments and treat each received chunk as activity. */
+  stream?: boolean;
+  onProgress?: ((receivedChars: number) => void) | undefined;
+  /** Absolute ladder deadline; activity may renew inactivity, never this cap. */
+  deadlineAtMs?: number | undefined;
 }
 
 /** Thrown when a Gemini request fails with a status. `retryDelayMs` carries the
@@ -100,13 +107,15 @@ function sleep(ms: number): Promise<void> {
  * exhausting retries. HTTP failures throw `GeminiHttpError`.
  */
 export async function callGeminiStructured<T>(options: GeminiCallOptions): Promise<GeminiResult<T>> {
-  const { apiKey, model, systemInstruction, prompt, schema, temperature = 0, timeoutMs = 30_000, maxRetries = 4 } = options;
+  const { apiKey, model, systemInstruction, prompt, schema, temperature = 0, timeoutMs = 30_000, maxRetries = 4, stream = false, onProgress, deadlineAtMs } = options;
 
   if (!apiKey) {
     throw new Error("callGeminiStructured: missing apiKey");
   }
 
-  const url = `${API_ROOT}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const operation = stream ? "streamGenerateContent" : "generateContent";
+  const query = stream ? `alt=sse&key=${encodeURIComponent(apiKey)}` : `key=${encodeURIComponent(apiKey)}`;
+  const url = `${API_ROOT}/${encodeURIComponent(model)}:${operation}?${query}`;
   const body = {
     systemInstruction: { parts: [{ text: systemInstruction }] },
     contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -121,7 +130,14 @@ export async function callGeminiStructured<T>(options: GeminiCallOptions): Promi
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const renewTimeout = (): void => {
+      if (timer) clearTimeout(timer);
+      const deadlineRemaining = deadlineAtMs === undefined ? timeoutMs : deadlineAtMs - Date.now();
+      const delay = Math.max(1, Math.min(timeoutMs, deadlineRemaining));
+      timer = setTimeout(() => controller.abort(), delay);
+    };
+    renewTimeout();
 
     try {
       const response = await fetch(url, {
@@ -144,7 +160,25 @@ export async function callGeminiStructured<T>(options: GeminiCallOptions): Promi
         throw new GeminiHttpError(response.status, `Gemini ${response.status}: ${text.slice(0, 500)}`, retryDelay);
       }
 
-      const json = (await response.json()) as GeminiRawResponse;
+      let json: GeminiRawResponse;
+      let textPart = "";
+      if (stream) {
+        json = {};
+        await readSseData(response, (data) => {
+          if (data === "[DONE]") return;
+          const chunk = JSON.parse(data) as GeminiRawResponse;
+          const chunkText = chunk.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+          textPart += chunkText;
+          if (chunk.promptFeedback !== undefined) json.promptFeedback = chunk.promptFeedback;
+          if (chunk.usageMetadata !== undefined) json.usageMetadata = chunk.usageMetadata;
+          const finishReason = chunk.candidates?.[0]?.finishReason;
+          if (finishReason) json.candidates = [{ finishReason }];
+          try { onProgress?.(textPart.length); } catch { /* diagnostics must not break generation */ }
+        }, () => renewTimeout());
+      } else {
+        json = (await response.json()) as GeminiRawResponse;
+        textPart = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+      }
 
       const blockReason = json.promptFeedback?.blockReason;
       if (blockReason) {
@@ -158,7 +192,6 @@ export async function callGeminiStructured<T>(options: GeminiCallOptions): Promi
         throw new Error(`Gemini finished with ${finish}`);
       }
 
-      const textPart = candidate?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
       if (!textPart.trim()) {
         throw new Error("Gemini returned an empty response");
       }
@@ -190,7 +223,7 @@ export async function callGeminiStructured<T>(options: GeminiCallOptions): Promi
       }
       throw err;
     } finally {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
     }
   }
 

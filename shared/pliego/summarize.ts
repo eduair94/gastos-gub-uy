@@ -15,11 +15,20 @@ import { pliegoDocsSignature } from "./docs-signature";
 import { buildPliegoCorpus } from "./document-corpus";
 import type { GeminiSchema } from "../ai/gemini-client";
 import { ProviderRotator } from "../ai/rotator";
+import type { ModelGenerationProgress } from "../ai/rotator";
 
 const DISCLAIMER = "Resumen generado por IA. Verificá siempre el pliego oficial.";
 const MAX_INPUT_CHARS = 60_000;
 
 type GeneratedSummary = Omit<IPliegoSummary, "model" | "generatedAt" | "sourceDocs" | "disclaimer">;
+
+export interface PliegoGenerationOptions {
+  timeoutMs?: number | undefined;
+  maxRetriesPerModel?: number | undefined;
+  totalTimeoutMs?: number | undefined;
+  stream?: boolean | undefined;
+  onProgress?: ((progress: ModelGenerationProgress) => void) | undefined;
+}
 
 const SUMMARY_SCHEMA: GeminiSchema = {
   type: "OBJECT",
@@ -85,7 +94,11 @@ export function buildPliegoRotator(): ProviderRotator {
  * (no key, no pliego, no extractable text, or the whole model ladder failed).
  * Pass a shared `rotator` to reuse its per-run model cooldowns across calls.
  */
-export async function summarizeOpenCall(compraId: string, rotator?: ProviderRotator): Promise<IPliegoSummary | null> {
+export async function summarizeOpenCall(
+  compraId: string,
+  rotator?: ProviderRotator,
+  generationOptions: PliegoGenerationOptions = {},
+): Promise<IPliegoSummary | null> {
   const rot = rotator ?? buildPliegoRotator();
   if (!rot.available) return null;
 
@@ -125,7 +138,11 @@ export async function summarizeOpenCall(compraId: string, rotator?: ProviderRota
       prompt,
       schema: SUMMARY_SCHEMA,
       temperature: 0,
-      timeoutMs: 45_000,
+      timeoutMs: generationOptions.timeoutMs ?? 45_000,
+      maxRetriesPerModel: generationOptions.maxRetriesPerModel,
+      totalTimeoutMs: generationOptions.totalTimeoutMs,
+      stream: generationOptions.stream,
+      onProgress: generationOptions.onProgress,
     });
     generated = res.data;
     modelUsed = res.modelUsed;

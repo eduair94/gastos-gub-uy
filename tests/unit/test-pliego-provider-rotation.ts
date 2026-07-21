@@ -44,8 +44,8 @@ function groq429(): Response {
 }
 
 const realFetch = globalThis.fetch;
-function mockFetch(handler: (url: string) => Response) {
-  globalThis.fetch = (async (url: any) => handler(String(url))) as typeof fetch;
+function mockFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>) {
+  globalThis.fetch = (async (url: any, init?: RequestInit) => handler(String(url), init)) as typeof fetch;
 }
 
 async function run() {
@@ -104,6 +104,93 @@ async function run() {
   {
     const rot = new ProviderRotator({});
     assert.strictEqual(rot.available, false, "no keys → not available");
+  }
+
+  // 5) Interactive mode makes one attempt per model instead of multiplying a
+  // proxy timeout by the provider clients' default retry counts.
+  let geminiAttempts = 0;
+  mockFetch((url) => {
+    if (url.includes("generativelanguage.googleapis.com")) {
+      geminiAttempts++;
+      return new Response("unavailable", { status: 503 });
+    }
+    if (url.includes("api.groq.com")) return groqOk();
+    throw new Error(`unexpected url ${url}`);
+  });
+  {
+    const rot = new ProviderRotator({
+      geminiApiKey: "g", groqApiKey: "q",
+      geminiModels: ["gemini-2.5-flash-lite"], groqModels: ["llama-3.3-70b-versatile"],
+    });
+    const { modelUsed } = await rot.generateStructured<typeof VALID>({
+      systemInstruction: "s", prompt: "p", schema: SCHEMA, maxRetriesPerModel: 0,
+    });
+    assert.strictEqual(geminiAttempts, 1, "interactive mode must not retry one failing model");
+    assert.strictEqual(modelUsed, "groq:llama-3.3-70b-versatile");
+  }
+
+  // 6) The full ladder respects one total wall-clock budget.
+  let timedCalls = 0;
+  mockFetch((_url, init) => {
+    timedCalls++;
+    return new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => {
+        const error = new Error("aborted");
+        error.name = "AbortError";
+        reject(error);
+      }, { once: true });
+    });
+  });
+  {
+    const rot = new ProviderRotator({
+      geminiApiKey: "g",
+      geminiModels: ["one", "two", "three"],
+    });
+    const started = Date.now();
+    await assert.rejects(() => rot.generateStructured<typeof VALID>({
+      systemInstruction: "s", prompt: "p", schema: SCHEMA,
+      timeoutMs: 1_000, maxRetriesPerModel: 0, totalTimeoutMs: 30,
+    }));
+    assert.ok(Date.now() - started < 250, "total budget should abort the ladder promptly");
+    assert.strictEqual(timedCalls, 1, "expired total budget must prevent later model calls");
+  }
+
+  // 7) SSE fragments count as activity: a response may take longer than the
+  // per-request inactivity timeout as long as it keeps producing output.
+  const fragments = JSON.stringify(VALID).match(/.{1,18}/g) ?? [];
+  let requestedStreaming = false;
+  mockFetch((_url, init) => {
+    requestedStreaming = JSON.parse(String(init?.body)).stream === true;
+    const encoder = new TextEncoder();
+    let index = 0;
+    return new Response(new ReadableStream({
+      start(controller) {
+        const push = () => {
+          if (index < fragments.length) {
+            const event = { choices: [{ delta: { content: fragments[index++] } }] };
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+            setTimeout(push, 20);
+          } else {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+          }
+        };
+        push();
+      },
+    }), { status: 200, headers: { "content-type": "text/event-stream" } });
+  });
+  {
+    const progress: number[] = [];
+    const rot = new ProviderRotator({ groqApiKey: "q", groqModels: ["streaming-model"] });
+    const { data, modelUsed } = await rot.generateStructured<typeof VALID>({
+      systemInstruction: "s", prompt: "p", schema: SCHEMA,
+      stream: true, timeoutMs: 35, totalTimeoutMs: 1_000, maxRetriesPerModel: 0,
+      onProgress: event => progress.push(event.receivedChars),
+    });
+    assert.strictEqual(requestedStreaming, true, "interactive request must enable provider streaming");
+    assert.strictEqual(modelUsed, "groq:streaming-model");
+    assert.deepStrictEqual(data, VALID);
+    assert.ok(progress.some(chars => chars > 0), "partial model output must be observable before completion");
   }
 }
 

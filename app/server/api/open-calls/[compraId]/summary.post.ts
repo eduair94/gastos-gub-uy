@@ -1,25 +1,23 @@
-import { createError, defineEventHandler, getRouterParam } from 'h3'
+import { createError, defineEventHandler, getRouterParam, setResponseStatus } from 'h3'
 import { connectToDatabase } from '../../../utils/database'
 import { OpenCallModel } from '../../../../../shared/models/open_call'
-import { summarizeOpenCall } from '../../../../../shared/pliego/summarize'
 import { enforcePliegoSummaryLimit } from '../../../utils/aiRateLimit'
 import { isSupportedPliegoDocument } from '../../../../../shared/services/pliego-extractor'
+import { pliegoDocsSignature } from '../../../../../shared/pliego/docs-signature'
+import { isPliegoGenerationRunning, startPliegoSummaryGeneration } from '../../../utils/pliegoSummaryGeneration'
 
-// On-demand pliego summary generation. Runs PDF/Word extraction + the free-tier model
-// ladder (Gemini → Groq) in the request path, so it is tightly rate-limited per
-// IP (aiRateLimit) on top of the global limiter to protect the shared daily quota.
-// Idempotent: if a fresh summary already exists it is returned without spending
-// budget; a modified pliego (signature changed) is regenerated.
+// Enqueues one on-demand generation and returns immediately. A Mongo lease makes
+// every tab/request for this compraId join the same background run; clients poll
+// GET /summary instead of holding a proxy connection through the model ladder.
 export default defineEventHandler(async (event) => {
   const compraId = getRouterParam(event, 'compraId')
   if (!compraId) {
     throw createError({ statusCode: 400, statusMessage: 'Falta compraId' })
   }
 
-  enforcePliegoSummaryLimit(event)
   await connectToDatabase()
 
-  const call = await OpenCallModel.findOne({ compraId }).select('documents').lean()
+  const call = await OpenCallModel.findOne({ compraId }).select('documents aiSummary aiSummaryGeneration').lean()
   if (!call) {
     throw createError({ statusCode: 404, statusMessage: 'Llamado no encontrado' })
   }
@@ -28,12 +26,29 @@ export default defineEventHandler(async (event) => {
     return { success: true, data: { available: false, hasPliego: false } }
   }
 
-  const summary = await summarizeOpenCall(compraId)
-  if (!summary) {
-    // Reachable when no provider key is set, the PDF had no extractable text, or
-    // the whole model ladder was rate-limited. Not a server error — a soft miss.
-    return { success: true, data: { available: false, hasPliego: true, error: 'generation-failed' } }
+  const currentSignature = pliegoDocsSignature(call.documents)
+  const fresh = call.aiSummary
+    && (call.aiSummary.docsSignature === undefined || call.aiSummary.docsSignature === currentSignature)
+  if (fresh) {
+    return { success: true, data: { available: true, summary: call.aiSummary, stale: false, generating: false } }
   }
 
-  return { success: true, data: { available: true, summary } }
+  // Joining an existing lease is free: repeated clicks/tabs must not consume the
+  // per-IP generation budget or start another provider ladder.
+  if (isPliegoGenerationRunning(call.aiSummaryGeneration)) {
+    setResponseStatus(event, 202)
+    return {
+      success: true,
+      data: { available: Boolean(call.aiSummary), summary: call.aiSummary, stale: Boolean(call.aiSummary), generating: true, started: false },
+    }
+  }
+
+  enforcePliegoSummaryLimit(event)
+  const generation = await startPliegoSummaryGeneration(compraId)
+  if (generation.promise) event.waitUntil(generation.promise)
+  setResponseStatus(event, 202)
+  return {
+    success: true,
+    data: { available: Boolean(call.aiSummary), summary: call.aiSummary, stale: Boolean(call.aiSummary), generating: true, started: generation.started },
+  }
 })

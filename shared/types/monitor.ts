@@ -135,6 +135,22 @@ export interface IPliegoSummary {
   docsSignature?: string | undefined
 }
 
+export type PliegoSummaryGenerationStatus = 'running' | 'complete' | 'failed'
+
+// Distributed single-flight state for on-demand generation. A lease prevents
+// concurrent Nitro workers/tabs from starting the same expensive model ladder.
+export interface IPliegoSummaryGeneration {
+  status: PliegoSummaryGenerationStatus
+  leaseId?: string | undefined
+  startedAt: Date
+  leaseUntil?: Date | undefined
+  finishedAt?: Date | undefined
+  lastError?: string | undefined
+  model?: string | undefined
+  lastActivityAt?: Date | undefined
+  receivedChars?: number | undefined
+}
+
 export interface IOpenCall extends Document {
   compraId: string
   ocid: string
@@ -168,6 +184,7 @@ export interface IOpenCall extends Document {
   // pliego and invalidate a stale AI summary. See shared/pliego/docs-signature.ts.
   pliegoDocsSignature?: string | undefined
   aiSummary?: IPliegoSummary | undefined
+  aiSummaryGeneration?: IPliegoSummaryGeneration | undefined
   awardRef?: { releaseId: string, ocid: string, awardedAt?: Date | undefined } | undefined
   // $setOnInsert only — "is this NEW?" (drives alerts). Never updated on resync.
   firstSeenAt: Date

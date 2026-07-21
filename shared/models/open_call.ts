@@ -128,6 +128,19 @@ const OpenCallSchema = new Schema<IOpenCall>(
     // change vs aiSummary.docsSignature means the pliego was modified → regenerate.
     pliegoDocsSignature: { type: String },
     aiSummary: { type: PliegoSummarySchema, default: undefined },
+    // Mongo-backed lease for one on-demand generation per compraId. The lease
+    // survives multiple tabs/workers and expires if a process dies mid-run.
+    aiSummaryGeneration: {
+      status: { type: String, enum: ["running", "complete", "failed"] },
+      leaseId: { type: String },
+      startedAt: { type: Date },
+      leaseUntil: { type: Date },
+      finishedAt: { type: Date },
+      lastError: { type: String },
+      model: { type: String },
+      lastActivityAt: { type: Date },
+      receivedChars: { type: Number },
+    },
     awardRef: {
       releaseId: { type: String },
       ocid: { type: String },

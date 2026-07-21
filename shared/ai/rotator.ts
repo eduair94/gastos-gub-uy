@@ -35,6 +35,18 @@ export interface GenerateArgs {
   schema: GeminiSchema;
   temperature?: number | undefined;
   timeoutMs?: number | undefined;
+  /** Retries inside each provider/model. Batch defaults stay unchanged. */
+  maxRetriesPerModel?: number | undefined;
+  /** Overall wall-clock budget across the full model ladder. */
+  totalTimeoutMs?: number | undefined;
+  /** Prefer provider SSE and report partial response activity. */
+  stream?: boolean | undefined;
+  onProgress?: ((progress: ModelGenerationProgress) => void) | undefined;
+}
+
+export interface ModelGenerationProgress {
+  modelUsed: string;
+  receivedChars: number;
 }
 
 export interface GenerateResult<T> {
@@ -115,12 +127,22 @@ export class ProviderRotator {
     if (!this.available) throw new Error("ProviderRotator: no providers configured");
 
     let lastError: Error | null = null;
+    const deadline = args.totalTimeoutMs === undefined ? null : Date.now() + args.totalTimeoutMs;
 
     for (const m of this.ladder) {
       const key = label(m);
       if (this.cooldown.has(key)) continue;
+      const remainingMs = deadline === null ? null : deadline - Date.now();
+      if (remainingMs !== null && remainingMs <= 0) break;
+      const requestTimeoutMs = remainingMs === null
+        ? args.timeoutMs
+        : Math.max(1, Math.min(args.timeoutMs ?? 45_000, remainingMs));
 
       try {
+        const onProgress = (receivedChars: number): void => {
+          try { args.onProgress?.({ modelUsed: key, receivedChars }); } catch { /* diagnostics only */ }
+        };
+        onProgress(0);
         if (m.provider === "gemini") {
           const { data } = await callGeminiStructured<T>({
             apiKey: this.geminiApiKey!,
@@ -129,7 +151,11 @@ export class ProviderRotator {
             prompt: args.prompt,
             schema: args.schema,
             temperature: args.temperature ?? 0,
-            timeoutMs: args.timeoutMs ?? 45_000,
+            timeoutMs: requestTimeoutMs ?? 45_000,
+            stream: args.stream ?? false,
+            onProgress,
+            ...(deadline === null ? {} : { deadlineAtMs: deadline }),
+            ...(args.maxRetriesPerModel === undefined ? {} : { maxRetries: args.maxRetriesPerModel }),
           });
           return { data, modelUsed: key };
         } else {
@@ -140,7 +166,11 @@ export class ProviderRotator {
             prompt: args.prompt,
             schema: args.schema,
             temperature: args.temperature ?? 0,
-            timeoutMs: args.timeoutMs ?? 45_000,
+            timeoutMs: requestTimeoutMs ?? 45_000,
+            stream: args.stream ?? false,
+            onProgress,
+            ...(deadline === null ? {} : { deadlineAtMs: deadline }),
+            ...(args.maxRetriesPerModel === undefined ? {} : { maxRetries: args.maxRetriesPerModel }),
           });
           return { data, modelUsed: key };
         }
@@ -152,7 +182,7 @@ export class ProviderRotator {
       }
     }
 
-    throw lastError ?? new Error("ProviderRotator: ladder exhausted with no error");
+    throw lastError ?? new Error("ProviderRotator: model ladder exceeded its total time budget");
   }
 }
 

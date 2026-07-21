@@ -10,6 +10,7 @@
  */
 import type { GeminiSchema } from "./gemini-client";
 import { geminiToJsonSchema, requiredKeys } from "./json-schema";
+import { readSseData } from "./sse";
 
 export interface GroqUsage {
   promptTokens: number;
@@ -32,6 +33,11 @@ export interface GroqCallOptions {
   temperature?: number;
   timeoutMs?: number;
   maxRetries?: number;
+  /** Stream response fragments and treat each received chunk as activity. */
+  stream?: boolean;
+  onProgress?: ((receivedChars: number) => void) | undefined;
+  /** Absolute ladder deadline; activity may renew inactivity, never this cap. */
+  deadlineAtMs?: number | undefined;
 }
 
 export class GroqHttpError extends Error {
@@ -65,7 +71,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 export async function callGroqStructured<T>(options: GroqCallOptions): Promise<GroqResult<T>> {
-  const { apiKey, model, systemInstruction, prompt, schema, temperature = 0, timeoutMs = 45_000, maxRetries = 3 } = options;
+  const { apiKey, model, systemInstruction, prompt, schema, temperature = 0, timeoutMs = 45_000, maxRetries = 3, stream = false, onProgress, deadlineAtMs } = options;
 
   if (!apiKey) throw new Error("callGroqStructured: missing apiKey");
 
@@ -84,6 +90,7 @@ export async function callGroqStructured<T>(options: GroqCallOptions): Promise<G
     ],
     temperature,
     response_format: { type: "json_object" as const },
+    ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
   };
 
   const needed = requiredKeys(schema);
@@ -91,7 +98,14 @@ export async function callGroqStructured<T>(options: GroqCallOptions): Promise<G
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const renewTimeout = (): void => {
+      if (timer) clearTimeout(timer);
+      const deadlineRemaining = deadlineAtMs === undefined ? timeoutMs : deadlineAtMs - Date.now();
+      const delay = Math.max(1, Math.min(timeoutMs, deadlineRemaining));
+      timer = setTimeout(() => controller.abort(), delay);
+    };
+    renewTimeout();
 
     try {
       const response = await fetch(API_URL, {
@@ -115,8 +129,21 @@ export async function callGroqStructured<T>(options: GroqCallOptions): Promise<G
         throw new GroqHttpError(response.status, `Groq ${response.status}: ${text.slice(0, 500)}`, retryDelay);
       }
 
-      const json = (await response.json()) as GroqRawResponse;
-      const content = json.choices?.[0]?.message?.content ?? "";
+      let json: GroqRawResponse;
+      let content = "";
+      if (stream) {
+        json = {};
+        await readSseData(response, (data) => {
+          if (data === "[DONE]") return;
+          const chunk = JSON.parse(data) as GroqStreamChunk;
+          content += chunk.choices?.[0]?.delta?.content ?? "";
+          if (chunk.usage !== undefined) json.usage = chunk.usage;
+          try { onProgress?.(content.length); } catch { /* diagnostics must not break generation */ }
+        }, () => renewTimeout());
+      } else {
+        json = (await response.json()) as GroqRawResponse;
+        content = json.choices?.[0]?.message?.content ?? "";
+      }
       if (!content.trim()) throw new Error("Groq returned an empty response");
 
       let parsed: T;
@@ -153,7 +180,7 @@ export async function callGroqStructured<T>(options: GroqCallOptions): Promise<G
       }
       throw err;
     } finally {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
     }
   }
 
@@ -162,5 +189,10 @@ export async function callGroqStructured<T>(options: GroqCallOptions): Promise<G
 
 interface GroqRawResponse {
   choices?: Array<{ message?: { content?: string } }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+}
+
+interface GroqStreamChunk {
+  choices?: Array<{ delta?: { content?: string } }>;
   usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
 }

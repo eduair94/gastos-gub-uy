@@ -16,7 +16,16 @@ interface Summary {
 }
 
 interface SummaryResponse {
-  data: { available: boolean, summary?: Summary, hasPliego?: boolean, stale?: boolean, error?: string }
+  data: {
+    available: boolean
+    summary?: Summary
+    hasPliego?: boolean
+    stale?: boolean
+    generating?: boolean
+    started?: boolean
+    generation?: { model?: string, lastActivityAt?: string, receivedChars?: number }
+    error?: string
+  }
 }
 
 const props = defineProps<{ compraId: string, hasBenchmarks?: boolean }>()
@@ -31,12 +40,66 @@ const stale = ref(false)
 const s = ref<Summary>({})
 const generating = ref(false)
 const genError = ref('')
+const streamingModel = ref('')
+let pollPromise: Promise<void> | null = null
+let disposed = false
 
 const { data } = await useFetch<SummaryResponse>(() => `/api/open-calls/${props.compraId}/summary`)
-available.value = data.value?.data?.available === true
-hasPliego.value = data.value?.data?.hasPliego !== false
-stale.value = data.value?.data?.stale === true
-s.value = data.value?.data?.summary ?? {}
+
+function applyResponse(res: SummaryResponse | null | undefined) {
+  if (!res?.data) return
+  available.value = res.data.available === true
+  hasPliego.value = res.data.hasPliego !== false
+  stale.value = res.data.stale === true
+  generating.value = res.data.generating === true
+  streamingModel.value = (res.data.generation?.receivedChars ?? 0) > 0
+    ? (res.data.generation?.model ?? '')
+    : ''
+  if (res.data.summary) s.value = res.data.summary
+  if (res.data.error && !generating.value) genError.value = t('llamados.summaryError')
+}
+
+applyResponse(data.value)
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function pollSummary(): Promise<void> {
+  if (pollPromise) return pollPromise
+  pollPromise = (async () => {
+    const deadline = Date.now() + 7 * 60_000
+    while (!disposed && generating.value && Date.now() < deadline) {
+      await delay(2_500)
+      if (disposed) return
+      try {
+        const res = await $fetch<SummaryResponse>(`/api/open-calls/${props.compraId}/summary`)
+        applyResponse(res)
+        if (!generating.value) {
+          if (!available.value || stale.value) genError.value = t('llamados.summaryError')
+          return
+        }
+      }
+      catch {
+        // A transient polling miss must not start another generation. Keep
+        // following the shared server-side lease until it resolves or expires.
+      }
+    }
+    if (!disposed && generating.value) {
+      generating.value = false
+      genError.value = t('llamados.summaryError')
+    }
+  })().finally(() => { pollPromise = null })
+  return pollPromise
+}
+
+onMounted(() => {
+  if (generating.value) void pollSummary()
+})
+
+onBeforeUnmount(() => {
+  disposed = true
+})
 
 async function generate() {
   if (generating.value) return
@@ -44,22 +107,14 @@ async function generate() {
   genError.value = ''
   try {
     const res = await $fetch<SummaryResponse>(`/api/open-calls/${props.compraId}/summary`, { method: 'POST' })
-    if (res?.data?.available && res.data.summary) {
-      s.value = res.data.summary
-      available.value = true
-      stale.value = false
-    }
-    else {
-      hasPliego.value = res?.data?.hasPliego !== false
-      genError.value = hasPliego.value ? t('llamados.summaryError') : ''
-    }
+    applyResponse(res)
+    if (generating.value) void pollSummary()
+    else if (!available.value || stale.value) genError.value = hasPliego.value ? t('llamados.summaryError') : ''
   }
   catch (err: any) {
     // 429 (rate limit) carries a friendly statusMessage; anything else is a soft failure.
-    genError.value = err?.data?.statusMessage || err?.statusMessage || t('llamados.summaryError')
-  }
-  finally {
     generating.value = false
+    genError.value = err?.data?.statusMessage || err?.statusMessage || t('llamados.summaryError')
   }
 }
 </script>
@@ -86,6 +141,13 @@ async function generate() {
         >
           {{ generating ? t('llamados.summaryGenerating') : t('llamados.summaryRefresh') }}
         </button>
+        <span
+          v-if="streamingModel"
+          class="pliego__stream u-muted u-mono"
+        >
+          <v-icon size="14">mdi-loading mdi-spin</v-icon>
+          {{ t('llamados.summaryModel', { model: streamingModel }) }}
+        </span>
       </p>
 
       <p
@@ -216,6 +278,13 @@ async function generate() {
           {{ generating ? t('llamados.summaryGenerating') : t('llamados.summaryGenerate') }}
         </button>
         <p
+          v-if="streamingModel"
+          class="pliego__stream u-muted u-mono"
+        >
+          <v-icon size="14">mdi-loading mdi-spin</v-icon>
+          {{ t('llamados.summaryModel', { model: streamingModel }) }}
+        </p>
+        <p
           v-if="genError"
           class="pliego__err"
         >
@@ -296,4 +365,5 @@ async function generate() {
 }
 .pliego__refresh { padding: 2px var(--s-2); text-transform: none; }
 .pliego__err { font-size: var(--t-sm); color: var(--alerta); margin: var(--s-2) 0 0; }
+.pliego__stream { display: inline-flex; align-items: center; gap: var(--s-1); font-size: var(--t-xs); margin: var(--s-2) 0 0; }
 </style>
