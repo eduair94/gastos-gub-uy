@@ -67,6 +67,35 @@ module.exports = {
       health_check_grace_period: 3000,
       // Additional environment variables
       env_file: '.env'
+    },
+    {
+      // Continuously drains RUPE companies that have never received an award.
+      // Each successful supplier is checkpointed through enrichedAt, so PM2
+      // restarts and deploys resume safely without repeating the current pass.
+      name: 'gastos-gub-contact-enrichment',
+      script: './node_modules/tsx/dist/cli.mjs',
+      args: 'src/jobs/enrich-supplier-contacts.ts --registry-only --loop --limit=100 --stale-days=365 --pause-ms=60000 --require-crawl4ai --require-google-maps',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production'
+      },
+      env_production: {
+        NODE_ENV: 'production'
+      },
+      watch: false,
+      max_memory_restart: '1G',
+      time: true,
+      restart_delay: 10000,
+      max_restarts: 20,
+      min_uptime: '30s',
+      kill_timeout: 30000,
+      log_file: './logs/contact-enrichment.log',
+      out_file: './logs/contact-enrichment-out.log',
+      error_file: './logs/contact-enrichment-error.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      env_file: '.env'
     }
   ],
 };

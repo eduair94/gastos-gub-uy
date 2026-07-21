@@ -35,5 +35,24 @@ jobs:
           cd /root/gastos-gub-uy
           git fetch origin master
           git reset --hard origin/master
+          npm ci
           npm --prefix app ci
           node scripts/deploy-dashboard.mjs
+          npm run ensure-indexes
+          pm2 startOrRestart ecosystem.config.js --only gastos-gub-cronserver --env production
+          pm2 startOrRestart ecosystem.config.js --only gastos-gub-contact-enrichment --env production
+          pm2 save
+          sleep 20
+          node - <<'NODE'
+          const { execFileSync } = require('node:child_process')
+          const processes = JSON.parse(execFileSync('pm2', ['jlist'], { encoding: 'utf8' }))
+          for (const name of ['gastos-gub-cronserver', 'gastos-gub-contact-enrichment']) {
+            const process = processes.find(candidate => candidate.name === name)
+            if (process?.pm2_env?.status !== 'online') {
+              throw new Error(`${name} is not online after deploy (status: ${process?.pm2_env?.status ?? 'missing'})`)
+            }
+          }
+          NODE
+          pm2 show gastos-gub-cronserver
+          pm2 show gastos-gub-contact-enrichment
+          pm2 logs gastos-gub-contact-enrichment --lines 20 --nostream

@@ -16,6 +16,7 @@ import { createGeminiJudge } from "./enrich/match-judge";
 import { fetchHtml, search, searchGazette, findPlace, placeDetails } from "./enrich/backends";
 import { crawl4aiBaseUrl, createCrawl4aiTransport } from "./enrich/crawl4ai";
 import { createWebsiteVerifier, createWebsiteJudge, isDirectoryUrl, websiteSourceRank } from "./enrich/website-verify";
+import { mergeStoredPlace, registryContactQuery, registryContactToSupplier, type EnrichmentSupplier } from "./enrich/candidates";
 import type { PlaceInfo } from "./enrich/types";
 import type { FieldSource, WebsiteSource } from "../../shared/models/supplier_contacts";
 
@@ -32,6 +33,11 @@ async function main() {
   const limit = Number(arg("limit") ?? "100");
   const minPriority = Number(arg("minPriority") ?? "0");
   const staleDays = Number(arg("stale-days") ?? "90");
+  const registryOnly = flag("registry-only");
+  const loop = flag("loop");
+  const requireCrawl4ai = flag("require-crawl4ai");
+  const requireGoogleMaps = flag("require-google-maps");
+  const pauseMs = Math.max(1_000, Number(arg("pause-ms") ?? "60000"));
   const wanted = new Set((arg("sources") ?? "dei,rupe,website,webSearch,impo,googleMaps").split(","));
 
   // DNS canary: if the runtime can't reach a resolver at all, mxValid() will
@@ -47,7 +53,7 @@ async function main() {
         "❌ DNS unavailable in this environment; MX validation would mark every email invalid " +
         "— aborting to avoid writing an all-null dataset. Run on a network-capable host.",
       );
-      process.exit(1);
+      throw new Error("DNS unavailable; refusing to run contact enrichment");
     }
     // Anything else (e.g. gmail.com genuinely returning no records) is not a
     // connectivity failure — DNS clearly works enough to give a definitive
@@ -64,6 +70,7 @@ async function main() {
   // Fetch/search transport: crawl4ai (headless, server-side, JS-capable, paced to
   // avoid rate-limits) when CRAWL4AI_BASE_URL is set; else the direct axios backends.
   const c4Base = crawl4aiBaseUrl();
+  if (requireCrawl4ai && !c4Base) throw new Error("CRAWL4AI_BASE_URL is required for this enrichment worker");
   const transport = c4Base ? createCrawl4aiTransport({ baseUrl: c4Base }) : null;
   const fetchHtmlX = transport?.fetchHtml ?? fetchHtml;
   const searchX = transport?.search ?? search;
@@ -96,19 +103,33 @@ async function main() {
   if (wanted.has("googleMaps")) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
+      if (requireGoogleMaps) throw new Error("GEMINI_API_KEY is required for Google Maps match verification");
       console.warn("⚠️ googleMaps requested but GEMINI_API_KEY is unset — skipping the match judge would accept false matches; resolver NOT registered.");
     } else {
       resolvers.push(createGoogleMapsResolver({ findPlace, placeDetails, judge: createGeminiJudge({ apiKey }) }));
     }
   }
 
-  // Candidate suppliers by spend priority, skipping fresh ones.
+  do {
+  // Awarded suppliers retain spend-priority ordering. RUPE-only suppliers are
+  // read directly from supplier_contacts because they have no supplier_pattern.
   const staleBefore = new Date(Date.now() - staleDays * 864e5);
-  const suppliers = await db.collection("supplier_patterns")
-    .find({}, { projection: { supplierId: 1, name: 1, totalValue: 1, totalContracts: 1 } })
-    .sort({ totalValue: -1 })
-    .limit(limit * 4) // over-fetch; we filter fresh ones below
-    .toArray();
+  const suppliers: EnrichmentSupplier[] = registryOnly
+    ? (await db.collection("supplier_contacts")
+      .find(registryContactQuery(staleBefore), { projection: { supplierId: 1, name: 1 } })
+      .sort({ enrichedAt: 1, _id: 1 })
+      .limit(limit)
+      .toArray()).map(registryContactToSupplier)
+    : (await db.collection("supplier_patterns")
+      .find({}, { projection: { supplierId: 1, name: 1, totalValue: 1, totalContracts: 1 } })
+      .sort({ totalValue: -1 })
+      .limit(limit * 4)
+      .toArray()).map(s => ({
+        supplierId: String(s.supplierId ?? ""),
+        name: String(s.name ?? ""),
+        totalValue: Number(s.totalValue ?? 0),
+        totalContracts: Number(s.totalContracts ?? 0),
+      }));
 
   let processed = 0;
   let errors = 0;
@@ -122,7 +143,10 @@ async function main() {
     // guards the DB ops so a transient Mongo error on ONE supplier doesn't
     // abort the whole batch.
     try {
-      const existing = await SupplierContactModel.findOne({ supplierId }, { enrichedAt: 1, status: 1, website: 1, websiteSource: 1 }).lean();
+      const existing = await SupplierContactModel.findOne({ supplierId }, {
+        enrichedAt: 1, status: 1, website: 1, websiteSource: 1, phone: 1, phoneSource: 1,
+        address: 1, locality: 1, lat: 1, lng: 1, hours: 1, mapsUrl: 1, placeId: 1, placeSource: 1,
+      }).lean();
       if (existing && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore) continue;
 
       const rut = digits(supplierId);
@@ -141,8 +165,8 @@ async function main() {
       let website: string | null = seededSite;
       let websiteSource: WebsiteSource | null = seededSite ? (existing?.websiteSource ?? null) : null;
       let websiteRank = seededSite ? websiteSourceRank(websiteSource) : -1;
-      let phone: string | null = null;
-      let phoneSource: FieldSource | null = null;
+      let phone: string | null = existing?.phone ?? null;
+      let phoneSource: FieldSource | null = existing?.phoneSource ?? null;
       let place: PlaceInfo | null = null;
       for (let i = 0; i < resolvers.length; i++) {
         const r = resolvers[i];
@@ -165,6 +189,7 @@ async function main() {
       const primaryEmail = pickPrimary(emails);
       const rubros = await deriveRubros(db, supplierId, 5).catch(() => []);
       const status = emails.length ? "enriched" : "no_contact";
+      const storedPlace = mergeStoredPlace(place, existing ?? {});
 
       processed++;
       if (dryRun) {
@@ -175,14 +200,7 @@ async function main() {
         { supplierId },
         { $set: {
           supplierId, rut, name, emails, primaryEmail, website, websiteSource, phone, phoneSource,
-          address: place?.address ?? null,
-          locality: place?.locality ?? null,
-          lat: place?.lat ?? null,
-          lng: place?.lng ?? null,
-          hours: place?.hours ?? null,
-          mapsUrl: place?.mapsUrl ?? null,
-          placeId: place?.placeId ?? null,
-          placeSource: place?.source ?? null,
+          ...storedPlace,
           rubros, status, priorityScore, enrichedAt: new Date(),
         } },
         { upsert: true },
@@ -190,12 +208,21 @@ async function main() {
       if (processed % 25 === 0) console.log(`   …${processed}/${limit}`);
     } catch (e) {
       errors++;
+      await SupplierContactModel.updateOne(
+        { supplierId },
+        { $set: { status: "error", enrichedAt: new Date() } },
+      ).catch(() => undefined);
       console.error(`   ⚠️ supplier ${supplierId} failed, skipping:`, e instanceof Error ? e.message : e);
     }
   }
 
   const withEmail = await SupplierContactModel.countDocuments({ primaryEmail: { $ne: null } });
-  console.log(`✅ processed ${processed}; supplier_contacts with a primary email: ${withEmail}; errors: ${errors}`);
+  console.log(`✅ processed ${processed} ${registryOnly ? "RUPE-only" : "awarded"}; supplier_contacts with a primary email: ${withEmail}; errors: ${errors}`);
+  if (loop) {
+    console.log(`⏳ next enrichment batch in ${Math.round(pauseMs / 1000)}s`);
+    await sleep(pauseMs);
+  }
+  } while (loop);
   await disconnectFromDatabase();
 }
 

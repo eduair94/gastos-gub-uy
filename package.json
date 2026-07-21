@@ -34,6 +34,7 @@
     "load-rupe": "tsx src/jobs/load-rupe.ts",
     "geocode-rupe": "tsx src/jobs/geocode-rupe.ts",
     "seed-rupe-only-contacts": "tsx src/jobs/seed-rupe-only-contacts.ts",
+    "enrich-supplier-contacts": "tsx src/jobs/enrich-supplier-contacts.ts",
     "sync-open-calls": "tsx src/jobs/sync-open-calls.ts",
     "backfill-open-calls": "tsx src/jobs/backfill-open-calls.ts",
     "backfill-open-call-contacts": "tsx src/jobs/backfill-open-call-contacts.ts",

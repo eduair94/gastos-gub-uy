@@ -1,3 +1,4 @@
+
 import { Schema } from "mongoose";
 import type { Model } from "mongoose";
 import { mongoose } from "../connection/database";
@@ -113,6 +114,7 @@ SupplierContactSchema.index({ "rubros.classificationId": 1 });
 SupplierContactSchema.index({ placeSource: 1 });
 SupplierContactSchema.index({ locality: 1 });
 SupplierContactSchema.index({ neverAwarded: 1, priorityScore: -1 });
+SupplierContactSchema.index({ neverAwarded: 1, enrichedAt: 1 });
 
 export const SupplierContactModel: Model<ISupplierContact> =
   (mongoose.models.SupplierContact as Model<ISupplierContact>) ||
