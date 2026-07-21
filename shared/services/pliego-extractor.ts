@@ -14,6 +14,11 @@ export interface PliegoDocumentLike {
   format?: string | undefined;
 }
 
+// Extraction and model-input limits are deliberately separate. Keeping the
+// complete text here lets the corpus builder select relevant clauses from the
+// whole document instead of silently discarding everything after character 60k.
+export const MAX_EXTRACTED_PLIEGO_CHARS = 500_000;
+
 function normalizedUrl(url: string | undefined): string {
   return (url ?? "").toLowerCase().split(/[?#]/, 1)[0] ?? "";
 }
@@ -44,7 +49,11 @@ function cleanText(text: string, maxChars: number): string | null {
   return cleaned ? cleaned.slice(0, maxChars) : null;
 }
 
-export async function extractPdfText(url: string, maxChars = 60_000, timeoutMs = 30_000): Promise<string | null> {
+export async function extractPdfText(
+  url: string,
+  maxChars = MAX_EXTRACTED_PLIEGO_CHARS,
+  timeoutMs = 30_000,
+): Promise<string | null> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok) return null;
@@ -58,7 +67,11 @@ export async function extractPdfText(url: string, maxChars = 60_000, timeoutMs =
   }
 }
 
-export async function extractWordText(url: string, maxChars = 60_000, timeoutMs = 30_000): Promise<string | null> {
+export async function extractWordText(
+  url: string,
+  maxChars = MAX_EXTRACTED_PLIEGO_CHARS,
+  timeoutMs = 30_000,
+): Promise<string | null> {
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok) return null;
@@ -72,7 +85,7 @@ export async function extractWordText(url: string, maxChars = 60_000, timeoutMs 
 
 export async function extractPliegoText(
   doc: PliegoDocumentLike,
-  maxChars = 60_000,
+  maxChars = MAX_EXTRACTED_PLIEGO_CHARS,
   timeoutMs = 30_000,
 ): Promise<string | null> {
   if (!doc.url) return null;

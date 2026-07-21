@@ -16,6 +16,9 @@ import type { IOpenCall, IPliegoSummary } from "../types/monitor";
 import { extractPliegoText, isSupportedPliegoDocument } from "../services/pliego-extractor";
 import { pliegoDocsSignature } from "./docs-signature";
 import { buildPliegoCorpus } from "./document-corpus";
+import type { ExtractedPliegoDocument } from "./document-corpus";
+import { applyVerifiedPliegoFacts, extractVerifiedPliegoFacts, normalizeGeneratedPliegoSummary } from "./verified-facts";
+import type { OfficialPliegoDates } from "./verified-facts";
 import type { GeminiSchema } from "../ai/gemini-client";
 import { ProviderRotator } from "../ai/rotator";
 import type { ModelGenerationProgress } from "../ai/rotator";
@@ -26,7 +29,7 @@ const MAX_INPUT_CHARS = 60_000;
 // tokens). Keep enough headroom for instructions/schema under its 6k TPM cap.
 const GROQ_MAX_INPUT_CHARS = 16_000;
 
-type GeneratedSummary = Omit<IPliegoSummary, "model" | "generatedAt" | "sourceDocs" | "disclaimer">;
+export type GeneratedSummary = Omit<IPliegoSummary, "model" | "generatedAt" | "sourceDocs" | "disclaimer">;
 
 export interface PliegoGenerationOptions {
   timeoutMs?: number | undefined;
@@ -131,6 +134,40 @@ export function buildPliegoRotator(): ProviderRotator {
   });
 }
 
+/** Pure generation entry point used by the DB job and read-only diagnostics. */
+export async function generatePliegoSummaryFromExtracted(
+  title: string,
+  extracted: ExtractedPliegoDocument[],
+  rotator: ProviderRotator,
+  officialDates: OfficialPliegoDates = {},
+  generationOptions: PliegoGenerationOptions = {},
+): Promise<{ generated: GeneratedSummary; modelUsed: string }> {
+  const combined = buildPliegoCorpus(extracted, MAX_INPUT_CHARS);
+  const groqCombined = buildPliegoCorpus(extracted, GROQ_MAX_INPUT_CHARS);
+  const prompt = `Título del llamado: ${title}\n\nTexto del/los pliego(s):\n${combined}`;
+  const groqPrompt = `Título del llamado: ${title}\n\nTexto del/los pliego(s):\n${groqCombined}`;
+  const result = await rotator.generateStructured<GeneratedSummary>({
+    systemInstruction: SYSTEM_INSTRUCTION + DOCUMENT_PRECEDENCE_INSTRUCTION,
+    prompt,
+    groqPrompt,
+    schema: SUMMARY_SCHEMA,
+    temperature: 0,
+    timeoutMs: generationOptions.timeoutMs ?? 45_000,
+    maxRetriesPerModel: generationOptions.maxRetriesPerModel,
+    totalTimeoutMs: generationOptions.totalTimeoutMs,
+    stream: generationOptions.stream,
+    onProgress: generationOptions.onProgress,
+  });
+  return {
+    generated: applyVerifiedPliegoFacts(
+      normalizeGeneratedPliegoSummary(result.data),
+      extractVerifiedPliegoFacts(extracted.map(item => item.text)),
+      officialDates,
+    ),
+    modelUsed: result.modelUsed,
+  };
+}
+
 /**
  * Generates and caches a summary for one call, or null when not possible
  * (no key, no pliego, no extractable text, or the whole model ladder failed).
@@ -169,7 +206,7 @@ export async function summarizeOpenCall(
     return null;
   }
 
-  const extracted: Array<{ document: (typeof documents)[number]; text: string }> = [];
+  const extracted: ExtractedPliegoDocument[] = [];
   for (const document of documents) {
     const text = await extractPliegoText(document);
     if (text) extracted.push({ document, text });
@@ -185,28 +222,18 @@ export async function summarizeOpenCall(
     return null;
   }
 
-  const combined = buildPliegoCorpus(extracted, MAX_INPUT_CHARS);
-  const groqCombined = buildPliegoCorpus(extracted, GROQ_MAX_INPUT_CHARS);
-  const prompt = `Título del llamado: ${call.title}\n\nTexto del/los pliego(s):\n${combined}`;
-  const groqPrompt = `Título del llamado: ${call.title}\n\nTexto del/los pliego(s):\n${groqCombined}`;
-
   let generated: GeneratedSummary;
   let modelUsed: string;
   try {
-    const res = await rot.generateStructured<GeneratedSummary>({
-      systemInstruction: SYSTEM_INSTRUCTION + DOCUMENT_PRECEDENCE_INSTRUCTION,
-      prompt,
-      groqPrompt,
-      schema: SUMMARY_SCHEMA,
-      temperature: 0,
-      timeoutMs: generationOptions.timeoutMs ?? 45_000,
-      maxRetriesPerModel: generationOptions.maxRetriesPerModel,
-      totalTimeoutMs: generationOptions.totalTimeoutMs,
-      stream: generationOptions.stream,
-      onProgress: generationOptions.onProgress,
-    });
-    generated = res.data;
-    modelUsed = res.modelUsed;
+    const result = await generatePliegoSummaryFromExtracted(
+      call.title,
+      extracted,
+      rot,
+      { reception: call.tenderPeriod?.endDate, enquiries: call.enquiryPeriod?.endDate },
+      generationOptions,
+    );
+    generated = result.generated;
+    modelUsed = result.modelUsed;
   } catch (error) {
     if (generationOptions.throwOnFailure) throw error;
     return null; // whole ladder exhausted — retried on a later run

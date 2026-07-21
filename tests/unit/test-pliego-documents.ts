@@ -3,12 +3,15 @@
  */
 import assert from "node:assert/strict";
 import {
+  MAX_EXTRACTED_PLIEGO_CHARS,
   isPdfDocument,
   isSupportedPliegoDocument,
   isWordDocument,
 } from "../../shared/services/pliego-extractor";
 import { pliegoDocsSignature } from "../../shared/pliego/docs-signature";
-import { buildPliegoCorpus } from "../../shared/pliego/document-corpus";
+import { buildPliegoCorpus, buildPliegoCorpusWithDiagnostics } from "../../shared/pliego/document-corpus";
+
+assert.ok(MAX_EXTRACTED_PLIEGO_CHARS > 60_000, "extraction must not truncate at the model-input limit");
 
 assert.equal(isWordDocument({ url: "https://x/pliego_1349474.doc" }), true);
 assert.equal(isWordDocument({ url: "https://x/pliego.docx?download=1" }), true);
@@ -59,5 +62,30 @@ const clauseText = Array.from({ length: 30 }, (_, index) => index === 17
   : `Sección narrativa ${index}. ${"texto general ".repeat(60)}`).join("\n\n");
 const compressedClause = buildPliegoCorpus([{ document: baseDoc, text: clauseText }], 5_000);
 assert.ok(compressedClause.includes(relevantClause), "task-relevant clauses must survive compression");
+
+const lateParticularClauses = [
+  "OBJETO: servicio integral de limpieza.",
+  "REQUISITOS: inscripción en RUPE y visita obligatoria.",
+  "DOCUMENTACIÓN: presentar Anexo VI y carta poder.",
+  "COTIZACIÓN: único lote, pesos uruguayos, no admite ofertas parciales.",
+  "PLAZO DE EJECUCIÓN: 12 meses, prorrogable por 180 días.",
+  "GARANTÍA: la garantía de mantenimiento de oferta no es obligatoria.",
+  "EVALUACIÓN: único factor precio. NO APLICA RESERVA DE MERCADO.",
+  "PENALIDADES: multa de 0,5 UR; rescisión al superar 30% mensual.",
+  "PAGO: a 30 días de la factura.",
+  "CONDICIONES TÉCNICAS: nueve operarios, equipos y fichas de seguridad.",
+];
+const categoryText = [
+  ...Array.from({ length: 45 }, (_, index) => `Condiciones generales ${index}. ${"texto administrativo ".repeat(45)}`),
+  ...lateParticularClauses,
+].join("\n\n");
+const focused = buildPliegoCorpusWithDiagnostics([{ document: baseDoc, text: categoryText }], 8_000);
+for (const clause of lateParticularClauses) {
+  assert.ok(focused.corpus.includes(clause), `critical category clause must survive: ${clause}`);
+}
+for (const category of ["objeto", "requisitos", "documentos", "cotizacion", "ejecucion", "garantias", "evaluacion", "penalidades", "pagos", "tecnico"]) {
+  assert.ok(focused.diagnostics.categories.includes(category), `diagnostics must report ${category}`);
+}
+assert.equal(focused.diagnostics.compressed, true);
 
 console.log("ok: Word pliegos + correction-aware corpus");

@@ -66,9 +66,7 @@ export interface GenerateResult<T> {
 // (not GA under that id); add it back here when it lists for the key.
 const DEFAULT_GEMINI_MODELS = [
   "gemini-2.5-flash-lite",
-  "gemini-2.0-flash-lite",
   "gemini-2.5-flash",
-  "gemini-2.0-flash",
   "gemini-2.5-pro",
 ];
 // Free-tier Groq chat models (ListModels-verified for the key, 2026-07-21),
