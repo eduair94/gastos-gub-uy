@@ -15,7 +15,7 @@
  *     vínculo comercial con ningún proveedor.
  *   - Cada empresa puede pedir una corrección.
  *
- * Fuente de los datos: workflow uy-tender-alert-competitor-research (13 proveedores).
+ * Fuente de los datos: workflow uy-tender-alert-competitor-research (14 proveedores).
  * Ver docs/superpowers/specs/2026-07-21-pliego-resumen-ia-y-comparativa-alertas-design.md
  */
 
@@ -121,7 +121,7 @@ export const PROVIDERS: Provider[] = [
     coverage: { es: 'Sólo ARCE/comprasestatales, sincronizado a diario. No BPS ni intendencias.', en: 'Only ARCE/comprasestatales, synced daily. No BPS or municipalities.' },
     legalValidation: { es: 'Ninguna.', en: 'None.' },
     ux: { es: 'Español claro, registro sin tarjeta. Fuerte en análisis IA y precios de referencia de adjudicaciones.', en: 'Clear Spanish, no-card signup. Strong AI analysis and reference award prices.' },
-    sources: ['https://gubly.com.uy/', 'https://gubly.com.uy/#planes'],
+    sources: ['https://gubly.com.uy/', 'https://gubly.com.uy/#planes', 'https://nic.com.uy/consulta-whois'],
     confidence: 'alta',
   },
   {
@@ -172,8 +172,35 @@ export const PROVIDERS: Provider[] = [
     coverage: { es: 'Datos oficiales OCDS de ARCE (+750.000 contratos, cifra del sitio). No BPS ni intendencias.', en: 'Official OCDS data from ARCE (+750,000 contracts, per the site). No BPS or municipalities.' },
     legalValidation: { es: 'Ninguna. Aclara que las alertas responden a criterios estadísticos que pueden no reflejar el contexto real.', en: 'None. Notes its alerts follow statistical criteria that may not reflect real context.' },
     ux: { es: 'Enfoque competitivo/comercial (vigilancia de competidores, head-to-head, forecast). NO ofrece resumen de pliegos con IA.', en: 'Competitive/commercial focus (competitor watch, head-to-head, forecast). Does NOT offer AI document summaries.' },
-    sources: ['https://clearbid.uy/', 'https://clearbid.uy/planes'],
+    sources: ['https://clearbid.uy/', 'https://clearbid.uy/planes', 'https://nic.com.uy/consulta-whois'],
     confidence: 'alta',
+  },
+  {
+    id: 'tenderis',
+    name: 'Tenderis',
+    url: 'https://www.tenderis.org/',
+    group: 'core',
+    tagline: { es: 'Tu agente de compras públicas: descubre, analiza y recomienda oportunidades.', en: 'Your public-procurement agent: discover, analyze and recommend opportunities.' },
+    countryFocus: { es: 'Uruguay · Compras Estatales', en: 'Uruguay · Compras Estatales' },
+    reachable: true,
+    hasFreeTier: true,
+    freeTrial: { es: 'Prueba gratis anunciada; el sitio no publica duración ni condiciones.', en: 'Free trial advertised; the site does not publish its duration or conditions.' },
+    plans: [
+      { name: 'Básico', priceText: 'USD 69 + IVA / mes', amount: 69, currency: 'USD', period: 'mes', ivaExcluded: true, note: { es: 'Alertas en tiempo real, resumen de pliego, chat, 2 checklist, seguimiento de 5 compras y 2 años de datos.', en: 'Real-time alerts, document summary, chat, 2 checklists, tracking for 5 purchases and 2 years of data.' } },
+      { name: 'Avanzado', priceText: 'USD 119 + IVA / mes', amount: 119, currency: 'USD', period: 'mes', ivaExcluded: true, note: { es: 'Ranking completo, hasta 3 usuarios, 15 consultas/mes al pliego, 5 checklist y datos desde 2002.', en: 'Full ranking, up to 3 users, 15 document queries/mo, 5 checklists and data since 2002.' } },
+      { name: 'Personalizado', priceText: 'Consultar', amount: 0, currency: 'UNKNOWN', period: 'desconocido', note: { es: 'API, integraciones, reportes, múltiples usuarios y soporte prioritario.', en: 'API, integrations, reports, multiple users and priority support.' } },
+    ],
+    entryPaid: { amount: 69, currency: 'USD', text: 'USD 69 + IVA/mes' },
+    features: { aiPliego: 'si', emailAlerts: 'si', whatsappTelegram: 'desconocido', savedSearches: 'desconocido', bidTooling: 'si', api: 'si', legalAdvisory: 'no' },
+    coverage: { es: 'Sincronización con Compras Estatales; el plan Básico ofrece 2 años de historial y el Avanzado, datos desde 2002.', en: 'Synced with Compras Estatales; Basic includes 2 years of history and Advanced includes data since 2002.' },
+    legalValidation: { es: 'Ninguna publicada.', en: 'None published.' },
+    ux: { es: 'Fuerte en IA aplicada al pliego e inteligencia de mercado. Incluye checklist, calendario y seguimiento; la API queda para el plan personalizado.', en: 'Strong in AI document analysis and market intelligence. Includes checklists, calendar and tracking; API access is limited to the custom plan.' },
+    sources: ['https://www.tenderis.org/', 'https://rdap.org/domain/tenderis.org'],
+    confidence: 'alta',
+    caveats: [
+      { es: 'Servicio nuevo: tenderis.org fue registrado el 2026-01-16 (RDAP).', en: 'New service: tenderis.org was registered on 2026-01-16 (RDAP).' },
+      { es: 'El sitio anuncia una prueba gratis, pero no publica su duración ni condiciones.', en: 'The site advertises a free trial but does not publish its duration or conditions.' },
+    ],
   },
   {
     id: 'licitapro',
@@ -195,7 +222,7 @@ export const PROVIDERS: Provider[] = [
     coverage: { es: 'Licitaciones públicas de Uruguay; filtros por sector/organismo/artículo. No nombra la fuente que ingiere.', en: 'Uruguayan public tenders; filters by sector/agency/item. Does not name its data source.' },
     legalValidation: { es: 'Ninguna.', en: 'None.' },
     ux: { es: 'Precio por créditos (un pozo mensual consumido por resúmenes/propuestas/consultas): flexible pero difícil de comparar de igual a igual con planes planos. Precios en USD.', en: 'Credit-based pricing (a monthly pool spent on summaries/proposals/queries): flexible but hard to compare with flat plans. Prices in USD.' },
-    sources: ['https://licitapro.uy/', 'https://licitapro.uy/resumenes-licitaciones'],
+    sources: ['https://licitapro.uy/', 'https://licitapro.uy/resumenes-licitaciones', 'https://nic.com.uy/consulta-whois'],
     confidence: 'alta',
     caveats: [
       { es: 'Precio por créditos: los "créditos" se convierten en cantidades aproximadas de acciones, no en cifras garantizadas.', en: 'Credit-based: "credits" map to approximate action counts, not guaranteed quantities.' },
@@ -220,7 +247,7 @@ export const PROVIDERS: Provider[] = [
     coverage: { es: 'Publicaciones oficiales de compras públicas (agregador UY + Brasil). No detalla fuentes uruguayas concretas.', en: 'Official procurement listings (UY + Brazil aggregator). Does not detail concrete Uruguayan sources.' },
     legalValidation: { es: 'Ninguna. Aclara que sólo agrega licitaciones y no participa de los procesos.', en: 'None. States it only aggregates tenders and does not take part in the processes.' },
     ux: { es: 'Precios totalmente transparentes con descuentos por período. Búsqueda "con IA" y vista en mapa, pero NO resume pliegos con IA. Tiene API documentada.', en: 'Fully transparent prices with term discounts. "AI" search and map view, but does NOT summarize documents with AI. Has a documented API.' },
-    sources: ['https://www.licitaya.uy/home.php', 'https://www.licitaya.uy/subscription.php'],
+    sources: ['https://www.licitaya.uy/home.php', 'https://www.licitaya.uy/subscription.php', 'https://nic.com.uy/consulta-whois'],
     confidence: 'alta',
   },
   {
@@ -243,7 +270,7 @@ export const PROVIDERS: Provider[] = [
     coverage: { es: 'Compras Estatales (ARCE), organizado por organismo/inciso; monitoreo ~cada hora.', en: 'Compras Estatales (ARCE), organized by agency/inciso; monitored ~hourly.' },
     legalValidation: { es: 'Ninguna.', en: 'None.' },
     ux: { es: 'El más barato con plan pago ($250/mes). Alertas por email con recordatorios de cierre; sin IA. Producto secundario de una empresa que también vende otros servicios.', en: 'Cheapest paid plan ($250/mo). Email alerts with deadline reminders; no AI. A side product of a firm that also sells other services.' },
-    sources: ['https://www.dsoluciones.com.uy/servicios/notificaciones/compras-estatales'],
+    sources: ['https://www.dsoluciones.com.uy/servicios/notificaciones/compras-estatales', 'https://nic.com.uy/consulta-whois'],
     confidence: 'alta',
   },
   // ─── UY-native con precio opaco / venta consultiva ──────────────────────────
@@ -380,7 +407,7 @@ export const PROVIDERS: Provider[] = [
     coverage: { es: 'No verificable (sitio caído / geo-bloqueado).', en: 'Unverifiable (site down / geo-blocked).' },
     legalValidation: { es: 'No verificable.', en: 'Unverifiable.' },
     ux: { es: 'No se pudo evaluar: el sitio no responde. Todo dato proviene de fragmentos en caché.', en: 'Could not be assessed: the site does not respond. All data comes from cached snippets.' },
-    sources: ['https://licitaia.com.uy/'],
+    sources: ['https://licitaia.com.uy/', 'https://nic.com.uy/consulta-whois'],
     confidence: 'baja',
     caveats: [
       { es: 'No verificable en sitio: no responde desde fuera de Uruguay. Sin precios ni datos confirmados.', en: 'Unverifiable on-site: does not respond from outside Uruguay. No confirmed prices or data.' },
@@ -411,33 +438,34 @@ export const PROVIDERS: Provider[] = [
 ]
 
 /**
- * Antigüedad corroborada de cada dominio. Fuentes: RDAP (fecha de registro del
- * dominio) y Wayback Machine (primer archivo web). Verificado 2026-07-21. Los
- * dominios .uy no tienen whois público (NIC.uy no lo publica) y varios sitios
- * nuevos aún no tienen snapshots en Wayback → "sin dato" (año null). Que un .uy
- * figure "s/d" NO implica que sea antiguo: solo que su fecha no es pública.
+ * Antigüedad corroborada de cada dominio. Fuentes: WHOIS de Dominios UY/ANTEL,
+ * RDAP (dominios genéricos) y Wayback Machine (primer archivo web). Verificado
+ * 2026-07-21. La consulta de ANTEL entrega fecha para los .com.uy que administra;
+ * para varios .uy directos responde que no están en su sistema y remite al agente
+ * registrador. "s/d" no implica antigüedad: sólo que la consulta no dio una fecha.
  */
 export const ESTABLISHED: Record<string, { year: number | null, basis: Bi }> = {
-  gubly: { year: null, basis: { es: '.uy sin whois público; sin archivo en Wayback', en: '.uy has no public whois; no Wayback archive' } },
+  gubly: { year: 2026, basis: { es: 'alta 2026-05-14 (WHOIS Dominios UY/ANTEL)', en: 'registered 2026-05-14 (Dominios UY/ANTEL WHOIS)' } },
   proveedoruy: { year: 2026, basis: { es: 'dominio registrado el 2026-05-17 (RDAP)', en: 'domain registered 2026-05-17 (RDAP)' } },
-  clearbid: { year: null, basis: { es: '.uy sin whois público; sin archivo web', en: '.uy has no public whois; no web archive' } },
-  licitapro: { year: null, basis: { es: '.uy sin whois público; sin archivo web', en: '.uy has no public whois; no web archive' } },
-  licitaya: { year: null, basis: { es: 'marca Portal Genial (Brasil, 2004); dominio .uy sin fecha pública', en: 'Portal Genial brand (Brazil, 2004); .uy domain has no public date' } },
-  dsoluciones: { year: 2024, basis: { es: 'primer archivo web 2024 (Wayback)', en: 'first web archive 2024 (Wayback)' } },
+  clearbid: { year: null, basis: { es: 'WHOIS ANTEL no lo encuentra en su sistema; fecha no disponible', en: 'ANTEL WHOIS does not find it in its system; date unavailable' } },
+  tenderis: { year: 2026, basis: { es: 'dominio registrado el 2026-01-16 (RDAP)', en: 'domain registered 2026-01-16 (RDAP)' } },
+  licitapro: { year: null, basis: { es: 'WHOIS ANTEL no lo encuentra en su sistema; fecha no disponible', en: 'ANTEL WHOIS does not find it in its system; date unavailable' } },
+  licitaya: { year: null, basis: { es: 'WHOIS ANTEL no lo encuentra en su sistema; fecha no disponible', en: 'ANTEL WHOIS does not find it in its system; date unavailable' } },
+  dsoluciones: { year: 2024, basis: { es: 'alta 2024-03-07 (WHOIS Dominios UY/ANTEL)', en: 'registered 2024-03-07 (Dominios UY/ANTEL WHOIS)' } },
   trexia: { year: 2025, basis: { es: 'dominio registrado en 2025 (RDAP)', en: 'domain registered 2025 (RDAP)' } },
   latamcompra: { year: 2015, basis: { es: 'dominio registrado en 2015 (RDAP)', en: 'domain registered 2015 (RDAP)' } },
   b2btenders: { year: 2001, basis: { es: 'dominio activo desde 2001 (Wayback); registro actual 2021', en: 'domain active since 2001 (Wayback); current registration 2021' } },
   licitacionespublica: { year: 2021, basis: { es: 'primer archivo web 2021 (Wayback)', en: 'first web archive 2021 (Wayback)' } },
   ialicitaciones: { year: 2025, basis: { es: 'dominio registrado en 2025 (RDAP)', en: 'domain registered 2025 (RDAP)' } },
-  licitaia: { year: null, basis: { es: '.uy sin whois; sitio caído', en: '.uy no whois; site down' } },
-  neuratek: { year: 2024, basis: { es: 'dominio registrado en 2024 (RDAP)', en: 'domain registered 2024 (RDAP)' } },
+  licitaia: { year: 2026, basis: { es: 'alta 2026-03-21 (WHOIS Dominios UY/ANTEL)', en: 'registered 2026-03-21 (Dominios UY/ANTEL WHOIS)' } },
+  licitamatch: { year: 2024, basis: { es: 'dominio neuratek.ai registrado en 2024 (RDAP)', en: 'neuratek.ai domain registered in 2024 (RDAP)' } },
 }
 
 /** Filas de la matriz objetiva, en orden. */
 export interface Dimension { key: string, label: Bi, help?: Bi }
 export const DIMENSIONS: Dimension[] = [
   { key: 'countryFocus', label: { es: 'Foco y fuente', en: 'Focus & source' }, help: { es: 'País y feed oficial que cubre.', en: 'Country and official feed covered.' } },
-  { key: 'established', label: { es: 'En línea desde', en: 'Online since' }, help: { es: 'Antigüedad del dominio (RDAP / archivo web). "s/d" = .uy sin whois público.', en: 'Domain age (RDAP / web archive). "s/d" = .uy with no public whois.' } },
+  { key: 'established', label: { es: 'En línea desde', en: 'Online since' }, help: { es: 'Antigüedad del dominio (WHOIS UY / RDAP / archivo web). "s/d" = la consulta no entregó fecha.', en: 'Domain age (UY WHOIS / RDAP / web archive). "n/a" = the lookup returned no date.' } },
   { key: 'entryPaid', label: { es: 'Precio de entrada', en: 'Entry price' }, help: { es: 'Plan pago más barato, en su moneda original (sin convertir).', en: 'Cheapest paid plan, in its original currency (no conversion).' } },
   { key: 'freeTier', label: { es: 'Gratis / prueba', en: 'Free / trial' } },
   { key: 'aiPliego', label: { es: 'Resumen IA de pliego', en: 'AI document summary' } },
@@ -448,8 +476,8 @@ export const DIMENSIONS: Dimension[] = [
 ]
 
 export const METHODOLOGY: Bi = {
-  es: `Datos relevados de los sitios oficiales de cada servicio en ${VERIFIED_ON}, con fuente por dato. Los precios se muestran tal cual (en su moneda: USD, pesos o euros) y NO se convierten entre sí: mezclan monedas, algunos cotizan "+ IVA" y otros por créditos, así que las cifras no son directamente comparables. Lo no publicado figura como "Consultar"; lo que no se pudo confirmar se marca como tal. La antigüedad ("en línea desde") se corroboró con RDAP (fecha de registro del dominio) y la Wayback Machine (primer archivo web); los dominios .uy no tienen whois público, así que varios figuran "s/d" —eso no significa que sean antiguos, sino que su fecha no es pública. Ningún proveedor cubre de forma verificable BPS ni intendencias: donde nombran la fuente, es ARCE/comprasestatales. Las cifras de volumen que cada empresa afirma no fueron verificadas de forma independiente.`,
-  en: `Data gathered from each service's official site on ${VERIFIED_ON}, sourced per fact. Prices are shown as-is (in their currency: USD, pesos or euros) and are NOT converted between each other: they mix currencies, some quote "+ VAT" and others by credits, so the figures are not directly comparable. Unpublished prices read "Consultar"; anything unconfirmable is marked. Age ("online since") was corroborated with RDAP (domain registration date) and the Wayback Machine (first web archive); .uy domains have no public whois, so several read "s/d" — that does not mean they are old, only that their date is not public. No provider verifiably covers BPS or municipalities: where a source is named, it is ARCE/comprasestatales. Volume figures each company claims were not independently verified.`,
+  es: `Datos relevados de los sitios oficiales de cada servicio en ${VERIFIED_ON}, con fuente por dato. Los precios se muestran tal cual (en su moneda: USD, pesos o euros) y NO se convierten entre sí: mezclan monedas, algunos cotizan "+ IVA" y otros por créditos, así que las cifras no son directamente comparables. Lo no publicado figura como "Consultar"; lo que no se pudo confirmar se marca como tal. La antigüedad ("en línea desde") se corroboró con el WHOIS público de Dominios UY/ANTEL para .uy, RDAP para dominios genéricos y la Wayback Machine. La consulta de ANTEL no devuelve fecha para algunos .uy administrados por otros registradores; por eso figuran "s/d", no porque sean antiguos. Ningún proveedor declara de forma verificable monitorear portales separados de BPS o intendencias: donde identifica la fuente, es Compras Estatales/ARCE. Las cifras de volumen que cada empresa afirma no fueron verificadas de forma independiente.`,
+  en: `Data gathered from each service's official site on ${VERIFIED_ON}, sourced per fact. Prices are shown as-is (in their currency: USD, pesos or euros) and are NOT converted between each other: they mix currencies, some quote "+ VAT" and others by credits, so the figures are not directly comparable. Unpublished prices read "Consultar"; anything unconfirmable is marked. Age ("online since") was corroborated with the public Dominios UY/ANTEL WHOIS for .uy domains, RDAP for generic domains and the Wayback Machine. ANTEL's lookup returns no date for some .uy domains managed by other registrars; those read "n/a", not because they are old. No provider verifiably claims to monitor separate BPS or municipality portals: where a source is identified, it is Compras Estatales/ARCE. Volume figures each company claims were not independently verified.`,
 }
 
 export const NEUTRALITY: Bi = {
@@ -463,8 +491,8 @@ export const RECOMMENDATION = {
   title: { es: 'Nuestra recomendación para PYMES', en: 'Our recommendation for SMEs' },
   disclosure: { es: 'Opinión propia · sin patrocinio · sin vínculo comercial', en: 'Our own opinion · no sponsorship · no commercial ties' },
   body: {
-    es: 'Para quien recién empieza a presentarse a licitaciones del Estado — el perfil más común entre las PYMEs uruguayas — nuestra recomendación es ProveedorUY. Es el único servicio del relevamiento que suma asesoría jurídica de un estudio (Grupo Deana): registro y gestión del RUPE, revisión previa de ofertas, aclaraciones e impugnaciones ante el Tribunal de Cuentas. A eso le agrega una capa de gestión de ofertas (constructor ítem por ítem, checklist de cumplimiento, calendario de plazos) que los agregadores no tienen, resumen de pliegos con IA y una prueba de 10 días sin tarjeta. Para un proveedor sin equipo jurídico propio, ese acompañamiento reduce el mayor riesgo de una licitación: quedar afuera por un error formal.',
-    en: 'For those just starting to bid on state tenders — the most common profile among Uruguayan SMEs — our recommendation is ProveedorUY. It is the only service in the survey that adds legal advice from a firm (Grupo Deana): RUPE registration and management, prior review of offers, clarifications and challenges before the Court of Accounts. It also adds a bid-management layer (item-by-item builder, compliance checklist, deadline calendar) that aggregators lack, AI document summaries and a 10-day no-card trial. For a supplier without an in-house legal team, that support cuts a tender\'s biggest risk: being disqualified over a formal error.',
+    es: 'Para quien recién empieza a presentarse a licitaciones del Estado — el perfil más común entre las PYMEs uruguayas — nuestra recomendación es ProveedorUY. Es el único servicio del relevamiento que publica asesoría jurídica de un estudio asociado (Grupo Deana): registro y gestión del RUPE, revisión previa de ofertas, aclaraciones e impugnaciones ante el Tribunal de Cuentas. También publica un constructor de ofertas ítem por ítem, además de checklist, calendario, resumen de pliegos con IA y una prueba de 10 días sin tarjeta. Tenderis ofrece checklist y calendario, pero no anuncia un constructor equivalente ni asesoría jurídica. Para un proveedor sin equipo jurídico propio, ese acompañamiento reduce el riesgo de quedar afuera por un error formal.',
+    en: 'For those just starting to bid on state tenders — the most common profile among Uruguayan SMEs — our recommendation is ProveedorUY. It is the only service in the survey that publishes legal advice from a partner firm (Grupo Deana): RUPE registration and management, prior review of offers, clarifications and challenges before the Court of Accounts. It also publishes an item-by-item offer builder, plus checklists, calendar, AI document summaries and a 10-day no-card trial. Tenderis offers checklists and a calendar but does not advertise an equivalent offer builder or legal advice. For a supplier without an in-house legal team, that support reduces the risk of being disqualified over a formal error.',
   },
   caveat: {
     es: 'Con salvedades objetivas: es un servicio nuevo (dominio registrado en 2026), el sitio no etiqueta la moneda de sus precios (se infiere pesos) y la asesoría jurídica es un servicio aparte, con costo no incluido en la suscripción.',
