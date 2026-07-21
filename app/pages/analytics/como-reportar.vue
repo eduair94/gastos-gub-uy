@@ -38,188 +38,344 @@ useSeo(() => ({
 </script>
 
 <template>
-  <div class="u-container page">
+  <v-container class="report-page">
+    <v-btn
+      :to="localePath('/analytics/errores-carga')"
+      class="report-back"
+      variant="text"
+      size="small"
+    >
+      <span aria-hidden="true">←</span>
+      {{ t('nav.erroresCarga') }}
+    </v-btn>
+
     <header class="hero">
-      <p class="u-eyebrow hero__eyebrow">
-        {{ t('comoReportar.eyebrow') }}
-      </p>
-      <h1 class="hero__t">
-        {{ t('comoReportar.title') }}
-      </h1>
-      <p class="u-lead hero__lead">
-        {{ t('comoReportar.dek') }}
-      </p>
-      <NuxtLink
-        :to="localePath('/analytics/errores-carga')"
-        class="hero__back"
-      >
-        ← {{ t('nav.erroresCarga') }}
-      </NuxtLink>
+      <v-row align="start">
+        <v-col
+          cols="12"
+          md="8"
+          lg="7"
+        >
+          <p class="u-eyebrow hero__eyebrow">
+            {{ t('comoReportar.eyebrow') }}
+          </p>
+          <h1 class="hero__title">
+            {{ t('comoReportar.title') }}
+          </h1>
+          <p class="u-lead hero__lead">
+            {{ t('comoReportar.dek') }}
+          </p>
+        </v-col>
+
+        <v-col
+          cols="12"
+          md="4"
+          lg="4"
+          offset-lg="1"
+        >
+          <v-card
+            class="source-card"
+            variant="outlined"
+          >
+            <v-card-title class="source-card__title">
+              {{ t('comoReportar.whoTitle') }}
+            </v-card-title>
+            <v-card-text class="source-card__body">
+              {{ t('comoReportar.whoBody') }}
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
     </header>
 
-    <section class="block">
-      <h2 class="block__t">
-        {{ t('comoReportar.whoTitle') }}
-      </h2>
-      <p class="block__b">
-        {{ t('comoReportar.whoBody') }}
-      </p>
+    <section class="process-section">
+      <v-row align="start">
+        <v-col
+          cols="12"
+          lg="4"
+        >
+          <div class="process-heading">
+            <p class="u-eyebrow process-heading__eyebrow">
+              {{ t('comoReportar.eyebrow') }}
+            </p>
+            <h2 class="process-heading__title">
+              {{ t('comoReportar.stepsTitle') }}
+            </h2>
+          </div>
+        </v-col>
+
+        <v-col
+          cols="12"
+          lg="8"
+        >
+          <v-list
+            tag="ol"
+            class="steps-list"
+          >
+            <v-list-item
+              v-for="(step, index) in steps"
+              :key="index"
+              tag="li"
+              class="step-item"
+            >
+              <template #prepend>
+                <v-avatar
+                  class="step-item__number u-mono"
+                  size="36"
+                >
+                  {{ index + 1 }}
+                </v-avatar>
+              </template>
+
+              <v-list-item-title class="step-item__text">
+                {{ step }}
+              </v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-col>
+      </v-row>
     </section>
 
-    <section class="block">
-      <h2 class="block__t">
-        {{ t('comoReportar.stepsTitle') }}
-      </h2>
-      <ol class="steps">
-        <li
-          v-for="(s, i) in steps"
-          :key="i"
-          class="step"
+    <v-row
+      class="information-row"
+      align="stretch"
+    >
+      <v-col
+        cols="12"
+        md="6"
+      >
+        <v-card
+          class="information-card"
+          variant="outlined"
+          height="100%"
         >
-          <span class="step__n u-mono">{{ i + 1 }}</span>
-          <span class="step__b">{{ s }}</span>
-        </li>
-      </ol>
-    </section>
+          <v-card-title class="information-card__title">
+            {{ t('comoReportar.attachTitle') }}
+          </v-card-title>
+          <v-card-text class="information-card__body">
+            {{ t('comoReportar.attachBody') }}
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-    <div class="cols">
-      <section class="block">
-        <h2 class="block__t">
-          {{ t('comoReportar.attachTitle') }}
-        </h2>
-        <p class="block__b">
-          {{ t('comoReportar.attachBody') }}
-        </p>
-      </section>
-
-      <section class="block">
-        <h2 class="block__t">
-          {{ t('comoReportar.contactsTitle') }}
-        </h2>
-        <p class="block__b">
-          {{ t('comoReportar.contactsBody') }}
-        </p>
-        <a
-          href="https://www.comprasestatales.gub.uy"
-          target="_blank"
-          rel="noopener external"
-          class="block__link"
+      <v-col
+        cols="12"
+        md="6"
+      >
+        <v-card
+          class="information-card"
+          variant="outlined"
+          height="100%"
         >
-          <v-icon size="16">mdi-open-in-new</v-icon>
-          {{ t('comoReportar.officialLink') }}
-        </a>
-      </section>
-    </div>
+          <v-card-title class="information-card__title">
+            {{ t('comoReportar.contactsTitle') }}
+          </v-card-title>
+          <v-card-text class="information-card__body">
+            <p>{{ t('comoReportar.contactsBody') }}</p>
+            <v-btn
+              href="https://www.comprasestatales.gub.uy"
+              target="_blank"
+              rel="noopener external"
+              class="official-link"
+              variant="outlined"
+              color="primary"
+              append-icon="mdi-open-in-new"
+            >
+              {{ t('comoReportar.officialLink') }}
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
 
-    <p class="disclaimer">
+    <v-alert
+      class="disclaimer"
+      variant="tonal"
+      color="primary"
+      :icon="false"
+    >
       {{ t('comoReportar.disclaimer') }}
-    </p>
-  </div>
+    </v-alert>
+  </v-container>
 </template>
 
 <style scoped>
-.page { padding-block: var(--s-6) var(--s-8); max-width: 80ch; }
+.report-page {
+  padding-block: var(--s-5) var(--s-8);
+}
 
-.hero { margin-bottom: var(--s-7); }
-.hero__eyebrow { color: var(--celeste-deep); }
-.hero__t { margin: var(--s-2) 0 var(--s-3); font-size: var(--t-2xl); line-height: 1.15; }
-.hero__lead { color: var(--text-muted); }
-
-.hero__back {
-  display: inline-block;
-  margin-top: var(--s-4);
+.report-back {
+  margin: 0 0 var(--s-5) calc(var(--s-3) * -1);
   font-family: var(--font-mono);
-  font-size: var(--t-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--celeste-deep);
-  text-decoration: none;
+  color: var(--celeste-deep) !important;
 }
 
-.hero__back:hover { text-decoration: underline; }
-
-.block { margin-bottom: var(--s-6); }
-
-.block__t {
-  margin: 0 0 var(--s-2);
-  font-size: var(--t-lg);
-}
-
-.block__b {
-  margin: 0;
+.report-back span {
+  margin-right: var(--s-2);
   font-size: var(--t-md);
-  line-height: 1.6;
+}
+
+.hero {
+  margin-bottom: var(--s-8);
+}
+
+.hero__eyebrow,
+.process-heading__eyebrow {
+  color: var(--celeste-deep);
+}
+
+.hero__title {
+  max-width: 16ch;
+  margin: var(--s-2) 0 var(--s-4);
+  font-size: clamp(var(--t-2xl), 5vw, var(--t-3xl));
+  line-height: 1.04;
+}
+
+.hero__lead {
+  max-width: 66ch;
   color: var(--text-muted);
 }
 
-.cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-5) var(--s-6);
+.source-card,
+.information-card {
+  border-color: var(--rule);
+  background: var(--surface);
 }
 
-.steps {
-  list-style: none;
+.source-card {
+  border-top: 4px solid var(--celeste);
+}
+
+.source-card__title,
+.information-card__title {
+  padding: var(--s-5) var(--s-5) var(--s-2);
+  font-family: var(--font-display);
+  font-size: var(--t-lg);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.source-card__body,
+.information-card__body {
+  padding: 0 var(--s-5) var(--s-5);
+  font-size: var(--t-sm);
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.process-section {
+  padding-block: var(--s-7);
+  border-block: 1px solid var(--rule);
+}
+
+.process-heading__eyebrow {
+  margin-bottom: var(--s-2);
+}
+
+.process-heading__title {
+  max-width: 12ch;
   margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
+  font-size: var(--t-2xl);
+  line-height: 1.08;
 }
 
-.step {
+.steps-list {
   display: grid;
-  grid-template-columns: auto 1fr;
   gap: var(--s-3);
-  align-items: start;
-  padding: var(--s-4);
+  padding: 0;
+  background: transparent;
+}
+
+.step-item {
+  min-height: 0;
+  padding: var(--s-4) var(--s-5);
   border: 1px solid var(--rule);
   border-left: 3px solid var(--celeste);
   border-radius: var(--r-md);
   background: var(--surface);
 }
 
-.step__n {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+.step-item__number {
+  margin-right: var(--s-4);
   background: var(--surface-sunken);
   color: var(--celeste-deep);
-  font-weight: 700;
   font-size: var(--t-sm);
+  font-weight: 700;
 }
 
-.step__b {
+.step-item__text {
+  overflow: visible;
+  font-size: var(--t-sm);
+  line-height: 1.6;
+  text-overflow: initial;
+  white-space: normal;
+}
+
+.information-row {
+  margin-top: var(--s-7);
+}
+
+.information-card__body p {
+  margin: 0;
+}
+
+.official-link {
+  margin-top: var(--s-4);
+}
+
+.disclaimer {
+  margin-top: var(--s-6);
   font-size: var(--t-sm);
   line-height: 1.55;
 }
 
-.block__link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: var(--s-3);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  color: var(--celeste-deep);
-  text-decoration: none;
+@media (min-width: 1280px) {
+  .process-heading {
+    position: sticky;
+    top: calc(var(--s-7) + 64px);
+  }
 }
 
-.block__link:hover { text-decoration: underline; }
+@media (max-width: 599px) {
+  .report-page {
+    padding-inline: var(--s-4);
+  }
 
-.disclaimer {
-  margin: var(--s-6) 0 0;
-  padding-top: var(--s-5);
-  border-top: 1px solid var(--rule);
-  font-size: var(--t-xs);
-  color: var(--text-muted);
-  font-style: italic;
-}
+  .hero {
+    margin-bottom: var(--s-6);
+  }
 
-@media (max-width: 620px) {
-  .cols { grid-template-columns: 1fr; }
+  .hero__title {
+    font-size: var(--t-2xl);
+  }
+
+  .process-section {
+    padding-block: var(--s-5);
+  }
+
+  .process-heading__title {
+    max-width: none;
+    font-size: var(--t-xl);
+  }
+
+  .step-item {
+    padding: var(--s-4);
+  }
+
+  .step-item__number {
+    margin-right: var(--s-3);
+  }
+
+  .information-row {
+    margin-top: var(--s-5);
+  }
+
+  .official-link {
+    width: 100%;
+  }
 }
 </style>

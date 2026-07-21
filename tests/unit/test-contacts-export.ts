@@ -29,6 +29,10 @@ const webDoc = sanitizeContact({
   ],
   website: "https://acme.uy", websiteSource: "webSearch",
   phone: "+59829001234", phoneSource: "dei",
+  websitePhone: "2407 0000",
+  websiteAddress: "Cnel. Brandzen 1956",
+  contactFormUrl: "https://acme.uy/#contacto",
+  socialLinks: [{ platform: "instagram", url: "https://instagram.com/acme/", label: "@acme" }],
   address: "Av. Siempreviva 742", locality: "Montevideo", placeSource: "dei",
   onlyDirectAward: true, directAwardCount: 4,
 } as never);
@@ -37,6 +41,10 @@ assert.equal(webDoc.websiteSource, "webSearch", "provenance of a verified websit
 assert.equal(webDoc.phone, "+59829001234");
 assert.equal(webDoc.phoneSource, "dei", "provenance of phone is surfaced");
 assert.equal(webDoc.address, "Av. Siempreviva 742");
+assert.equal(webDoc.websitePhone, "2407 0000");
+assert.equal(webDoc.websiteAddress, "Cnel. Brandzen 1956");
+assert.equal(webDoc.contactFormUrl, "https://acme.uy/#contacto");
+assert.equal(webDoc.socialLinks[0].platform, "instagram");
 assert.equal(webDoc.email, "info@acme.uy");
 assert.equal(webDoc.neverAwarded, false, "default false when the doc doesn't set it");
 assert.equal(webDoc.rupeEstado, null);
@@ -69,6 +77,7 @@ assert.ok(!/Fuentes|methods/i.test(header), "method badges are UI-only — never
 assert.ok(!/compra directa|onlyDirectAward/i.test(header), "direct-award badge is UI-only — never in tabular exports");
 assert.ok(row.includes("webSearch"), "CSV row carries the website origin");
 assert.ok(header.includes("Sitio web") && header.includes("Teléfono"), "website + phone columns");
+assert.ok(header.includes("Formulario de contacto") && header.includes("Redes sociales"), "first-party contact details are exported");
 assert.ok(row.includes("Av. Siempreviva 742"), "CSV row carries the address");
 assert.ok(row.includes("info@acme.uy; ventas@acme.uy"), "CSV Emails column joins ALL emails");
 
@@ -84,6 +93,8 @@ assert.ok(/ADR;TYPE=WORK:.*Av\. Siempreviva 742/.test(vcf), "vCard ADR carries a
 assert.equal((vcf.match(/EMAIL/g) || []).length, 2, "vCard lists all emails");
 assert.ok(/URL:https:\/\/acme\.uy/.test(vcf), "vCard URL carries website");
 assert.ok(/TEL;TYPE=WORK,VOICE:/.test(vcf), "vCard TEL carries phone");
+assert.equal((vcf.match(/TEL;TYPE=WORK,VOICE:/g) || []).length, 2, "vCard keeps official and website phones");
+assert.ok(vcf.includes("X-SOCIALPROFILE;TYPE=instagram:"), "vCard carries social profiles");
 
 // A PublicContact still type-checks with address (compile-time guard).
 const _typed: PublicContact = webDoc;

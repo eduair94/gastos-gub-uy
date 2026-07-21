@@ -6,8 +6,8 @@ import { mongoose } from "../connection/database";
 export type EmailSource = "dei" | "website" | "webSearch" | "impo" | "rupe" | "manual" | "googleMaps";
 export type EmailStatus = "candidate" | "valid" | "invalid" | "suppressed";
 export type ContactStatus = "pending" | "enriched" | "no_contact" | "error" | "registry";
-/** Provenance for phone/place fields → gates public display (dei/rupe = official open data, freely displayable; googleMaps = ToS-restricted). */
-export type FieldSource = "dei" | "googleMaps" | "rupe";
+/** Provenance for phone/place fields → gates public display (dei/rupe/website are displayable; googleMaps is ToS-restricted). */
+export type FieldSource = "dei" | "googleMaps" | "rupe" | "website";
 /**
  * Provenance for `website`. Adds `webSearch` — a domain confirmed to be the
  * supplier's own by the crawl4ai discovery + verification path (match-score +
@@ -30,6 +30,14 @@ export interface IRubro {
   itemCount: number;
   share: number;
 }
+export type SocialPlatform =
+  | "instagram" | "facebook" | "linkedin" | "x" | "youtube" | "tiktok"
+  | "whatsapp" | "threads" | "pinterest" | "telegram" | "bluesky";
+export interface ISocialLink {
+  platform: SocialPlatform;
+  url: string;
+  label: string;
+}
 export interface ISupplierContact {
   supplierId: string;
   rut: string;
@@ -42,6 +50,14 @@ export interface ISupplierContact {
   phone: string | null;
   /** Provenance of `phone`. */
   phoneSource: FieldSource | null;
+  /** Phone published on the supplier's own website (kept even when an official phone also exists). */
+  websitePhone: string | null;
+  /** Address published on the supplier's own website; supplementary to the registry address. */
+  websiteAddress: string | null;
+  /** Page/anchor containing a first-party contact form. */
+  contactFormUrl: string | null;
+  /** First-party social profiles found on the supplier's website. */
+  socialLinks: ISocialLink[];
   // Knowledge-panel location data (from DEI open data or the Google Maps proxy).
   address: string | null;
   locality: string | null;
@@ -61,6 +77,8 @@ export interface ISupplierContact {
   neverAwarded: boolean;
   /** RUPE registry state verbatim (ACTIVO / EN INGRESO / …) when this row is RUPE-sourced; null otherwise. */
   rupeEstado: string | null;
+  /** Extractor contract version, used to reprocess rows after enrichment improves. */
+  enrichmentVersion: number;
 }
 
 const EmailEntrySchema = new Schema<IEmailEntry>({
@@ -79,6 +97,12 @@ const RubroSchema = new Schema<IRubro>({
   share: { type: Number, default: 0 },
 }, { _id: false });
 
+const SocialLinkSchema = new Schema<ISocialLink>({
+  platform: { type: String, required: true },
+  url: { type: String, required: true, trim: true },
+  label: { type: String, default: "", trim: true },
+}, { _id: false });
+
 const SupplierContactSchema = new Schema<ISupplierContact>({
   supplierId: { type: String, required: true },
   rut: { type: String, default: "" },
@@ -89,6 +113,10 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
   websiteSource: { type: String, default: null },
   phone: { type: String, default: null },
   phoneSource: { type: String, default: null },
+  websitePhone: { type: String, default: null },
+  websiteAddress: { type: String, default: null },
+  contactFormUrl: { type: String, default: null },
+  socialLinks: { type: [SocialLinkSchema], default: [] },
   address: { type: String, default: null },
   locality: { type: String, default: null },
   lat: { type: Number, default: null },
@@ -103,6 +131,7 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
   enrichedAt: { type: Date, default: null },
   neverAwarded: { type: Boolean, default: false },
   rupeEstado: { type: String, default: null },
+  enrichmentVersion: { type: Number, default: 0 },
 }, { timestamps: true, collection: "supplier_contacts" });
 
 // Declared for parity; BUILT by scripts/ensure-indexes.ts (autoIndex is off).

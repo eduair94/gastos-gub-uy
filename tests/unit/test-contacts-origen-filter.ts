@@ -10,10 +10,10 @@ import { buildContactFilter } from "../../app/server/utils/contacts";
   const todas = await buildContactFilter({});
   assert.ok(!("empty" in todas));
   const f = (todas as { filter: Record<string, unknown> }).filter;
-  assert.deepEqual(f.$or, [
-    { emails: { $elemMatch: { mxValid: true, status: "valid" } } },
-    { neverAwarded: true },
-  ]);
+  assert.ok(Array.isArray(f.$or));
+  assert.ok((f.$or as Record<string, unknown>[]).some(c => c.neverAwarded === true));
+  assert.ok((f.$or as Record<string, unknown>[]).some(c => !!c.emails));
+  assert.ok((f.$or as Record<string, unknown>[]).some(c => !!c.contactFormUrl));
   assert.equal(f.status, undefined, "the old status:'enriched' gate is dropped - email/neverAwarded conditions govern instead");
   assert.equal(f.$and, undefined);
 

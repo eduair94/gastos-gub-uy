@@ -1,5 +1,5 @@
 // src/jobs/enrich/types.ts
-import type { EmailSource, FieldSource, WebsiteSource } from "../../../shared/models/supplier_contacts";
+import type { EmailSource, FieldSource, ISocialLink, WebsiteSource } from "../../../shared/models/supplier_contacts";
 
 export interface ContactCandidate { email: string; source: EmailSource; confidence: number }
 
@@ -24,6 +24,10 @@ export interface ResolverResult {
   phone?: string | null;
   /** Provenance of `phone`, so the orchestrator can tag it on the record. */
   phoneSource?: FieldSource | null;
+  websitePhone?: string | null;
+  websiteAddress?: string | null;
+  contactFormUrl?: string | null;
+  socialLinks?: ISocialLink[];
   place?: PlaceInfo | null;
 }
 export interface ResolverInput { supplierId: string; rut: string; name: string; website?: string | null }

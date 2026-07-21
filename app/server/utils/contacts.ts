@@ -19,13 +19,16 @@ export type ContactMethod = 'crawl4ai' | 'googleMaps' | 'dei' | 'rupe' | 'impo'
  * fields are hidden. A record can carry several.
  */
 export function contactMethods(
-  doc: Partial<Pick<ISupplierContact, 'emails' | 'websiteSource' | 'phoneSource' | 'placeSource'>>,
+  doc: Partial<Pick<ISupplierContact,
+  'emails' | 'websiteSource' | 'phoneSource' | 'placeSource'
+  | 'websitePhone' | 'websiteAddress' | 'contactFormUrl' | 'socialLinks'>>,
 ): ContactMethod[] {
   const found = new Set<ContactMethod>()
   const emailSources = (doc.emails ?? []).map(e => e.source)
   const fieldSources = [doc.websiteSource, doc.phoneSource, doc.placeSource]
   const has = (s: string) => emailSources.includes(s as never) || fieldSources.includes(s as never)
   if (has('webSearch') || has('website')) found.add('crawl4ai')
+  if (doc.websitePhone || doc.websiteAddress || doc.contactFormUrl || doc.socialLinks?.length) found.add('crawl4ai')
   if (has('googleMaps')) found.add('googleMaps')
   if (has('dei')) found.add('dei')
   if (has('rupe')) found.add('rupe')
@@ -97,7 +100,14 @@ export async function buildContactFilter(
   const origen = String(query.origen ?? 'todas')
   if (origen === 'con-email') andConditions.push(hasUsableEmail)
   else if (origen === 'sin-adjudicaciones') andConditions.push({ neverAwarded: true })
-  else andConditions.push({ $or: [hasUsableEmail, { neverAwarded: true }] })
+  else andConditions.push({ $or: [
+    hasUsableEmail,
+    { neverAwarded: true },
+    { website: { $nin: [null, ''] }, websiteSource: { $ne: 'googleMaps' } },
+    { phone: { $nin: [null, ''] }, phoneSource: { $ne: 'googleMaps' } },
+    { contactFormUrl: { $nin: [null, ''] } },
+    { 'socialLinks.0': { $exists: true } },
+  ] })
 
   // `search` and `categoria` both constrain `name`; each becomes its own $and
   // entry so one can't clobber the other (mirrors /api/suppliers).
@@ -191,6 +201,11 @@ export interface PublicRubro {
   label: string
   share: number
 }
+export interface PublicSocialLink {
+  platform: string
+  url: string
+  label: string
+}
 /** The single sanitized shape every read path returns. */
 export interface PublicContact {
   supplierId: string
@@ -205,8 +220,13 @@ export interface PublicContact {
   phone: string | null
   /** Origin of `phone` (e.g. "dei"), or null. */
   phoneSource: string | null
+  websitePhone: string | null
+  websiteAddress: string | null
+  contactFormUrl: string | null
+  socialLinks: PublicSocialLink[]
   locality: string | null
   address: string | null
+  placeSource: string | null
   /** Top rubro label (highest share). */
   rubro: string | null
   rubros: PublicRubro[]
@@ -272,6 +292,11 @@ export function sanitizeContact(
   // stripped/absent, so the origin shown always matches a visible value.
   const websiteSource = website ? (doc.websiteSource ?? null) : null
   const phoneSource = phone ? (doc.phoneSource ?? null) : null
+  const socialLinks = (doc.socialLinks ?? []).map(link => ({
+    platform: link.platform,
+    url: link.url,
+    label: link.label ?? '',
+  }))
 
   return {
     supplierId: doc.supplierId ?? '',
@@ -283,8 +308,13 @@ export function sanitizeContact(
     websiteSource,
     phone,
     phoneSource,
+    websitePhone: doc.websitePhone ?? null,
+    websiteAddress: doc.websiteAddress ?? null,
+    contactFormUrl: doc.contactFormUrl ?? null,
+    socialLinks,
     locality: placeRestricted ? null : (doc.locality ?? null),
     address: placeRestricted ? null : (doc.address ?? null),
+    placeSource: placeRestricted ? null : (doc.placeSource ?? null),
     rubro: rubros[0]?.label || null,
     rubros,
     methods: contactMethods(doc),
@@ -300,7 +330,7 @@ export function sanitizeContact(
 // ---- Serializers -------------------------------------------------------------
 
 /** Curated table order used by CSV + XLSX. */
-const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'awarded', header: string, width: number }[] = [
+const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'socialsJoined' | 'awarded', header: string, width: number }[] = [
   { key: 'name', header: 'Nombre', width: 42 },
   { key: 'rut', header: 'RUT', width: 14 },
   { key: 'awarded', header: 'Adjudicó', width: 10 },
@@ -309,16 +339,21 @@ const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'awarded', he
   { key: 'website', header: 'Sitio web', width: 28 },
   { key: 'websiteSource', header: 'Origen sitio', width: 14 },
   { key: 'phone', header: 'Teléfono', width: 16 },
+  { key: 'websitePhone', header: 'Teléfono del sitio', width: 18 },
   { key: 'locality', header: 'Localidad', width: 20 },
   { key: 'address', header: 'Dirección', width: 34 },
+  { key: 'websiteAddress', header: 'Dirección del sitio', width: 34 },
+  { key: 'contactFormUrl', header: 'Formulario de contacto', width: 32 },
+  { key: 'socialsJoined', header: 'Redes sociales', width: 42 },
   { key: 'rubro', header: 'Rubro', width: 32 },
   { key: 'supplierId', header: 'ID proveedor', width: 18 },
 ]
 
 function cellValue(c: PublicContact, key: string): string {
   if (key === 'emailsJoined') return c.emails.map(e => e.email).join('; ')
+  if (key === 'socialsJoined') return c.socialLinks.map(link => `${link.platform}: ${link.url}`).join('; ')
   if (key === 'awarded') return c.neverAwarded ? 'No' : 'Sí'
-  const v = (c as Record<string, unknown>)[key]
+  const v = (c as unknown as Record<string, unknown>)[key]
   return v == null ? '' : String(v)
 }
 
@@ -367,7 +402,11 @@ export function toVcard(contacts: PublicContact[]): string {
     }
     if (c.website) lines.push(`URL:${vcardEscape(c.website)}`)
     if (c.phone) lines.push(`TEL;TYPE=WORK,VOICE:${vcardEscape(c.phone)}`)
+    if (c.websitePhone && c.websitePhone !== c.phone) lines.push(`TEL;TYPE=WORK,VOICE:${vcardEscape(c.websitePhone)}`)
     if (c.address || c.locality) lines.push(`ADR;TYPE=WORK:;;${vcardEscape(c.address ?? '')};${vcardEscape(c.locality ?? '')};;;Uruguay`)
+    if (c.websiteAddress && c.websiteAddress !== c.address) lines.push(`ADR;TYPE=WORK:;;${vcardEscape(c.websiteAddress)};;;;;Uruguay`)
+    if (c.contactFormUrl) lines.push(`URL;TYPE=CONTACT:${vcardEscape(c.contactFormUrl)}`)
+    for (const social of c.socialLinks) lines.push(`X-SOCIALPROFILE;TYPE=${social.platform}:${vcardEscape(social.url)}`)
     if (c.rubro) lines.push(`NOTE:${vcardEscape(c.rubro)}`)
     lines.push('END:VCARD')
     return lines.join('\r\n')

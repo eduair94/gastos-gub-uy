@@ -774,8 +774,16 @@
       "email": "Email",
       "website": "Website",
       "phone": "Phone",
+      "moreContact": "More contact",
       "sources": "Sources"
     },
+    "source": {
+      "webSearch": "Crawl4AI · web search",
+      "verifiedWebsite": "Crawl4AI · verified site",
+      "website": "Crawl4AI · website",
+      "googleMaps": "Google Maps"
+    },
+    "contactForm": "Contact form",
     "sort": {
       "priorityDesc": "Most relevant",
       "nameAsc": "Name (A–Z)"

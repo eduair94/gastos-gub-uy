@@ -5,7 +5,7 @@
 // award — the "Sin adjudicaciones" tier of the public contact directory (see
 // docs/superpowers/specs/2026-07-21-rupe-only-companies-contact-directory-design.md).
 // RUPE carries name + fiscal address + estado only (no email/phone/website); the
-// seeded row is address-only until a future Tier-2 enrichment pass (not built
+// seeded row is address-only until the continuous Tier-2 enrichment worker
 // here) finds contact details.
 //
 // Anti-joins rupe_registry against the awarded-supplier RUT set

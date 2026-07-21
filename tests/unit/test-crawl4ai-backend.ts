@@ -57,18 +57,19 @@ function fakeFetch(records: Rec[], respond: (url: string, body: any) => any) {
 }
 
 async function main() {
-  // fetchHtml posts to /html and returns j.html
+  // fetchHtml posts to /crawl and returns the rendered raw HTML so link
+  // attributes survive for social-profile extraction.
   {
     const recs: Rec[] = [];
     const t = createCrawl4aiTransport({
       baseUrl: "https://c4.test",
       minIntervalMs: 0,
-      fetchImpl: fakeFetch(recs, (_u, b) => ({ url: b.url, html: "<p>hola contacto@x.uy</p>", success: true })),
+      fetchImpl: fakeFetch(recs, (_u, b) => ({ success: true, results: [{ url: b.urls[0], html: "<p>hola contacto@x.uy</p>" }] })),
     });
     const html = await t.fetchHtml("https://foo.uy/contacto");
     assert.equal(html, "<p>hola contacto@x.uy</p>");
-    assert.ok(recs[0].url.endsWith("/html"), `posted to ${recs[0].url}`);
-    assert.equal(recs[0].body.url, "https://foo.uy/contacto");
+    assert.ok(recs[0].url.endsWith("/crawl"), `posted to ${recs[0].url}`);
+    assert.deepEqual(recs[0].body.urls, ["https://foo.uy/contacto"]);
   }
 
   // fetchHtml swallows transport errors and HTTP errors → null
@@ -101,7 +102,7 @@ async function main() {
     const t = createCrawl4aiTransport({
       baseUrl: "https://c4.test",
       minIntervalMs: 50,
-      fetchImpl: fakeFetch(recs, () => ({ html: "x" })),
+      fetchImpl: fakeFetch(recs, (_u, b) => ({ results: [{ url: b.urls[0], html: "x" }] })),
     });
     await t.fetchHtml("https://a.uy");
     await t.fetchHtml("https://b.uy");

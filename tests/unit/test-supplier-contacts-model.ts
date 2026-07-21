@@ -11,11 +11,17 @@ const doc = new SupplierContactModel({
   rubros: [{ classificationId: "28267", label: "Alcohol", itemCount: 3, share: 0.5 }],
   status: "enriched",
   priorityScore: 123,
+  websitePhone: "2407 0000",
+  websiteAddress: "Cnel. Brandzen 1956",
+  contactFormUrl: "https://example.uy/#contact",
+  socialLinks: [{ platform: "instagram", url: "https://instagram.com/example/", label: "@example" }],
+  enrichmentVersion: 2,
 });
 const err = doc.validateSync();
 assert.equal(err, undefined, `unexpected validation error: ${err?.message}`);
 assert.equal(doc.emails[0].source, "dei");
 assert.equal(doc.collection.name, "supplier_contacts");
+assert.equal(doc.socialLinks[0].platform, "instagram");
 console.log("ok: supplier_contacts model");
 
 // A RUPE-only ("registered, never awarded") seed row must also validate.

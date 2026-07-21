@@ -4,6 +4,7 @@ import { createDeiResolver } from "../../src/jobs/enrich/resolvers/dei";
 import { extractEmailsFromHtml, createWebsiteResolver } from "../../src/jobs/enrich/resolvers/website";
 import { createWebSearchResolver } from "../../src/jobs/enrich/resolvers/web-search";
 import { createImpoResolver } from "../../src/jobs/enrich/resolvers/impo";
+import { extractWebsiteContactDetails } from "../../src/jobs/enrich/website-contact-details";
 
 // Minimal fake of the mongodb Db surface the resolver uses.
 function fakeDb(rows: any[]) {
@@ -69,6 +70,32 @@ function fakeDb(rows: any[]) {
   const empty = await r.resolve({ supplierId: "R/1", rut: "1", name: "x", website: null });
   assert.deepEqual(empty.emails, []);
   console.log("ok: website resolver");
+})();
+
+(() => {
+  const html = `
+    <section id="contact"><h1>Escribinos</h1>
+      <form id="contact-form" name="segalerba-contact">
+        <input name="name"><input type="email" name="email"><textarea name="message"></textarea>
+      </form>
+    </section>
+    <footer>
+      <div>2407 0000</div>
+      <div>Cnel. Brandzen 1956 | 501, MVD</div>
+      <a>estudio_segalerba</a>
+      <a href="https://www.linkedin.com/company/acme">LinkedIn</a>
+      <a href="https://t.me/acme">Telegram</a>
+      <a href="https://www.threads.net/@acme">Threads</a>
+    </footer>`;
+  const details = extractWebsiteContactDetails(html, "https://segalerba.com.uy/");
+  assert.equal(details.phone, "2407 0000");
+  assert.equal(details.address, "Cnel. Brandzen 1956 | 501, MVD");
+  assert.equal(details.contactFormUrl, "https://segalerba.com.uy/#contact-form");
+  assert.ok(details.socialLinks.some(link => link.platform === "instagram" && link.url.includes("estudio_segalerba")));
+  assert.ok(details.socialLinks.some(link => link.platform === "linkedin"));
+  assert.ok(details.socialLinks.some(link => link.platform === "telegram"));
+  assert.ok(details.socialLinks.some(link => link.platform === "threads"));
+  console.log("ok: website contact details");
 })();
 
 (async () => {

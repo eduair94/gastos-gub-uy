@@ -19,10 +19,13 @@ export interface StoredPlace {
   placeSource?: FieldSource | null;
 }
 
-export function registryContactQuery(staleBefore: Date) {
+export const CONTACT_ENRICHMENT_VERSION = 2;
+
+export function registryContactQuery(staleBefore: Date, enrichmentVersion = CONTACT_ENRICHMENT_VERSION) {
   return {
     neverAwarded: true,
     $or: [
+      { enrichmentVersion: { $ne: enrichmentVersion } },
       { enrichedAt: null },
       { enrichedAt: { $exists: false } },
       { enrichedAt: { $lt: staleBefore } },

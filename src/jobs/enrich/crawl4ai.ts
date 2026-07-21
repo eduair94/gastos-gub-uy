@@ -102,9 +102,13 @@ export function createCrawl4aiTransport(opts: Crawl4aiOptions): Crawl4aiTranspor
 
   return {
     async fetchHtml(url: string): Promise<string | null> {
-      const j = await paced(() => post("/html", { url }));
-      // crawl4ai returns cleaned HTML on `html`; visible-text emails survive.
-      return j && typeof j.html === "string" ? j.html : null;
+      // `/crawl` returns the rendered raw HTML (including href/src attributes),
+      // unlike `/html`, whose schema-oriented sanitizer removes social links.
+      // Keeping this behind the same transport preserves pacing and lets the
+      // resolver extract first-party profiles without a direct-site fallback.
+      const j = await paced(() => post("/crawl", { urls: [url] }));
+      const result = Array.isArray(j?.results) ? j.results[0] : null;
+      return result && typeof result.html === "string" ? result.html : null;
     },
     async search(query: string): Promise<SearchHit[]> {
       const ddg = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;

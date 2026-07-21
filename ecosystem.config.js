@@ -69,12 +69,13 @@ module.exports = {
       env_file: '.env'
     },
     {
-      // Continuously drains RUPE companies that have never received an award.
+      // Alternates RUPE-only and awarded suppliers through one globally paced
+      // Crawl4AI transport so both populations receive the same enrichment.
       // Each successful supplier is checkpointed through enrichedAt, so PM2
       // restarts and deploys resume safely without repeating the current pass.
       name: 'gastos-gub-contact-enrichment',
       script: './node_modules/tsx/dist/cli.mjs',
-      args: 'src/jobs/enrich-supplier-contacts.ts --registry-only --loop --limit=100 --stale-days=365 --pause-ms=60000 --require-crawl4ai --require-google-maps',
+      args: 'src/jobs/enrich-supplier-contacts.ts --all-populations --loop --limit=100 --stale-days=365 --pause-ms=60000 --require-crawl4ai --require-google-maps',
       instances: 1,
       exec_mode: 'fork',
       env: {

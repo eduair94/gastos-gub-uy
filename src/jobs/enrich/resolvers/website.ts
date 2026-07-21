@@ -1,6 +1,8 @@
 // src/jobs/enrich/resolvers/website.ts
 import type { ContactResolver, ResolverInput, ResolverResult, ContactCandidate } from "../types";
 import { RAW_EMAIL_RE } from "../email-regex";
+import { extractWebsiteContactDetails } from "../website-contact-details";
+import type { ISocialLink } from "../../../../shared/models/supplier_contacts";
 
 // Emails embedded in HTML text or mailto: hrefs. Excludes image-suffix false positives.
 const IMG_SUFFIX = /\.(png|jpe?g|gif|webp|svg)$/i;
@@ -37,6 +39,10 @@ export function createWebsiteResolver(
       try { base = new URL(input.website); } catch { return { emails: [] }; }
       const siteDomain = base.hostname;
       const seen = new Map<string, ContactCandidate>();
+      const socials = new Map<string, ISocialLink>();
+      let websitePhone: string | null = null;
+      let websiteAddress: string | null = null;
+      let contactFormUrl: string | null = null;
       for (let i = 0; i < CONTACT_PATHS.length; i++) {
         const url = new URL(CONTACT_PATHS[i], base.origin).toString();
         const html = await fetchHtml(url).catch(() => null);
@@ -45,11 +51,20 @@ export function createWebsiteResolver(
           const prev = seen.get(c.email);
           if (!prev || c.confidence > prev.confidence) seen.set(c.email, c);
         }
+        const details = extractWebsiteContactDetails(html, url);
+        websitePhone ||= details.phone;
+        websiteAddress ||= details.address;
+        contactFormUrl ||= details.contactFormUrl;
+        for (const social of details.socialLinks) socials.set(social.url, social);
         // Always try at least home ("") + the first contact path before short-circuiting,
         // since the home page alone often already carries a same-domain (0.75) match.
         if (i >= 1 && [...seen.values()].some(c => c.confidence >= 0.75)) break; // enough signal
       }
-      return { emails: [...seen.values()], website: input.website };
+      return {
+        emails: [...seen.values()], website: input.website,
+        phone: websitePhone, phoneSource: websitePhone ? "website" : null,
+        websitePhone, websiteAddress, contactFormUrl, socialLinks: [...socials.values()],
+      };
     },
   };
 }

@@ -12,6 +12,7 @@
 import type { DataColumn } from '~/components/DataTable.vue'
 
 interface EmailEntry { email: string, source: string, mxValid: boolean, status: string }
+interface SocialLink { platform: string, url: string, label: string }
 interface ContactRow {
   supplierId: string
   rut: string
@@ -22,8 +23,13 @@ interface ContactRow {
   websiteSource: string | null
   phone: string | null
   phoneSource: string | null
+  websitePhone: string | null
+  websiteAddress: string | null
+  contactFormUrl: string | null
+  socialLinks: SocialLink[]
   locality: string | null
   address: string | null
+  placeSource: string | null
   rubro: string | null
   methods: string[]
   neverAwarded: boolean
@@ -35,10 +41,16 @@ interface ContactRow {
 
 /** Short, language-neutral origin tag for a contact field ("DEI"/"RUPE" are proper nouns). */
 function originLabel(src: string | null): string {
-  if (src === 'webSearch') return '✓ verificado'
+  if (src === 'webSearch') return t('contacts.source.webSearch')
+  if (src === 'website') return t('contacts.source.website')
+  if (src === 'googleMaps') return t('contacts.source.googleMaps')
   if (src === 'dei') return 'DEI'
   if (src === 'rupe') return 'RUPE'
+  if (src === 'impo') return 'IMPO'
   return ''
+}
+function websiteOriginLabel(src: string | null): string {
+  return src === 'webSearch' ? t('contacts.source.verifiedWebsite') : originLabel(src)
 }
 interface RubroFacet { classificationId: string, label: string, count: number }
 
@@ -60,7 +72,7 @@ const METHOD_BADGES: Record<string, { label: string, cls: string }> = {
   dei: { label: 'DEI', cls: 'is-dei' },
   rupe: { label: 'RUPE', cls: 'is-rupe' },
   crawl4ai: { label: 'crawl4ai', cls: 'is-crawl' },
-  googleMaps: { label: 'Maps', cls: 'is-maps' },
+  googleMaps: { label: 'Google Maps', cls: 'is-maps' },
   impo: { label: 'IMPO', cls: 'is-impo' },
 }
 
@@ -224,7 +236,7 @@ const columns = computed<DataColumn<ContactRow>[]>(() => [
   { key: 'email', label: t('contacts.table.email') },
   { key: 'website', label: t('contacts.table.website') },
   { key: 'phone', label: t('contacts.table.phone'), mono: true },
-  { key: 'methods', label: t('contacts.table.sources') },
+  { key: 'moreContact', label: t('contacts.table.moreContact') },
 ])
 
 const orgLd = useOrgLd()
@@ -570,6 +582,18 @@ useSeo(() => ({
               v-if="row.onlyDirectAward"
               :count="row.directAwardCount"
             />
+            <div
+              v-if="row.methods && row.methods.length"
+              class="srcbadges"
+              :aria-label="t('contacts.table.sources')"
+            >
+              <span
+                v-for="m in row.methods"
+                :key="m"
+                class="srcbadge"
+                :class="METHOD_BADGES[m]?.cls"
+              >{{ METHOD_BADGES[m]?.label || m }}</span>
+            </div>
           </div>
         </template>
         <template #cell:rubro="{ row }">
@@ -579,9 +603,20 @@ useSeo(() => ({
           <div>{{ row.locality || '—' }}</div>
           <div
             v-if="row.address"
-            style="font-size:0.85em;opacity:0.7"
+            class="fielddetail"
           >
             {{ row.address }}
+            <span
+              v-if="originLabel(row.placeSource)"
+              class="fieldsrc"
+            >{{ originLabel(row.placeSource) }}</span>
+          </div>
+          <div
+            v-if="row.websiteAddress && row.websiteAddress !== row.address"
+            class="fielddetail"
+          >
+            {{ row.websiteAddress }}
+            <span class="fieldsrc">{{ t('contacts.source.website') }}</span>
           </div>
         </template>
         <template #cell:email="{ row }">
@@ -589,12 +624,17 @@ useSeo(() => ({
             v-if="row.emails.length"
             style="display:flex;flex-direction:column;gap:2px"
           >
-            <a
+            <div
               v-for="e in row.emails"
               :key="e.email"
-              :href="`mailto:${e.email}`"
-              class="link"
-            >{{ e.email }}</a>
+              class="fieldstack"
+            >
+              <a
+                :href="`mailto:${e.email}`"
+                class="link"
+              >{{ e.email }}</a>
+              <span class="fieldsrc">{{ originLabel(e.source) }}</span>
+            </div>
           </div>
           <span
             v-else-if="row.neverAwarded"
@@ -611,28 +651,59 @@ useSeo(() => ({
               class="link"
             >{{ hostname(row.website) }}</a>
             <div
-              v-if="originLabel(row.websiteSource)"
+              v-if="websiteOriginLabel(row.websiteSource)"
               style="font-size:0.8em;opacity:0.7"
             >
-              {{ originLabel(row.websiteSource) }}
+              {{ websiteOriginLabel(row.websiteSource) }}
             </div>
           </template>
           <span v-else>—</span>
         </template>
         <template #cell:phone="{ row }">
-          {{ row.phone || '—' }}
-        </template>
-        <template #cell:methods="{ row }">
           <div
-            v-if="row.methods && row.methods.length"
-            class="srcbadges"
+            v-if="row.phone || row.websitePhone"
+            class="fieldstack"
           >
-            <span
-              v-for="m in row.methods"
-              :key="m"
-              class="srcbadge"
-              :class="METHOD_BADGES[m]?.cls"
-            >{{ METHOD_BADGES[m]?.label || m }}</span>
+            <template v-if="row.phone">
+              <a
+                :href="`tel:${row.phone}`"
+                class="link"
+              >{{ row.phone }}</a>
+              <span
+                v-if="originLabel(row.phoneSource)"
+                class="fieldsrc"
+              >{{ originLabel(row.phoneSource) }}</span>
+            </template>
+            <template v-if="row.websitePhone && row.websitePhone !== row.phone">
+              <a
+                :href="`tel:${row.websitePhone}`"
+                class="link"
+              >{{ row.websitePhone }}</a>
+              <span class="fieldsrc">{{ t('contacts.source.website') }}</span>
+            </template>
+          </div>
+          <span v-else>—</span>
+        </template>
+        <template #cell:moreContact="{ row }">
+          <div
+            v-if="row.contactFormUrl || row.socialLinks?.length"
+            class="morecontact"
+          >
+            <a
+              v-if="row.contactFormUrl"
+              :href="row.contactFormUrl"
+              target="_blank"
+              rel="nofollow noopener"
+              class="link"
+            >{{ t('contacts.contactForm') }}</a>
+            <a
+              v-for="social in row.socialLinks"
+              :key="social.url"
+              :href="social.url"
+              target="_blank"
+              rel="nofollow noopener"
+              class="link"
+            >{{ social.label || social.platform }}</a>
           </div>
           <span v-else>—</span>
         </template>
@@ -862,6 +933,16 @@ useSeo(() => ({
 }
 
 .link { color: var(--celeste-deep); text-decoration: none; }
+.fieldstack { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.fielddetail { margin-top: 2px; font-size: 0.85em; color: var(--text-muted); }
+.fieldsrc {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.25;
+}
+.morecontact { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 
 /* Source/method badges (which enrichment produced the record). */
 .srcbadges { display: flex; flex-wrap: wrap; gap: 4px; }

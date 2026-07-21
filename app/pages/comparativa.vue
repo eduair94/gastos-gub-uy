@@ -168,11 +168,11 @@ useSeo(() => ({
 
     <v-container class="u-container cmp__body">
       <!-- Objective matrix -->
-      <section class="cmp__sec">
-        <h2 class="cmp__h">
+      <section class="mb-6 mb-md-8">
+        <h2 class="cmp__h ma-0 mb-2">
           {{ t('comparativa.matrixTitle') }}
         </h2>
-        <p class="cmp__help u-muted">
+        <p class="cmp__help u-muted ma-0 mb-4">
           {{ t('comparativa.matrixHelp') }}
         </p>
         <v-card
@@ -231,14 +231,14 @@ useSeo(() => ({
             </template>
           </v-data-table>
         </v-card>
-        <p class="cmp__note u-muted">
+        <p class="cmp__note u-muted ma-0 mt-3">
           {{ t('comparativa.priceCaveat') }}
         </p>
       </section>
 
       <!-- Unified entry-price comparison, normalized to pesos -->
-      <section class="cmp__sec">
-        <h2 class="cmp__h">
+      <section class="mb-6 mb-md-8">
+        <h2 class="cmp__h ma-0 mb-2">
           {{ t('comparativa.chartsTitle') }}
         </h2>
         <ChartBlock
@@ -252,7 +252,7 @@ useSeo(() => ({
             :row-height="36"
           />
         </ChartBlock>
-        <p class="cmp__note u-muted">
+        <p class="cmp__note u-muted ma-0 mt-3">
           {{ t('comparativa.chartNote') }}
         </p>
       </section>
@@ -260,7 +260,7 @@ useSeo(() => ({
       <!-- Editorial recommendation (labeled opinion) -->
       <section
         v-if="recommended"
-        class="cmp__sec"
+        class="mb-6 mb-md-8"
       >
         <v-card class="reco">
           <div class="reco__head">
@@ -294,7 +294,7 @@ useSeo(() => ({
             rel="noopener nofollow"
             color="primary"
             append-icon="mdi-arrow-right"
-            class="reco__cta"
+            class="mt-4"
           >
             {{ t('comparativa.visitSiteNamed', { name: recommended.name }) }}
           </v-btn>
@@ -302,11 +302,11 @@ useSeo(() => ({
       </section>
 
       <!-- Provider cards: core + opaque -->
-      <section class="cmp__sec">
-        <h2 class="cmp__h">
+      <section class="mb-6 mb-md-8">
+        <h2 class="cmp__h ma-0 mb-4">
           {{ t('comparativa.providersTitle') }}
         </h2>
-        <v-row class="cmp__cards">
+        <v-row>
           <v-col
             v-for="p in [...core, ...opaque]"
             :key="p.id"
@@ -316,7 +316,9 @@ useSeo(() => ({
             <v-card
               tag="article"
               height="100%"
-              class="pcard"
+              border
+              rounded="md"
+              class="pcard pa-4"
               :class="{ 'pcard--reco': p.id === RECOMMENDATION.providerId }"
             >
               <header class="pcard__head">
@@ -349,7 +351,7 @@ useSeo(() => ({
                 <span class="pcard__agebasis">· {{ established(p).basis }}</span>
               </p>
 
-              <ul class="pcard__plans">
+              <ul class="pcard__plans mb-3">
                 <li
                   v-for="pl in p.plans"
                   :key="pl.name"
@@ -367,7 +369,7 @@ useSeo(() => ({
                 </li>
               </ul>
 
-              <div class="pcard__feats">
+              <div class="d-flex flex-wrap ga-1 mb-3">
                 <v-chip
                   v-if="p.features.aiPliego === 'si'"
                   class="chipf"
@@ -437,7 +439,7 @@ useSeo(() => ({
 
               <v-btn
                 v-if="p.reachable"
-                class="pcard__visit"
+                class="mt-3"
                 :href="p.url"
                 target="_blank"
                 rel="noopener nofollow"
@@ -454,14 +456,14 @@ useSeo(() => ({
       </section>
 
       <!-- Regional aggregators -->
-      <section class="cmp__sec">
-        <h2 class="cmp__h">
+      <section class="mb-6 mb-md-8">
+        <h2 class="cmp__h ma-0 mb-2">
           {{ t('comparativa.regionalTitle') }}
         </h2>
-        <p class="cmp__help u-muted">
+        <p class="cmp__help u-muted ma-0 mb-4">
           {{ t('comparativa.regionalLead') }}
         </p>
-        <v-row class="cmp__mini">
+        <v-row>
           <v-col
             v-for="p in regional"
             :key="p.id"
@@ -472,7 +474,9 @@ useSeo(() => ({
             <v-card
               tag="article"
               height="100%"
-              class="mcard"
+              border
+              rounded="md"
+              class="mcard pa-3"
             >
               <h4>
                 <a
@@ -493,7 +497,7 @@ useSeo(() => ({
                 >{{ pesoText(p.entryPaid.amount, p.entryPaid.currency) }}</span>
               </p>
               <v-btn
-                class="mcard__visit"
+                class="mt-1"
                 :href="p.url"
                 target="_blank"
                 rel="noopener nofollow"
@@ -510,14 +514,16 @@ useSeo(() => ({
       </section>
 
       <!-- Out of scope + unverified -->
-      <section class="cmp__sec">
-        <v-row class="cmp__sec--notes">
+      <section class="mb-6 mb-md-8">
+        <v-row>
           <v-col
             cols="12"
             md="6"
           >
             <v-card
-              class="notecard"
+              border
+              rounded="md"
+              class="notecard pa-4"
               height="100%"
             >
               <h3>{{ t('comparativa.outOfScopeTitle') }}</h3>
@@ -534,7 +540,9 @@ useSeo(() => ({
             md="6"
           >
             <v-card
-              class="notecard"
+              border
+              rounded="md"
+              class="notecard pa-4"
               height="100%"
             >
               <h3>{{ t('comparativa.unverifiedTitle') }}</h3>
@@ -550,8 +558,8 @@ useSeo(() => ({
       </section>
 
       <!-- Methodology + neutrality -->
-      <section class="cmp__sec cmp__method">
-        <h2 class="cmp__h">
+      <section class="cmp__method mb-6 mb-md-8">
+        <h2 class="cmp__h ma-0 mb-2">
           {{ t('comparativa.methodologyTitle') }}
         </h2>
         <p>{{ bi(METHODOLOGY) }}</p>
@@ -582,10 +590,9 @@ useSeo(() => ({
   text-transform: uppercase; letter-spacing: 0.05em; color: var(--verde);
 }
 .cmp__body { padding-block: var(--s-6) var(--s-8); }
-.cmp__sec { margin-bottom: var(--s-8); }
-.cmp__h { font-size: var(--t-xl); margin: 0 0 var(--s-2); }
-.cmp__help { margin: 0 0 var(--s-4); max-width: 70ch; }
-.cmp__note { font-size: var(--t-xs); margin: var(--s-3) 0 0; max-width: 80ch; }
+.cmp__h { font-size: var(--t-xl); }
+.cmp__help { max-width: 70ch; }
+.cmp__note { max-width: 80ch; font-size: var(--t-xs); }
 
 /* Matrix */
 .cmp__tablewrap { overflow: hidden; }
@@ -622,8 +629,6 @@ useSeo(() => ({
 .reco__caveat { display: flex; gap: var(--s-2); font-size: var(--t-sm); color: var(--text-muted); margin: 0; }
 
 /* Provider cards */
-.cmp__cards, .cmp__mini, .cmp__sec--notes { margin-top: calc(var(--s-2) * -1); }
-.pcard { border: 1px solid var(--rule); border-radius: var(--r-md); padding: var(--s-4); background: var(--surface); }
 .pcard--reco { border-color: var(--celeste); box-shadow: 0 0 0 1px var(--celeste); }
 .pcard__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--s-2); }
 .pcard__head h3 { font-size: var(--t-lg); margin: 0; }
@@ -637,12 +642,11 @@ useSeo(() => ({
 .pcard__focus { font-size: var(--t-xs); margin: 0 0 var(--s-1); }
 .pcard__age { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: var(--t-xs); margin: 0 0 var(--s-3); }
 .pcard__agebasis { opacity: 0.75; }
-.pcard__plans { list-style: none; margin: 0 0 var(--s-3); padding: 0; }
+.pcard__plans { list-style: none; padding: 0; }
 .pcard__plans li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); padding: var(--s-1) 0; border-bottom: 1px dashed var(--rule); }
 .pcard__plan { font-family: var(--font-mono); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); min-width: 84px; }
 .pcard__price { font-weight: 600; color: var(--celeste-deep); }
 .pcard__flag { font-size: 10px; color: var(--text-muted); font-style: italic; }
-.pcard__feats { display: flex; flex-wrap: wrap; gap: var(--s-1); margin: 0 0 var(--s-3); }
 .chipf { color: var(--text-muted); }
 .chipf--legal { color: var(--verde); font-weight: 600; }
 .pcard__row { font-size: var(--t-sm); line-height: 1.45; margin: 0 0 var(--s-2); }
@@ -652,7 +656,6 @@ useSeo(() => ({
 .pcard__src a { margin-right: var(--s-1); color: var(--celeste-deep); }
 
 /* Mini cards (regional) */
-.mcard { border: 1px solid var(--rule); border-radius: var(--r-md); padding: var(--s-3); }
 .mcard h4 { font-size: var(--t-base); margin: 0 0 var(--s-1); }
 .mcard h4 a { color: var(--text); text-decoration: none; }
 .mcard h4 a:hover { text-decoration: underline; }
@@ -660,7 +663,7 @@ useSeo(() => ({
 .mcard__price { font-weight: 600; color: var(--celeste-deep); font-size: var(--t-sm); }
 
 /* Notes */
-.notecard { border: 1px dashed var(--rule); border-radius: var(--r-md); padding: var(--s-4); background: var(--surface-sunken); }
+.notecard { border-style: dashed; background: var(--surface-sunken); }
 .notecard h3 { font-size: var(--t-base); margin: 0 0 var(--s-2); }
 .notecard p { font-size: var(--t-sm); line-height: 1.45; margin: 0 0 var(--s-2); }
 
@@ -672,9 +675,6 @@ useSeo(() => ({
 
 /* Peso-approx + visit links */
 .pcard__approx, .mcard__approx { font-size: var(--t-xs); color: var(--text-muted); font-weight: 400; }
-.pcard__visit { margin-top: var(--s-3); }
-.mcard__visit { margin-top: var(--s-1); }
-.reco__cta { margin-top: var(--s-4); }
 
 /* Responsive */
 .chero__title { font-size: clamp(1.7rem, 6vw, var(--t-3xl)); }
@@ -723,7 +723,6 @@ useSeo(() => ({
   .chero { padding: var(--s-6) 0 var(--s-5); }
   .chero__lead { font-size: var(--t-base); }
   .cmp__body { padding-block: var(--s-5) var(--s-7); }
-  .cmp__sec { margin-bottom: var(--s-6); }
   .reco { padding: var(--s-4); }
 }
 </style>
