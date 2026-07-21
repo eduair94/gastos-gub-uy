@@ -74,7 +74,7 @@ async function main(): Promise<void> {
 
   const now = new Date();
   const budget = { remaining: candidates.length };
-  const attach = await attachProbedReiteraciones(candidates, budget, now, concurrency);
+  const attach = await attachProbedReiteraciones(candidates, budget, now, concurrency, { reprobe });
 
   const bulkOps = candidates
     .filter((c) => c.reiteracionProbedAt)

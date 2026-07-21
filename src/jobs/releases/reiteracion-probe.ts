@@ -8,6 +8,12 @@
  * 30KB Word doc sitting right next to it — same folder, same government-assigned
  * numeric id, different prefix.
  *
+ * The government later migrated resolution exports from Word to PDF, so the file
+ * may be `.doc` OR `.pdf` depending on the compra's vintage (e.g. compra 1332455
+ * publishes reiter_1332455.pdf, not .doc). The probe derives the right extension
+ * from the acta's own URL — the acta and reiteración are exported together and
+ * share it — and falls back to trying both. See reiteracionUrl / actaExtension.
+ *
  * Same gap class as the open-calls pliego probe (src/jobs/open-calls/pliego-probe.ts):
  * a deterministic sibling URL, HEAD-probed and synthesized into the document the
  * feed should have provided. The reiteración is not universal — only compras where
@@ -25,7 +31,16 @@ const RESOLUCIONES_BASE = "https://www.comprasestatales.gub.uy/Resoluciones";
 const REITERACION_DOC_TYPE = "reiteracionGasto";
 
 /**
- * Deterministic public URL of a compra's "reiteración del gasto" resolution.
+ * Extensions the government serves resolution files under. The site migrated its
+ * resolution export from Word to PDF at some point, so BOTH exist in the wild:
+ * older compras publish `reiter_{id}.doc`, newer ones `reiter_{id}.pdf` (compra
+ * 1332455). PDF is listed first because it is the current default.
+ */
+const REITERACION_EXTENSIONS = ["pdf", "doc"] as const;
+
+/**
+ * Deterministic public URL of a compra's "reiteración del gasto" resolution for
+ * a given file extension.
  *
  * Casing matters, same trap as the pliego probe: the capital `/Resoluciones/`
  * path (what the feed's own awardNotice URL already uses) serves the file; the
@@ -33,34 +48,64 @@ const REITERACION_DOC_TYPE = "reiteracionGasto";
  * file 404s to an HTML error page, so a caller must verify the response is not
  * HTML, never trust status 200 alone.
  */
-export function reiteracionUrl(compraId: string): string {
-  return `${RESOLUCIONES_BASE}/reiter_${encodeURIComponent(compraId)}.doc`;
+export function reiteracionUrl(compraId: string, ext: string = REITERACION_EXTENSIONS[0]): string {
+  return `${RESOLUCIONES_BASE}/reiter_${encodeURIComponent(compraId)}.${ext}`;
+}
+
+/**
+ * The file extension of the feed's awardNotice (acta) URL. The acta and the
+ * reiteración are generated together by the same government export, in the same
+ * folder, under the same numeric id — so they share an extension (both `.doc` on
+ * compra 1331990, both `.pdf` on 1332455). Deriving the reiteración extension
+ * from the acta keeps the probe a single HEAD in the common case instead of
+ * trying every extension. Returns null when it can't be read (→ probe them all).
+ */
+function actaExtension(awards: IAward[] | undefined): string | null {
+  for (const award of awards ?? []) {
+    const notice = award.documents?.find((d) => d.documentType === "awardNotice");
+    const m = notice?.url ? /\.([a-z0-9]{2,5})(?:$|[?#])/i.exec(notice.url) : null;
+    if (m) return m[1].toLowerCase();
+  }
+  return null;
 }
 
 /**
  * HEAD-probes the deterministic reiteración URL. Returns a synthesized award
  * document when it resolves to a real file, else null. HEAD only — nothing is
  * downloaded here, matching the pliego probe's pattern.
+ *
+ * `preferExt` is the acta's extension (see actaExtension): when known we probe
+ * exactly that one, since the reiteración mirrors it — one request, so the
+ * dominant "no reiteración exists" case stays a single HEAD. When it's unknown
+ * we fall back to trying every known extension in turn.
  */
-export async function probeReiteracionDoc(compraId: string, timeoutMs = 12_000): Promise<IAwardDocument | null> {
-  const url = reiteracionUrl(compraId);
-  try {
-    const res = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(timeoutMs) });
-    if (!res.ok) return null;
-    const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
-    if (!contentType || contentType.includes("html")) return null; // 404/301 land on text/html
-    const lastModified = res.headers.get("last-modified");
-    return {
-      id: `reiter-${compraId}`,
-      documentType: REITERACION_DOC_TYPE,
-      url,
-      language: "es",
-      datePublished: lastModified ? new Date(lastModified) : new Date(),
-      format: contentType,
-    };
-  } catch {
-    return null; // unreachable / timeout — treat as "no reiteración", retried later
+export async function probeReiteracionDoc(
+  compraId: string,
+  preferExt?: string | null,
+  timeoutMs = 12_000,
+): Promise<IAwardDocument | null> {
+  const extensions = preferExt ? [preferExt] : [...REITERACION_EXTENSIONS];
+  for (const ext of extensions) {
+    const url = reiteracionUrl(compraId, ext);
+    try {
+      const res = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(timeoutMs) });
+      if (!res.ok) continue;
+      const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
+      if (!contentType || contentType.includes("html")) continue; // 404/301 land on text/html
+      const lastModified = res.headers.get("last-modified");
+      return {
+        id: `reiter-${compraId}`,
+        documentType: REITERACION_DOC_TYPE,
+        url,
+        language: "es",
+        datePublished: lastModified ? new Date(lastModified) : new Date(),
+        format: contentType,
+      };
+    } catch {
+      // unreachable / timeout — try the next extension, else treat as "no reiteración"
+    }
   }
+  return null; // no extension resolved — retried on a later run
 }
 
 /** Mutable probe budget shared across an entire upload run, so it never hammers the gov site. */
@@ -126,12 +171,18 @@ function attachToFirstAwardNotice(awards: IAward[], doc: IAwardDocument): void {
  * releases without one have no resolution file to be sibling to. Probing is
  * capped by `budget`; releases left over (budget exhausted) get no marker and
  * are simply retried on the next run.
+ *
+ * `opts.reprobe` forces step (3) even for releases already stamped
+ * `reiteracionProbedAt` (step 2) — needed to re-probe records marked a miss
+ * under an older probe (e.g. before `.pdf` resolutions were handled). Carry-
+ * forward (step 1) still wins, so a real doc is never re-fetched or wiped.
  */
 export async function attachProbedReiteraciones(
   releases: ReiteracionCandidate[],
   budget: ReiteracionBudget,
   now: Date,
   concurrency = 5,
+  opts: { reprobe?: boolean } = {},
 ): Promise<AttachReiteracionResult> {
   const result: AttachReiteracionResult = { found: 0, probed: 0, carried: 0 };
 
@@ -153,7 +204,7 @@ export async function attachProbedReiteraciones(
       result.carried++;
       continue;
     }
-    if (prev?.reiteracionProbedAt) {
+    if (prev?.reiteracionProbedAt && !opts.reprobe) {
       release.reiteracionProbedAt = prev.reiteracionProbedAt; // (2) probed before, no reiteración — don't repeat
       continue;
     }
@@ -169,7 +220,7 @@ export async function attachProbedReiteraciones(
   result.probed = slice.length;
 
   await mapLimit(slice, concurrency, async ({ release, compraId }) => {
-    const doc = await probeReiteracionDoc(compraId);
+    const doc = await probeReiteracionDoc(compraId, actaExtension(release.awards));
     release.reiteracionProbedAt = now; // one-shot marker (success or miss)
     if (doc) {
       attachToFirstAwardNotice(release.awards!, doc);
