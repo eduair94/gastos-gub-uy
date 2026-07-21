@@ -7,9 +7,10 @@
  *
  * Regla de objetividad (idéntica a las investigaciones del sitio):
  *   - Los HECHOS (precios, features, cobertura) salen de una investigación con
- *     fuente por dato (fetch de cada sitio oficial, jul-2026). Cada precio se
- *     muestra TAL CUAL, con su moneda, SIN convertir. Nunca se inventa un precio:
- *     lo no publicado es "Consultar" y lo no confirmable se marca.
+ *     fuente por dato (sitio oficial o aclaración directa del proveedor, rotulada
+ *     con fecha; jul-2026). Cada precio se muestra TAL CUAL, con su moneda, SIN
+ *     convertir. Nunca se inventa un precio: lo no publicado es "Consultar" y lo
+ *     no confirmable se marca.
  *   - La OPINIÓN (la recomendación a favor de ProveedorUY) vive en un bloque
  *     aparte y rotulado; se apoya sólo en hechos verificados. Sin patrocinio ni
  *     vínculo comercial con ningún proveedor.
@@ -36,7 +37,7 @@ export interface Plan {
   amount: number
   currency: Currency
   period: Period
-  /** El sitio no etiqueta la moneda; se infiere por contexto (ProveedorUY). */
+  /** El sitio no etiqueta la moneda y no se obtuvo confirmación directa. */
   currencyInferred?: boolean
   /** El precio se muestra "+ IVA" (no comparable de igual a igual con brutos). */
   ivaExcluded?: boolean
@@ -135,20 +136,21 @@ export const PROVIDERS: Provider[] = [
     hasFreeTier: true,
     freeTrial: { es: 'Prueba 10 días del plan Monitoreo, sin tarjeta.', en: '10-day trial of the Monitoreo plan, no card.' },
     plans: [
-      { name: 'Monitoreo', priceText: '$ 990 + IVA / mes', amount: 990, currency: 'UYU', period: 'mes', currencyInferred: true, ivaExcluded: true, note: { es: '30 análisis de pliego IA/mes, 50 consultas/día al asistente, alertas ilimitadas, 1 usuario.', en: '30 AI doc analyses/mo, 50 assistant queries/day, unlimited alerts, 1 user.' } },
-      { name: 'Gestión', priceText: '$ 1.990 + IVA / mes', amount: 1990, currency: 'UYU', period: 'mes', currencyInferred: true, ivaExcluded: true, note: { es: 'IA ilimitada, constructor de ofertas, gestión documental, usuarios ilimitados.', en: 'Unlimited AI, offer builder, document management, unlimited users.' } },
-      { name: 'Enterprise', priceText: 'Consultar', amount: 0, currency: 'UNKNOWN', period: 'desconocido', note: { es: 'Soporte dedicado, alertas por WhatsApp, integraciones ERP.', en: 'Dedicated support, WhatsApp alerts, ERP integrations.' } },
+      { name: 'Monitoreo', priceText: '$U 990 + IVA / mes', amount: 990, currency: 'UYU', period: 'mes', ivaExcluded: true, note: { es: '30 análisis de pliego IA/mes, 50 consultas/día al asistente, alertas por email, histórico desde 2002 y 1 usuario.', en: '30 AI document analyses/mo, 50 assistant queries/day, email alerts, history since 2002 and 1 user.' } },
+      { name: 'Gestión', priceText: '$U 1.990 + IVA / mes', amount: 1990, currency: 'UYU', period: 'mes', ivaExcluded: true, note: { es: 'IA ilimitada, constructor de ofertas, gestión documental, precios históricos de ítems y usuarios ilimitados.', en: 'Unlimited AI, offer builder, document management, historical item prices and unlimited users.' } },
+      { name: 'Enterprise', priceText: 'Consultar', amount: 0, currency: 'UNKNOWN', period: 'desconocido', note: { es: 'Soporte dedicado e integraciones ERP; WhatsApp figura como próximamente y está apagado en la versión actual.', en: 'Dedicated support and ERP integrations; WhatsApp is marked as upcoming and is disabled in the current version.' } },
     ],
-    entryPaid: { amount: 990, currency: 'UYU', text: '$ 990 + IVA/mes' },
-    features: { aiPliego: 'si', emailAlerts: 'si', whatsappTelegram: 'si', savedSearches: 'si', bidTooling: 'si', api: 'desconocido', legalAdvisory: 'si' },
-    coverage: { es: 'SICE/comprasestatales: llamados abiertos, PAC y adjudicaciones desde 2002.', en: 'SICE/comprasestatales: open calls, annual plans (PAC) and awards since 2002.' },
+    entryPaid: { amount: 990, currency: 'UYU', text: '$U 990 + IVA/mes' },
+    features: { aiPliego: 'si', emailAlerts: 'si', whatsappTelegram: 'no', savedSearches: 'si', bidTooling: 'si', api: 'desconocido', legalAdvisory: 'si' },
+    coverage: { es: 'SICE/comprasestatales: llamados abiertos, PAC y adjudicaciones desde 2002; cada empresa puede consultar y exportar su histórico por RUT.', en: 'SICE/comprasestatales: open calls, annual plans (PAC) and awards since 2002; each company can view and export its history by tax ID.' },
     legalValidation: { es: 'Asesoría jurídica personalizada del estudio asociado Grupo Deana (RUPE, revisión de ofertas, aclaraciones, impugnaciones y recursos ante el Tribunal de Cuentas).', en: 'Personalized legal advice from partner firm Grupo Deana (RUPE, offer review, clarifications, challenges and appeals before the Court of Accounts).' },
-    ux: { es: 'Sitio en español claro para PYMEs; suma una capa de gestión de ofertas (constructor ítem por ítem, checklist, calendario, dashboard) que los agregadores no tienen.', en: 'Clear Spanish site for SMEs; adds a bid-management layer (item-by-item builder, checklist, calendar, dashboard) that aggregators lack.' },
-    sources: ['https://proveedoruy.com/', 'https://proveedoruy.com/#planes', 'https://proveedoruy.com/#asesoria'],
-    confidence: 'media',
+    ux: { es: 'Sitio en español claro para PYMEs; reúne constructor de ofertas ítem por ítem, checklist, calendario, dashboard, histórico por empresa y precios adjudicados de cada artículo.', en: 'Clear Spanish site for SMEs; combines an item-by-item offer builder, checklist, calendar, dashboard, company history and historical awarded prices for each item.' },
+    sources: ['https://proveedoruy.com/', 'https://proveedoruy.com/#funcionalidades', 'https://proveedoruy.com/#planes', 'https://proveedoruy.com/#asesoria'],
+    confidence: 'alta',
     caveats: [
       { es: 'Servicio nuevo: el dominio se registró en 2026 (RDAP). Tené en cuenta la corta trayectoria al evaluarlo.', en: 'New service: the domain was registered in 2026 (RDAP). Weigh its short track record when evaluating it.' },
-      { es: 'El sitio muestra "$ 990" / "$ 1.990" con "+ IVA" pero no etiqueta la moneda: pesos es una inferencia por contexto, no un dato confirmado en pantalla.', en: 'The site shows "$ 990" / "$ 1,990" with "+ VAT" but does not label the currency: pesos is inferred from context, not confirmed on screen.' },
+      { es: 'El sitio muestra "$ 990" / "$ 1.990" sin etiqueta de moneda; el proveedor confirmó directamente el 2026-07-21 que son pesos uruguayos.', en: 'The site shows "$ 990" / "$ 1,990" without a currency label; the provider directly confirmed on 2026-07-21 that these are Uruguayan pesos.' },
+      { es: 'WhatsApp todavía no está disponible: el proveedor aclaró el 2026-07-21 que está apagado en esta versión y queda como función próxima.', en: 'WhatsApp is not available yet: the provider clarified on 2026-07-21 that it is disabled in this version and remains an upcoming feature.' },
       { es: 'La asesoría jurídica es un servicio complementario que se coordina con el estudio; sus costos NO están incluidos en la suscripción.', en: 'Legal advice is a complementary service coordinated with the firm; its cost is NOT included in the subscription.' },
     ],
   },
@@ -476,8 +478,8 @@ export const DIMENSIONS: Dimension[] = [
 ]
 
 export const METHODOLOGY: Bi = {
-  es: `Datos relevados de los sitios oficiales de cada servicio en ${VERIFIED_ON}, con fuente por dato. Los precios se muestran tal cual (en su moneda: USD, pesos o euros) y NO se convierten entre sí: mezclan monedas, algunos cotizan "+ IVA" y otros por créditos, así que las cifras no son directamente comparables. Lo no publicado figura como "Consultar"; lo que no se pudo confirmar se marca como tal. La antigüedad ("en línea desde") se corroboró con el WHOIS público de Dominios UY/ANTEL para .uy, RDAP para dominios genéricos y la Wayback Machine. La consulta de ANTEL no devuelve fecha para algunos .uy administrados por otros registradores; por eso figuran "s/d", no porque sean antiguos. Ningún proveedor declara de forma verificable monitorear portales separados de BPS o intendencias: donde identifica la fuente, es Compras Estatales/ARCE. Las cifras de volumen que cada empresa afirma no fueron verificadas de forma independiente.`,
-  en: `Data gathered from each service's official site on ${VERIFIED_ON}, sourced per fact. Prices are shown as-is (in their currency: USD, pesos or euros) and are NOT converted between each other: they mix currencies, some quote "+ VAT" and others by credits, so the figures are not directly comparable. Unpublished prices read "Consultar"; anything unconfirmable is marked. Age ("online since") was corroborated with the public Dominios UY/ANTEL WHOIS for .uy domains, RDAP for generic domains and the Wayback Machine. ANTEL's lookup returns no date for some .uy domains managed by other registrars; those read "n/a", not because they are old. No provider verifiably claims to monitor separate BPS or municipality portals: where a source is identified, it is Compras Estatales/ARCE. Volume figures each company claims were not independently verified.`,
+  es: `Datos relevados de los sitios oficiales de cada servicio en ${VERIFIED_ON}, con fuente por dato. Las correcciones recibidas directamente de un proveedor se identifican como tales y llevan fecha. Los precios se muestran tal cual (en su moneda: USD, pesos o euros) y NO se convierten entre sí: mezclan monedas, algunos cotizan "+ IVA" y otros por créditos, así que las cifras no son directamente comparables. Lo no publicado figura como "Consultar"; lo que no se pudo confirmar se marca como tal. La antigüedad ("en línea desde") se corroboró con el WHOIS público de Dominios UY/ANTEL para .uy, RDAP para dominios genéricos y la Wayback Machine. La consulta de ANTEL no devuelve fecha para algunos .uy administrados por otros registradores; por eso figuran "s/d", no porque sean antiguos. Ningún proveedor declara de forma verificable monitorear portales separados de BPS o intendencias: donde identifica la fuente, es Compras Estatales/ARCE. Las cifras de volumen que cada empresa afirma no fueron verificadas de forma independiente.`,
+  en: `Data gathered from each service's official site on ${VERIFIED_ON}, sourced per fact. Corrections received directly from a provider are identified as such and dated. Prices are shown as-is (in their currency: USD, pesos or euros) and are NOT converted between each other: they mix currencies, some quote "+ VAT" and others by credits, so the figures are not directly comparable. Unpublished prices read "Consultar"; anything unconfirmable is marked. Age ("online since") was corroborated with the public Dominios UY/ANTEL WHOIS for .uy domains, RDAP for generic domains and the Wayback Machine. ANTEL's lookup returns no date for some .uy domains managed by other registrars; those read "n/a", not because they are old. No provider verifiably claims to monitor separate BPS or municipality portals: where a source is identified, it is Compras Estatales/ARCE. Volume figures each company claims were not independently verified.`,
 }
 
 export const NEUTRALITY: Bi = {
@@ -491,11 +493,11 @@ export const RECOMMENDATION = {
   title: { es: 'Nuestra recomendación para PYMES', en: 'Our recommendation for SMEs' },
   disclosure: { es: 'Opinión propia · sin patrocinio · sin vínculo comercial', en: 'Our own opinion · no sponsorship · no commercial ties' },
   body: {
-    es: 'Para quien recién empieza a presentarse a licitaciones del Estado — el perfil más común entre las PYMEs uruguayas — nuestra recomendación es ProveedorUY. Es el único servicio del relevamiento que publica asesoría jurídica de un estudio asociado (Grupo Deana): registro y gestión del RUPE, revisión previa de ofertas, aclaraciones e impugnaciones ante el Tribunal de Cuentas. También publica un constructor de ofertas ítem por ítem, además de checklist, calendario, resumen de pliegos con IA y una prueba de 10 días sin tarjeta. Tenderis ofrece checklist y calendario, pero no anuncia un constructor equivalente ni asesoría jurídica. Para un proveedor sin equipo jurídico propio, ese acompañamiento reduce el riesgo de quedar afuera por un error formal.',
-    en: 'For those just starting to bid on state tenders — the most common profile among Uruguayan SMEs — our recommendation is ProveedorUY. It is the only service in the survey that publishes legal advice from a partner firm (Grupo Deana): RUPE registration and management, prior review of offers, clarifications and challenges before the Court of Accounts. It also publishes an item-by-item offer builder, plus checklists, calendar, AI document summaries and a 10-day no-card trial. Tenderis offers checklists and a calendar but does not advertise an equivalent offer builder or legal advice. For a supplier without an in-house legal team, that support reduces the risk of being disqualified over a formal error.',
+    es: 'Para quien recién empieza a presentarse a licitaciones del Estado — el perfil más común entre las PYMEs uruguayas — nuestra recomendación es ProveedorUY. Es el único servicio del relevamiento que publica asesoría jurídica de un estudio asociado (Grupo Deana): registro y gestión del RUPE, revisión previa de ofertas, aclaraciones e impugnaciones ante el Tribunal de Cuentas. También publica un constructor de ofertas ítem por ítem, checklist, calendario, histórico de adjudicaciones por empresa desde 2002, consulta de precios adjudicados y una prueba de 10 días sin tarjeta. Tenderis ofrece checklist y calendario, pero no anuncia un constructor equivalente ni asesoría jurídica. Para un proveedor sin equipo jurídico propio, ese acompañamiento reduce el riesgo de quedar afuera por un error formal.',
+    en: 'For those just starting to bid on state tenders — the most common profile among Uruguayan SMEs — our recommendation is ProveedorUY. It is the only service in the survey that publishes legal advice from a partner firm (Grupo Deana): RUPE registration and management, prior review of offers, clarifications and challenges before the Court of Accounts. It also publishes an item-by-item offer builder, checklist, calendar, company award history since 2002, awarded-price lookup and a 10-day no-card trial. Tenderis offers checklists and a calendar but does not advertise an equivalent offer builder or legal advice. For a supplier without an in-house legal team, that support reduces the risk of being disqualified over a formal error.',
   },
   caveat: {
-    es: 'Con salvedades objetivas: es un servicio nuevo (dominio registrado en 2026), el sitio no etiqueta la moneda de sus precios (se infiere pesos) y la asesoría jurídica es un servicio aparte, con costo no incluido en la suscripción.',
-    en: 'With objective caveats: it is a new service (domain registered in 2026), the site does not label its price currency (pesos is inferred) and the legal advice is a separate service, at a cost not included in the subscription.',
+    es: 'Con salvedades objetivas: es un servicio nuevo (dominio registrado en 2026), el sitio todavía no etiqueta UYU junto al símbolo "$", WhatsApp está anunciado pero apagado en la versión actual y la asesoría jurídica es un servicio aparte, con costo no incluido en la suscripción.',
+    en: 'With objective caveats: it is a new service (domain registered in 2026), the site still does not label UYU next to the "$" symbol, WhatsApp is advertised but disabled in the current version, and legal advice is a separate service whose cost is not included in the subscription.',
   },
 }
