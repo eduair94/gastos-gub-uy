@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { connectToDatabase } from '../../utils/database'
 import { fetchDei } from '../../utils/dei'
+import { fetchRupe } from '../../utils/rupe'
 import { ReleaseModel, SupplierPatternModel } from '../../utils/models'
 
 export default defineEventHandler(async (event) => {
@@ -69,13 +70,20 @@ export default defineEventHandler(async (event) => {
 
     // Cross-reference the industrial registry (DEI) by RUT. Null for the ~94%
     // of suppliers that aren't registered industrial firms — expected, not missing.
-    const dei = (await fetchDei([decodedSupplierId])).get(decodedSupplierId) ?? null
+    // Cross-reference the state-provider registry (RUPE) by RUT — 91.7% coverage,
+    // so this fills the location gap DEI leaves. Both queried; the UI shows the
+    // RUPE card only when DEI isn't present (DEI is the richer record).
+    const [dei, rupe] = await Promise.all([
+      fetchDei([decodedSupplierId]).then(m => m.get(decodedSupplierId) ?? null),
+      fetchRupe([decodedSupplierId]).then(m => m.get(decodedSupplierId) ?? null),
+    ])
 
     return {
       success: true,
       data: {
         supplier: supplierPattern,
         dei,
+        rupe,
         recentContracts: contractsWithSupplierAwards,
         meta: {
           totalContractsFound: contractsWithSupplierAwards.length,

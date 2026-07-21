@@ -26,3 +26,6 @@ firebase.json
 # Local scratch: throwaway QA screenshots, ad-hoc logs. Never committed.
 .scratch/
 docs/screenshots
+
+# RUPE open-data CSVs — 74MB, re-downloaded by src/jobs/load-rupe.ts from catalogodatos
+rupe/

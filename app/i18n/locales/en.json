@@ -331,6 +331,16 @@
         "mapTitle": "Map of industrial supplier companies",
         "mapHelp": "Each point is a registered industrial company that sells to the State, placed at its primary establishment."
       }
+    },
+    "rupe": {
+      "title": "State Suppliers Registry (RUPE)",
+      "source": "Source: ARCE — Registro Único de Proveedores del Estado (RUPE), open data. Cross-referenced to the supplier by RUT.",
+      "f": {
+        "razonSocial": "Legal name",
+        "pais": "Country",
+        "ubicacion": "Fiscal domicile",
+        "mapLink": "View on Google Maps"
+      }
     }
   },
   "estad": {
