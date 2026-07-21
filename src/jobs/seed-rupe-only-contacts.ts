@@ -19,12 +19,20 @@ import { connectToDatabase, disconnectFromDatabase, mongoose } from "../../share
 import { SupplierContactModel } from "../../shared/models/supplier_contacts";
 import { buildRegistryRow, type RupeSeedInput } from "./seed-rupe-only/build-row";
 
-function arg(name: string): string | undefined {
-  const hit = process.argv.find(a => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : undefined;
-}
 const flag = (name: string) => process.argv.includes(`--${name}`);
 const digits = (s: string) => (s || "").replace(/\D/g, "");
+
+function parseLimit(): number {
+  const hit = process.argv.find(a => a === "--limit" || a.startsWith("--limit="));
+  if (!hit) return Infinity;
+
+  const raw = hit === "--limit" ? "" : hit.slice("--limit=".length);
+  const value = Number(raw);
+  if (!raw.trim() || !Number.isFinite(value) || value < 0 || !Number.isInteger(value)) {
+    throw new Error(`--limit must be a non-negative integer; received ${JSON.stringify(raw)}`);
+  }
+  return value;
+}
 
 /** Chunk an array for a bounded `$in` (avoids one huge round-trip). */
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -36,89 +44,99 @@ function chunk<T>(arr: T[], size: number): T[][] {
 async function main() {
   const dryRun = flag("dry-run");
   const onlyActive = flag("only-active");
-  const limit = arg("limit") ? Number(arg("limit")) : Infinity;
+  const limit = parseLimit();
+  let connected = false;
 
-  await connectToDatabase();
-  const db = mongoose.connection.db!;
+  try {
+    await connectToDatabase();
+    connected = true;
+    const db = mongoose.connection.db!;
 
-  console.log("📥 loading awarded-supplier RUT set from supplier_patterns...");
-  const awardedRuts = new Set<string>();
-  const patternsCursor = db.collection("supplier_patterns").find({}, { projection: { supplierId: 1 } });
-  for await (const doc of patternsCursor as AsyncIterable<{ supplierId?: string }>) {
-    const rut = digits(doc.supplierId ?? "");
-    if (rut) awardedRuts.add(rut);
-  }
-  console.log(`   ${awardedRuts.size} awarded RUTs`);
+    console.log("📥 loading awarded-supplier RUT set from supplier_patterns...");
+    const awardedRuts = new Set<string>();
+    const patternsCursor = db.collection("supplier_patterns").find({}, { projection: { supplierId: 1 } });
+    for await (const doc of patternsCursor as AsyncIterable<{ supplierId?: string }>) {
+      const rut = digits(doc.supplierId ?? "");
+      if (rut) awardedRuts.add(rut);
+    }
+    console.log(`   ${awardedRuts.size} awarded RUTs`);
 
-  const rupeFilter: Record<string, unknown> = onlyActive ? { estado: "ACTIVO" } : {};
-  const rupeCursor = db.collection("rupe_registry").find(rupeFilter, {
-    projection: {
-      rut: 1, denominacionSocial: 1, domicilioFiscal: 1, localidad: 1,
-      departamento: 1, estado: 1, lat: 1, lng: 1, placeId: 1, geocodeStatus: 1,
-    },
-  });
+    const rupeFilter: Record<string, unknown> = onlyActive ? { estado: "ACTIVO" } : {};
+    const rupeCursor = db.collection("rupe_registry").find(rupeFilter, {
+      projection: {
+        rut: 1, denominacionSocial: 1, domicilioFiscal: 1, localidad: 1,
+        departamento: 1, estado: 1, lat: 1, lng: 1, placeId: 1, geocodeStatus: 1,
+      },
+    });
 
-  let seen = 0, seeded = 0, skippedAwarded = 0, errors = 0;
-  for await (const doc of rupeCursor as AsyncIterable<RupeSeedInput>) {
-    if (seeded >= limit) break;
-    seen++;
-    const rut = digits(doc.rut);
-    if (!rut || awardedRuts.has(rut)) { skippedAwarded++; continue; }
+    let seen = 0, seeded = 0, skippedAwarded = 0, errors = 0;
+    for await (const doc of rupeCursor as AsyncIterable<RupeSeedInput>) {
+      if (seeded >= limit) break;
+      seen++;
+      const rut = digits(doc.rut);
+      if (!rut || awardedRuts.has(rut)) { skippedAwarded++; continue; }
 
-    try {
-      const row = buildRegistryRow({ ...doc, rut });
-      seeded++;
-      if (dryRun) {
-        if (seeded <= 10) console.log(`   would seed: ${row.name} (${row.supplierId}) — ${row.address ?? "(sin dirección)"}`);
-        continue;
-      }
-      await SupplierContactModel.updateOne(
-        { supplierId: row.supplierId },
-        {
-          $set: row,
-          $setOnInsert: {
-            status: "registry",
-            priorityScore: 0,
-            emails: [],
-            primaryEmail: null,
-            website: null,
-            websiteSource: null,
-            phone: null,
-            phoneSource: null,
-            hours: null,
-            mapsUrl: null,
-            rubros: [],
-            enrichedAt: null,
+      try {
+        const row = buildRegistryRow({ ...doc, rut });
+        if (dryRun) {
+          seeded++;
+          if (seeded <= 10) console.log(`   would seed: ${row.name} (${row.supplierId}) — ${row.address ?? "(sin dirección)"}`);
+          continue;
+        }
+        await SupplierContactModel.updateOne(
+          { supplierId: row.supplierId },
+          {
+            $set: row,
+            $setOnInsert: {
+              status: "registry",
+              priorityScore: 0,
+              emails: [],
+              primaryEmail: null,
+              website: null,
+              websiteSource: null,
+              phone: null,
+              phoneSource: null,
+              hours: null,
+              mapsUrl: null,
+              rubros: [],
+              enrichedAt: null,
+            },
           },
-        },
-        { upsert: true },
-      );
-      if (seeded % 5000 === 0) console.log(`   …${seeded} seeded (${seen} scanned)`);
-    } catch (e) {
-      errors++;
-      console.error(`   ⚠️ rut ${doc.rut} failed, skipping:`, e instanceof Error ? e.message : e);
+          { upsert: true },
+        );
+        seeded++;
+        if (seeded % 5000 === 0) console.log(`   …${seeded} seeded (${seen} scanned)`);
+      } catch (e) {
+        errors++;
+        console.error(`   ⚠️ rut ${doc.rut} failed, skipping:`, e instanceof Error ? e.message : e);
+      }
     }
-  }
-  console.log(`✅ scan complete: ${seen} RUPE rows scanned, ${seeded} seeded, ${skippedAwarded} already-awarded (skipped), ${errors} error(s)`);
+    console.log(`✅ scan complete: ${seen} RUPE rows scanned, ${seeded} seeded, ${skippedAwarded} already-awarded (skipped), ${errors} error(s)`);
+    if (errors) throw new Error(`RUPE-only contact seeding completed with ${errors} row error(s)`);
 
-  // Reconcile the reverse case: a row seeded as neverAwarded whose company has
-  // since won an award (a later supplier_patterns refresh added it).
-  if (!dryRun && awardedRuts.size) {
-    console.log("🔄 reconciling neverAwarded → false for RUTs that now have an award...");
-    let flipped = 0;
-    for (const batch of chunk([...awardedRuts], 5000)) {
-      const res = await SupplierContactModel.updateMany(
-        { neverAwarded: true, rut: { $in: batch } },
-        { $set: { neverAwarded: false } },
-      );
-      flipped += res.modifiedCount;
+    // Reconcile the reverse case: a row seeded as neverAwarded whose company has
+    // since won an award (a later supplier_patterns refresh added it).
+    if (!dryRun && awardedRuts.size) {
+      console.log("🔄 reconciling neverAwarded → false for RUTs that now have an award...");
+      let flipped = 0;
+      for (const batch of chunk([...awardedRuts], 5000)) {
+        const res = await SupplierContactModel.updateMany(
+          { neverAwarded: true, rut: { $in: batch } },
+          { $set: { neverAwarded: false } },
+        );
+        flipped += res.modifiedCount;
+      }
+      console.log(`   ${flipped} row(s) flipped back to awarded`);
     }
-    console.log(`   ${flipped} row(s) flipped back to awarded`);
-  }
 
-  const registryTotal = await SupplierContactModel.countDocuments({ neverAwarded: true });
-  console.log(`📊 supplier_contacts rows currently marked neverAwarded: ${registryTotal}`);
-  await disconnectFromDatabase();
+    const registryTotal = await SupplierContactModel.countDocuments({ neverAwarded: true });
+    console.log(`📊 supplier_contacts rows currently marked neverAwarded: ${registryTotal}`);
+  } finally {
+    if (connected) await disconnectFromDatabase();
+  }
 }
 
-main().catch(e => { console.error("❌ seed-rupe-only-contacts failed:", e); process.exit(1); });
+main().catch(e => {
+  console.error("❌ seed-rupe-only-contacts failed:", e);
+  process.exitCode = 1;
+});
