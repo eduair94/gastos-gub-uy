@@ -31,6 +31,8 @@
     "refresh-tender-forecast": "tsx src/jobs/refresh-tender-forecast.ts",
     "import-sice-catalog": "tsx src/jobs/import-sice-catalog.ts",
     "load-dei": "tsx src/jobs/load-dei.ts",
+    "load-rupe": "tsx src/jobs/load-rupe.ts",
+    "geocode-rupe": "tsx src/jobs/geocode-rupe.ts",
     "sync-open-calls": "tsx src/jobs/sync-open-calls.ts",
     "backfill-open-calls": "tsx src/jobs/backfill-open-calls.ts",
     "backfill-open-call-contacts": "tsx src/jobs/backfill-open-call-contacts.ts",

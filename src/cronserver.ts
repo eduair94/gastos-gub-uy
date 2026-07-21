@@ -910,6 +910,30 @@ class CronServer {
       { scheduled: true, timezone: "America/Montevideo" }
     );
     this.logger.info(`Tender-forecast refresh scheduled with expression: ${tenderForecastExpression} (Uruguay timezone)`);
+
+    // RUPE registry refresh, monthly on the 1st at 06:00 — after tender-forecast (05:00), no
+    // stacking. Downloads ARCE's monthly RUPE open-data CSVs into rupe_registry (a
+    // geocode-preserving upsert — it never clobbers existing coordinates), then geocodes only
+    // the new/changed addresses via the Maps proxy. The first full backfill (~104k addresses)
+    // is a manual run on this box; the monthly delta is small, so --limit=5000 covers it.
+    // Writes its own rupe_registry; independent of busyWith.
+    const rupeExpression = "0 6 1 * *";
+    cron.schedule(
+      rupeExpression,
+      async () => {
+        try {
+          this.logger.info("Starting RUPE registry refresh (load)...");
+          await this.runJobProcess("jobs/load-rupe");
+          this.logger.info("RUPE load complete; geocoding new/changed addresses...");
+          await this.runJobProcess("jobs/geocode-rupe", ["--limit=5000"]);
+          this.logger.info("RUPE registry refresh completed successfully");
+        } catch (error) {
+          this.logger.error("RUPE registry refresh failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`RUPE registry refresh scheduled with expression: ${rupeExpression} (Uruguay timezone)`);
   }
 
   /**

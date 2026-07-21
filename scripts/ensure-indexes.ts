@@ -564,6 +564,14 @@ async function main(): Promise<void> {
       await sc.createIndex({ locality: 1 }, { background: true, name: 'locality_1' })
       console.log('✅ supplier_contacts indexes ensured')
 
+      // --- rupe_registry (RUPE supplier registry + geocode cache) ---
+      const rr = db.collection('rupe_registry')
+      await rr.createIndex({ rut: 1 }, { unique: true, background: true, name: 'rut_1' })
+      await rr.createIndex({ normalizedName: 1 }, { background: true, name: 'normalizedName_1' })
+      await rr.createIndex({ geocodeStatus: 1 }, { background: true, name: 'geocodeStatus_1' })
+      await rr.createIndex({ departamento: 1 }, { background: true, name: 'departamento_1' })
+      console.log('✅ rupe_registry indexes ensured (rut unique, normalizedName, geocodeStatus, departamento)')
+
       // --- procurement_contacts (organism purchasing contacts directory) ---
       const pc = db.collection('procurement_contacts')
       await pc.createIndex({ organismId: 1 }, { unique: true, background: true, name: 'organismId_1' })
@@ -623,6 +631,7 @@ async function main(): Promise<void> {
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
       console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality}')
+      console.log('   plan: rupe_registry.{rut unique, normalizedName, geocodeStatus, departamento}')
       console.log('   plan: procurement_contacts.{organismId unique, llamadosCount, dataVersion, searchText text}')
       console.log('   plan: tender_forecast.{buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, expectedWindow.end, rubroAncestors, confidence}')
     }

@@ -5,8 +5,8 @@ import { mongoose } from "../connection/database";
 export type EmailSource = "dei" | "website" | "webSearch" | "impo" | "rupe" | "manual" | "googleMaps";
 export type EmailStatus = "candidate" | "valid" | "invalid" | "suppressed";
 export type ContactStatus = "pending" | "enriched" | "no_contact" | "error";
-/** Provenance for phone/place fields → gates public display (dei = free, googleMaps = ToS-restricted). */
-export type FieldSource = "dei" | "googleMaps";
+/** Provenance for phone/place fields → gates public display (dei/rupe = official open data, freely displayable; googleMaps = ToS-restricted). */
+export type FieldSource = "dei" | "googleMaps" | "rupe";
 
 export interface IEmailEntry {
   email: string;

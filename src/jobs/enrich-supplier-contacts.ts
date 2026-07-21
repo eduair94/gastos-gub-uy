@@ -7,6 +7,7 @@ import type { ContactResolver, ContactCandidate, ResolverResult } from "./enrich
 import { mergeCandidates, pickPrimary, CONNECTIVITY_DNS_ERROR_CODES } from "./enrich/hygiene";
 import { deriveRubros } from "./enrich/rubros";
 import { createDeiResolver } from "./enrich/resolvers/dei";
+import { createRupeResolver } from "./enrich/resolvers/rupe";
 import { createWebsiteResolver } from "./enrich/resolvers/website";
 import { createWebSearchResolver } from "./enrich/resolvers/web-search";
 import { createImpoResolver } from "./enrich/resolvers/impo";
@@ -29,7 +30,7 @@ async function main() {
   const limit = Number(arg("limit") ?? "100");
   const minPriority = Number(arg("minPriority") ?? "0");
   const staleDays = Number(arg("stale-days") ?? "90");
-  const wanted = new Set((arg("sources") ?? "dei,website,webSearch,impo,googleMaps").split(","));
+  const wanted = new Set((arg("sources") ?? "dei,rupe,website,webSearch,impo,googleMaps").split(","));
 
   // DNS canary: if the runtime can't reach a resolver at all, mxValid() will
   // (correctly, per hygiene.ts) return false for every domain over the whole
@@ -60,6 +61,10 @@ async function main() {
   // higher confidence regardless of resolve order.
   const resolvers: ContactResolver[] = [];
   if (wanted.has("dei")) resolvers.push(createDeiResolver(db));
+  // rupe runs right after dei: both are official, in-Mongo, false-positive-free by
+  // RUT. DEI's place still wins the first-non-null race for its 2.4k suppliers;
+  // rupe fills the ~90% DEI never covers. Emits no emails/website — never clobbers those.
+  if (wanted.has("rupe")) resolvers.push(createRupeResolver(db));
   if (wanted.has("webSearch")) resolvers.push(createWebSearchResolver({ search, fetchHtml }));
   if (wanted.has("website")) resolvers.push(createWebsiteResolver(fetchHtml));
   if (wanted.has("impo")) resolvers.push(createImpoResolver(searchGazette));
@@ -118,7 +123,9 @@ async function main() {
         if (!place && res.place) place = res.place;
         // Throttle external calls, but not after the LAST resolver — that
         // sleep was pure dead time, wasting ~1/3 of runtime at full scale.
-        if (i < resolvers.length - 1) await sleep(r.name === "dei" ? 0 : 800);
+        // dei + rupe are in-Mongo lookups (no external call) → no throttle.
+        const inMongo = r.name === "dei" || r.name === "rupe";
+        if (i < resolvers.length - 1) await sleep(inMongo ? 0 : 800);
       }
 
       const emails = await mergeCandidates(all);
