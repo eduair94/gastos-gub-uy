@@ -102,7 +102,7 @@ async function siblingTenderInfo(contract: IRelease): Promise<{ description: str
   // The tender-stage sibling (same ocid): its description AND its parties.
   const sib = await ReleaseModel.findOne(
     { ocid: contract.ocid, tag: 'tender' },
-    { 'tender.description': 1, parties: 1 },
+    { 'tender.description': 1, 'parties': 1 },
   ).maxTimeMS(3000).lean().catch(() => null) as { tender?: { description?: string }, parties?: unknown[] } | null
 
   if (!contact) contact = pickPartyContact(sib?.parties as never)

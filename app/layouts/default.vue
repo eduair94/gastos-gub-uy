@@ -440,7 +440,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             v-for="n in nav"
             :key="n.key"
             class="topnav__link railnav__item"
-            :class="{ 'topnav__more': hasChildren(n) }"
+            :class="{ topnav__more: hasChildren(n) }"
           >{{ t(`nav.${n.key}`) }}<v-icon
             v-if="hasChildren(n)"
             size="16"

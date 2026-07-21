@@ -23,25 +23,57 @@ async function copy(value: string) {
   try {
     await navigator.clipboard.writeText(value)
     copied.value = value
-    setTimeout(() => { if (copied.value === value) copied.value = '' }, 1500)
-  } catch { /* clipboard unavailable — no-op */ }
+    setTimeout(() => {
+      if (copied.value === value) copied.value = ''
+    }, 1500)
+  }
+  catch { /* clipboard unavailable — no-op */ }
 }
 </script>
 
 <template>
-  <section v-if="has" class="panel calldetail__section cc">
-    <h2 class="u-eyebrow">{{ t('contactPanel.title') }}</h2>
+  <section
+    v-if="has"
+    class="panel calldetail__section cc"
+  >
+    <h2 class="u-eyebrow">
+      {{ t('contactPanel.title') }}
+    </h2>
     <ul class="cc__list">
-      <li v-if="contact?.name" class="cc__row">
-        <v-icon size="16" class="cc__icon">mdi-account-outline</v-icon>
+      <li
+        v-if="contact?.name"
+        class="cc__row"
+      >
+        <v-icon
+          size="16"
+          class="cc__icon"
+        >
+          mdi-account-outline
+        </v-icon>
         <span class="cc__val">{{ contact.name }}</span>
       </li>
-      <li v-if="organism" class="cc__row">
-        <v-icon size="16" class="cc__icon">mdi-office-building-outline</v-icon>
+      <li
+        v-if="organism"
+        class="cc__row"
+      >
+        <v-icon
+          size="16"
+          class="cc__icon"
+        >
+          mdi-office-building-outline
+        </v-icon>
         <span class="cc__val u-truncate">{{ organism }}</span>
       </li>
-      <li v-if="contact?.email" class="cc__row">
-        <v-icon size="16" class="cc__icon">mdi-email-outline</v-icon>
+      <li
+        v-if="contact?.email"
+        class="cc__row"
+      >
+        <v-icon
+          size="16"
+          class="cc__icon"
+        >
+          mdi-email-outline
+        </v-icon>
         <a
           class="cc__val cc__link"
           :href="`mailto:${contact.email}`"
@@ -53,29 +85,46 @@ async function copy(value: string) {
           :title="t('contactPanel.copy')"
           @click="copy(contact.email!)"
         >
-          <v-icon size="14">{{ copied === contact.email ? 'mdi-check' : 'mdi-content-copy' }}</v-icon>
+          <v-icon size="14">
+            {{ copied === contact.email ? 'mdi-check' : 'mdi-content-copy' }}
+          </v-icon>
         </button>
       </li>
-      <li v-if="contact?.telephone" class="cc__row">
-        <v-icon size="16" class="cc__icon">mdi-phone-outline</v-icon>
+      <li
+        v-if="contact?.telephone"
+        class="cc__row"
+      >
+        <v-icon
+          size="16"
+          class="cc__icon"
+        >
+          mdi-phone-outline
+        </v-icon>
         <a
           v-if="telHref"
           class="cc__val cc__link"
           :href="telHref"
           :aria-label="t('contactPanel.srPhone', { v: contact.telephone })"
         >{{ contact.telephone }}</a>
-        <span v-else class="cc__val">{{ contact.telephone }}</span>
+        <span
+          v-else
+          class="cc__val"
+        >{{ contact.telephone }}</span>
         <button
           type="button"
           class="cc__copy"
           :title="t('contactPanel.copy')"
           @click="copy(contact.telephone!)"
         >
-          <v-icon size="14">{{ copied === contact.telephone ? 'mdi-check' : 'mdi-content-copy' }}</v-icon>
+          <v-icon size="14">
+            {{ copied === contact.telephone ? 'mdi-check' : 'mdi-content-copy' }}
+          </v-icon>
         </button>
       </li>
     </ul>
-    <p class="cc__note">{{ t('contactPanel.note') }}</p>
+    <p class="cc__note">
+      {{ t('contactPanel.note') }}
+    </p>
   </section>
 </template>
 
