@@ -1,5 +1,6 @@
 // src/jobs/enrich/resolvers/web-search.ts
 import type { ContactResolver, ResolverInput, ResolverResult, ContactCandidate } from "../types";
+import { domainOf, isJunkEmail, isRoleAccount, normalizeEmail } from "../hygiene";
 import { extractEmailsFromHtml } from "./website";
 
 export interface SearchHit { url: string; title: string; snippet: string }
@@ -16,6 +17,7 @@ export interface WebSearchDeps {
 }
 
 const CAP = 0.5;
+const SUPPLEMENTAL_CAP = 0.25;
 
 export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
   return {
@@ -32,11 +34,11 @@ export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
         const seen = seenByHost.get(host) ?? new Map<string, ContactCandidate>();
         seenByHost.set(host, seen);
         // emails may already be in the snippet
-        for (const c of extractEmailsFromHtml(hit.snippet, host)) add(seen, c);
+        for (const c of extractEmailsFromHtml(hit.snippet, host, hit.url)) add(seen, c);
         const html = await deps.fetchHtml(hit.url).catch(() => null);
         if (html) {
           if (!firstLoaded) firstLoaded = hit.url;
-          for (const c of extractEmailsFromHtml(html, host)) add(seen, c);
+          for (const c of extractEmailsFromHtml(html, host, hit.url)) add(seen, c);
         }
       }
       // Verified discovery (preferred) confirms the domain belongs to the supplier
@@ -46,17 +48,30 @@ export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
       const verified = deps.verifyWebsite
         ? await deps.verifyWebsite({ name: input.name, rut: input.rut }, hits).catch(() => null)
         : null;
-      // A directory page can correctly mention the supplier while exposing the
-      // directory owner's own contact email. When verification is enabled, only
-      // emails found on the VERIFIED corporate host are eligible; if no official
-      // site is verified, fail closed and return no web-search emails.
-      const seen = deps.verifyWebsite
-        ? (verified ? seenByHost.get(hostOf(verified)) : undefined)
-        : mergeSeen(seenByHost.values());
-      // Rebrand every candidate as webSearch + cap confidence (unverified origin).
-      const emails: ContactCandidate[] = [...(seen?.values() ?? [])].map(c => ({
-        email: c.email, source: "webSearch", confidence: Math.min(c.confidence, CAP),
-      }));
+      const selected = new Map<string, ContactCandidate>();
+      const officialHost = verified ? hostOf(verified) : null;
+      if (!deps.verifyWebsite) {
+        for (const candidate of mergeSeen(seenByHost.values()).values()) {
+          add(selected, asWebSearch(candidate, CAP));
+        }
+      } else {
+        // Corporate-site emails remain the strongest web-search evidence.
+        for (const candidate of seenByHost.get(officialHost ?? "")?.values() ?? []) {
+          add(selected, asWebSearch(candidate, CAP));
+        }
+        // A third-party listing may expose a real person-level contact (the
+        // Entre Lagos / Mariano Yabran case). Preserve it as low-confidence,
+        // source-linked evidence, while rejecting role accounts, junk, and an
+        // email belonging to the directory host itself.
+        for (const [host, group] of seenByHost) {
+          if (host === officialHost) continue;
+          for (const candidate of group.values()) {
+            if (!isSupplementalContact(candidate, host)) continue;
+            add(selected, asWebSearch(candidate, SUPPLEMENTAL_CAP));
+          }
+        }
+      }
+      const emails = [...selected.values()];
       if (verified) return { emails, website: verified, websiteSource: "webSearch" };
       if (!deps.verifyWebsite && firstLoaded) return { emails, website: firstLoaded };
       return { emails, website: null };
@@ -65,7 +80,21 @@ export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
 }
 
 function hostOf(url: string): string {
-  try { return new URL(url).hostname; } catch { return ""; }
+  try { return new URL(url).hostname.replace(/^www\./i, "").toLowerCase(); } catch { return ""; }
+}
+function asWebSearch(candidate: ContactCandidate, cap: number): ContactCandidate {
+  return {
+    email: candidate.email,
+    source: "webSearch",
+    confidence: Math.min(candidate.confidence, cap),
+    sourceUrl: candidate.sourceUrl ?? null,
+  };
+}
+function isSupplementalContact(candidate: ContactCandidate, listingHost: string): boolean {
+  const email = normalizeEmail(candidate.email);
+  if (!email || isJunkEmail(email) || isRoleAccount(email)) return false;
+  const emailHost = domainOf(email).replace(/^www\./i, "").toLowerCase();
+  return emailHost !== listingHost && !!candidate.sourceUrl;
 }
 function add(map: Map<string, ContactCandidate>, c: ContactCandidate) {
   const prev = map.get(c.email);

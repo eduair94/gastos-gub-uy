@@ -19,10 +19,19 @@ export type WebsiteSource = FieldSource | "webSearch";
 export interface IEmailEntry {
   email: string;
   source: EmailSource;
+  /** Exact page/document where the address was observed, when available. */
+  sourceUrl: string | null;
   confidence: number;
   isRoleAccount: boolean;
   mxValid: boolean;
   status: EmailStatus;
+}
+export interface IPhoneEntry {
+  phone: string;
+  source: FieldSource;
+  /** Exact page/record where the number was observed, when available. */
+  sourceUrl: string | null;
+  confidence: number;
 }
 export interface IRubro {
   classificationId: string;
@@ -37,6 +46,9 @@ export interface ISocialLink {
   platform: SocialPlatform;
   url: string;
   label: string;
+  source: WebsiteSource;
+  /** Supplier page that linked to the social profile. */
+  sourceUrl: string | null;
 }
 export interface ISupplierContact {
   supplierId: string;
@@ -50,6 +62,8 @@ export interface ISupplierContact {
   phone: string | null;
   /** Provenance of `phone`. */
   phoneSource: FieldSource | null;
+  /** All observed phone numbers with independent provenance. */
+  phones: IPhoneEntry[];
   /** Phone published on the supplier's own website (kept even when an official phone also exists). */
   websitePhone: string | null;
   /** Address published on the supplier's own website; supplementary to the registry address. */
@@ -84,10 +98,18 @@ export interface ISupplierContact {
 const EmailEntrySchema = new Schema<IEmailEntry>({
   email: { type: String, required: true, lowercase: true, trim: true },
   source: { type: String, required: true },
+  sourceUrl: { type: String, default: null, trim: true },
   confidence: { type: Number, default: 0 },
   isRoleAccount: { type: Boolean, default: false },
   mxValid: { type: Boolean, default: false },
   status: { type: String, default: "candidate" },
+}, { _id: false });
+
+const PhoneEntrySchema = new Schema<IPhoneEntry>({
+  phone: { type: String, required: true, trim: true },
+  source: { type: String, required: true },
+  sourceUrl: { type: String, default: null, trim: true },
+  confidence: { type: Number, default: 0 },
 }, { _id: false });
 
 const RubroSchema = new Schema<IRubro>({
@@ -101,6 +123,8 @@ const SocialLinkSchema = new Schema<ISocialLink>({
   platform: { type: String, required: true },
   url: { type: String, required: true, trim: true },
   label: { type: String, default: "", trim: true },
+  source: { type: String, default: "website" },
+  sourceUrl: { type: String, default: null, trim: true },
 }, { _id: false });
 
 const SupplierContactSchema = new Schema<ISupplierContact>({
@@ -113,6 +137,7 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
   websiteSource: { type: String, default: null },
   phone: { type: String, default: null },
   phoneSource: { type: String, default: null },
+  phones: { type: [PhoneEntrySchema], default: [] },
   websitePhone: { type: String, default: null },
   websiteAddress: { type: String, default: null },
   contactFormUrl: { type: String, default: null },

@@ -6,22 +6,28 @@ const doc = new SupplierContactModel({
   supplierId: "R/214843360014",
   rut: "214843360014",
   name: "MURRY S A",
-  emails: [{ email: "a@b.uy", source: "dei", confidence: 0.9, isRoleAccount: false, mxValid: true, status: "valid" }],
+  emails: [{ email: "a@b.uy", source: "dei", sourceUrl: "https://example.uy/contacto", confidence: 0.9, isRoleAccount: false, mxValid: true, status: "valid" }],
   primaryEmail: "a@b.uy",
   rubros: [{ classificationId: "28267", label: "Alcohol", itemCount: 3, share: 0.5 }],
   status: "enriched",
   priorityScore: 123,
   websitePhone: "2407 0000",
+  phones: [
+    { phone: "2407 0000", source: "website", sourceUrl: "https://example.uy/contacto", confidence: 0.8 },
+    { phone: "2900 0000", source: "dei", sourceUrl: null, confidence: 0.9 },
+  ],
   websiteAddress: "Cnel. Brandzen 1956",
   contactFormUrl: "https://example.uy/#contact",
-  socialLinks: [{ platform: "instagram", url: "https://instagram.com/example/", label: "@example" }],
-  enrichmentVersion: 2,
+  socialLinks: [{ platform: "instagram", url: "https://instagram.com/example/", label: "@example", source: "website", sourceUrl: "https://example.uy/contacto" }],
+  enrichmentVersion: 3,
 });
 const err = doc.validateSync();
 assert.equal(err, undefined, `unexpected validation error: ${err?.message}`);
 assert.equal(doc.emails[0].source, "dei");
 assert.equal(doc.collection.name, "supplier_contacts");
 assert.equal(doc.socialLinks[0].platform, "instagram");
+assert.equal(doc.emails[0].sourceUrl, "https://example.uy/contacto");
+assert.equal(doc.phones.length, 2);
 console.log("ok: supplier_contacts model");
 
 // A RUPE-only ("registered, never awarded") seed row must also validate.

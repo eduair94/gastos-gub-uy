@@ -23,16 +23,20 @@ const webDoc = sanitizeContact({
   supplierId: "R100", rut: "100", name: "ACME SA",
   primaryEmail: "info@acme.uy",
   emails: [
-    { email: "info@acme.uy", source: "website", mxValid: true, status: "valid", isRoleAccount: true } as never,
-    { email: "ventas@acme.uy", source: "webSearch", mxValid: true, status: "valid", isRoleAccount: false } as never,
+    { email: "info@acme.uy", source: "website", sourceUrl: "https://acme.uy/contacto", mxValid: true, status: "valid", isRoleAccount: true } as never,
+    { email: "ventas@acme.uy", source: "webSearch", sourceUrl: "https://directorio.example/acme", mxValid: true, status: "valid", isRoleAccount: false } as never,
     { email: "bounced@acme.uy", source: "website", mxValid: false, status: "suppressed", isRoleAccount: false } as never,
   ],
   website: "https://acme.uy", websiteSource: "webSearch",
   phone: "+59829001234", phoneSource: "dei",
+  phones: [
+    { phone: "+59829001234", source: "dei", sourceUrl: null, confidence: 0.9 },
+    { phone: "2407 0000", source: "website", sourceUrl: "https://acme.uy/contacto", confidence: 0.8 },
+  ],
   websitePhone: "2407 0000",
   websiteAddress: "Cnel. Brandzen 1956",
   contactFormUrl: "https://acme.uy/#contacto",
-  socialLinks: [{ platform: "instagram", url: "https://instagram.com/acme/", label: "@acme" }],
+  socialLinks: [{ platform: "instagram", url: "https://instagram.com/acme/", label: "@acme", source: "website", sourceUrl: "https://acme.uy/contacto" }],
   address: "Av. Siempreviva 742", locality: "Montevideo", placeSource: "dei",
   onlyDirectAward: true, directAwardCount: 4,
 } as never);
@@ -40,11 +44,14 @@ assert.equal(webDoc.website, "https://acme.uy");
 assert.equal(webDoc.websiteSource, "webSearch", "provenance of a verified website is surfaced");
 assert.equal(webDoc.phone, "+59829001234");
 assert.equal(webDoc.phoneSource, "dei", "provenance of phone is surfaced");
+assert.equal(webDoc.phones.length, 2, "all independently sourced phones are surfaced");
+assert.equal(webDoc.phones[1]?.sourceUrl, "https://acme.uy/contacto");
 assert.equal(webDoc.address, "Av. Siempreviva 742");
 assert.equal(webDoc.websitePhone, "2407 0000");
 assert.equal(webDoc.websiteAddress, "Cnel. Brandzen 1956");
 assert.equal(webDoc.contactFormUrl, "https://acme.uy/#contacto");
 assert.equal(webDoc.socialLinks[0].platform, "instagram");
+assert.equal(webDoc.socialLinks[0].sourceUrl, "https://acme.uy/contacto");
 assert.equal(webDoc.email, "info@acme.uy");
 assert.equal(webDoc.neverAwarded, false, "default false when the doc doesn't set it");
 assert.equal(webDoc.rupeEstado, null);
@@ -53,6 +60,7 @@ assert.equal(webDoc.directAwardCount, 4);
 // suppressed email is dropped; both valid ones remain
 assert.equal(webDoc.emails.length, 2);
 assert.ok(webDoc.emails.some(e => e.email === "ventas@acme.uy"));
+assert.equal(webDoc.emails.find(e => e.email === "ventas@acme.uy")?.sourceUrl, "https://directorio.example/acme");
 assert.ok(!webDoc.emails.some(e => e.email === "bounced@acme.uy"));
 
 // googleMaps-sourced phone/website/place must be stripped before display/export
@@ -79,7 +87,9 @@ assert.ok(row.includes("webSearch"), "CSV row carries the website origin");
 assert.ok(header.includes("Sitio web") && header.includes("Teléfono"), "website + phone columns");
 assert.ok(header.includes("Formulario de contacto") && header.includes("Redes sociales"), "first-party contact details are exported");
 assert.ok(row.includes("Av. Siempreviva 742"), "CSV row carries the address");
-assert.ok(row.includes("info@acme.uy; ventas@acme.uy"), "CSV Emails column joins ALL emails");
+assert.ok(row.includes("info@acme.uy") && row.includes("ventas@acme.uy"), "CSV Emails column joins ALL emails");
+assert.ok(row.includes("https://directorio.example/acme"), "CSV keeps the exact email evidence URL");
+assert.ok(row.includes("https://acme.uy/contacto"), "CSV keeps phone/social evidence URLs");
 
 // JSON exposes the full decorated PublicContact shape (the route attaches the
 // supplier-pattern signal before it reaches this serializer).

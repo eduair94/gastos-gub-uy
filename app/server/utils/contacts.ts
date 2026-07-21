@@ -20,12 +20,16 @@ export type ContactMethod = 'crawl4ai' | 'googleMaps' | 'dei' | 'rupe' | 'impo'
  */
 export function contactMethods(
   doc: Partial<Pick<ISupplierContact,
-  'emails' | 'websiteSource' | 'phoneSource' | 'placeSource'
+  'emails' | 'websiteSource' | 'phoneSource' | 'phones' | 'placeSource'
   | 'websitePhone' | 'websiteAddress' | 'contactFormUrl' | 'socialLinks'>>,
 ): ContactMethod[] {
   const found = new Set<ContactMethod>()
   const emailSources = (doc.emails ?? []).map(e => e.source)
-  const fieldSources = [doc.websiteSource, doc.phoneSource, doc.placeSource]
+  const fieldSources = [
+    doc.websiteSource, doc.phoneSource, doc.placeSource,
+    ...(doc.phones ?? []).map(phone => phone.source),
+    ...(doc.socialLinks ?? []).map(link => link.source),
+  ]
   const has = (s: string) => emailSources.includes(s as never) || fieldSources.includes(s as never)
   if (has('webSearch') || has('website')) found.add('crawl4ai')
   if (doc.websitePhone || doc.websiteAddress || doc.contactFormUrl || doc.socialLinks?.length) found.add('crawl4ai')
@@ -105,6 +109,7 @@ export async function buildContactFilter(
     { neverAwarded: true },
     { website: { $nin: [null, ''] }, websiteSource: { $ne: 'googleMaps' } },
     { phone: { $nin: [null, ''] }, phoneSource: { $ne: 'googleMaps' } },
+    { phones: { $elemMatch: { phone: { $nin: [null, ''] }, source: { $ne: 'googleMaps' } } } },
     { contactFormUrl: { $nin: [null, ''] } },
     { 'socialLinks.0': { $exists: true } },
   ] })
@@ -125,17 +130,20 @@ export async function buildContactFilter(
     andConditions.push({ name: { $in: names } })
   }
 
+  // "has phone" includes every displayable observed number, not only the
+  // backwards-compatible primary field.
+  if (String(query.hasPhone ?? '') === '1') {
+    andConditions.push({ $or: [
+      { phone: { $nin: [null, ''] }, phoneSource: { $ne: 'googleMaps' } },
+      { phones: { $elemMatch: { phone: { $nin: [null, ''] }, source: { $ne: 'googleMaps' } } } },
+    ] })
+  }
+
   if (andConditions.length === 1) Object.assign(filter, andConditions[0])
   else filter.$and = andConditions
 
   if (query.rubro) filter['rubros.classificationId'] = String(query.rubro)
 
-  // "has phone" means a DISPLAYABLE phone: googleMaps-sourced phones are stripped
-  // on read (ToS), so counting them here would inflate the total with blank cells.
-  if (String(query.hasPhone ?? '') === '1') {
-    filter.phone = { $nin: [null, ''] }
-    filter.phoneSource = { $ne: 'googleMaps' }
-  }
   if (String(query.hasWebsite ?? '') === '1') {
     filter.website = { $nin: [null, ''] }
     filter.websiteSource = { $ne: 'googleMaps' }
@@ -192,9 +200,17 @@ export function contactSort(query: ContactQuery): Record<string, 1 | -1> {
 export interface PublicEmail {
   email: string
   source: string
+  sourceUrl: string | null
+  confidence: number
   mxValid: boolean
   status: string
   isRoleAccount: boolean
+}
+export interface PublicPhone {
+  phone: string
+  source: string
+  sourceUrl: string | null
+  confidence: number
 }
 export interface PublicRubro {
   classificationId: string
@@ -205,6 +221,8 @@ export interface PublicSocialLink {
   platform: string
   url: string
   label: string
+  source: string
+  sourceUrl: string | null
 }
 /** The single sanitized shape every read path returns. */
 export interface PublicContact {
@@ -220,6 +238,7 @@ export interface PublicContact {
   phone: string | null
   /** Origin of `phone` (e.g. "dei"), or null. */
   phoneSource: string | null
+  phones: PublicPhone[]
   websitePhone: string | null
   websiteAddress: string | null
   contactFormUrl: string | null
@@ -252,10 +271,51 @@ function pickEmails(emails: ISupplierContact['emails']): PublicEmail[] {
     .map(e => ({
       email: e.email,
       source: e.source,
+      sourceUrl: publicSourceUrl(e.sourceUrl),
+      confidence: Number(e.confidence) || 0,
       mxValid: !!e.mxValid,
       status: e.status,
       isRoleAccount: !!e.isRoleAccount,
     }))
+}
+
+function publicSourceUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  try {
+    const url = new URL(raw)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null
+  }
+  catch { return null }
+}
+
+function pickPhones(doc: Partial<ISupplierContact>): PublicPhone[] {
+  const raw = [...(doc.phones ?? [])]
+  if (!raw.length && doc.phone && doc.phoneSource) {
+    raw.push({ phone: doc.phone, source: doc.phoneSource, sourceUrl: null, confidence: 0 })
+  }
+  if (doc.websitePhone) {
+    raw.push({
+      phone: doc.websitePhone,
+      source: 'website',
+      sourceUrl: doc.website ?? null,
+      confidence: 0.8,
+    })
+  }
+  const seen = new Set<string>()
+  return raw
+    .filter(entry => entry.source !== 'googleMaps' && !!entry.phone?.trim())
+    .map(entry => ({
+      phone: entry.phone.trim(),
+      source: entry.source,
+      sourceUrl: publicSourceUrl(entry.sourceUrl),
+      confidence: Number(entry.confidence) || 0,
+    }))
+    .filter((entry) => {
+      const key = `${entry.phone.replace(/\D/g, '') || entry.phone}|${entry.source}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
 }
 
 function pickDisplayEmail(primary: string | null, emails: PublicEmail[]): string | null {
@@ -280,22 +340,28 @@ export function sanitizeContact(
   },
 ): PublicContact {
   const emails = pickEmails(doc.emails ?? [])
+  const phones = pickPhones(doc)
   const rubros: PublicRubro[] = (doc.rubros ?? [])
     .map(r => ({ classificationId: r.classificationId, label: r.label ?? '', share: r.share ?? 0 }))
     .sort((a, b) => b.share - a.share)
 
-  const phone = doc.phoneSource === 'googleMaps' ? null : (doc.phone ?? null)
+  const legacyPhone = doc.phoneSource === 'googleMaps' ? null : (doc.phone ?? null)
+  const phone = legacyPhone ?? phones[0]?.phone ?? null
   // A Places-listed website is Google-Maps content under the same ToS as phone.
   const website = doc.websiteSource === 'googleMaps' ? null : (doc.website ?? null)
   const placeRestricted = doc.placeSource === 'googleMaps'
   // Provenance travels with the field it describes: null once the field itself is
   // stripped/absent, so the origin shown always matches a visible value.
   const websiteSource = website ? (doc.websiteSource ?? null) : null
-  const phoneSource = phone ? (doc.phoneSource ?? null) : null
+  const phoneSource = phone
+    ? (legacyPhone ? (doc.phoneSource ?? null) : (phones[0]?.source ?? null))
+    : null
   const socialLinks = (doc.socialLinks ?? []).map(link => ({
     platform: link.platform,
     url: link.url,
     label: link.label ?? '',
+    source: link.source ?? 'website',
+    sourceUrl: publicSourceUrl(link.sourceUrl),
   }))
 
   return {
@@ -308,6 +374,7 @@ export function sanitizeContact(
     websiteSource,
     phone,
     phoneSource,
+    phones,
     websitePhone: doc.websitePhone ?? null,
     websiteAddress: doc.websiteAddress ?? null,
     contactFormUrl: doc.contactFormUrl ?? null,
@@ -330,7 +397,7 @@ export function sanitizeContact(
 // ---- Serializers -------------------------------------------------------------
 
 /** Curated table order used by CSV + XLSX. */
-const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'socialsJoined' | 'awarded', header: string, width: number }[] = [
+const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'phonesJoined' | 'socialsJoined' | 'awarded', header: string, width: number }[] = [
   { key: 'name', header: 'Nombre', width: 42 },
   { key: 'rut', header: 'RUT', width: 14 },
   { key: 'awarded', header: 'Adjudicó', width: 10 },
@@ -339,6 +406,7 @@ const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'socialsJoine
   { key: 'website', header: 'Sitio web', width: 28 },
   { key: 'websiteSource', header: 'Origen sitio', width: 14 },
   { key: 'phone', header: 'Teléfono', width: 16 },
+  { key: 'phonesJoined', header: 'Teléfonos y origen', width: 48 },
   { key: 'websitePhone', header: 'Teléfono del sitio', width: 18 },
   { key: 'locality', header: 'Localidad', width: 20 },
   { key: 'address', header: 'Dirección', width: 34 },
@@ -350,8 +418,15 @@ const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'socialsJoine
 ]
 
 function cellValue(c: PublicContact, key: string): string {
-  if (key === 'emailsJoined') return c.emails.map(e => e.email).join('; ')
-  if (key === 'socialsJoined') return c.socialLinks.map(link => `${link.platform}: ${link.url}`).join('; ')
+  if (key === 'emailsJoined') {
+    return c.emails.map(e => `${e.email} [${e.source}${e.sourceUrl ? `: ${e.sourceUrl}` : ''}]`).join('; ')
+  }
+  if (key === 'phonesJoined') {
+    return c.phones.map(phone => `${phone.phone} [${phone.source}${phone.sourceUrl ? `: ${phone.sourceUrl}` : ''}]`).join('; ')
+  }
+  if (key === 'socialsJoined') {
+    return c.socialLinks.map(link => `${link.platform}: ${link.url} [${link.source}${link.sourceUrl ? `: ${link.sourceUrl}` : ''}]`).join('; ')
+  }
   if (key === 'awarded') return c.neverAwarded ? 'No' : 'Sí'
   const v = (c as unknown as Record<string, unknown>)[key]
   return v == null ? '' : String(v)
@@ -401,8 +476,10 @@ export function toVcard(contacts: PublicContact[]): string {
       if (e.email !== c.email) lines.push(`EMAIL;TYPE=INTERNET:${vcardEscape(e.email)}`)
     }
     if (c.website) lines.push(`URL:${vcardEscape(c.website)}`)
-    if (c.phone) lines.push(`TEL;TYPE=WORK,VOICE:${vcardEscape(c.phone)}`)
-    if (c.websitePhone && c.websitePhone !== c.phone) lines.push(`TEL;TYPE=WORK,VOICE:${vcardEscape(c.websitePhone)}`)
+    const phoneValues = new Set(c.phones.map(entry => entry.phone))
+    if (!phoneValues.size && c.phone) phoneValues.add(c.phone)
+    if (!phoneValues.size && c.websitePhone) phoneValues.add(c.websitePhone)
+    for (const phone of phoneValues) lines.push(`TEL;TYPE=WORK,VOICE:${vcardEscape(phone)}`)
     if (c.address || c.locality) lines.push(`ADR;TYPE=WORK:;;${vcardEscape(c.address ?? '')};${vcardEscape(c.locality ?? '')};;;Uruguay`)
     if (c.websiteAddress && c.websiteAddress !== c.address) lines.push(`ADR;TYPE=WORK:;;${vcardEscape(c.websiteAddress)};;;;;Uruguay`)
     if (c.contactFormUrl) lines.push(`URL;TYPE=CONTACT:${vcardEscape(c.contactFormUrl)}`)

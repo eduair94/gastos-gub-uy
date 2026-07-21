@@ -1,5 +1,5 @@
 // src/jobs/enrich/resolvers/website.ts
-import type { ContactResolver, ResolverInput, ResolverResult, ContactCandidate } from "../types";
+import type { ContactResolver, ResolverInput, ResolverResult, ContactCandidate, PhoneCandidate } from "../types";
 import { RAW_EMAIL_RE } from "../email-regex";
 import { extractWebsiteContactDetails } from "../website-contact-details";
 import type { ISocialLink } from "../../../../shared/models/supplier_contacts";
@@ -11,7 +11,7 @@ export function registrableDomain(host: string): string {
   return host.replace(/^www\./, "").toLowerCase();
 }
 
-export function extractEmailsFromHtml(html: string, siteDomain: string): ContactCandidate[] {
+export function extractEmailsFromHtml(html: string, siteDomain: string, sourceUrl: string | null = null): ContactCandidate[] {
   const found = new Map<string, number>();
   const site = registrableDomain(siteDomain);
   for (const m of html.matchAll(RAW_EMAIL_RE)) {
@@ -23,7 +23,9 @@ export function extractEmailsFromHtml(html: string, siteDomain: string): Contact
     const conf = registrableDomain(dom) === site ? 0.75 : 0.45;
     found.set(email, Math.max(found.get(email) ?? 0, conf));
   }
-  return [...found].map(([email, confidence]) => ({ email, source: "website" as const, confidence }));
+  return [...found].map(([email, confidence]) => ({
+    email, source: "website" as const, confidence, sourceUrl,
+  }));
 }
 
 const CONTACT_PATHS = ["", "/contacto", "/contact", "/contactenos", "/contacto-2", "/nosotros"];
@@ -39,6 +41,7 @@ export function createWebsiteResolver(
       try { base = new URL(input.website); } catch { return { emails: [] }; }
       const siteDomain = base.hostname;
       const seen = new Map<string, ContactCandidate>();
+      const phones = new Map<string, PhoneCandidate>();
       const socials = new Map<string, ISocialLink>();
       let websitePhone: string | null = null;
       let websiteAddress: string | null = null;
@@ -47,12 +50,16 @@ export function createWebsiteResolver(
         const url = new URL(CONTACT_PATHS[i], base.origin).toString();
         const html = await fetchHtml(url).catch(() => null);
         if (!html) continue;
-        for (const c of extractEmailsFromHtml(html, siteDomain)) {
+        for (const c of extractEmailsFromHtml(html, siteDomain, url)) {
           const prev = seen.get(c.email);
           if (!prev || c.confidence > prev.confidence) seen.set(c.email, c);
         }
         const details = extractWebsiteContactDetails(html, url);
         websitePhone ||= details.phone;
+        for (const phone of details.phones) {
+          const key = `${phone.replace(/\D/g, "") || phone}|${url}`;
+          phones.set(key, { phone, source: "website", confidence: 0.8, sourceUrl: url });
+        }
         websiteAddress ||= details.address;
         contactFormUrl ||= details.contactFormUrl;
         for (const social of details.socialLinks) socials.set(social.url, social);
@@ -63,6 +70,7 @@ export function createWebsiteResolver(
       return {
         emails: [...seen.values()], website: input.website,
         phone: websitePhone, phoneSource: websitePhone ? "website" : null,
+        phones: [...phones.values()],
         websitePhone, websiteAddress, contactFormUrl, socialLinks: [...socials.values()],
       };
     },

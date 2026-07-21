@@ -19,7 +19,7 @@ export interface StoredPlace {
   placeSource?: FieldSource | null;
 }
 
-export const CONTACT_ENRICHMENT_VERSION = 2;
+export const CONTACT_ENRICHMENT_VERSION = 3;
 
 export function registryContactQuery(staleBefore: Date, enrichmentVersion = CONTACT_ENRICHMENT_VERSION) {
   return {

@@ -4,7 +4,7 @@ import { promises as dns } from "node:dns";
 import { connectToDatabase, disconnectFromDatabase, mongoose } from "../../shared/connection/database";
 import { SupplierContactModel } from "../../shared/models/supplier_contacts";
 import type { ContactResolver, ContactCandidate, ResolverResult } from "./enrich/types";
-import { mergeCandidates, pickPrimary, CONNECTIVITY_DNS_ERROR_CODES } from "./enrich/hygiene";
+import { existingEmailCandidates, mergeCandidates, pickPrimary, CONNECTIVITY_DNS_ERROR_CODES } from "./enrich/hygiene";
 import { deriveRubros } from "./enrich/rubros";
 import { createDeiResolver } from "./enrich/resolvers/dei";
 import { createRupeResolver } from "./enrich/resolvers/rupe";
@@ -18,7 +18,7 @@ import { crawl4aiBaseUrl, createCrawl4aiTransport } from "./enrich/crawl4ai";
 import { createWebsiteVerifier, createWebsiteJudge, isDirectoryUrl, websiteSourceRank } from "./enrich/website-verify";
 import { CONTACT_ENRICHMENT_VERSION, mergeStoredPlace, registryContactQuery, registryContactToSupplier, type EnrichmentSupplier } from "./enrich/candidates";
 import type { PlaceInfo } from "./enrich/types";
-import type { FieldSource, ISocialLink, WebsiteSource } from "../../shared/models/supplier_contacts";
+import type { FieldSource, IPhoneEntry, ISocialLink, WebsiteSource } from "../../shared/models/supplier_contacts";
 
 function arg(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -160,9 +160,9 @@ async function main() {
     // abort the whole batch.
     try {
       const existing = await SupplierContactModel.findOne({ supplierId }, {
-        enrichedAt: 1, status: 1, website: 1, websiteSource: 1, phone: 1, phoneSource: 1,
+        enrichedAt: 1, status: 1, emails: 1, website: 1, websiteSource: 1, phone: 1, phoneSource: 1,
         address: 1, locality: 1, lat: 1, lng: 1, hours: 1, mapsUrl: 1, placeId: 1, placeSource: 1,
-        websitePhone: 1, websiteAddress: 1, contactFormUrl: 1, socialLinks: 1, enrichmentVersion: 1,
+        phones: 1, websitePhone: 1, websiteAddress: 1, contactFormUrl: 1, socialLinks: 1, enrichmentVersion: 1,
       }).lean();
       if (existing && existing.enrichmentVersion === CONTACT_ENRICHMENT_VERSION
         && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore) continue;
@@ -178,7 +178,10 @@ async function main() {
       // (official dei/rupe, or a crawl4ai-VERIFIED one) OVERRIDES a stale,
       // unverified seed. This is what stops a re-run from re-stamping an old
       // "first hit that loaded" directory URL forever.
-      const all: ContactCandidate[] = [];
+      // A fresh crawl adds evidence; it must not replace previously validated
+      // addresses. This keeps person-level directory contacts alongside newer
+      // first-party addresses while hygiene still rejects invalid/junk entries.
+      const all: ContactCandidate[] = existingEmailCandidates(existing?.emails);
       const seededSite = existing?.website && !isDirectoryUrl(existing.website) ? existing.website : null;
       let website: string | null = seededSite;
       let websiteSource: WebsiteSource | null = seededSite ? (existing?.websiteSource ?? null) : null;
@@ -187,10 +190,27 @@ async function main() {
       let phoneSource: FieldSource | null = existing?.phoneSource ?? null;
       const fieldRank = (source: FieldSource | null | undefined) => source === "dei" || source === "rupe" ? 3 : source === "website" ? 2 : source === "googleMaps" ? 1 : 0;
       let phoneRank = fieldRank(phoneSource);
+      const phones = new Map<string, IPhoneEntry>();
+      const addPhone = (entry: IPhoneEntry): void => {
+        const normalized = entry.phone.replace(/\D/g, "") || entry.phone.trim().toLowerCase();
+        const key = `${normalized}|${entry.source}`;
+        const previous = phones.get(key);
+        if (!previous || entry.confidence > previous.confidence
+          || (!previous.sourceUrl && entry.sourceUrl)) phones.set(key, entry);
+      };
+      for (const entry of existing?.phones ?? []) addPhone(entry);
+      if (phone && phoneSource) {
+        addPhone({ phone, source: phoneSource, sourceUrl: null, confidence: fieldRank(phoneSource) / 3 });
+      }
       let websitePhone: string | null = existing?.websitePhone ?? null;
+      if (websitePhone) addPhone({ phone: websitePhone, source: "website", sourceUrl: existing?.website ?? null, confidence: 0.8 });
       let websiteAddress: string | null = existing?.websiteAddress ?? null;
       let contactFormUrl: string | null = existing?.contactFormUrl ?? null;
-      const socialLinks = new Map<string, ISocialLink>((existing?.socialLinks ?? []).map(link => [link.url, link]));
+      const socialLinks = new Map<string, ISocialLink>((existing?.socialLinks ?? []).map(link => [link.url, {
+        ...link,
+        source: link.source ?? "website",
+        sourceUrl: link.sourceUrl ?? existing?.website ?? null,
+      }]));
       let place: PlaceInfo | null = null;
       for (let i = 0; i < resolvers.length; i++) {
         const r = resolvers[i];
@@ -202,6 +222,15 @@ async function main() {
         }
         if (res.phone && fieldRank(res.phoneSource) > phoneRank) {
           phone = res.phone; phoneSource = res.phoneSource ?? null; phoneRank = fieldRank(phoneSource);
+        }
+        for (const entry of res.phones ?? []) addPhone({ ...entry, sourceUrl: entry.sourceUrl ?? null });
+        if (res.phone && res.phoneSource && !(res.phones?.length)) {
+          addPhone({
+            phone: res.phone,
+            source: res.phoneSource,
+            sourceUrl: null,
+            confidence: fieldRank(res.phoneSource) / 3,
+          });
         }
         websitePhone = res.websitePhone ?? websitePhone;
         websiteAddress = res.websiteAddress ?? websiteAddress;
@@ -218,7 +247,7 @@ async function main() {
       const emails = await mergeCandidates(all);
       const primaryEmail = pickPrimary(emails);
       const rubros = await deriveRubros(db, supplierId, 5).catch(() => []);
-      const hasContact = emails.length > 0 || !!website || !!phone || !!websitePhone || !!websiteAddress || !!contactFormUrl || socialLinks.size > 0;
+      const hasContact = emails.length > 0 || phones.size > 0 || !!website || !!phone || !!websitePhone || !!websiteAddress || !!contactFormUrl || socialLinks.size > 0;
       const status = hasContact ? "enriched" : "no_contact";
       const storedPlace = mergeStoredPlace(place, existing ?? {});
 
@@ -231,7 +260,7 @@ async function main() {
         { supplierId },
         { $set: {
           supplierId, rut, name, emails, primaryEmail, website, websiteSource, phone, phoneSource,
-          websitePhone, websiteAddress, contactFormUrl, socialLinks: [...socialLinks.values()],
+          phones: [...phones.values()], websitePhone, websiteAddress, contactFormUrl, socialLinks: [...socialLinks.values()],
           ...storedPlace,
           rubros, status, priorityScore, enrichedAt: new Date(), enrichmentVersion: CONTACT_ENRICHMENT_VERSION,
         } },

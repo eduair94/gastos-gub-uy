@@ -3,6 +3,7 @@ import type { ISocialLink, SocialPlatform } from "../../../shared/models/supplie
 
 export interface WebsiteContactDetails {
   phone: string | null;
+  phones: string[];
   address: string | null;
   contactFormUrl: string | null;
   socialLinks: ISocialLink[];
@@ -61,7 +62,13 @@ export function extractWebsiteContactDetails(html: string, pageUrl: string): Web
       const platform = platformFor(url);
       if (!platform) return;
       const normalized = url.toString();
-      socialLinks.set(normalized, { platform, url: normalized, label: cleanText($(element).text()) });
+      socialLinks.set(normalized, {
+        platform,
+        url: normalized,
+        label: cleanText($(element).text()),
+        source: "website",
+        sourceUrl: pageUrl,
+      });
     } catch { /* malformed link */ }
   });
 
@@ -73,7 +80,12 @@ export function extractWebsiteContactDetails(html: string, pageUrl: string): Web
     const text = cleanText($(element).text()).replace(/^@/, "");
     if (!/^[a-z0-9][a-z0-9._]{2,29}$/i.test(text) || (!text.includes("_") && !$(element).text().trim().startsWith("@"))) return;
     const url = `https://www.instagram.com/${text}/`;
-    if (!socialLinks.has(url)) socialLinks.set(url, { platform: "instagram", url, label: `@${text}` });
+    if (!socialLinks.has(url)) {
+      socialLinks.set(url, {
+        platform: "instagram", url, label: `@${text}`,
+        source: "website", sourceUrl: pageUrl,
+      });
+    }
   });
 
   let contactFormUrl: string | null = null;
@@ -102,11 +114,16 @@ export function extractWebsiteContactDetails(html: string, pageUrl: string): Web
   });
   if (!fragments.length) fragments.push(cleanText($.root().text()));
 
-  let phone: string | null = null;
+  const phonesByDigits = new Map<string, string>();
   for (const fragment of fragments) {
-    const match = [...fragment.matchAll(PHONE_RE)][0]?.[0];
-    if (match) { phone = cleanPhone(match); break; }
+    for (const match of fragment.matchAll(PHONE_RE)) {
+      const value = cleanPhone(match[0]);
+      const key = value.replace(/\D/g, "") || value;
+      if (!phonesByDigits.has(key)) phonesByDigits.set(key, value);
+    }
   }
+  const phones = [...phonesByDigits.values()];
+  const phone = phones[0] ?? null;
 
   let address: string | null = null;
   for (const fragment of fragments) {
@@ -116,5 +133,5 @@ export function extractWebsiteContactDetails(html: string, pageUrl: string): Web
     }
   }
 
-  return { phone, address, contactFormUrl, socialLinks: [...socialLinks.values()] };
+  return { phone, phones, address, contactFormUrl, socialLinks: [...socialLinks.values()] };
 }

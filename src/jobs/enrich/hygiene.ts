@@ -86,7 +86,10 @@ export async function mergeCandidates(
     const email = normalizeEmail(c.email);
     if (!email || isJunkEmail(email)) continue;
     const prev = best.get(email);
-    if (!prev || c.confidence > prev.confidence) best.set(email, { ...c, email });
+    if (!prev || c.confidence > prev.confidence
+      || (c.confidence === prev.confidence && !prev.sourceUrl && c.sourceUrl)) {
+      best.set(email, { ...c, email });
+    }
   }
   const out: IEmailEntry[] = [];
   for (const c of best.values()) {
@@ -94,6 +97,7 @@ export async function mergeCandidates(
     out.push({
       email: c.email,
       source: c.source,
+      sourceUrl: c.sourceUrl ?? null,
       confidence: c.confidence,
       isRoleAccount: isRoleAccount(c.email),
       mxValid: ok,
@@ -101,6 +105,26 @@ export async function mergeCandidates(
     });
   }
   return out;
+}
+
+/**
+ * Carry forward previously validated addresses when a later crawl discovers
+ * additional contact channels. Enrichment is additive: a verified corporate
+ * site must not erase a valid person-level address found in an earlier run.
+ * Invalid/suppressed legacy rows are deliberately not promoted back into the
+ * candidate set; mergeCandidates still applies normalization and junk filters.
+ */
+export function existingEmailCandidates(
+  entries: IEmailEntry[] | null | undefined,
+): ContactCandidate[] {
+  return (entries ?? [])
+    .filter(entry => entry.status === "valid" && entry.mxValid)
+    .map(entry => ({
+      email: entry.email,
+      source: entry.source,
+      sourceUrl: entry.sourceUrl ?? null,
+      confidence: Number.isFinite(entry.confidence) ? entry.confidence : 0.5,
+    }));
 }
 
 export function pickPrimary(entries: IEmailEntry[]): string | null {

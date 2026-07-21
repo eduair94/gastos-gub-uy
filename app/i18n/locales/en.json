@@ -781,7 +781,8 @@
       "webSearch": "Crawl4AI · web search",
       "verifiedWebsite": "Crawl4AI · verified site",
       "website": "Crawl4AI · website",
-      "googleMaps": "Google Maps"
+      "googleMaps": "Google Maps",
+      "manual": "Manual validation"
     },
     "contactForm": "Contact form",
     "sort": {

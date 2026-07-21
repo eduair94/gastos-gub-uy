@@ -73,6 +73,12 @@ export function createGoogleMapsResolver(deps: GoogleMapsDeps): ContactResolver 
         websiteSource: d.website ? "googleMaps" : null,
         phone: d.phone ?? null,
         phoneSource: d.phone ? "googleMaps" : null,
+        phones: d.phone ? [{
+          phone: d.phone,
+          source: "googleMaps",
+          confidence: 0.7,
+          sourceUrl: d.mapsUrl ?? null,
+        }] : [],
         place,
       };
     },

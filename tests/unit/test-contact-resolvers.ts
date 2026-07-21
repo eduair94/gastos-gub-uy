@@ -30,6 +30,8 @@ function fakeDb(rows: any[]) {
   assert.equal(out.website, "https://murry.uy");
   // Rescued address/geo — previously discarded — with dei provenance.
   assert.equal(out.phoneSource, "dei");
+  assert.equal(out.phones?.length, 1);
+  assert.equal(out.phones?.[0]?.source, "dei");
   assert.ok(out.place, "expected a place block from the rescued DEI fields");
   assert.equal(out.place!.source, "dei");
   assert.equal(out.place!.address, "Av. Italia 1234");
@@ -48,13 +50,14 @@ function fakeDb(rows: any[]) {
     <a href="mailto:Ventas@empresa.com.uy">escribinos</a>
     <p>Contacto: gerencia@empresa.com.uy y también juan@gmail.com</p>
     <img src="x@2x.png"> <span>soporte@otra-empresa.uy</span>`;
-  const cands = extractEmailsFromHtml(html, "empresa.com.uy");
+  const cands = extractEmailsFromHtml(html, "empresa.com.uy", "https://empresa.com.uy/contacto");
   const emails = cands.map(c => c.email).sort();
   // same-domain emails ranked/higher-confidence; @2x.png is NOT an email; gmail kept but lower.
   assert.ok(emails.includes("ventas@empresa.com.uy"));
   assert.ok(emails.includes("gerencia@empresa.com.uy"));
   assert.ok(!emails.some(e => e.includes("2x.png")));
   const sameDomain = cands.find(c => c.email === "ventas@empresa.com.uy")!;
+  assert.equal(sameDomain.sourceUrl, "https://empresa.com.uy/contacto");
   const offDomain = cands.find(c => c.email === "juan@gmail.com");
   if (offDomain) assert.ok(sameDomain.confidence > offDomain.confidence);
 
@@ -80,7 +83,7 @@ function fakeDb(rows: any[]) {
       </form>
     </section>
     <footer>
-      <div>2407 0000</div>
+      <div>2407 0000 · 099 195 441</div>
       <div>Cnel. Brandzen 1956 | 501, MVD</div>
       <a>estudio_segalerba</a>
       <a href="https://www.linkedin.com/company/acme">LinkedIn</a>
@@ -89,12 +92,14 @@ function fakeDb(rows: any[]) {
     </footer>`;
   const details = extractWebsiteContactDetails(html, "https://segalerba.com.uy/");
   assert.equal(details.phone, "2407 0000");
+  assert.deepEqual(details.phones, ["2407 0000", "099 195 441"]);
   assert.equal(details.address, "Cnel. Brandzen 1956 | 501, MVD");
   assert.equal(details.contactFormUrl, "https://segalerba.com.uy/#contact-form");
   assert.ok(details.socialLinks.some(link => link.platform === "instagram" && link.url.includes("estudio_segalerba")));
   assert.ok(details.socialLinks.some(link => link.platform === "linkedin"));
   assert.ok(details.socialLinks.some(link => link.platform === "telegram"));
   assert.ok(details.socialLinks.some(link => link.platform === "threads"));
+  assert.ok(details.socialLinks.every(link => link.source === "website" && link.sourceUrl === "https://segalerba.com.uy/"));
   console.log("ok: website contact details");
 })();
 
@@ -106,6 +111,7 @@ function fakeDb(rows: any[]) {
   const out = await r.resolve({ supplierId: "R/1", rut: "217231960015", name: "ANFANG S R L" });
   assert.ok(out.emails.some(e => e.email === "hola@empresa.uy"));
   assert.ok(out.emails.every(e => e.confidence <= 0.5)); // capped
+  assert.ok(out.emails.every(e => e.sourceUrl === "https://empresa.uy/contacto"));
   console.log("ok: web-search resolver");
 })();
 

@@ -1,7 +1,18 @@
 // src/jobs/enrich/types.ts
 import type { EmailSource, FieldSource, ISocialLink, WebsiteSource } from "../../../shared/models/supplier_contacts";
 
-export interface ContactCandidate { email: string; source: EmailSource; confidence: number }
+export interface ContactCandidate {
+  email: string;
+  source: EmailSource;
+  confidence: number;
+  sourceUrl?: string | null;
+}
+export interface PhoneCandidate {
+  phone: string;
+  source: FieldSource;
+  confidence: number;
+  sourceUrl?: string | null;
+}
 
 /** Knowledge-panel location data a resolver can supply (Google Places / DEI). */
 export interface PlaceInfo {
@@ -24,6 +35,7 @@ export interface ResolverResult {
   phone?: string | null;
   /** Provenance of `phone`, so the orchestrator can tag it on the record. */
   phoneSource?: FieldSource | null;
+  phones?: PhoneCandidate[];
   websitePhone?: string | null;
   websiteAddress?: string | null;
   contactFormUrl?: string | null;

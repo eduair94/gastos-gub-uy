@@ -1,7 +1,7 @@
 // tests/unit/test-contact-hygiene.ts
 import assert from "node:assert";
 import {
-  normalizeEmail, isRoleAccount, isJunkEmail, mergeCandidates, pickPrimary,
+  normalizeEmail, isRoleAccount, isJunkEmail, existingEmailCandidates, mergeCandidates, pickPrimary,
 } from "../../src/jobs/enrich/hygiene";
 
 // normalizeEmail lowercases, trims, strips mailto:, rejects garbage.
@@ -36,6 +36,29 @@ const stubMx = async (d: string) => d !== "dead.uy";
   assert.equal(juan.mxValid, true);
   const dead = merged.find(e => e.email === "x@dead.uy")!;
   assert.equal(dead.mxValid, false);
+
+  // Re-enrichment adds newly observed addresses without deleting previously
+  // validated ones. Invalid and suppressed legacy rows are not revived.
+  const carried = existingEmailCandidates([
+    { email: "mariano.y@gmail.com", source: "webSearch", sourceUrl: "https://uy.todosnegocios.com/entre-lagos-s-a-2622-6123", confidence: 0.5, isRoleAccount: false, mxValid: true, status: "valid" },
+    { email: "entrelagosbienesraices@gmail.com", source: "webSearch", sourceUrl: "https://entrelagosbienesraices.com/contacto.aspx", confidence: 0.5, isRoleAccount: false, mxValid: true, status: "valid" },
+    { email: "old@dead.uy", source: "webSearch", sourceUrl: null, confidence: 0.5, isRoleAccount: false, mxValid: false, status: "invalid" },
+    { email: "blocked@example.net", source: "manual", sourceUrl: null, confidence: 1, isRoleAccount: false, mxValid: true, status: "suppressed" },
+  ]);
+  assert.deepEqual(carried.map(entry => entry.email), [
+    "mariano.y@gmail.com",
+    "entrelagosbienesraices@gmail.com",
+  ]);
+  assert.equal(carried[0]?.sourceUrl, "https://uy.todosnegocios.com/entre-lagos-s-a-2622-6123");
+  const additive = await mergeCandidates([
+    ...carried,
+    { email: "nuevo@entrelagos.uy", source: "website", confidence: 0.8, sourceUrl: "https://entrelagos.uy/contacto" },
+  ], stubMx);
+  assert.deepEqual(additive.map(entry => entry.email).sort(), [
+    "entrelagosbienesraices@gmail.com",
+    "mariano.y@gmail.com",
+    "nuevo@entrelagos.uy",
+  ]);
 
   // primary = non-role, mx-valid, highest confidence → juan
   assert.equal(pickPrimary(merged), "juan@empresa.uy");
