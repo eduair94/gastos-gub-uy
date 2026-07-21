@@ -34,3 +34,6 @@ export * from './webhook_delivery';
 export * from './sice_catalog';
 export * from './sice_rubro';
 
+// Contracting-unit purchasing contacts directory (procurement_contacts)
+export * from './procurement_contacts';
+

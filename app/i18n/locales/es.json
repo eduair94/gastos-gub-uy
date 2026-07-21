@@ -12,7 +12,8 @@
     "contracts": "Contratos",
     "products": "Productos",
     "suppliers": "Proveedores",
-    "contactos": "Contactos",
+    "contactos": "Contactos de proveedores",
+    "contactosCompras": "Contactos de compras",
     "buyers": "Organismos",
     "anomalies": "Alertas",
     "unexplained": "Sin explicación",
@@ -286,6 +287,10 @@
     },
     "aiNote": "La categoría de cada proveedor la genera una IA (Gemini) a partir del nombre: es orientativa, puede equivocarse, verificá contra la fuente.",
     "aiTitle": "Categoría generada por IA",
+    "filter": {
+      "category": "Tipo",
+      "categoryAny": "Cualquier tipo"
+    },
     "dei": {
       "badge": "DEI",
       "badgeTitle": "Empresa industrial registrada en el Directorio de Empresas Industriales (MIEM)",
@@ -1595,6 +1600,10 @@
       "title": "Contactos de proveedores del Estado uruguayo",
       "description": "Directorio descargable de datos de contacto de {total} proveedores del Estado uruguayo: email, sitio web, teléfono y rubro. CSV, Excel, JSON y vCard."
     },
+    "contactos": {
+      "title": "Contactos de compras del Estado uruguayo",
+      "description": "Directorio de contactos oficiales de compras por organismo del Estado uruguayo: a quién escribirle en cada unidad compradora."
+    },
     "supplierDetail": {
       "title": "{name} — proveedor del Estado",
       "description": "{name} cobró {amount} del Estado uruguayo en {contracts} contratos con {buyers} organismos."
@@ -1746,6 +1755,31 @@
     "notConfigured": "La autenticación no está disponible en este momento.",
     "genericError": "No pudimos completar la operación. Revisá los datos e intentá de nuevo.",
     "verifyNotice": "Te enviamos un email para verificar tu cuenta. Verificala para activar las alertas."
+  },
+  "contactPanel": {
+    "title": "Contacto de la unidad compradora",
+    "note": "Dato de contacto oficial publicado por el organismo en comprasestatales.gub.uy.",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "srEmail": "Enviar correo a {v}",
+    "srPhone": "Llamar al {v}"
+  },
+  "contactos": {
+    "title": "Contactos de compras del Estado",
+    "lead": "A quién escribirle en cada organismo: el contacto oficial de compras publicado en los llamados.",
+    "resultsSummary": "{count} organismos",
+    "searchPlaceholder": "Buscar organismo, persona o correo…",
+    "colOrganism": "Organismo",
+    "colContact": "Contacto",
+    "colEmail": "Correo",
+    "colPhone": "Teléfono",
+    "colCalls": "Llamados",
+    "empty": {
+      "title": "Ningún contacto coincide con esa búsqueda",
+      "body": "Probá con parte del nombre del organismo, la persona o el correo.",
+      "action": "Limpiar búsqueda"
+    },
+    "note": "Datos de contacto oficiales publicados por los organismos en comprasestatales.gub.uy."
   },
   "llamados": {
     "title": "Llamados abiertos",

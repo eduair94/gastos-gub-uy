@@ -74,6 +74,14 @@ const OpenCallSchema = new Schema<IOpenCall>(
       id: { type: String },
       name: { type: String },
     },
+    // The contracting unit's official contact (from parties[].contactPoint).
+    // Public data published by the agency on comprasestatales.gub.uy.
+    contact: {
+      name: { type: String },
+      telephone: { type: String },
+      faxNumber: { type: String },
+      email: { type: String },
+    },
     // OCDS enum — internal only, never displayed (DESIGN.md). Show
     // procurementMethodDetails (the Spanish name) instead.
     procurementMethod: { type: String },

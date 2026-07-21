@@ -849,6 +849,26 @@ class CronServer {
     );
     this.logger.info(`Dept-indicators refresh scheduled with expression: ${deptIndicatorsExpression} (Uruguay timezone)`);
 
+    // Purchasing-contacts directory, weekly on Sunday at 04:30 — a full-collection scan over
+    // tender releases' parties[].contactPoint (no index), the same cost class as the rollups
+    // above; the contact data changes slowly. Writes its own procurement_contacts collection,
+    // independent of busyWith. No other job runs at 04:30 Sunday.
+    const contactsExpression = "30 4 * * 0";
+    cron.schedule(
+      contactsExpression,
+      async () => {
+        try {
+          this.logger.info("Starting purchasing-contacts refresh...");
+          await this.runJobProcess("jobs/refresh-contacts");
+          this.logger.info("Purchasing-contacts refresh completed successfully");
+        } catch (error) {
+          this.logger.error("Purchasing-contacts refresh failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Purchasing-contacts refresh scheduled with expression: ${contactsExpression} (Uruguay timezone)`);
+
     // Product-variant distributions, weekly on Sunday at 07:00 — after the daily detector +
     // AI triage, so it scopes the current unexplained set. Heavier than the others (it scrapes
     // gov característica pages for uncached compras), hence weekly; independent of busyWith
