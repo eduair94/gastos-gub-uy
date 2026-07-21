@@ -12,11 +12,19 @@ export default defineEventHandler(async (event) => {
       limit = 10,
     } = query
 
+    // Resolve mode: `ids=<id1,id2>` returns the {value,label} for those exact
+    // supplierIds — so a filter loaded from a URL (e.g. a supplier profile link)
+    // can show the supplier NAME in its chip instead of the raw id.
+    const idsRaw = typeof query.ids === 'string' ? query.ids : ''
+    const ids = idsRaw.split(',').map(s => s.trim()).filter(Boolean)
+
     // Build search filter
     const filter: Record<string, unknown> = {}
-
+    if (ids.length) {
+      filter.supplierId = { $in: ids.slice(0, 100) }
+    }
     // If there's a search term, apply regex search on name
-    if (search && typeof search === 'string' && search.trim().length > 0) {
+    else if (search && typeof search === 'string' && search.trim().length > 0) {
       filter.name = { $regex: search.trim(), $options: 'i' }
     }
 
@@ -24,7 +32,7 @@ export default defineEventHandler(async (event) => {
     const suppliers = await SupplierPatternModel.find(filter)
       .select('supplierId name totalValue totalContracts')
       .sort({ totalValue: -1 })
-      .limit(Number(limit))
+      .limit(ids.length ? 100 : Number(limit))
       .lean()
 
     // Transform to autocomplete format

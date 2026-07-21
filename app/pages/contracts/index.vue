@@ -250,6 +250,30 @@ watch(() => filters.value.search, (s) => {
 const { data: optionsRes, pending: optionsPending } = await useFetch<any>('/api/contracts/filters')
 const options = computed(() => optionsRes.value?.data ?? null)
 
+// A supplier filter loaded from the URL (e.g. a supplier profile's "ver contratos"
+// link passes the supplierId) isn't in the top-suppliers option list, so the
+// autocomplete chip would show the raw id. Resolve the selected ids to their
+// names and merge them in, so the chip reads as the supplier name.
+const selectedSupplierIds = computed(() => filters.value.suppliers.filter(s => s.includes('/')))
+const { data: resolvedSupRes } = await useFetch<any>('/api/suppliers/autocomplete', {
+  query: computed(() => ({ ids: selectedSupplierIds.value.join(',') })),
+  immediate: selectedSupplierIds.value.length > 0,
+})
+const resolvedSuppliers = computed(() => {
+  const wanted = new Set(selectedSupplierIds.value)
+  return (resolvedSupRes.value?.data ?? [])
+    .filter((r: any) => wanted.has(r.value))
+    .map((r: any) => ({ value: r.value, label: r.label }))
+})
+// Options with the resolved selected suppliers merged in (dedup by value).
+const mergedOptions = computed(() => {
+  const base = options.value
+  if (!base) return base
+  const existing = new Set((base.suppliers ?? []).map((o: any) => o.value))
+  const extra = resolvedSuppliers.value.filter(o => !existing.has(o.value))
+  return extra.length ? { ...base, suppliers: [...(base.suppliers ?? []), ...extra] } : base
+})
+
 // The monthly BCU rate table, loaded once, so the preview popup can restate an
 // amount in UYU at the contract's own month and in today's pesos client-side.
 const { data: rateRes } = await useFetch<any>('/api/rates')
@@ -529,7 +553,7 @@ useSeo(() => ({
       >
         <FilterRail
           v-model="filters"
-          :options="options"
+          :options="mergedOptions"
           :loading="optionsPending"
           @clear="clearAll"
         />
@@ -555,7 +579,7 @@ useSeo(() => ({
           <div class="railsheet__body">
             <FilterRail
               v-model="filters"
-              :options="options"
+              :options="mergedOptions"
               :loading="optionsPending"
               @clear="clearAll"
             />
