@@ -35,7 +35,9 @@ jobs:
           cd /root/gastos-gub-uy
           git fetch origin master
           git reset --hard origin/master
-          npm ci
+          # The root lockfile is intentionally gitignored in this repository;
+          # install reconciles the runner's local lock instead of failing on it.
+          npm install --include=dev --no-audit --no-fund
           npm --prefix app ci
           node scripts/deploy-dashboard.mjs
           npm run ensure-indexes
