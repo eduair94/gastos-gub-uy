@@ -129,6 +129,15 @@ async function copy(value: string) {
 </template>
 
 <style scoped>
+/* Own the inner padding + header spacing outright. The parent pages style
+   `.calldetail__section` in their own scoped blocks, which reaches this
+   component's root but never its inner <h2> (Vue scoping), so the header sat
+   flush and — on the contract page, where `.calldetail__section` isn't defined
+   at all — so did the whole card. Keeping it self-contained makes it correct on
+   every page. Inter-card spacing is left to the parent layout (flex gap on the
+   llamado aside; the `.block + .block` rhythm on the contract aside). */
+.cc { padding: var(--s-5); }
+.cc > h2 { margin: 0 0 var(--s-3); }
 .cc__list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--rule); border-radius: var(--r-md); overflow: hidden; }
 .cc__row { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3); font-size: var(--t-sm); }
 .cc__row + .cc__row { border-top: 1px solid var(--rule); }

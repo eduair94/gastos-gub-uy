@@ -1728,6 +1728,7 @@ useSeo(() => ({
         <!-- ===== Aside ===== -->
         <aside class="grid__side">
           <CallContact
+            class="block"
             :contact="(contract as any)?.contact"
             :organism="(contract as any)?.buyer?.name"
           />
