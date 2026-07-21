@@ -44,3 +44,17 @@ export async function attachEnrichment<T>(items: T[], getName: (item: T) => stri
   const map = await fetchEnrichment(items.map(getName))
   return items.map(it => ({ ...it, ...(map.get(getName(it)) ?? EMPTY) }))
 }
+
+/**
+ * Supplier names whose enrichment resolves to `category`, gated the same way
+ * `fetchEnrichment` gates what it shows (confidence >= 0.5) so a "type" filter
+ * never matches a supplier whose chip wouldn't actually render that category.
+ */
+export async function fetchNamesByCategory(category: string): Promise<string[]> {
+  if (!category || mongoose.connection.readyState !== 1) return []
+  const rows = await mongoose.connection.db!
+    .collection('supplier_enrichment')
+    .find({ category, confidence: { $gte: 0.5 } }, { projection: { name: 1, _id: 0 } })
+    .toArray()
+  return rows.map(r => (r as { name: string }).name)
+}

@@ -576,6 +576,15 @@ async function main(): Promise<void> {
       )
       console.log('✅ procurement_contacts indexes ensured (organismId unique, llamadosCount, dataVersion, text)')
 
+      // --- supplier_patterns (the /suppliers directory: search + sortable columns) ---
+      const sp = db.collection('supplier_patterns')
+      await sp.createIndex({ name: 1 }, { background: true, name: 'name_1' })
+      await sp.createIndex({ totalContracts: -1 }, { background: true, name: 'totalContracts_-1' })
+      await sp.createIndex({ totalValue: -1 }, { background: true, name: 'totalValue_-1' })
+      await sp.createIndex({ buyerCount: -1 }, { background: true, name: 'buyerCount_-1' })
+      await sp.createIndex({ avgContractValue: -1 }, { background: true, name: 'avgContractValue_-1' })
+      console.log('✅ supplier_patterns indexes ensured (name, totalContracts, totalValue, buyerCount, avgContractValue)')
+
       // --- campaign collections (Phase B) ---
       const sup = db.collection('email_suppressions')
       await sup.createIndex({ email: 1 }, { unique: true, background: true, name: 'email_1' })
@@ -625,6 +634,7 @@ async function main(): Promise<void> {
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
       console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality}')
       console.log('   plan: procurement_contacts.{organismId unique, llamadosCount, dataVersion, searchText text}')
+      console.log('   plan: supplier_patterns.{name, totalContracts, totalValue, buyerCount, avgContractValue}')
       console.log('   plan: tender_forecast.{buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, expectedWindow.end, rubroAncestors, confidence}')
     }
 

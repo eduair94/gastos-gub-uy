@@ -41,7 +41,7 @@ const CHECK = process.argv.includes('--check')
 // A token must look like a bare class name; the `:class`/template-literal sweep
 // below also sees CSS declarations ("align-items:") and interpolations
 // ("d-${i}"), which are not classes and would only add noise to the report.
-const UTILITY_PREFIX = /^(d|ma|mt|mb|ml|mr|mx|my|pa|pt|pb|pl|pr|px|py|text|align|justify|flex|w|h|order|rounded|elevation|position|overflow|gap|fill|float|opacity|border|hidden)-[a-z0-9-]+$/
+const UTILITY_PREFIX = /^(d|ma|mt|mb|ml|mr|mx|my|pa|pt|pb|pl|pr|px|py|text|align|justify|flex|w|h|order|rounded|elevation|position|overflow|gap|ga|gr|gc|fill|float|opacity|border|hidden)-[a-z0-9-]+$/
 
 function* walk(dir) {
   let entries
