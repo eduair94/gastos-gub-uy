@@ -319,7 +319,7 @@ function pickPhones(doc: Partial<ISupplierContact>): PublicPhone[] {
     .map(entry => ({
       phone: entry.phone.trim(),
       source: entry.source,
-      sourceUrl: publicSourceUrl(entry.sourceUrl),
+      sourceUrl: publicSourceUrl(entry.sourceUrl ?? (entry.source === 'googleMaps' ? doc.mapsUrl : null)),
       confidence: Number(entry.confidence) || 0,
     }))
     .filter((entry) => {
@@ -355,7 +355,9 @@ export function sanitizeContact(
   const legacyPhone = doc.phone ?? null
   const phone = legacyPhone ?? phones[0]?.phone ?? null
   const website = doc.website ?? null
-  const websiteSource = website ? (doc.websiteSource ?? null) : null
+  const websiteSource = website
+    ? (doc.websiteSource ?? (doc.placeSource === 'googleMaps' ? 'googleMaps' : null))
+    : null
   const mapsUrl = publicSourceUrl(doc.mapsUrl)
   const websiteSourceUrl = website
     ? (websiteSource === 'googleMaps' ? mapsUrl : publicSourceUrl(website))

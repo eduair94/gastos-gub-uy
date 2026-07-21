@@ -78,8 +78,9 @@ assert.ok(!webDoc.emails.some(e => e.email === "bounced@acme.uy"));
 // Google Maps phone/website/place remain visible with their listing URL.
 const gmapsDoc = sanitizeContact({
   supplierId: "R200", rut: "200", name: "BETA SA",
-  emails: [], website: "https://beta.example", websiteSource: "googleMaps",
+  emails: [], website: "https://beta.example", websiteSource: null,
   phone: "+59824445555", phoneSource: "googleMaps",
+  phones: [{ phone: "+59824445555", source: "googleMaps", sourceUrl: null, confidence: 0.7 }],
   address: "Rambla 100", locality: "Punta del Este", placeSource: "googleMaps",
   mapsUrl: "https://maps.google.com/?cid=123", hours: "lunes: 09:00-18:00",
   enrichmentMethods: ["crawl4ai", "googleMaps"],
@@ -89,6 +90,7 @@ assert.equal(gmapsDoc.websiteSource, "googleMaps");
 assert.equal(gmapsDoc.websiteSourceUrl, "https://maps.google.com/?cid=123");
 assert.equal(gmapsDoc.phone, "+59824445555", "googleMaps phone is visible with provenance");
 assert.equal(gmapsDoc.phoneSource, "googleMaps");
+assert.equal(gmapsDoc.phones[0]?.sourceUrl, "https://maps.google.com/?cid=123", "legacy Maps phones inherit the listing URL");
 assert.equal(gmapsDoc.address, "Rambla 100");
 assert.equal(gmapsDoc.mapsUrl, "https://maps.google.com/?cid=123");
 assert.equal(gmapsDoc.hours, "lunes: 09:00-18:00");
