@@ -289,7 +289,8 @@
     "aiTitle": "AI-generated category",
     "filter": {
       "category": "Type",
-      "categoryAny": "Any type"
+      "categoryAny": "Any type",
+      "categoryNote": "AI-estimated type — advisory"
     },
     "dei": {
       "badge": "DEI",
@@ -715,8 +716,12 @@
     "sort": {
       "totalDesc": "Highest total received",
       "totalAsc": "Lowest total received",
-      "contractsDesc": "Most contracts"
+      "contractsDesc": "Most contracts",
+      "buyersDesc": "Most agencies",
+      "avgDesc": "Highest average contract",
+      "nameAsc": "Name (A–Z)"
     },
+    "sortHint": "Sort by this column",
     "empty": {
       "title": "No supplier matches that search",
       "body": "Try part of the name, without the legal form: “saceem” rather than “SACEEM S.A.”.",

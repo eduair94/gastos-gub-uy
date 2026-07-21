@@ -27,7 +27,42 @@ const DEPARTAMENTOS = [
   'SALTO', 'SAN JOSE', 'SORIANO', 'TACUAREMBO', 'TREINTA Y TRES',
 ]
 
+/** The `sup.cat.*` values a supplier can be filtered by (mirrors SupplierChip; excludes 'otro', which never renders as a chip). */
+const CATEGORIAS = [
+  'empresa', 'organismo-publico', 'persona', 'cooperativa', 'agencia-publicidad', 'productora',
+  'medio-tv', 'medio-radio', 'medio-prensa', 'medio-digital', 'medio-via-publica',
+]
+
 const { t } = useI18n()
+
+// v-select item lists (title/value pairs so translated labels can differ from
+// the query-string value the API expects).
+const SORT_ITEMS = computed(() => [
+  { title: t('suppliers.sort.totalDesc'), value: 'totalDesc' },
+  { title: t('suppliers.sort.totalAsc'), value: 'totalAsc' },
+  { title: t('suppliers.sort.contractsDesc'), value: 'contractsDesc' },
+  { title: t('suppliers.sort.buyersDesc'), value: 'buyersDesc' },
+  { title: t('suppliers.sort.avgDesc'), value: 'avgDesc' },
+  { title: t('suppliers.sort.nameAsc'), value: 'nameAsc' },
+])
+
+const TAMANO_ITEMS = computed(() => [
+  { title: t('sup.dei.filter.sizeAny'), value: '' },
+  { title: t('sup.dei.size.micro'), value: 'micro' },
+  { title: t('sup.dei.size.pequena'), value: 'pequena' },
+  { title: t('sup.dei.size.mediana'), value: 'mediana' },
+  { title: t('sup.dei.size.gran'), value: 'gran' },
+])
+
+const DEPARTAMENTO_ITEMS = computed(() => [
+  { title: t('sup.dei.filter.deptAny'), value: '' },
+  ...DEPARTAMENTOS.map(d => ({ title: d, value: d })),
+])
+
+const CATEGORIA_ITEMS = computed(() => [
+  { title: t('sup.filter.categoryAny'), value: '' },
+  ...CATEGORIAS.map(c => ({ title: t(`sup.cat.${c}`), value: c })),
+])
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
@@ -44,21 +79,59 @@ const sort = ref((route.query.sort as string) ?? 'totalDesc')
 const deiOnly = ref(route.query.dei === '1')
 const tamano = ref((route.query.tamano as string) ?? '')
 const departamento = ref((route.query.departamento as string) ?? '')
-const hasFilters = computed(() => deiOnly.value || !!tamano.value || !!departamento.value)
+const categoria = ref((route.query.categoria as string) ?? '')
+const hasFilters = computed(() => deiOnly.value || !!tamano.value || !!departamento.value || !!categoria.value)
 
 function clearFilters() {
   track('filter_clear', { surface: 'suppliers' })
   deiOnly.value = false
   tamano.value = ''
   departamento.value = ''
+  categoria.value = ''
   page.value = 1
 }
 
-/** The two sort fields `suppliers/index.get.ts` actually indexes. */
-const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
+/** Every sort key → the API `sortBy`/`sortOrder` it maps to. Each column has a
+ * desc + asc key; `suppliers/index.get.ts` indexes all five fields. */
+const SORTS: Record<string, { sortBy: string, sortOrder: 'asc' | 'desc' }> = {
   totalDesc: { sortBy: 'totalValue', sortOrder: 'desc' },
   totalAsc: { sortBy: 'totalValue', sortOrder: 'asc' },
   contractsDesc: { sortBy: 'totalContracts', sortOrder: 'desc' },
+  contractsAsc: { sortBy: 'totalContracts', sortOrder: 'asc' },
+  buyersDesc: { sortBy: 'buyerCount', sortOrder: 'desc' },
+  buyersAsc: { sortBy: 'buyerCount', sortOrder: 'asc' },
+  avgDesc: { sortBy: 'avgContractValue', sortOrder: 'desc' },
+  avgAsc: { sortBy: 'avgContractValue', sortOrder: 'asc' },
+  nameAsc: { sortBy: 'name', sortOrder: 'asc' },
+  nameDesc: { sortBy: 'name', sortOrder: 'desc' },
+}
+
+// One table column = one sortable field with its desc/asc keys. `numeric` cols
+// default to desc on first click (biggest first — the useful view); name to asc.
+interface SortCol { field: string, label: string, cls: string, numeric: boolean, desc: string, asc: string }
+const COLUMNS: SortCol[] = [
+  { field: 'name', label: 'suppliers.table.name', cls: '', numeric: false, desc: 'nameDesc', asc: 'nameAsc' },
+  { field: 'totalContracts', label: 'suppliers.table.contracts', cls: 'ctable__c-n', numeric: true, desc: 'contractsDesc', asc: 'contractsAsc' },
+  { field: 'buyerCount', label: 'suppliers.table.buyers', cls: 'ctable__c-n', numeric: true, desc: 'buyersDesc', asc: 'buyersAsc' },
+  { field: 'totalValue', label: 'suppliers.table.total', cls: 'ctable__c-amt', numeric: true, desc: 'totalDesc', asc: 'totalAsc' },
+  { field: 'avgContractValue', label: 'suppliers.table.avg', cls: 'ctable__c-amt', numeric: true, desc: 'avgDesc', asc: 'avgAsc' },
+]
+
+// The active sort resolved to a field + direction, for header state/aria.
+const activeSort = computed(() => SORTS[sort.value] ?? SORTS.totalDesc)
+function sortDirFor(col: SortCol): 'asc' | 'desc' | null {
+  if (activeSort.value.sortBy !== col.field) return null
+  return activeSort.value.sortOrder
+}
+function ariaSortFor(col: SortCol): 'ascending' | 'descending' | 'none' {
+  const d = sortDirFor(col)
+  return d === 'asc' ? 'ascending' : d === 'desc' ? 'descending' : 'none'
+}
+// Click a header: if already sorting by this column, flip direction; else start
+// on the column's natural first direction (desc for numbers, asc for name).
+function toggleSort(col: SortCol) {
+  const d = sortDirFor(col)
+  sort.value = d === null ? (col.numeric ? col.desc : col.asc) : (d === 'desc' ? col.asc : col.desc)
 }
 
 // The API matches `name` with an unanchored regex, so every keystroke is a
@@ -73,15 +146,16 @@ const listQuery = computed(() => ({
   ...(deiOnly.value ? { dei: '1' } : {}),
   ...(tamano.value ? { tamano: tamano.value } : {}),
   ...(departamento.value ? { departamento: departamento.value } : {}),
+  ...(categoria.value ? { categoria: categoria.value } : {}),
   ...(SORTS[sort.value] ?? SORTS.totalDesc),
 }))
 
 // Page 7 of a different result set is meaningless.
-watch([searchTerm, sort, deiOnly, tamano, departamento], () => {
+watch([searchTerm, sort, deiOnly, tamano, departamento, categoria], () => {
   page.value = 1
 })
 
-watch([searchTerm, page, sort, deiOnly, tamano, departamento], () => {
+watch([searchTerm, page, sort, deiOnly, tamano, departamento, categoria], () => {
   const q: Record<string, string> = {}
   if (searchTerm.value) q.search = searchTerm.value
   if (page.value > 1) q.page = String(page.value)
@@ -89,19 +163,20 @@ watch([searchTerm, page, sort, deiOnly, tamano, departamento], () => {
   if (deiOnly.value) q.dei = '1'
   if (tamano.value) q.tamano = tamano.value
   if (departamento.value) q.departamento = departamento.value
+  if (categoria.value) q.categoria = categoria.value
   router.replace({ query: q })
 })
 
 // One settled query/filter set = one event. Skips the initial fire (arriving
 // from a link/reload isn't "searching").
 let searchTouched = false
-watch([searchTerm, deiOnly, tamano, departamento], () => {
+watch([searchTerm, deiOnly, tamano, departamento, categoria], () => {
   if (!searchTouched) {
     searchTouched = true
     return
   }
   if (searchTerm.value) track('search', { search_term: searchTerm.value, location: 'suppliers' })
-  if (hasFilters.value) track('filter_apply', { surface: 'suppliers', active_count: [deiOnly.value, tamano.value, departamento.value].filter(Boolean).length })
+  if (hasFilters.value) track('filter_apply', { surface: 'suppliers', active_count: [deiOnly.value, tamano.value, departamento.value, categoria.value].filter(Boolean).length })
 })
 watch(sort, s => track('sort_change', { surface: 'suppliers', sort: s }))
 
@@ -233,77 +308,53 @@ useSeo(() => {
         </button>
       </form>
 
-      <label class="toolbar__sort">
-        <span class="u-sr-only">{{ t('common.sortBy') }}</span>
-        <select
-          v-model="sort"
-          class="toolbar__select"
-        >
-          <option value="totalDesc">
-            {{ t('suppliers.sort.totalDesc') }}
-          </option>
-          <option value="totalAsc">
-            {{ t('suppliers.sort.totalAsc') }}
-          </option>
-          <option value="contractsDesc">
-            {{ t('suppliers.sort.contractsDesc') }}
-          </option>
-        </select>
-      </label>
+      <v-select
+        v-model="sort"
+        :items="SORT_ITEMS"
+        :label="t('common.sortBy')"
+        class="toolbar__vsel"
+      />
+    </div>
+
+    <!-- ===== Tipo de proveedor (AI-classified) — kept apart from the DEI
+         registry filters below: this is an advisory guess, not a verified fact. -->
+    <div class="typefilter">
+      <v-select
+        v-model="categoria"
+        :items="CATEGORIA_ITEMS"
+        :label="t('sup.filter.category')"
+        class="typefilter__vsel"
+      />
+      <span
+        class="typefilter__note"
+        :title="t('sup.aiTitle')"
+      >{{ t('sup.filter.categoryNote') }}</span>
     </div>
 
     <!-- ===== DEI cross-reference filters ===== -->
     <div class="filters">
-      <label class="filters__toggle">
-        <input
-          v-model="deiOnly"
-          type="checkbox"
-        >
-        <span>{{ t('sup.dei.filter.only') }}</span>
-      </label>
+      <v-checkbox
+        v-model="deiOnly"
+        :label="t('sup.dei.filter.only')"
+        density="compact"
+        hide-details
+        color="success"
+        class="filters__toggle"
+      />
 
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('sup.dei.filter.size') }}</span>
-        <select
-          v-model="tamano"
-          class="toolbar__select"
-        >
-          <option value="">
-            {{ t('sup.dei.filter.sizeAny') }}
-          </option>
-          <option value="micro">
-            {{ t('sup.dei.size.micro') }}
-          </option>
-          <option value="pequena">
-            {{ t('sup.dei.size.pequena') }}
-          </option>
-          <option value="mediana">
-            {{ t('sup.dei.size.mediana') }}
-          </option>
-          <option value="gran">
-            {{ t('sup.dei.size.gran') }}
-          </option>
-        </select>
-      </label>
+      <v-select
+        v-model="tamano"
+        :items="TAMANO_ITEMS"
+        :label="t('sup.dei.filter.size')"
+        class="filters__vsel"
+      />
 
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('sup.dei.filter.dept') }}</span>
-        <select
-          v-model="departamento"
-          class="toolbar__select"
-        >
-          <option value="">
-            {{ t('sup.dei.filter.deptAny') }}
-          </option>
-          <option
-            v-for="d in DEPARTAMENTOS"
-            :key="d"
-            :value="d"
-          >
-            {{ d }}
-          </option>
-        </select>
-      </label>
+      <v-select
+        v-model="departamento"
+        :items="DEPARTAMENTO_ITEMS"
+        :label="t('sup.dei.filter.dept')"
+        class="filters__vsel"
+      />
 
       <button
         v-if="hasFilters"
@@ -381,32 +432,26 @@ useSeo(() => {
         <table class="ctable dtable">
           <thead>
             <tr>
-              <th scope="col">
-                {{ t('suppliers.table.name') }}
-              </th>
               <th
+                v-for="col in COLUMNS"
+                :key="col.field"
                 scope="col"
-                class="ctable__c-n"
+                :class="col.cls"
+                :aria-sort="ariaSortFor(col)"
               >
-                {{ t('suppliers.table.contracts') }}
-              </th>
-              <th
-                scope="col"
-                class="ctable__c-n"
-              >
-                {{ t('suppliers.table.buyers') }}
-              </th>
-              <th
-                scope="col"
-                class="ctable__c-amt"
-              >
-                {{ t('suppliers.table.total') }}
-              </th>
-              <th
-                scope="col"
-                class="ctable__c-amt"
-              >
-                {{ t('suppliers.table.avg') }}
+                <button
+                  type="button"
+                  class="ctable__sort"
+                  :class="{ 'ctable__sort--active': sortDirFor(col) }"
+                  :title="t('suppliers.sortHint')"
+                  @click="toggleSort(col)"
+                >
+                  <span>{{ t(col.label) }}</span>
+                  <span
+                    class="ctable__caret"
+                    aria-hidden="true"
+                  >{{ sortDirFor(col) === 'asc' ? '▲' : sortDirFor(col) === 'desc' ? '▼' : '↕' }}</span>
+                </button>
               </th>
             </tr>
           </thead>
@@ -556,18 +601,7 @@ useSeo(() => {
 
 .find__x:hover { color: var(--text); }
 
-.toolbar__sort { margin-left: auto; }
-
-.toolbar__select {
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--t-sm);
-  cursor: pointer;
-}
+.toolbar__vsel { flex: 0 0 auto; max-width: 220px; margin-left: auto; }
 
 /* ---- DEI filters ---- */
 .filters {
@@ -588,6 +622,8 @@ useSeo(() => {
 }
 
 .filters__toggle input { accent-color: var(--verde); cursor: pointer; }
+
+.filters__vsel { flex: 0 1 200px; }
 
 .filters__clear {
   padding: var(--s-1) var(--s-3);
@@ -675,6 +711,46 @@ useSeo(() => {
 .ctable td.ctable__c-amt,
 .ctable th.ctable__c-amt { text-align: right; }
 
+/* ---- Sortable headers ---- */
+.ctable__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.ctable th.ctable__c-n .ctable__sort,
+.ctable th.ctable__c-amt .ctable__sort { flex-direction: row-reverse; }
+.ctable__sort:hover { color: var(--text); }
+.ctable__sort--active { color: var(--text); font-weight: 700; }
+.ctable__caret {
+  font-size: 0.7em;
+  color: var(--text-muted);
+  transition: color var(--dur) var(--ease);
+}
+.ctable__sort--active .ctable__caret { color: var(--celeste-deep); }
+
+/* ---- Tipo filter (AI, kept apart from the DEI registry filters) ---- */
+.typefilter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+.typefilter__vsel { flex: 0 1 220px; }
+.typefilter__note {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  cursor: help;
+}
+
 /* ---- States ---- */
 .state {
   padding: var(--s-8) var(--s-5);
@@ -738,7 +814,6 @@ useSeo(() => {
 @media (max-width: 640px) {
   .toolbar { flex-direction: column; align-items: stretch; }
   .find { max-width: none; }
-  .toolbar__sort { margin-left: 0; }
-  .toolbar__select { width: 100%; }
+  .toolbar__vsel { max-width: none; margin-left: 0; }
 }
 </style>

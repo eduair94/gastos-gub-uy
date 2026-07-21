@@ -49,5 +49,8 @@ SupplierPatternSchema.index({ name: 1 });
 SupplierPatternSchema.index({ totalContracts: -1 });
 SupplierPatternSchema.index({ totalValue: -1 });
 SupplierPatternSchema.index({ lastUpdated: -1 });
+// Sort columns on the /suppliers directory (built in scripts/ensure-indexes.ts).
+SupplierPatternSchema.index({ buyerCount: -1 });
+SupplierPatternSchema.index({ avgContractValue: -1 });
 
 export const SupplierPatternModel = mongoose.model<ISupplierPattern>("SupplierPattern", SupplierPatternSchema);
