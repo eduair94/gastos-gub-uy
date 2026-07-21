@@ -564,6 +564,17 @@ async function main(): Promise<void> {
       await sc.createIndex({ locality: 1 }, { background: true, name: 'locality_1' })
       console.log('✅ supplier_contacts indexes ensured')
 
+      // --- procurement_contacts (organism purchasing contacts directory) ---
+      const pc = db.collection('procurement_contacts')
+      await pc.createIndex({ organismId: 1 }, { unique: true, background: true, name: 'organismId_1' })
+      await pc.createIndex({ llamadosCount: -1 }, { background: true, name: 'llamadosCount_-1' })
+      await pc.createIndex({ dataVersion: 1 }, { background: true, name: 'dataVersion_1' })
+      await pc.createIndex(
+        { searchText: 'text' },
+        { name: 'procurement_contacts_text', default_language: 'none', background: true },
+      )
+      console.log('✅ procurement_contacts indexes ensured (organismId unique, llamadosCount, dataVersion, text)')
+
       // --- campaign collections (Phase B) ---
       const sup = db.collection('email_suppressions')
       await sup.createIndex({ email: 1 }, { unique: true, background: true, name: 'email_1' })
@@ -612,6 +623,7 @@ async function main(): Promise<void> {
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
       console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality}')
+      console.log('   plan: procurement_contacts.{organismId unique, llamadosCount, dataVersion, searchText text}')
       console.log('   plan: tender_forecast.{buyerId+rubroNodeId unique, dataVersion, expectedWindow.start, expectedWindow.end, rubroAncestors, confidence}')
     }
 
