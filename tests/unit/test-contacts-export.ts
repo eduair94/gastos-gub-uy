@@ -4,7 +4,7 @@
 // rubro), and the ToS strip (googleMaps-sourced phone/website/place) is enforced
 // in the one choke point before any export.
 import assert from "node:assert";
-import { sanitizeContact, toCsv, toVcard, contactMethods, type PublicContact } from "../../app/server/utils/contacts";
+import { sanitizeContact, toCsv, toJsonExport, toVcard, contactMethods, type PublicContact } from "../../app/server/utils/contacts";
 
 // --- contactMethods: which enrichment methods touched a record (from RAW sources) ---
 assert.deepEqual(contactMethods({} as never), []);
@@ -38,6 +38,8 @@ assert.equal(webDoc.phone, "+59829001234");
 assert.equal(webDoc.phoneSource, "dei", "provenance of phone is surfaced");
 assert.equal(webDoc.address, "Av. Siempreviva 742");
 assert.equal(webDoc.email, "info@acme.uy");
+assert.equal(webDoc.neverAwarded, false, "default false when the doc doesn't set it");
+assert.equal(webDoc.rupeEstado, null);
 assert.equal(webDoc.onlyDirectAward, true);
 assert.equal(webDoc.directAwardCount, 4);
 // suppressed email is dropped; both valid ones remain
@@ -70,6 +72,12 @@ assert.ok(header.includes("Sitio web") && header.includes("Teléfono"), "website
 assert.ok(row.includes("Av. Siempreviva 742"), "CSV row carries the address");
 assert.ok(row.includes("info@acme.uy; ventas@acme.uy"), "CSV Emails column joins ALL emails");
 
+// JSON exposes the full decorated PublicContact shape (the route attaches the
+// supplier-pattern signal before it reaches this serializer).
+const [jsonContact] = JSON.parse(toJsonExport([webDoc]));
+assert.equal(jsonContact.onlyDirectAward, true);
+assert.equal(jsonContact.directAwardCount, 4);
+
 // --- vCard: address, all emails, website, phone ---
 const vcf = toVcard([webDoc]);
 assert.ok(/ADR;TYPE=WORK:.*Av\. Siempreviva 742/.test(vcf), "vCard ADR carries address");
@@ -80,5 +88,24 @@ assert.ok(/TEL;TYPE=WORK,VOICE:/.test(vcf), "vCard TEL carries phone");
 // A PublicContact still type-checks with address (compile-time guard).
 const _typed: PublicContact = webDoc;
 void _typed;
+
+// --- RUPE-only "never awarded" row: address-only, chip data present, not ToS-stripped ---
+const registryDoc = sanitizeContact({
+  supplierId: "R300", rut: "300", name: "GAMMA SA",
+  emails: [], website: null, websiteSource: null, phone: null, phoneSource: null,
+  address: "Ruta 5 km 30", locality: "Canelones, Canelones", placeSource: "rupe",
+  neverAwarded: true, rupeEstado: "ACTIVO",
+} as never);
+assert.equal(registryDoc.neverAwarded, true);
+assert.equal(registryDoc.rupeEstado, "ACTIVO");
+assert.equal(registryDoc.address, "Ruta 5 km 30", "rupe placeSource is not ToS-stripped");
+assert.equal(registryDoc.email, null);
+
+// --- CSV: "Adjudicó" column reflects neverAwarded (Sí = won an award, No = registry-only) ---
+const csv2 = toCsv([webDoc, registryDoc]);
+const [header2, row1, row2] = csv2.split("\r\n");
+assert.ok(header2.includes("Adjudicó"), "CSV must carry the Adjudicó column");
+assert.ok(row1.includes(",Sí,"), "an awarded row shows Adjudicó=Sí");
+assert.ok(row2.includes(",No,"), "a never-awarded row shows Adjudicó=No");
 
 console.log("ok: contacts export");

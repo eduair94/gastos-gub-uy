@@ -213,6 +213,10 @@ export interface PublicContact {
   /** Enrichment methods that produced this record (badges only — not exported). */
   methods: ContactMethod[]
   priorityScore: number
+  /** True when this row is a RUPE registry seed that never won an award (address-only, no email/phone/website). */
+  neverAwarded: boolean
+  /** RUPE registry state (ACTIVO/EN INGRESO/…) when `neverAwarded`; null otherwise. */
+  rupeEstado: string | null
   dei?: { estado: string | null } | null
   onlyDirectAward: boolean
   directAwardCount: number
@@ -285,6 +289,8 @@ export function sanitizeContact(
     rubros,
     methods: contactMethods(doc),
     priorityScore: doc.priorityScore ?? 0,
+    neverAwarded: !!doc.neverAwarded,
+    rupeEstado: doc.rupeEstado ?? null,
     onlyDirectAward: doc.onlyDirectAward ?? false,
     directAwardCount: doc.directAwardCount ?? 0,
     ...(doc.dei !== undefined ? { dei: doc.dei ? { estado: doc.dei.estado ?? null } : null } : {}),
@@ -294,9 +300,10 @@ export function sanitizeContact(
 // ---- Serializers -------------------------------------------------------------
 
 /** Curated table order used by CSV + XLSX. */
-const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined', header: string, width: number }[] = [
+const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'awarded', header: string, width: number }[] = [
   { key: 'name', header: 'Nombre', width: 42 },
   { key: 'rut', header: 'RUT', width: 14 },
+  { key: 'awarded', header: 'Adjudicó', width: 10 },
   { key: 'email', header: 'Email', width: 30 },
   { key: 'emailsJoined', header: 'Emails', width: 40 },
   { key: 'website', header: 'Sitio web', width: 28 },
@@ -310,6 +317,7 @@ const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined', header: string
 
 function cellValue(c: PublicContact, key: string): string {
   if (key === 'emailsJoined') return c.emails.map(e => e.email).join('; ')
+  if (key === 'awarded') return c.neverAwarded ? 'No' : 'Sí'
   const v = (c as Record<string, unknown>)[key]
   return v == null ? '' : String(v)
 }
