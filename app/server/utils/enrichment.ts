@@ -46,6 +46,16 @@ export async function attachEnrichment<T>(items: T[], getName: (item: T) => stri
 }
 
 /**
+ * The `sup.cat.*` values a supplier can be filtered by (mirrors SupplierChip;
+ * excludes 'otro', which never renders as a chip). The single source of truth for
+ * both the /api/suppliers and /api/contacts "type" filters.
+ */
+export const CATEGORIES = new Set([
+  'medio-tv', 'medio-radio', 'medio-prensa', 'medio-digital', 'medio-via-publica',
+  'agencia-publicidad', 'productora', 'organismo-publico', 'empresa', 'cooperativa', 'persona',
+])
+
+/**
  * Supplier names whose enrichment resolves to `category`, gated the same way
  * `fetchEnrichment` gates what it shows (confidence >= 0.5) so a "type" filter
  * never matches a supplier whose chip wouldn't actually render that category.

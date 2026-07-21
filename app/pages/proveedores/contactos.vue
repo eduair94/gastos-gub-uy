@@ -25,6 +25,7 @@ interface ContactRow {
   locality: string | null
   address: string | null
   rubro: string | null
+  methods: string[]
   dei?: { estado?: string | null } | null
 }
 
@@ -43,6 +44,21 @@ const DEPARTAMENTOS = [
   'LAVALLEJA', 'MALDONADO', 'MONTEVIDEO', 'PAYSANDU', 'RIO NEGRO', 'RIVERA', 'ROCHA',
   'SALTO', 'SAN JOSE', 'SORIANO', 'TACUAREMBO', 'TREINTA Y TRES',
 ]
+
+/** Company-type (AI-classified) values — mirrors the /suppliers Tipo filter. */
+const CATEGORIAS = [
+  'empresa', 'organismo-publico', 'persona', 'cooperativa', 'agencia-publicidad', 'productora',
+  'medio-tv', 'medio-radio', 'medio-prensa', 'medio-digital', 'medio-via-publica',
+]
+
+/** How each enrichment method is badged (label + css modifier). */
+const METHOD_BADGES: Record<string, { label: string, cls: string }> = {
+  dei: { label: 'DEI', cls: 'is-dei' },
+  rupe: { label: 'RUPE', cls: 'is-rupe' },
+  crawl4ai: { label: 'crawl4ai', cls: 'is-crawl' },
+  googleMaps: { label: 'Maps', cls: 'is-maps' },
+  impo: { label: 'IMPO', cls: 'is-impo' },
+}
 
 const FORMATS = [
   { fmt: 'csv', icon: 'mdi-file-delimited-outline' },
@@ -66,6 +82,7 @@ const page = ref(Number(route.query.page ?? 1))
 const rubro = ref((route.query.rubro as string) ?? '')
 const departamento = ref((route.query.departamento as string) ?? '')
 const tamano = ref((route.query.tamano as string) ?? '')
+const categoria = ref((route.query.categoria as string) ?? '')
 const deiOnly = ref(route.query.dei === '1')
 // Verified-only is the default; the URL only records the widening (verified=0).
 const verifiedOnly = ref(route.query.verified !== '0')
@@ -79,7 +96,7 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
 }
 
 const hasFilters = computed(() =>
-  !!rubro.value || !!departamento.value || !!tamano.value || deiOnly.value
+  !!rubro.value || !!departamento.value || !!tamano.value || !!categoria.value || deiOnly.value
   || !verifiedOnly.value || hasPhone.value || hasWebsite.value)
 
 function clearFilters() {
@@ -87,6 +104,7 @@ function clearFilters() {
   rubro.value = ''
   departamento.value = ''
   tamano.value = ''
+  categoria.value = ''
   deiOnly.value = false
   verifiedOnly.value = true
   hasPhone.value = false
@@ -103,6 +121,7 @@ const filterQuery = computed(() => ({
   ...(rubro.value ? { rubro: rubro.value } : {}),
   ...(deiOnly.value ? { dei: '1' } : {}),
   ...(tamano.value ? { tamano: tamano.value } : {}),
+  ...(categoria.value ? { categoria: categoria.value } : {}),
   ...(departamento.value ? { departamento: departamento.value } : {}),
   ...(verifiedOnly.value ? {} : { verified: '0' }),
   ...(hasPhone.value ? { hasPhone: '1' } : {}),
@@ -112,17 +131,18 @@ const filterQuery = computed(() => ({
 
 const listQuery = computed(() => ({ page: page.value, limit: 25, ...filterQuery.value }))
 
-watch([searchTerm, rubro, departamento, tamano, deiOnly, verifiedOnly, hasPhone, hasWebsite, sort], () => {
+watch([searchTerm, rubro, departamento, tamano, categoria, deiOnly, verifiedOnly, hasPhone, hasWebsite, sort], () => {
   page.value = 1
 })
 
-watch([searchTerm, page, rubro, departamento, tamano, deiOnly, verifiedOnly, hasPhone, hasWebsite, sort], () => {
+watch([searchTerm, page, rubro, departamento, tamano, categoria, deiOnly, verifiedOnly, hasPhone, hasWebsite, sort], () => {
   const q: Record<string, string> = {}
   if (searchTerm.value) q.search = searchTerm.value
   if (page.value > 1) q.page = String(page.value)
   if (rubro.value) q.rubro = rubro.value
   if (departamento.value) q.departamento = departamento.value
   if (tamano.value) q.tamano = tamano.value
+  if (categoria.value) q.categoria = categoria.value
   if (deiOnly.value) q.dei = '1'
   if (!verifiedOnly.value) q.verified = '0'
   if (hasPhone.value) q.hasPhone = '1'
@@ -179,6 +199,11 @@ function onExport(fmt: string) {
   track('contact_export', { format: fmt, count: filteredTotal.value })
 }
 
+const CATEGORIA_ITEMS = computed(() => [
+  { title: t('sup.filter.categoryAny'), value: '' },
+  ...CATEGORIAS.map(c => ({ title: t(`sup.cat.${c}`), value: c })),
+])
+
 const columns = computed<DataColumn<ContactRow>[]>(() => [
   { key: 'name', label: t('contacts.table.name'), primary: true },
   { key: 'rubro', label: t('contacts.table.rubro') },
@@ -186,6 +211,7 @@ const columns = computed<DataColumn<ContactRow>[]>(() => [
   { key: 'email', label: t('contacts.table.email') },
   { key: 'website', label: t('contacts.table.website') },
   { key: 'phone', label: t('contacts.table.phone'), mono: true },
+  { key: 'methods', label: t('contacts.table.sources') },
 ])
 
 const orgLd = useOrgLd()
@@ -325,6 +351,22 @@ useSeo(() => ({
           </option>
           <option value="gran">
             {{ t('sup.dei.size.gran') }}
+          </option>
+        </select>
+      </label>
+
+      <label class="filters__sel">
+        <span class="u-sr-only">{{ t('sup.filter.category') }}</span>
+        <select
+          v-model="categoria"
+          class="sel"
+        >
+          <option
+            v-for="it in CATEGORIA_ITEMS"
+            :key="it.value"
+            :value="it.value"
+          >
+            {{ it.title }}
           </option>
         </select>
       </label>
@@ -517,6 +559,20 @@ useSeo(() => ({
         </template>
         <template #cell:phone="{ row }">
           {{ row.phone || '—' }}
+        </template>
+        <template #cell:methods="{ row }">
+          <div
+            v-if="row.methods && row.methods.length"
+            class="srcbadges"
+          >
+            <span
+              v-for="m in row.methods"
+              :key="m"
+              class="srcbadge"
+              :class="METHOD_BADGES[m]?.cls"
+            >{{ METHOD_BADGES[m]?.label || m }}</span>
+          </div>
+          <span v-else>—</span>
         </template>
       </DataTable>
     </PaginatedList>
@@ -726,6 +782,23 @@ useSeo(() => ({
 .namecell__link:hover { color: var(--celeste-deep); text-decoration: underline; }
 
 .link { color: var(--celeste-deep); text-decoration: none; }
+
+/* Source/method badges (which enrichment produced the record). */
+.srcbadges { display: flex; flex-wrap: wrap; gap: 4px; }
+.srcbadge {
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke, rgba(255, 255, 255, 0.14));
+  white-space: nowrap;
+  opacity: 0.92;
+}
+.srcbadge.is-dei { color: #7ee0a6; border-color: rgba(126, 224, 166, 0.4); }
+.srcbadge.is-rupe { color: #7ec8e0; border-color: rgba(126, 200, 224, 0.4); }
+.srcbadge.is-crawl { color: #e6c46a; border-color: rgba(230, 196, 106, 0.4); }
+.srcbadge.is-maps { color: #d59bd5; border-color: rgba(213, 155, 213, 0.4); }
+.srcbadge.is-impo { color: #b7b7c9; border-color: rgba(183, 183, 201, 0.4); }
 .link:hover { text-decoration: underline; }
 
 /* ---- States ---- */

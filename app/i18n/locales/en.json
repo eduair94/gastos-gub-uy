@@ -772,7 +772,8 @@
       "locality": "Locality",
       "email": "Email",
       "website": "Website",
-      "phone": "Phone"
+      "phone": "Phone",
+      "sources": "Sources"
     },
     "sort": {
       "priorityDesc": "Most relevant",

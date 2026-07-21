@@ -79,6 +79,17 @@ const supplier = computed<SupplierPattern | null>(() => detailRes.value?.data?.s
 const dei = computed(() => detailRes.value?.data?.dei ?? null)
 /** RUPE state-provider record (91.7% coverage). Shown only when DEI isn't (DEI is richer). */
 const rupe = computed(() => detailRes.value?.data?.rupe ?? null)
+/** Sanitized contact enrichment (email/website/phone) + the METHOD provenance. */
+const contact = computed(() => detailRes.value?.data?.contact ?? null)
+const contactMethods = computed<string[]>(() => contact.value?.methods ?? [])
+/** How each enrichment method is badged (label + css modifier). */
+const METHOD_BADGES: Record<string, { label: string, cls: string }> = {
+  dei: { label: 'DEI', cls: 'is-dei' },
+  rupe: { label: 'RUPE', cls: 'is-rupe' },
+  crawl4ai: { label: 'crawl4ai', cls: 'is-crawl' },
+  googleMaps: { label: 'Maps', cls: 'is-maps' },
+  impo: { label: 'IMPO', cls: 'is-impo' },
+}
 const notFound = computed(() => detailError.value?.statusCode === 404 || (!supplier.value && !!detailError.value))
 
 // A 404 must answer 404, not a 200 carrying an apology — but the state itself
@@ -233,6 +244,17 @@ useSeo(() => ({
           <p class="head__rut u-mono">
             {{ supplier.supplierId }}
           </p>
+          <div
+            v-if="contactMethods.length"
+            class="head__src srcbadges"
+          >
+            <span
+              v-for="m in contactMethods"
+              :key="m"
+              class="srcbadge"
+              :class="METHOD_BADGES[m]?.cls"
+            >{{ METHOD_BADGES[m]?.label || m }}</span>
+          </div>
         </div>
         <div class="head__money">
           <MoneyAmount
@@ -569,6 +591,21 @@ useSeo(() => ({
 }
 
 .head__id { min-width: 0; }
+.head__src { margin-top: 8px; }
+.srcbadges { display: flex; flex-wrap: wrap; gap: 5px; }
+.srcbadge {
+  font-size: 0.72rem;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+}
+.srcbadge.is-dei { color: #7ee0a6; border-color: rgba(126, 224, 166, 0.4); }
+.srcbadge.is-rupe { color: #7ec8e0; border-color: rgba(126, 200, 224, 0.4); }
+.srcbadge.is-crawl { color: #e6c46a; border-color: rgba(230, 196, 106, 0.4); }
+.srcbadge.is-maps { color: #d59bd5; border-color: rgba(213, 155, 213, 0.4); }
+.srcbadge.is-impo { color: #b7b7c9; border-color: rgba(183, 183, 201, 0.4); }
 
 .head h1 { margin: var(--s-3) 0 0; }
 
