@@ -30,6 +30,7 @@ async function main() {
     });
     const res = await resolver.resolve({ supplierId: "1", rut: "210001", name: "REAL SA" });
     assert.equal(res.website, "https://real.com.uy");
+    assert.equal(res.websiteSource, "webSearch", "a verified website is tagged webSearch (provenance)");
     assert.deepEqual(gotInput, { name: "REAL SA", rut: "210001" });
     assert.equal(gotHits.length, 2, "verifier receives all hits, not just the first");
   }

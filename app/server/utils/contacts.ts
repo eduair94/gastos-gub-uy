@@ -123,7 +123,11 @@ export interface PublicContact {
   email: string | null
   emails: PublicEmail[]
   website: string | null
+  /** Origin of `website`: "dei"|"rupe" (official registry), "webSearch" (crawl4ai-verified), or null (unverified). */
+  websiteSource: string | null
   phone: string | null
+  /** Origin of `phone` (e.g. "dei"), or null. */
+  phoneSource: string | null
   locality: string | null
   address: string | null
   /** Top rubro label (highest share). */
@@ -175,6 +179,10 @@ export function sanitizeContact(
   // A Places-listed website is Google-Maps content under the same ToS as phone.
   const website = doc.websiteSource === 'googleMaps' ? null : (doc.website ?? null)
   const placeRestricted = doc.placeSource === 'googleMaps'
+  // Provenance travels with the field it describes: null once the field itself is
+  // stripped/absent, so the origin shown always matches a visible value.
+  const websiteSource = website ? (doc.websiteSource ?? null) : null
+  const phoneSource = phone ? (doc.phoneSource ?? null) : null
 
   return {
     supplierId: doc.supplierId ?? '',
@@ -183,7 +191,9 @@ export function sanitizeContact(
     email: pickDisplayEmail(doc.primaryEmail ?? null, emails),
     emails,
     website,
+    websiteSource,
     phone,
+    phoneSource,
     locality: placeRestricted ? null : (doc.locality ?? null),
     address: placeRestricted ? null : (doc.address ?? null),
     rubro: rubros[0]?.label || null,
@@ -202,6 +212,7 @@ const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined', header: string
   { key: 'email', header: 'Email', width: 30 },
   { key: 'emailsJoined', header: 'Emails', width: 40 },
   { key: 'website', header: 'Sitio web', width: 28 },
+  { key: 'websiteSource', header: 'Origen sitio', width: 14 },
   { key: 'phone', header: 'Teléfono', width: 16 },
   { key: 'locality', header: 'Localidad', width: 20 },
   { key: 'address', header: 'Dirección', width: 34 },

@@ -38,14 +38,18 @@ export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
       }
       // Verified discovery (preferred) confirms the domain belongs to the supplier
       // over ALL hits; without a verifier, fall back to the first hit that loaded.
-      const website = deps.verifyWebsite
+      // A verified site carries `websiteSource: "webSearch"` so the orchestrator can
+      // rank it above a stale, unverified seed; the unverified fallback carries none.
+      const verified = deps.verifyWebsite
         ? await deps.verifyWebsite({ name: input.name, rut: input.rut }, hits).catch(() => null)
-        : firstLoaded;
+        : null;
       // Rebrand every candidate as webSearch + cap confidence (unverified origin).
       const emails: ContactCandidate[] = [...seen.values()].map(c => ({
         email: c.email, source: "webSearch", confidence: Math.min(c.confidence, CAP),
       }));
-      return { emails, website };
+      if (verified) return { emails, website: verified, websiteSource: "webSearch" };
+      if (!deps.verifyWebsite && firstLoaded) return { emails, website: firstLoaded };
+      return { emails, website: null };
     },
   };
 }

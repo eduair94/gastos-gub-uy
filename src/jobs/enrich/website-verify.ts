@@ -16,7 +16,26 @@
 
 import type { SearchHit } from "./resolvers/web-search";
 import type { JudgeFn } from "./match-judge";
+import type { WebsiteSource } from "../../../shared/models/supplier_contacts";
 import { scoreMatch, contentTokens, LOW_SCORE } from "./match-score";
+
+/**
+ * Trust ranking of a website's provenance — higher wins when the orchestrator
+ * reconciles the website across resolvers and against a previously-stored one.
+ * An official registry site (dei/rupe) beats a crawl4ai-verified one, which beats
+ * a ToS-restricted Places site, which beats an unverified/unknown seed. This is
+ * what lets a verified domain OVERRIDE the stale, unverified first-hit URL an
+ * earlier run may have stored.
+ */
+export function websiteSourceRank(src: WebsiteSource | null | undefined): number {
+  switch (src) {
+    case "dei": return 4;
+    case "rupe": return 3;
+    case "webSearch": return 2;
+    case "googleMaps": return 1;
+    default: return 0; // unverified / unknown
+  }
+}
 
 /** Registrable-domain suffixes that are never a supplier's own site. */
 const AGGREGATOR_SUFFIXES = [
@@ -33,10 +52,18 @@ const AGGREGATOR_SUFFIXES = [
   // contact-data brokers (list a supplier, are not its site)
   "contactout.com", "rocketreach.co", "zoominfo.com", "apollo.io",
   "signalhire.com", "lusha.com", "leadiq.com", "kaspr.io",
+  // company-info / financial directories (a PROFILE of the firm, not its site)
+  "dnb.com", "emis.com", "bloomberg.com", "crunchbase.com", "opencorporates.com",
+  "kompass.com", "europages.com", "companywall.com.uy", "expouy.com", "guiauruguay.com.uy",
   // encyclopedias / search / jobs
   "wikipedia.org", "google.com", "bing.com",
   "computrabajo.com.uy", "buscojobs.com.uy",
 ];
+
+// Path shapes that mark a THIRD-PARTY listing even on an otherwise-legit domain
+// (e.g. uruguayxxi.gub.uy is a real gov site, but /en/service-directory/<firm>/ is
+// a directory page, not the firm's own site).
+const DIRECTORY_PATH_RX = /\/(business-directory|company-profiles?|service-directory|directorio|companies|company_profile|empresa-)/i;
 
 function hostOf(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./i, "").toLowerCase(); } catch { return ""; }
@@ -46,6 +73,20 @@ function hostOf(url: string): string {
 export function isAggregatorHost(host: string): boolean {
   const h = host.replace(/^www\./i, "").toLowerCase();
   return AGGREGATOR_SUFFIXES.some((s) => h === s || h.endsWith("." + s));
+}
+
+/**
+ * True when a URL is a third-party listing rather than the supplier's own site —
+ * either the host is a known aggregator/directory, or the PATH is a directory
+ * page on an otherwise-legit domain (so a firm's real .gub.uy page passes, but a
+ * /service-directory/<firm>/ listing on the same host does not).
+ */
+export function isDirectoryUrl(url: string): boolean {
+  const host = hostOf(url);
+  if (!host || isAggregatorHost(host)) return true;
+  let path = "";
+  try { path = new URL(url).pathname; } catch { return false; }
+  return DIRECTORY_PATH_RX.test(path);
 }
 
 // Two-level public suffixes seen on Uruguayan domains, stripped to expose the
@@ -108,7 +149,7 @@ export function createWebsiteVerifier(deps: WebsiteVerifierDeps) {
   const minConf = deps.minConf ?? 0.5;
   return async function verify(input: VerifyInput, hits: SearchHit[]): Promise<string | null> {
     const scored = hits
-      .filter((h) => /^https?:\/\//i.test(h.url) && !isAggregatorHost(hostOf(h.url)))
+      .filter((h) => /^https?:\/\//i.test(h.url) && !isDirectoryUrl(h.url))
       .map((h) => ({ h, score: scoreWebsiteCandidate(input.name, h) }))
       .filter((x) => x.score >= LOW_SCORE)
       .sort((a, b) => b.score - a.score);

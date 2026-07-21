@@ -15,9 +15,9 @@ import { createGoogleMapsResolver } from "./enrich/resolvers/google-maps";
 import { createGeminiJudge } from "./enrich/match-judge";
 import { fetchHtml, search, searchGazette, findPlace, placeDetails } from "./enrich/backends";
 import { crawl4aiBaseUrl, createCrawl4aiTransport } from "./enrich/crawl4ai";
-import { createWebsiteVerifier } from "./enrich/website-verify";
+import { createWebsiteVerifier, isDirectoryUrl, websiteSourceRank } from "./enrich/website-verify";
 import type { PlaceInfo } from "./enrich/types";
-import type { FieldSource } from "../../shared/models/supplier_contacts";
+import type { FieldSource, WebsiteSource } from "../../shared/models/supplier_contacts";
 
 function arg(name: string): string | undefined {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -122,19 +122,25 @@ async function main() {
     // guards the DB ops so a transient Mongo error on ONE supplier doesn't
     // abort the whole batch.
     try {
-      const existing = await SupplierContactModel.findOne({ supplierId }, { enrichedAt: 1, status: 1, website: 1 }).lean();
+      const existing = await SupplierContactModel.findOne({ supplierId }, { enrichedAt: 1, status: 1, website: 1, websiteSource: 1 }).lean();
       if (existing && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore) continue;
 
       const rut = digits(supplierId);
       const name = String(s.name ?? "");
       const input = { supplierId, rut, name, website: null as string | null };
 
-      // DEI first (may supply the website the later resolvers use); a
-      // domain found on an earlier run is reused too, so a stale re-run
-      // doesn't lose it.
+      // Website reconciliation by PROVENANCE (see websiteSourceRank): a
+      // previously-stored domain is reused as deep-crawl input AND a starting
+      // point — but only if it is not a third-party directory (those are dropped
+      // so this run re-derives a real site), and a higher-provenance domain
+      // (official dei/rupe, or a crawl4ai-VERIFIED one) OVERRIDES a stale,
+      // unverified seed. This is what stops a re-run from re-stamping an old
+      // "first hit that loaded" directory URL forever.
       const all: ContactCandidate[] = [];
-      let website: string | null = existing?.website ?? null;
-      let websiteSource: FieldSource | null = existing?.websiteSource ?? null;
+      const seededSite = existing?.website && !isDirectoryUrl(existing.website) ? existing.website : null;
+      let website: string | null = seededSite;
+      let websiteSource: WebsiteSource | null = seededSite ? (existing?.websiteSource ?? null) : null;
+      let websiteRank = seededSite ? websiteSourceRank(websiteSource) : -1;
       let phone: string | null = null;
       let phoneSource: FieldSource | null = null;
       let place: PlaceInfo | null = null;
@@ -142,7 +148,10 @@ async function main() {
         const r = resolvers[i];
         const res: ResolverResult = await r.resolve({ ...input, website }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
         all.push(...res.emails);
-        if (!website && res.website) { website = res.website; websiteSource = res.websiteSource ?? null; }
+        if (res.website && !isDirectoryUrl(res.website)) {
+          const rr = websiteSourceRank(res.websiteSource);
+          if (rr > websiteRank) { website = res.website; websiteSource = res.websiteSource ?? null; websiteRank = rr; }
+        }
         if (!phone && res.phone) { phone = res.phone; phoneSource = res.phoneSource ?? null; }
         if (!place && res.place) place = res.place;
         // Throttle external calls, but not after the LAST resolver — that

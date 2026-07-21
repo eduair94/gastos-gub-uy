@@ -15,12 +15,14 @@ const webDoc = sanitizeContact({
     { email: "ventas@acme.uy", source: "webSearch", mxValid: true, status: "valid", isRoleAccount: false } as never,
     { email: "bounced@acme.uy", source: "website", mxValid: false, status: "suppressed", isRoleAccount: false } as never,
   ],
-  website: "https://acme.uy", websiteSource: null,
+  website: "https://acme.uy", websiteSource: "webSearch",
   phone: "+59829001234", phoneSource: "dei",
   address: "Av. Siempreviva 742", locality: "Montevideo", placeSource: "dei",
 } as never);
 assert.equal(webDoc.website, "https://acme.uy");
+assert.equal(webDoc.websiteSource, "webSearch", "provenance of a verified website is surfaced");
 assert.equal(webDoc.phone, "+59829001234");
+assert.equal(webDoc.phoneSource, "dei", "provenance of phone is surfaced");
 assert.equal(webDoc.address, "Av. Siempreviva 742");
 assert.equal(webDoc.email, "info@acme.uy");
 // suppressed email is dropped; both valid ones remain
@@ -36,13 +38,17 @@ const gmapsDoc = sanitizeContact({
   address: "Rambla 100", locality: "Punta del Este", placeSource: "googleMaps",
 } as never);
 assert.equal(gmapsDoc.website, null, "googleMaps website stripped");
+assert.equal(gmapsDoc.websiteSource, null, "stripped website carries no origin");
 assert.equal(gmapsDoc.phone, null, "googleMaps phone stripped");
+assert.equal(gmapsDoc.phoneSource, null, "stripped phone carries no origin");
 assert.equal(gmapsDoc.address, null, "googleMaps address stripped");
 
 // --- CSV: address column present; all emails joined ---
 const csv = toCsv([webDoc]);
 const [header, row] = csv.split("\r\n");
 assert.ok(header.includes("Dirección"), "CSV must carry a Dirección column");
+assert.ok(header.includes("Origen sitio"), "CSV must carry the website-origin column");
+assert.ok(row.includes("webSearch"), "CSV row carries the website origin");
 assert.ok(header.includes("Sitio web") && header.includes("Teléfono"), "website + phone columns");
 assert.ok(row.includes("Av. Siempreviva 742"), "CSV row carries the address");
 assert.ok(row.includes("info@acme.uy; ventas@acme.uy"), "CSV Emails column joins ALL emails");

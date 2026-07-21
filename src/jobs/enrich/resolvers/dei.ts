@@ -38,9 +38,11 @@ export function createDeiResolver(db: Db): ContactResolver {
           }
         : null;
 
+      const deiSite = normalizeSiteUrl(row.sitioWeb);
       return {
         emails,
-        website: normalizeSiteUrl(row.sitioWeb),
+        website: deiSite,
+        websiteSource: deiSite ? "dei" : null,
         phone: row.telefono ? String(row.telefono) : null,
         phoneSource: row.telefono ? "dei" : null,
         place,

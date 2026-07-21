@@ -5,8 +5,16 @@ import type { MatchPair, MatchVerdict, JudgeFn } from "../../src/jobs/enrich/mat
 import {
   scoreWebsiteCandidate,
   isAggregatorHost,
+  isDirectoryUrl,
+  websiteSourceRank,
   createWebsiteVerifier,
 } from "../../src/jobs/enrich/website-verify";
+
+// provenance ranking: official registry > crawl4ai-verified > places > unverified seed
+assert.ok(websiteSourceRank("dei") > websiteSourceRank("webSearch"));
+assert.ok(websiteSourceRank("webSearch") > websiteSourceRank("googleMaps"));
+assert.ok(websiteSourceRank("webSearch") > websiteSourceRank(null));
+assert.equal(websiteSourceRank(null), 0);
 
 const hit = (title: string, url: string): SearchHit => ({ url, title, snippet: title });
 
@@ -26,6 +34,16 @@ assert.equal(isAggregatorHost("garinohnos.com.uy"), false);
 assert.equal(isAggregatorHost("contactout.com"), true);
 assert.equal(isAggregatorHost("somosuruguay.com.uy"), true);
 assert.equal(isAggregatorHost("rocketreach.co"), true);
+assert.equal(isAggregatorHost("www.dnb.com"), true);
+assert.equal(isAggregatorHost("emis.com"), true);
+
+// isDirectoryUrl: denied by host OR by a directory path pattern (even on a legit gov domain)
+assert.equal(isDirectoryUrl("https://www.dnb.com/business-directory/company-profiles.x.html"), true);
+assert.equal(isDirectoryUrl("https://www.emis.com/php/company-profile/UY/x_en_9918878.html"), true);
+assert.equal(isDirectoryUrl("https://www.uruguayxxi.gub.uy/en/service-directory/teyma-uruguay-sa/"), true);
+// the company's OWN gov page (no directory path) is NOT a directory
+assert.equal(isDirectoryUrl("https://www.gub.uy/ministerio-economia-finanzas/direccion-general-casinos"), false);
+assert.equal(isDirectoryUrl("https://ciemsa.com.uy/"), false);
 
 // --- verifier ---
 const throwingJudge: JudgeFn = async () => { throw new Error("judge must not be called"); };
@@ -115,6 +133,19 @@ async function main() {
   {
     const verify = createWebsiteVerifier({ judge: throwingJudge });
     assert.equal(await verify({ name: "X", rut: "1" }, []), null);
+  }
+
+  // a directory listing about the company (even a title match) is never the site → null, no judge
+  {
+    const verify = createWebsiteVerifier({ judge: throwingJudge });
+    const url = await verify(
+      { name: "TEYMA URUGUAY S A", rut: "210007778889" },
+      [
+        hit("Teyma Uruguay SA - Uruguay XXI", "https://www.uruguayxxi.gub.uy/en/service-directory/teyma-uruguay-sa/"),
+        hit("Teyma Uruguay | Dun & Bradstreet", "https://www.dnb.com/business-directory/company-profiles.teyma.html"),
+      ],
+    );
+    assert.equal(url, null);
   }
 
   console.log("ok: website verify");
