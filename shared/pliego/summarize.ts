@@ -23,8 +23,10 @@ type GeneratedSummary = Omit<IPliegoSummary, "model" | "generatedAt" | "sourceDo
 const SUMMARY_SCHEMA: GeminiSchema = {
   type: "OBJECT",
   properties: {
-    objeto: { type: "STRING", description: "Qué se licita, en 1-2 frases." },
-    requisitosClave: { type: "ARRAY", items: { type: "STRING" }, description: "Requisitos de admisibilidad clave." },
+    objeto: { type: "STRING", description: "Qué compra el Estado, en 1-2 frases claras (incluí cantidad y unidad si están)." },
+    requisitosClave: { type: "ARRAY", items: { type: "STRING" }, description: "Requisitos de admisibilidad que el oferente debe cumplir para poder presentarse (habilitaciones, antecedentes, RUPE, capacidad, etc.)." },
+    documentacionRequerida: { type: "ARRAY", items: { type: "STRING" }, description: "Documentos y formularios concretos que hay que presentar con la oferta." },
+    formaCotizacion: { type: "STRING", nullable: true, description: "Cómo cotizar: moneda, si el precio incluye o no impuestos, si admite ajuste paramétrico, y plazo de mantenimiento de la oferta." },
     plazos: {
       type: "OBJECT",
       properties: {
@@ -33,19 +35,20 @@ const SUMMARY_SCHEMA: GeminiSchema = {
         consultas: { type: "STRING", nullable: true },
       },
     },
-    garantias: { type: "STRING", nullable: true },
-    criteriosEvaluacion: { type: "ARRAY", items: { type: "STRING" } },
-    montoReferencia: { type: "STRING", nullable: true },
-    observaciones: { type: "ARRAY", items: { type: "STRING" }, description: "Condiciones inusuales o a tener en cuenta." },
+    plazoEjecucion: { type: "STRING", nullable: true, description: "Plazo de entrega o ejecución del contrato." },
+    garantias: { type: "STRING", nullable: true, description: "Garantías exigidas (mantenimiento de oferta, fiel cumplimiento) y sus montos si figuran." },
+    criteriosEvaluacion: { type: "ARRAY", items: { type: "STRING" }, description: "Cómo se evalúan y comparan las ofertas (precio, puntajes, factores)." },
+    montoReferencia: { type: "STRING", nullable: true, description: "Monto estimado, tope o precio de referencia si el pliego lo indica." },
+    observaciones: { type: "ARRAY", items: { type: "STRING" }, description: "Riesgos y condiciones a tener en cuenta antes de ofertar: penalidades, cláusulas inusuales o exigencias fuertes." },
   },
-  required: ["objeto", "requisitosClave", "criteriosEvaluacion", "observaciones"],
-  propertyOrdering: ["objeto", "requisitosClave", "plazos", "garantias", "criteriosEvaluacion", "montoReferencia", "observaciones"],
+  required: ["objeto", "requisitosClave", "documentacionRequerida", "criteriosEvaluacion", "observaciones"],
+  propertyOrdering: ["objeto", "requisitosClave", "documentacionRequerida", "formaCotizacion", "plazos", "plazoEjecucion", "garantias", "criteriosEvaluacion", "montoReferencia", "observaciones"],
 };
 
 const SYSTEM_INSTRUCTION =
-  "Sos un asistente para PYMES uruguayas que resume pliegos de compras públicas. "
-  + "Resumí en español claro y conciso, sin inventar datos. Si un dato no está en el texto, omitilo o dejalo vacío. "
-  + "No afirmes fechas o montos que no aparezcan explícitamente en el pliego.";
+  "Sos un asistente para PYMES uruguayas que resume pliegos de compras públicas para ayudar a un proveedor a decidir si le conviene presentarse a la licitación. "
+  + "Escribí en español claro, conciso y accionable, pensando en quien se presenta por primera vez: qué se licita, qué necesita para ser admitido, qué documentación presentar, cómo y en qué moneda cotizar, los plazos y los riesgos. "
+  + "No inventes datos: si algo no está en el texto, omitilo o dejalo vacío. No afirmes fechas ni montos que no aparezcan explícitamente en el pliego.";
 
 function csv(v: string | undefined): string[] {
   return (v ?? "").split(",").map(s => s.trim()).filter(Boolean);

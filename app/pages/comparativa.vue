@@ -10,7 +10,8 @@
  */
 import {
   PROVIDERS, DIMENSIONS, METHODOLOGY, NEUTRALITY, RECOMMENDATION, VERIFIED_ON,
-  type Provider, type Tri,
+  USD_UYU_REF, toPesos,
+  type Provider, type Tri, type Currency,
 } from '~/data/comparativa-alertas'
 
 const { t, locale } = useI18n()
@@ -28,15 +29,28 @@ const outOfScope = computed(() => PROVIDERS.filter(p => p.group === 'outOfScope'
 const unverified = computed(() => PROVIDERS.filter(p => p.group === 'unverified'))
 const recommended = computed(() => PROVIDERS.find(p => p.id === RECOMMENDATION.providerId))
 
-// Entry-price charts, split by currency (never converted). Ascending, cheapest first.
-function entryBars(currency: 'USD' | 'UYU') {
-  return core.value
-    .filter(p => p.entryPaid && p.entryPaid.currency === currency)
-    .map(p => ({ label: p.name, value: p.entryPaid!.amount, sub: p.entryPaid!.text, color: 'celeste' }))
-    .sort((a, b) => a.value - b.value)
+// Approximate peso amount for a USD/EUR figure (empty for pesos/unknown). The
+// original currency is always shown alongside — this is a clearly-labeled,
+// referential conversion, not a claim of an exact price.
+function pesoText(amount: number, currency: Currency): string {
+  if (amount <= 0 || currency === 'UYU' || currency === 'UNKNOWN') return ''
+  return `≈ $U ${formatNumber(toPesos(amount, currency))}`
 }
-const usdBars = computed(() => entryBars('USD'))
-const uyuBars = computed(() => entryBars('UYU'))
+
+// One unified entry-price comparison, everything normalized to pesos so USD and
+// peso plans sit on the same scale. Cheapest first. The bar's tooltip keeps the
+// original price. Core UY-native services with a public paid plan.
+const unifiedBars = computed(() =>
+  core.value
+    .filter(p => p.entryPaid)
+    .map(p => ({
+      label: p.name,
+      value: toPesos(p.entryPaid!.amount, p.entryPaid!.currency),
+      sub: p.entryPaid!.text,
+      color: 'celeste',
+    }))
+    .sort((a, b) => a.value - b.value),
+)
 
 const TRI_DIMS = new Set(['aiPliego', 'legalAdvisory', 'bidTooling', 'api', 'freeTier'])
 function triValue(p: Provider, key: string): Tri {
@@ -49,7 +63,11 @@ function triValue(p: Provider, key: string): Tri {
 }
 function textValue(p: Provider, key: string): string {
   if (key === 'countryFocus') return bi(p.countryFocus)
-  if (key === 'entryPaid') return p.entryPaid ? p.entryPaid.text : t('comparativa.consultar')
+  if (key === 'entryPaid') {
+    if (!p.entryPaid) return t('comparativa.consultar')
+    const approx = pesoText(p.entryPaid.amount, p.entryPaid.currency)
+    return approx ? `${p.entryPaid.text} (${approx})` : p.entryPaid.text
+  }
   if (key === 'alertChannels') {
     const c = ['Email']
     if (p.features.whatsappTelegram === 'si') c.push('WhatsApp')
@@ -175,35 +193,22 @@ useSeo(() => ({
         </p>
       </section>
 
-      <!-- Entry-price charts, per currency -->
+      <!-- Unified entry-price comparison, normalized to pesos -->
       <section class="cmp__sec">
         <h2 class="cmp__h">
           {{ t('comparativa.chartsTitle') }}
         </h2>
-        <div class="cmp__charts">
-          <ChartBlock
-            :title="t('comparativa.chartUsd')"
-            :help="t('comparativa.chartHelp')"
-            :level="3"
-          >
-            <InvHBars
-              :items="usdBars"
-              format="count"
-              :row-height="34"
-            />
-          </ChartBlock>
-          <ChartBlock
-            :title="t('comparativa.chartUyu')"
-            :help="t('comparativa.chartHelp')"
-            :level="3"
-          >
-            <InvHBars
-              :items="uyuBars"
-              format="count"
-              :row-height="34"
-            />
-          </ChartBlock>
-        </div>
+        <ChartBlock
+          :title="t('comparativa.chartUnified')"
+          :help="t('comparativa.chartHelp')"
+          :meta="t('comparativa.chartMeta', { rate: USD_UYU_REF, date: VERIFIED_ON })"
+        >
+          <InvHBars
+            :items="unifiedBars"
+            format="money"
+            :row-height="36"
+          />
+        </ChartBlock>
         <p class="cmp__note u-muted">
           {{ t('comparativa.chartNote') }}
         </p>
@@ -240,6 +245,17 @@ useSeo(() => ({
             </v-icon>
             {{ bi(RECOMMENDATION.caveat) }}
           </p>
+          <a
+            class="reco__cta"
+            :href="recommended.url"
+            target="_blank"
+            rel="noopener nofollow"
+          >
+            {{ t('comparativa.visitSiteNamed', { name: recommended.name }) }}
+            <v-icon size="16">
+              mdi-arrow-right
+            </v-icon>
+          </a>
         </div>
       </section>
 
@@ -282,6 +298,10 @@ useSeo(() => ({
               >
                 <span class="pcard__plan">{{ pl.name }}</span>
                 <span class="pcard__price">{{ pl.priceText }}</span>
+                <span
+                  v-if="pesoText(pl.amount, pl.currency)"
+                  class="pcard__approx"
+                >{{ pesoText(pl.amount, pl.currency) }}</span>
                 <span
                   v-if="pl.currencyInferred"
                   class="pcard__flag"
@@ -341,6 +361,19 @@ useSeo(() => ({
                 rel="noopener nofollow"
               >[{{ i + 1 }}]</a>
             </p>
+
+            <a
+              v-if="p.reachable"
+              class="pcard__visit"
+              :href="p.url"
+              target="_blank"
+              rel="noopener nofollow"
+            >
+              {{ t('comparativa.visitSite') }}
+              <v-icon size="14">
+                mdi-open-in-new
+              </v-icon>
+            </a>
           </article>
         </div>
       </section>
@@ -372,7 +405,17 @@ useSeo(() => ({
             <p>{{ bi(p.ux) }}</p>
             <p class="mcard__price">
               {{ p.entryPaid ? p.entryPaid.text : t('comparativa.consultar') }}
+              <span
+                v-if="p.entryPaid && pesoText(p.entryPaid.amount, p.entryPaid.currency)"
+                class="mcard__approx"
+              >{{ pesoText(p.entryPaid.amount, p.entryPaid.currency) }}</span>
             </p>
+            <a
+              class="mcard__visit"
+              :href="p.url"
+              target="_blank"
+              rel="noopener nofollow"
+            >{{ t('comparativa.visitSite') }} →</a>
           </article>
         </div>
       </section>
@@ -516,4 +559,31 @@ useSeo(() => ({
 .cmp__neutral { display: flex; gap: var(--s-2); font-size: var(--t-sm); color: var(--text-muted); }
 .cmp__back { margin-top: var(--s-4); }
 .cmp__back a { color: var(--celeste-deep); font-weight: 600; }
+
+/* Peso-approx + visit links */
+.pcard__approx, .mcard__approx { font-size: var(--t-xs); color: var(--text-muted); font-weight: 400; }
+.pcard__visit, .mcard__visit {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: var(--s-3); font-size: var(--t-sm); font-weight: 600; color: var(--celeste-deep); text-decoration: none;
+}
+.pcard__visit:hover, .mcard__visit:hover { text-decoration: underline; }
+.mcard__visit { margin-top: var(--s-1); font-size: var(--t-xs); }
+.reco__cta {
+  display: inline-flex; align-items: center; gap: var(--s-1);
+  margin-top: var(--s-4); padding: var(--s-2) var(--s-4); border-radius: var(--r-md);
+  background: var(--celeste); color: #fff; text-decoration: none; font-weight: 600; font-size: var(--t-sm);
+  transition: background 0.15s ease;
+}
+.reco__cta:hover { background: var(--celeste-deep); }
+
+/* Responsive */
+.chero__title { font-size: clamp(1.7rem, 6vw, var(--t-3xl)); }
+@media (max-width: 640px) {
+  .chero { padding: var(--s-6) 0 var(--s-5); }
+  .chero__lead { font-size: var(--t-base); }
+  .cmp__body { padding: var(--s-5) 0 var(--s-7); }
+  .cmp__sec { margin-bottom: var(--s-6); }
+  .reco { padding: var(--s-4); }
+  .cmp__cards, .cmp__mini { grid-template-columns: 1fr; }
+}
 </style>

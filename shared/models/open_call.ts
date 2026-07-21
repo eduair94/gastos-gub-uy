@@ -40,11 +40,14 @@ const PliegoSummarySchema = new Schema(
   {
     objeto: { type: String },
     requisitosClave: { type: [String], default: undefined },
+    documentacionRequerida: { type: [String], default: undefined },
+    formaCotizacion: { type: String },
     plazos: {
       recepcionOfertas: { type: String },
       aperturaOfertas: { type: String },
       consultas: { type: String },
     },
+    plazoEjecucion: { type: String },
     garantias: { type: String },
     criteriosEvaluacion: { type: [String], default: undefined },
     montoReferencia: { type: String },

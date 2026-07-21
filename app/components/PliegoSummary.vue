@@ -2,7 +2,10 @@
 interface Summary {
   objeto?: string
   requisitosClave?: string[]
+  documentacionRequerida?: string[]
+  formaCotizacion?: string
   plazos?: { recepcionOfertas?: string, aperturaOfertas?: string, consultas?: string }
+  plazoEjecucion?: string
   garantias?: string
   criteriosEvaluacion?: string[]
   montoReferencia?: string
@@ -107,6 +110,29 @@ async function generate() {
       </div>
 
       <div
+        v-if="s.documentacionRequerida?.length"
+        class="pliego__block"
+      >
+        <h3>{{ t('llamados.summaryDocumentacion') }}</h3>
+        <ul>
+          <li
+            v-for="(dq, i) in s.documentacionRequerida"
+            :key="`doc-${i}`"
+          >
+            {{ dq }}
+          </li>
+        </ul>
+      </div>
+
+      <div
+        v-if="s.formaCotizacion"
+        class="pliego__block"
+      >
+        <h3>{{ t('llamados.summaryCotizacion') }}</h3>
+        <p>{{ s.formaCotizacion }}</p>
+      </div>
+
+      <div
         v-if="s.criteriosEvaluacion?.length"
         class="pliego__block"
       >
@@ -119,6 +145,14 @@ async function generate() {
             {{ c }}
           </li>
         </ul>
+      </div>
+
+      <div
+        v-if="s.plazoEjecucion"
+        class="pliego__block"
+      >
+        <h3>{{ t('llamados.summaryPlazoEjecucion') }}</h3>
+        <p>{{ s.plazoEjecucion }}</p>
       </div>
 
       <div

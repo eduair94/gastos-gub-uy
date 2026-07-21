@@ -110,11 +110,17 @@ export interface IOpenCallDocument {
 export interface IPliegoSummary {
   objeto: string
   requisitosClave: string[]
+  // Documentos/formularios que el oferente debe presentar con la oferta.
+  documentacionRequerida: string[]
+  // Cómo cotizar: moneda, impuestos, ajuste, plazo de mantenimiento de la oferta.
+  formaCotizacion?: string | undefined
   plazos: {
     recepcionOfertas?: string | undefined
     aperturaOfertas?: string | undefined
     consultas?: string | undefined
   }
+  // Plazo de entrega o ejecución del contrato.
+  plazoEjecucion?: string | undefined
   garantias?: string | undefined
   criteriosEvaluacion: string[]
   montoReferencia?: string | undefined
