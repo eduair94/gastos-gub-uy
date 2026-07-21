@@ -77,6 +77,8 @@ const { data: detailRes, error: detailError } = await useFetch<any>(
 const supplier = computed<SupplierPattern | null>(() => detailRes.value?.data?.supplier ?? null)
 /** DEI industrial-registry record when this supplier's RUT is registered (else null). */
 const dei = computed(() => detailRes.value?.data?.dei ?? null)
+/** RUPE state-provider record (91.7% coverage). Shown only when DEI isn't (DEI is richer). */
+const rupe = computed(() => detailRes.value?.data?.rupe ?? null)
 const notFound = computed(() => detailError.value?.statusCode === 404 || (!supplier.value && !!detailError.value))
 
 // A 404 must answer 404, not a 200 carrying an apology — but the state itself
@@ -308,6 +310,16 @@ useSeo(() => ({
         v-if="dei"
         :dei="dei"
         :supplier-name="supplier.name"
+      />
+
+      <!-- ===== State-provider registry (RUPE) =====
+           Fallback location card for the ~85% of suppliers in RUPE but not DEI.
+           Official ARCE open data, cross-referenced by RUT — a fact of record. -->
+      <RupePanel
+        v-if="rupe && !dei"
+        :rupe="rupe"
+        :supplier-name="supplier.name"
+        :supplier-id="supplier.supplierId"
       />
 
       <!-- ===== Revenue by year =====
