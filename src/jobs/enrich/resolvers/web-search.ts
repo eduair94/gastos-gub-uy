@@ -26,11 +26,13 @@ export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
       const query = `${input.name} ${input.rut} uruguay contacto email`;
       const hits = await deps.search(query).catch(() => []);
       const seenByHost = new Map<string, Map<string, ContactCandidate>>();
+      const supplementalHosts = new Set<string>();
       // Legacy fallback website: first hit whose page loaded. Only used when no
       // verifier is injected (see WebSearchDeps.verifyWebsite).
       let firstLoaded: string | null = null;
       for (const hit of hits.slice(0, 3)) {
         const host = hostOf(hit.url);
+        if (isUruguayEvidenceHit(input, hit)) supplementalHosts.add(host);
         const seen = seenByHost.get(host) ?? new Map<string, ContactCandidate>();
         seenByHost.set(host, seen);
         // emails may already be in the snippet
@@ -65,6 +67,7 @@ export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
         // email belonging to the directory host itself.
         for (const [host, group] of seenByHost) {
           if (host === officialHost) continue;
+          if (!supplementalHosts.has(host)) continue;
           for (const candidate of group.values()) {
             if (!isSupplementalContact(candidate, host)) continue;
             add(selected, asWebSearch(candidate, SUPPLEMENTAL_CAP));
@@ -77,6 +80,22 @@ export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
       return { emails, website: null };
     },
   };
+}
+
+/**
+ * Person-level addresses from third-party listings need a country anchor. A
+ * company name alone is insufficient because common names (for example
+ * "Entre Lagos") produce homonyms throughout Latin America. Uruguay-hosted
+ * listings are eligible; a non-UY page must explicitly mention Uruguay or the
+ * supplier's full RUT in its search evidence.
+ */
+function isUruguayEvidenceHit(input: ResolverInput, hit: SearchHit): boolean {
+  const host = hostOf(hit.url);
+  if (host === "uy" || host.endsWith(".uy") || host.startsWith("uy.")) return true;
+  const evidence = `${hit.title} ${hit.snippet} ${hit.url}`;
+  if (/\buruguay\b/i.test(evidence)) return true;
+  const rut = input.rut.replace(/\D/g, "");
+  return rut.length >= 8 && evidence.replace(/\D/g, "").includes(rut);
 }
 
 function hostOf(url: string): string {

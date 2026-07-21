@@ -80,6 +80,22 @@ async function main() {
     assert.deepEqual(res.emails, []);
   }
 
+  // A foreign homonym is not valid person-level evidence merely because the
+  // company name matches the query.
+  {
+    const resolver = createWebSearchResolver({
+      search: async () => [{
+        url: "http://dev.red-conecta.com/empresas/6633",
+        title: "Entre Lagos",
+        snippet: "fmontecinos@entrelagos.cl",
+      }],
+      fetchHtml: async () => "<p>fmontecinos@entrelagos.cl</p>",
+      verifyWebsite: async () => null,
+    });
+    const res = await resolver.resolve({ supplierId: "1", rut: "214811130013", name: "ENTRE LAGOS SA" });
+    assert.deepEqual(res.emails, [], "a non-Uruguay homonym must be rejected");
+  }
+
   console.log("ok: web-search verify wiring");
 }
 main().catch((e) => { console.error(e); process.exit(1); });
