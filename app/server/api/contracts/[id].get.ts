@@ -7,6 +7,8 @@ import { awardUrl, compraIdFromOcid, ocdsJsonUrl, sourceUrl } from '../../utils/
 import { loadRateTable } from '../../utils/rates'
 import { toTodayUyu } from '../../../../shared/utils/real-value'
 import { canonicalUnit } from '../../../../shared/utils/units'
+import { pickPartyContact } from '../../../../shared/utils/contact-point'
+import type { IContactPoint } from '../../../../shared/types/database'
 
 /**
  * The reference price distribution for each item this contract bought.
@@ -86,30 +88,46 @@ async function itemBaselines(contract: IRelease) {
  * carries no description of its own, borrow the tender sibling's — a single
  * point lookup on the ocid.
  */
-async function siblingTenderDescription(contract: IRelease): Promise<string | null> {
-  if (contract.tender?.description?.trim()) return null // already has its own
-  if (!contract.ocid) return null
+// The tender-stage sibling (same ocid) supplies both the borrowed description
+// (award releases carry none) and the contracting-unit contact, which lives on
+// parties[].contactPoint — award releases don't carry it. One query for both.
+// The contact is the official, state-published purchasing contact — public data.
+async function siblingTenderInfo(contract: IRelease): Promise<{ description: string | null, contact: IContactPoint | undefined }> {
+  // The award release's own parties rarely carry a contact; prefer it if present.
+  let contact = pickPartyContact((contract as unknown as { parties?: unknown[] }).parties as never)
 
-  // 1) The tender-stage sibling's description (same ocid).
+  const needDescription = !contract.tender?.description?.trim()
+  if (!contract.ocid) return { description: null, contact }
+
+  // The tender-stage sibling (same ocid): its description AND its parties.
   const sib = await ReleaseModel.findOne(
     { ocid: contract.ocid, tag: 'tender' },
-    { 'tender.description': 1 },
-  ).maxTimeMS(3000).lean().catch(() => null) as { tender?: { description?: string } } | null
-  if (sib?.tender?.description?.trim()) return sib.tender.description.trim()
+    { 'tender.description': 1, parties: 1 },
+  ).maxTimeMS(3000).lean().catch(() => null) as { tender?: { description?: string }, parties?: unknown[] } | null
 
-  // 2) The object scraped from the gov page (cached), for compras OCDS
-  //    describes nowhere at all — e.g. "Sistema Veeam". Populated lazily by the
-  //    features endpoint and the AI triage job; null until first scraped.
-  const compraId = compraIdFromOcid(contract.ocid)
-  if (compraId) {
-    const feat = await ContractItemFeaturesModel.findOne(
-      { compraId },
-      { object: 1 },
-    ).maxTimeMS(3000).lean().catch(() => null) as { object?: string } | null
-    if (feat?.object?.trim()) return feat.object.trim()
+  if (!contact) contact = pickPartyContact(sib?.parties as never)
+
+  let description: string | null = null
+  if (needDescription) {
+    if (sib?.tender?.description?.trim()) {
+      description = sib.tender.description.trim()
+    }
+    else {
+      // The object scraped from the gov page (cached), for compras OCDS
+      // describes nowhere at all — e.g. "Sistema Veeam". Populated lazily by the
+      // features endpoint and the AI triage job; null until first scraped.
+      const compraId = compraIdFromOcid(contract.ocid)
+      if (compraId) {
+        const feat = await ContractItemFeaturesModel.findOne(
+          { compraId },
+          { object: 1 },
+        ).maxTimeMS(3000).lean().catch(() => null) as { object?: string } | null
+        if (feat?.object?.trim()) description = feat.object.trim()
+      }
+    }
   }
 
-  return null
+  return { description, contact }
 }
 
 export default defineEventHandler(async (event) => {
@@ -150,11 +168,12 @@ export default defineEventHandler(async (event) => {
 
     // The object text, item baselines, and rate table are independent — run
     // them together.
-    const [baselines, borrowedDescription, rateTable] = await Promise.all([
+    const [baselines, sibling, rateTable] = await Promise.all([
       itemBaselines(contract),
-      siblingTenderDescription(contract),
+      siblingTenderInfo(contract),
       loadRateTable(),
     ])
+    const borrowedDescription = sibling.description
 
     // The contract amount in TODAY's pesos: the NATIVE total (in its own
     // currency) converted to UYU at its OWN month's BCU rate, then deflated by
@@ -191,6 +210,9 @@ export default defineEventHandler(async (event) => {
       tender: borrowedDescription
         ? { ...contract.tender, description: borrowedDescription }
         : contract.tender,
+      // Contracting-unit contact (name/email/phone), from the tender sibling's
+      // parties. Public data from comprasestatales, shown verbatim.
+      ...(sibling.contact ? { contact: sibling.contact } : {}),
       // The human-facing government page, keyed on ocid — `id` resolves
       // to a DIFFERENT contract on adjustment/cancellation records.
       // See server/utils/query.ts#sourceUrl.
