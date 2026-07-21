@@ -8,6 +8,36 @@ export interface BulkWriteAccounting {
   failures: BulkWriteFailure[];
 }
 
+function hasEntries(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length > 0;
+  if (value instanceof Map || value instanceof Set) return value.size > 0;
+  return value != null;
+}
+
+function hasWriteConcernError(candidate: { err?: unknown; result?: unknown; writeConcernErrors?: unknown }): boolean {
+  if (candidate.err != null || hasEntries(candidate.writeConcernErrors)) return true;
+  if (!candidate.result || typeof candidate.result !== "object") return false;
+
+  const result = candidate.result as {
+    getWriteConcernError?: unknown;
+    result?: unknown;
+    writeConcernErrors?: unknown;
+  };
+  if (typeof result.getWriteConcernError === "function") {
+    try {
+      if (result.getWriteConcernError.call(result) != null) return true;
+    } catch {
+      return true;
+    }
+  }
+  if (hasEntries(result.writeConcernErrors)) return true;
+  if (result.result && typeof result.result === "object") {
+    const rawResult = result.result as { writeConcernErrors?: unknown };
+    if (hasEntries(rawResult.writeConcernErrors)) return true;
+  }
+  return false;
+}
+
 export function parseSeedLimit(args: readonly string[]): number {
   const hit = args.find(arg => arg === "--limit" || arg.startsWith("--limit="));
   if (!hit) return Infinity;
@@ -30,9 +60,11 @@ export function accountUnorderedBulkError(error: unknown, batchSize: number): Bu
 
   const candidate = error as {
     err?: unknown;
+    result?: unknown;
+    writeConcernErrors?: unknown;
     writeErrors?: unknown;
   };
-  if (candidate.err != null || !Array.isArray(candidate.writeErrors) || candidate.writeErrors.length === 0) {
+  if (hasWriteConcernError(candidate) || !Array.isArray(candidate.writeErrors) || candidate.writeErrors.length === 0) {
     return null;
   }
 

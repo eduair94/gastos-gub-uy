@@ -29,4 +29,18 @@ assert.equal(accountUnorderedBulkError({ writeErrors: [{ index: 2 }, { index: 2 
 assert.equal(accountUnorderedBulkError({ writeErrors: [{ index: 5 }] }, 5), null);
 assert.equal(accountUnorderedBulkError({ err: { message: "write concern" }, writeErrors: [{ index: 0 }] }, 5), null);
 
+const writeConcernError = { code: 64, errmsg: "waiting for replication timed out" };
+assert.equal(accountUnorderedBulkError({
+  writeErrors: [{ index: 0, errmsg: "duplicate" }],
+  result: { getWriteConcernError: () => writeConcernError },
+}, 2), null, "driver result write-concern errors make success accounting ambiguous");
+assert.equal(accountUnorderedBulkError({
+  writeErrors: [{ index: 0 }],
+  result: { writeConcernErrors: [writeConcernError] },
+}, 2), null, "raw result writeConcernErrors are ambiguous");
+assert.equal(accountUnorderedBulkError({
+  writeErrors: [{ index: 0 }],
+  result: { result: { writeConcernErrors: [writeConcernError] } },
+}, 2), null, "nested raw result writeConcernErrors are ambiguous");
+
 console.log("ok: seed-rupe-only batch accounting");
