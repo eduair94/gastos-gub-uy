@@ -781,6 +781,10 @@
       "nameAsc": "Nombre (A–Z)"
     },
     "filter": {
+      "origin": "Población",
+      "originTodas": "Todas",
+      "originConEmail": "Con email",
+      "originSinAdjudicaciones": "Sin adjudicaciones",
       "rubro": "Rubro",
       "rubroAny": "Todos los rubros",
       "dept": "Departamento",
@@ -795,9 +799,12 @@
       "clear": "Limpiar filtros"
     },
     "chip": {
+      "neverAwarded": "Sin adjudicaciones",
+      "neverAwardedTitle": "Registrada en RUPE; nunca resultó adjudicataria en el período",
       "onlyDirectAward": "Solo compra directa",
       "onlyDirectAwardTitle": "{count} adjudicaciones, todas por compra directa"
     },
+    "noPublicEmail": "Sin email público (registro RUPE)",
     "download": {
       "label": "Descargar {count} contactos",
       "aria": "Descargar en {format}",

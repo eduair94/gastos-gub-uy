@@ -781,6 +781,10 @@
       "nameAsc": "Name (A–Z)"
     },
     "filter": {
+      "origin": "Population",
+      "originTodas": "All",
+      "originConEmail": "With email",
+      "originSinAdjudicaciones": "Never awarded",
       "rubro": "Category",
       "rubroAny": "All categories",
       "dept": "Department",
@@ -795,9 +799,12 @@
       "clear": "Clear filters"
     },
     "chip": {
+      "neverAwarded": "Never awarded",
+      "neverAwardedTitle": "Registered in RUPE; never won an award in this period",
       "onlyDirectAward": "Direct awards only",
       "onlyDirectAwardTitle": "{count} awards, all through direct award"
     },
+    "noPublicEmail": "No public email (RUPE registry)",
     "download": {
       "label": "Download {count} contacts",
       "aria": "Download as {format}",
