@@ -156,13 +156,13 @@ function describeNotSuspectReason(release: any): string {
   if (priced.length > o.maxPricedItems) {
     return `${priced.length} priced line items — more than ${o.maxPricedItems}, so one official total cannot be attributed to a single line`;
   }
-  const hasForeignBulk = priced.some((i: any) => {
+  const hasBulkLine = priced.some((i: any) => {
     const qty = typeof i?.quantity === "number" ? i.quantity : null;
     const currency = typeof i?.unit?.value?.currency === "string" ? i.unit.value.currency : "";
-    return qty !== null && qty >= o.qtyThreshold && ["USD", "EUR"].includes(currency.toUpperCase());
+    return qty !== null && qty >= o.qtyThreshold && ["USD", "EUR", "UYU"].includes(currency.toUpperCase());
   });
-  if (!hasForeignBulk) {
-    return `no priced line with quantity >= ${o.qtyThreshold} in a foreign currency (USD/EUR)`;
+  if (!hasBulkLine) {
+    return `no priced line with quantity >= ${o.qtyThreshold} in an eligible currency (USD/EUR/UYU)`;
   }
   return "does not match the lump-sum profile";
 }
@@ -268,13 +268,12 @@ async function main(): Promise<void> {
 
     const idCompra = idCompraFromOcid(release.ocid ?? "");
     if (!idCompra) {
-      // Distinct from `unverified` below: this release was never scrapeable at
-      // all (the ocid tail isn't a numeric purchase id), as opposed to one that
-      // HAS a real id_compra but whose page fetch/parse failed. Most of the
-      // remaining candidate pool falls in this bucket (e.g. ocds-yfs5dr-i411869)
-      // — worth reporting separately so the operator doesn't read them as "the
-      // scraper is failing" when they were never candidates for scraping.
-      console.warn(`   ? ${id}: ocid ${release.ocid} has no numeric purchase id — not scrapeable`);
+      // Distinct from `unverified` below: this release has no usable purchase id
+      // at all (the ocid never had the canonical `ocds-<pub>-<tail>` shape), as
+      // opposed to one that HAS an id_compra but whose page fetch/parse failed.
+      // Alphanumeric tails (a6005, i292944) ARE scrapeable now and no longer land
+      // here — only a genuinely malformed ocid does.
+      console.warn(`   ? ${id}: ocid ${release.ocid} has no usable purchase id — not scrapeable`);
       noIdCompra++;
       continue;
     }
