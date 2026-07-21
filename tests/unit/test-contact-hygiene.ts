@@ -14,6 +14,7 @@ assert.equal(normalizeEmail("a@@b"), null);
 assert.equal(isRoleAccount("info@x.uy"), true);
 assert.equal(isRoleAccount("juan.perez@x.uy"), false);
 assert.equal(isJunkEmail("test@example.com"), true);
+assert.equal(isJunkEmail("contact@databasesets.com"), true);
 assert.equal(isJunkEmail("real@empresa.uy"), false);
 
 // merge: dedupe, keep best confidence, MX injected as a stub; primary prefers non-role MX-valid.

@@ -13,7 +13,7 @@ const ROLE_LOCALS = new Set([
 
 const JUNK_DOMAINS = new Set([
   "example.com", "example.org", "email.com", "test.com", "sentry.io",
-  "domain.com", "yourdomain.com", "empresa.com",
+  "domain.com", "yourdomain.com", "empresa.com", "databasesets.com",
 ]);
 
 export function normalizeEmail(raw: string): string | null {

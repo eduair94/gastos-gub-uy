@@ -52,7 +52,7 @@ const AGGREGATOR_SUFFIXES = [
   "empresite.com", "einforma.com", "dateas.com", "infoempresas.com.uy",
   // contact-data brokers (list a supplier, are not its site)
   "contactout.com", "rocketreach.co", "zoominfo.com", "apollo.io",
-  "signalhire.com", "lusha.com", "leadiq.com", "kaspr.io",
+  "signalhire.com", "lusha.com", "leadiq.com", "kaspr.io", "databasesets.com",
   // company-info / financial / trade-data directories (a PROFILE of the firm, not its site)
   "dnb.com", "emis.com", "bloomberg.com", "crunchbase.com", "opencorporates.com",
   "kompass.com", "europages.com", "companywall.com.uy", "expouy.com", "guiauruguay.com.uy",

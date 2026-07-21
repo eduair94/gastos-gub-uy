@@ -23,17 +23,20 @@ export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
     async resolve(input: ResolverInput): Promise<ResolverResult> {
       const query = `${input.name} ${input.rut} uruguay contacto email`;
       const hits = await deps.search(query).catch(() => []);
-      const seen = new Map<string, ContactCandidate>();
+      const seenByHost = new Map<string, Map<string, ContactCandidate>>();
       // Legacy fallback website: first hit whose page loaded. Only used when no
       // verifier is injected (see WebSearchDeps.verifyWebsite).
       let firstLoaded: string | null = null;
       for (const hit of hits.slice(0, 3)) {
+        const host = hostOf(hit.url);
+        const seen = seenByHost.get(host) ?? new Map<string, ContactCandidate>();
+        seenByHost.set(host, seen);
         // emails may already be in the snippet
-        for (const c of extractEmailsFromHtml(hit.snippet, hostOf(hit.url))) add(seen, c);
+        for (const c of extractEmailsFromHtml(hit.snippet, host)) add(seen, c);
         const html = await deps.fetchHtml(hit.url).catch(() => null);
         if (html) {
           if (!firstLoaded) firstLoaded = hit.url;
-          for (const c of extractEmailsFromHtml(html, hostOf(hit.url))) add(seen, c);
+          for (const c of extractEmailsFromHtml(html, host)) add(seen, c);
         }
       }
       // Verified discovery (preferred) confirms the domain belongs to the supplier
@@ -43,8 +46,15 @@ export function createWebSearchResolver(deps: WebSearchDeps): ContactResolver {
       const verified = deps.verifyWebsite
         ? await deps.verifyWebsite({ name: input.name, rut: input.rut }, hits).catch(() => null)
         : null;
+      // A directory page can correctly mention the supplier while exposing the
+      // directory owner's own contact email. When verification is enabled, only
+      // emails found on the VERIFIED corporate host are eligible; if no official
+      // site is verified, fail closed and return no web-search emails.
+      const seen = deps.verifyWebsite
+        ? (verified ? seenByHost.get(hostOf(verified)) : undefined)
+        : mergeSeen(seenByHost.values());
       // Rebrand every candidate as webSearch + cap confidence (unverified origin).
-      const emails: ContactCandidate[] = [...seen.values()].map(c => ({
+      const emails: ContactCandidate[] = [...(seen?.values() ?? [])].map(c => ({
         email: c.email, source: "webSearch", confidence: Math.min(c.confidence, CAP),
       }));
       if (verified) return { emails, website: verified, websiteSource: "webSearch" };
@@ -60,4 +70,9 @@ function hostOf(url: string): string {
 function add(map: Map<string, ContactCandidate>, c: ContactCandidate) {
   const prev = map.get(c.email);
   if (!prev || c.confidence > prev.confidence) map.set(c.email, c);
+}
+function mergeSeen(groups: Iterable<Map<string, ContactCandidate>>): Map<string, ContactCandidate> {
+  const merged = new Map<string, ContactCandidate>();
+  for (const group of groups) for (const candidate of group.values()) add(merged, candidate);
+  return merged;
 }
