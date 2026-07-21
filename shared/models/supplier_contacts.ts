@@ -4,7 +4,7 @@ import { mongoose } from "../connection/database";
 
 export type EmailSource = "dei" | "website" | "webSearch" | "impo" | "rupe" | "manual" | "googleMaps";
 export type EmailStatus = "candidate" | "valid" | "invalid" | "suppressed";
-export type ContactStatus = "pending" | "enriched" | "no_contact" | "error";
+export type ContactStatus = "pending" | "enriched" | "no_contact" | "error" | "registry";
 /** Provenance for phone/place fields → gates public display (dei/rupe = official open data, freely displayable; googleMaps = ToS-restricted). */
 export type FieldSource = "dei" | "googleMaps" | "rupe";
 /**
@@ -56,6 +56,10 @@ export interface ISupplierContact {
   status: ContactStatus;
   priorityScore: number;
   enrichedAt: Date | null;
+  /** True when this row was seeded from RUPE because the company never won an award — see seed-rupe-only-contacts.ts. Orthogonal to `status`. */
+  neverAwarded: boolean;
+  /** RUPE registry state verbatim (ACTIVO / EN INGRESO / …) when this row is RUPE-sourced; null otherwise. */
+  rupeEstado: string | null;
 }
 
 const EmailEntrySchema = new Schema<IEmailEntry>({
@@ -96,6 +100,8 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
   status: { type: String, default: "pending" },
   priorityScore: { type: Number, default: 0 },
   enrichedAt: { type: Date, default: null },
+  neverAwarded: { type: Boolean, default: false },
+  rupeEstado: { type: String, default: null },
 }, { timestamps: true, collection: "supplier_contacts" });
 
 // Declared for parity; BUILT by scripts/ensure-indexes.ts (autoIndex is off).
@@ -106,6 +112,7 @@ SupplierContactSchema.index({ name: 1 });
 SupplierContactSchema.index({ "rubros.classificationId": 1 });
 SupplierContactSchema.index({ placeSource: 1 });
 SupplierContactSchema.index({ locality: 1 });
+SupplierContactSchema.index({ neverAwarded: 1, priorityScore: -1 });
 
 export const SupplierContactModel: Model<ISupplierContact> =
   (mongoose.models.SupplierContact as Model<ISupplierContact>) ||
