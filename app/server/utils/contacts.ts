@@ -77,27 +77,34 @@ export async function buildContactFilter(
   query: ContactQuery,
   resolvers: ContactFilterResolvers = {},
 ): Promise<FilterResult> {
-  const filter: Record<string, unknown> = { status: 'enriched' }
+  const filter: Record<string, unknown> = {}
   const supplierIdSets: string[][] = []
 
-  // Default = deliverable list: at least one MX-validated, valid email.
-  // verified=0 widens to any surfaceable email — but still excludes suppressed/
-  // invalid, so a widened row always has a displayable address (mirrors pickEmails).
-  if (String(query.verified ?? '1') === '0') {
-    filter.emails = { $elemMatch: { status: { $nin: ['suppressed', 'invalid'] } } }
-  }
-  else {
-    filter.emails = { $elemMatch: { mxValid: true, status: 'valid' } }
-  }
+  // AND-composed conditions: the origin dimension + search/categoria (both
+  // constrain `name`). Collected into one array so none of them can clobber
+  // another via a shared top-level key.
+  const andConditions: Record<string, unknown>[] = []
 
-  // `search` and `categoria` both constrain `name`; assigning both to `filter.name`
-  // directly would let the second clobber the first, so combine them with `$and`
-  // when more than one name condition is in play (mirrors /api/suppliers).
-  const nameConditions: Record<string, unknown>[] = []
+  // Origin dimension — which population of the directory to include:
+  //  - todas (default): contactable (valid email) OR registered-never-awarded
+  //  - con-email: contactable only (the pre-existing default behaviour)
+  //  - sin-adjudicaciones: registered-never-awarded only
+  // `verified=0` widens "contactable" to any non-suppressed/invalid email,
+  // exactly as before — it composes with any of the three origen values.
+  const hasUsableEmail = String(query.verified ?? '1') === '0'
+    ? { emails: { $elemMatch: { status: { $nin: ['suppressed', 'invalid'] } } } }
+    : { emails: { $elemMatch: { mxValid: true, status: 'valid' } } }
+  const origen = String(query.origen ?? 'todas')
+  if (origen === 'con-email') andConditions.push(hasUsableEmail)
+  else if (origen === 'sin-adjudicaciones') andConditions.push({ neverAwarded: true })
+  else andConditions.push({ $or: [hasUsableEmail, { neverAwarded: true }] })
+
+  // `search` and `categoria` both constrain `name`; each becomes its own $and
+  // entry so one can't clobber the other (mirrors /api/suppliers).
   // User input → escaped literal + length cap before it reaches the regex engine
   // (ReDoS guard; the repo-wide rule, see app/server/context.md).
   const search = sanitizeSearch(query.search)
-  if (search) nameConditions.push({ name: { $regex: escapeRegex(search), $options: 'i' } })
+  if (search) andConditions.push({ name: { $regex: escapeRegex(search), $options: 'i' } })
 
   // Company TYPE (AI-classified enrichment category) → resolve matching names,
   // gated the same way the chip is (confidence >= 0.5). No names → no rows.
@@ -105,11 +112,11 @@ export async function buildContactFilter(
   if (categoria && CATEGORIES.has(categoria)) {
     const names = await fetchNamesByCategory(categoria)
     if (!names.length) return { empty: true }
-    nameConditions.push({ name: { $in: names } })
+    andConditions.push({ name: { $in: names } })
   }
 
-  if (nameConditions.length === 1) Object.assign(filter, nameConditions[0])
-  else if (nameConditions.length > 1) filter.$and = nameConditions
+  if (andConditions.length === 1) Object.assign(filter, andConditions[0])
+  else filter.$and = andConditions
 
   if (query.rubro) filter['rubros.classificationId'] = String(query.rubro)
 
