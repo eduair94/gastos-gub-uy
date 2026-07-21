@@ -287,6 +287,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
         <NuxtLink
           :to="localePath('/')"
           class="brand"
+          :aria-label="t('brand.name')"
         >
           <BrandMark :size="30" />
           <span class="brand__text">
@@ -1435,6 +1436,12 @@ watch([locale, user], () => nextTick(scheduleRecompute))
      pushing 27px of horizontal overflow at 360px. */
   .topbar__actions .iconbtn:not(.iconbtn--menu) { display: none; }
   .topbar__inner { gap: var(--s-2); }
+}
+
+@media (max-width: 340px) {
+  /* Keep the menu, brand mark and account action inside the narrowest
+     supported viewport. The link keeps its accessible name via aria-label. */
+  .brand__text { display: none; }
 }
 </style>
 

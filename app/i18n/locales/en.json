@@ -1832,6 +1832,12 @@
     "verifiedLabel": "Verified {date}",
     "matrixTitle": "Feature comparison",
     "matrixHelp": "Uruguayan services with public pricing, side by side. Every fact comes from the official sites; prices are shown in their original currency, not converted.",
+    "functionLabel": "Feature",
+    "tri": {
+      "yes": "Yes",
+      "no": "No",
+      "unknown": "Unconfirmed"
+    },
     "priceCaveat": "Prices are not directly comparable: they mix currencies (USD, pesos), some quote “+ VAT” and others by credits. They are shown as-is, in their currency.",
     "chartsTitle": "Entry price (cheapest paid plan)",
     "chartUnified": "Everything in pesos (approx.)",

@@ -1832,6 +1832,12 @@
     "verifiedLabel": "Verificado {date}",
     "matrixTitle": "Comparación por función",
     "matrixHelp": "Servicios uruguayos con precio público, lado a lado. Cada dato surge de los sitios oficiales; los precios se muestran en su moneda original, sin convertir.",
+    "functionLabel": "Función",
+    "tri": {
+      "yes": "Sí",
+      "no": "No",
+      "unknown": "Sin confirmar"
+    },
     "priceCaveat": "Los precios no son directamente comparables: mezclan monedas (USD, pesos), algunos cotizan “+ IVA” y otros por créditos. Se muestran tal cual, en su moneda.",
     "chartsTitle": "Precio de entrada (plan pago más barato)",
     "chartUnified": "Todo en pesos (aprox.)",
