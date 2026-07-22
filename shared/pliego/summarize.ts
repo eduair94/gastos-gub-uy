@@ -25,9 +25,10 @@ import type { ModelGenerationProgress } from "../ai/rotator";
 
 const DISCLAIMER = "Resumen generado por IA. Verificá siempre el pliego oficial.";
 const MAX_INPUT_CHARS = 60_000;
-// Groq's smallest free-tier TPM bucket rejects the 60k-char corpus (~15k
-// tokens). Keep enough headroom for instructions/schema under its 6k TPM cap.
-const GROQ_MAX_INPUT_CHARS = 16_000;
+// Groq's smallest free-tier bucket caps the whole request at 6k TPM. Real
+// Spanish pliegos reached 6.3–6.5k tokens with a 16k-char corpus once the
+// instructions/schema were included, so 12k leaves deterministic headroom.
+const GROQ_MAX_INPUT_CHARS = 12_000;
 
 export type GeneratedSummary = Omit<
   IPliegoSummary,
