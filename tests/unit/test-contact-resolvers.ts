@@ -87,6 +87,12 @@ function fakeDb(rows: any[]) {
       <div>Cnel. Brandzen 1956 | 501, MVD</div>
       <a>estudio_segalerba</a>
       <a href="https://www.linkedin.com/company/acme">LinkedIn</a>
+      <a href="https://www.linkedin.com/company/vitol-b.v./">&lt;img src="linkedin.svg" alt="LinkedIn logo" /&gt;</a>
+      <a href="https://facebook.com/acme">Facebook</a>
+      <a href="https://wa.me/59899123456">WhatsApp</a>
+      <a href="https://github.com/acme">GitHub</a>
+      <a href="https://discord.gg/acme">Discord</a>
+      <a href="https://linktr.ee/acme">Contactos de ACME</a>
       <a href="https://t.me/acme">Telegram</a>
       <a href="https://www.threads.net/@acme">Threads</a>
     </footer>`;
@@ -97,6 +103,12 @@ function fakeDb(rows: any[]) {
   assert.equal(details.contactFormUrl, "https://segalerba.com.uy/#contact-form");
   assert.ok(details.socialLinks.some(link => link.platform === "instagram" && link.url.includes("estudio_segalerba")));
   assert.ok(details.socialLinks.some(link => link.platform === "linkedin"));
+  assert.equal(details.socialLinks.find(link => link.url.includes("vitol-b.v"))?.label, "LinkedIn");
+  assert.ok(details.socialLinks.some(link => link.platform === "facebook"));
+  assert.ok(details.socialLinks.some(link => link.platform === "whatsapp"));
+  assert.ok(details.socialLinks.some(link => link.platform === "github"));
+  assert.ok(details.socialLinks.some(link => link.platform === "discord"));
+  assert.ok(details.socialLinks.some(link => link.platform === "linktree"));
   assert.ok(details.socialLinks.some(link => link.platform === "telegram"));
   assert.ok(details.socialLinks.some(link => link.platform === "threads"));
   assert.ok(details.socialLinks.every(link => link.source === "website" && link.sourceUrl === "https://segalerba.com.uy/"));

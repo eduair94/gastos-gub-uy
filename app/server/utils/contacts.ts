@@ -9,6 +9,7 @@ import type { ISupplierContact } from './models'
 import { DeiCompanyModel, RupeRegistryModel, SupplierPatternModel } from './models'
 import { escapeRegex, sanitizeSearch } from './query'
 import { fetchNamesByCategory, CATEGORIES } from './enrichment'
+import { safeSocialLabel } from '../../../shared/utils/social-label'
 
 /** The enrichment METHOD(s) that produced a record — shown as badges (never exported). */
 export type ContactMethod = 'crawl4ai' | 'googleMaps' | 'dei' | 'rupe' | 'impo'
@@ -379,13 +380,18 @@ export function sanitizeContact(
   const phoneSource = phone
     ? (legacyPhone ? (doc.phoneSource ?? null) : (phones[0]?.source ?? null))
     : null
-  const socialLinks = (doc.socialLinks ?? []).map(link => ({
-    platform: link.platform,
-    url: link.url,
-    label: link.label ?? '',
-    source: link.source ?? 'website',
-    sourceUrl: publicSourceUrl(link.sourceUrl),
-  }))
+  const socialLinks: PublicSocialLink[] = []
+  for (const link of doc.socialLinks ?? []) {
+    const url = publicSourceUrl(link.url)
+    if (!url) continue
+    socialLinks.push({
+      platform: link.platform,
+      url,
+      label: safeSocialLabel(link.label, link.platform),
+      source: link.source ?? 'website',
+      sourceUrl: publicSourceUrl(link.sourceUrl),
+    })
+  }
 
   return {
     supplierId: doc.supplierId ?? '',
@@ -401,7 +407,7 @@ export function sanitizeContact(
     phones,
     websitePhone: doc.websitePhone ?? null,
     websiteAddress: doc.websiteAddress ?? null,
-    contactFormUrl: doc.contactFormUrl ?? null,
+    contactFormUrl: publicSourceUrl(doc.contactFormUrl),
     socialLinks,
     locality: doc.locality ?? null,
     address: doc.address ?? null,

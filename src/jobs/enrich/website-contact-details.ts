@@ -1,5 +1,6 @@
 import { load } from "cheerio";
 import type { ISocialLink, SocialPlatform } from "../../../shared/models/supplier_contacts";
+import { safeSocialLabel } from "../../../shared/utils/social-label";
 
 export interface WebsiteContactDetails {
   phone: string | null;
@@ -21,6 +22,15 @@ const SOCIAL_HOSTS: Array<[RegExp, SocialPlatform]> = [
   [/(^|\.)pinterest\.[a-z.]+$/i, "pinterest"],
   [/(^|\.)(?:t|telegram)\.me$/i, "telegram"],
   [/(^|\.)bsky\.app$/i, "bluesky"],
+  [/(^|\.)github\.com$/i, "github"],
+  [/(^|\.)(?:discord\.gg|discord\.com)$/i, "discord"],
+  [/(^|\.)twitch\.tv$/i, "twitch"],
+  [/(^|\.)vimeo\.com$/i, "vimeo"],
+  [/(^|\.)snapchat\.com$/i, "snapchat"],
+  [/(^|\.)(?:linktr\.ee|linktree\.com)$/i, "linktree"],
+  [/(^|\.)reddit\.com$/i, "reddit"],
+  [/(^|\.)medium\.com$/i, "medium"],
+  [/(^|\.)mastodon\.social$/i, "mastodon"],
 ];
 
 // Uruguay numbers appear with many visual groupings: 2914 8414, 2914 84 14,
@@ -87,7 +97,7 @@ export function extractWebsiteContactDetails(html: string, pageUrl: string): Web
       socialLinks.set(normalized, {
         platform,
         url: normalized,
-        label: cleanText($(element).text()),
+        label: safeSocialLabel(cleanText($(element).text()), platform),
         source: "website",
         sourceUrl: pageUrl,
       });

@@ -75,6 +75,21 @@ assert.ok(webDoc.emails.some(e => e.email === "ventas@acme.uy"));
 assert.equal(webDoc.emails.find(e => e.email === "ventas@acme.uy")?.sourceUrl, "https://directorio.example/acme");
 assert.ok(!webDoc.emails.some(e => e.email === "bounced@acme.uy"));
 
+// Historical Crawl4AI rows may contain an escaped image tag as anchor text.
+// The public API/export must never surface that raw markup.
+const rawSocialDoc = sanitizeContact({
+  supplierId: "X/VITOL", rut: "1", name: "VITOL S.A.", emails: [],
+  contactFormUrl: "<img src=x>",
+  socialLinks: [{
+    platform: "linkedin", url: "https://www.linkedin.com/company/vitol-b.v./",
+    label: '<img src="linkedin.svg" alt="LinkedIn logo" />',
+    source: "website", sourceUrl: "https://www.vitol.com/contact/",
+  }],
+} as never);
+assert.equal(rawSocialDoc.contactFormUrl, null, "non-URL form evidence is suppressed");
+assert.equal(rawSocialDoc.socialLinks[0]?.label, "LinkedIn", "raw HTML social labels fall back to the platform");
+assert.ok(!JSON.stringify(rawSocialDoc).includes("<img"));
+
 // Google Maps phone/website/place remain visible with their listing URL.
 const gmapsDoc = sanitizeContact({
   supplierId: "R200", rut: "200", name: "BETA SA",

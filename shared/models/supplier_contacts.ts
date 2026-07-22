@@ -43,7 +43,9 @@ export interface IRubro {
 }
 export type SocialPlatform =
   | "instagram" | "facebook" | "linkedin" | "x" | "youtube" | "tiktok"
-  | "whatsapp" | "threads" | "pinterest" | "telegram" | "bluesky";
+  | "whatsapp" | "threads" | "pinterest" | "telegram" | "bluesky"
+  | "github" | "discord" | "twitch" | "vimeo" | "snapchat" | "linktree"
+  | "reddit" | "medium" | "mastodon";
 export interface ISocialLink {
   platform: SocialPlatform;
   url: string;
