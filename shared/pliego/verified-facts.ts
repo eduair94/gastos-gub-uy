@@ -97,12 +97,15 @@ function find(text: string, pattern: RegExp): RegExpExecArray | null {
   return last;
 }
 
-function officialDate(value: Date | string | undefined): string | undefined {
+export function formatOfficialPliegoDate(value: Date | string | undefined): string | undefined {
   if (!value) return undefined;
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(date.getTime())) return undefined;
   const parts = new Intl.DateTimeFormat("es-UY", {
-    timeZone: "America/Montevideo",
+    // The Compras Estatales projection stores Uruguay's wall-clock value in a
+    // BSON Date without an offset (10:00 official arrives as 10:00Z). Preserve
+    // those clock fields; converting to America/Montevideo would subtract 3h.
+    timeZone: "UTC",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -224,8 +227,8 @@ export function applyVerifiedPliegoFacts(
     if (facts.priceOnlyEvaluation && /(puntaje|calificacion|antecedente|experiencia)/.test(value)) return false;
     return true;
   });
-  const reception = officialDate(officialDates.reception);
-  const enquiries = officialDate(officialDates.enquiries);
+  const reception = formatOfficialPliegoDate(officialDates.reception);
+  const enquiries = formatOfficialPliegoDate(officialDates.enquiries);
 
   return {
     ...generated,

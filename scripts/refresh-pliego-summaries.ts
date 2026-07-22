@@ -7,9 +7,11 @@
  * Dry run: npx tsx scripts/refresh-pliego-summaries.ts --limit=12
  * Targeted: npx tsx scripts/refresh-pliego-summaries.ts --ids=1349474,1350881
  * Write:   npx tsx scripts/refresh-pliego-summaries.ts --ids=... --commit
+ * Dates:   npx tsx scripts/refresh-pliego-summaries.ts --ids=... --dates-only --commit
  */
 import { connectToDatabase, disconnectFromDatabase } from "../shared/connection/database";
 import { buildPliegoRotator, summarizeOpenCall } from "../shared/pliego/summarize";
+import { formatOfficialPliegoDate } from "../shared/pliego/verified-facts";
 import { OpenCallModel } from "../shared/models/open_call";
 import { isSupportedPliegoDocument, isWordDocument } from "../shared/services/pliego-extractor";
 
@@ -29,6 +31,7 @@ function sleep(ms: number): Promise<void> {
 
 async function main(): Promise<void> {
   const commit = process.argv.includes("--commit");
+  const datesOnly = process.argv.includes("--dates-only");
   const limit = positiveInt(argument("limit"), 12, 15);
   const explicitIds = (argument("ids") ?? "").split(",").map(value => value.trim()).filter(Boolean);
   await connectToDatabase();
@@ -42,7 +45,7 @@ async function main(): Promise<void> {
         "documents.0": { $exists: true },
       };
   const calls = await OpenCallModel.find(query)
-    .select("compraId title status tenderPeriod.endDate documents aiSummary")
+    .select("compraId title status tenderPeriod.endDate enquiryPeriod.endDate documents aiSummary")
     .limit(explicitIds.length ? 15 : 120)
     .lean();
 
@@ -71,6 +74,23 @@ async function main(): Promise<void> {
   }
   if (!commit) {
     console.log("[pliego-refresh] No writes performed. Add --commit to regenerate this exact selection.");
+    return;
+  }
+
+  if (datesOnly) {
+    let repaired = 0;
+    for (const item of ranked) {
+      const reception = formatOfficialPliegoDate(item.call.tenderPeriod?.endDate);
+      const enquiries = formatOfficialPliegoDate(item.call.enquiryPeriod?.endDate);
+      const set: Record<string, string> = {};
+      if (reception) set["aiSummary.plazos.recepcionOfertas"] = reception;
+      if (enquiries) set["aiSummary.plazos.consultas"] = enquiries;
+      if (!Object.keys(set).length) continue;
+      await OpenCallModel.updateOne({ compraId: item.call.compraId, aiSummary: { $exists: true } }, { $set: set });
+      repaired++;
+      console.log(`  OK ${item.call.compraId}: official dates repaired`);
+    }
+    console.log(`[pliego-refresh] date repair complete: ${repaired}/${ranked.length}`);
     return;
   }
 

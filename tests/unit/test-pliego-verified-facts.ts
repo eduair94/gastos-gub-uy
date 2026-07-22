@@ -55,8 +55,8 @@ const inaccurateModel: PliegoSummaryContent = {
 };
 
 const corrected = applyVerifiedPliegoFacts(inaccurateModel, facts, {
-  reception: "2026-07-22T13:00:00Z",
-  enquiries: "2026-07-20T13:00:00Z",
+  reception: "2026-07-22T10:00:00Z",
+  enquiries: "2026-07-20T10:00:00Z",
 });
 assert.equal(corrected.plazos.recepcionOfertas, "22/07/2026 10:00");
 assert.equal(corrected.plazos.aperturaOfertas, "22/07/2026 10:00");
