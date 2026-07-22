@@ -46,6 +46,8 @@ export interface GeminiCallOptions {
   model: string;
   systemInstruction: string;
   prompt: string;
+  /** Binary inputs supported by Gemini (for example, a scanned PDF). */
+  inlineData?: Array<{ mimeType: string; data: string }> | undefined;
   schema: GeminiSchema;
   /** 0 keeps the classification deterministic run-to-run. */
   temperature?: number;
@@ -107,7 +109,7 @@ function sleep(ms: number): Promise<void> {
  * exhausting retries. HTTP failures throw `GeminiHttpError`.
  */
 export async function callGeminiStructured<T>(options: GeminiCallOptions): Promise<GeminiResult<T>> {
-  const { apiKey, model, systemInstruction, prompt, schema, temperature = 0, timeoutMs = 30_000, maxRetries = 4, stream = false, onProgress, deadlineAtMs } = options;
+  const { apiKey, model, systemInstruction, prompt, inlineData = [], schema, temperature = 0, timeoutMs = 30_000, maxRetries = 4, stream = false, onProgress, deadlineAtMs } = options;
 
   if (!apiKey) {
     throw new Error("callGeminiStructured: missing apiKey");
@@ -118,7 +120,13 @@ export async function callGeminiStructured<T>(options: GeminiCallOptions): Promi
   const url = `${API_ROOT}/${encodeURIComponent(model)}:${operation}?${query}`;
   const body = {
     systemInstruction: { parts: [{ text: systemInstruction }] },
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    contents: [{
+      role: "user",
+      parts: [
+        { text: prompt },
+        ...inlineData.map(item => ({ inlineData: item })),
+      ],
+    }],
     generationConfig: {
       temperature,
       responseMimeType: "application/json",

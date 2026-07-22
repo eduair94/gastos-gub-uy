@@ -13,7 +13,8 @@ import { basename, resolve } from "node:path";
 import { parse } from "dotenv";
 import { OpenCallModel } from "../models/open_call";
 import type { IOpenCall, IPliegoSummary } from "../types/monitor";
-import { extractPliegoText, isSupportedPliegoDocument } from "../services/pliego-extractor";
+import { extractPliegoText, isPdfDocument, isSupportedPliegoDocument } from "../services/pliego-extractor";
+import { extractScannedPdfText } from "../services/pliego-ocr";
 import { pliegoDocsSignature } from "./docs-signature";
 import { buildPliegoCorpus } from "./document-corpus";
 import type { ExtractedPliegoDocument } from "./document-corpus";
@@ -215,8 +216,14 @@ export async function summarizeOpenCall(
   }
 
   const extracted: ExtractedPliegoDocument[] = [];
+  const ocrApiKey = process.env.FREE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   for (const document of documents) {
-    const text = await extractPliegoText(document);
+    let text = await extractPliegoText(document);
+    // PDFs published as scans have no text layer. Gemini can read the original
+    // PDF directly, avoiding a heavyweight OCR/runtime dependency in Nitro.
+    if (!text && ocrApiKey && document.url && isPdfDocument(document)) {
+      text = await extractScannedPdfText(document.url, { apiKey: ocrApiKey });
+    }
     if (text) extracted.push({ document, text });
   }
   const extractedUrls = new Set(extracted.map(item => item.document.url));
