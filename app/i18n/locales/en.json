@@ -1934,6 +1934,8 @@
     "summaryDisclaimer": "AI-generated summary. Always verify the official bidding documents.",
     "summaryModel": "Model: {model}",
     "summarySources": "Documents analyzed: {n}",
+    "summarySourcesPartial": "Documents analyzed: {analyzed} of {total}",
+    "summaryUnreadable": "Attachments without extractable text: {n}. Review them in the official document list.",
     "benchmarksTitle": "Historical prices and who won",
     "benchmarksLead": "What the State awarded these categories for, which firms won before, and where to see the detail — to prepare your bid.",
     "benchmarksEmpty": "No price history for these categories.",

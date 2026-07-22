@@ -128,6 +128,9 @@ export interface IPliegoSummary {
   model: string
   generatedAt: Date
   sourceDocs: string[]
+  // Supported attachments that were reachable but had no extractable text
+  // (commonly scanned PDFs). The UI discloses these as not analyzed.
+  unreadableDocs?: string[] | undefined
   disclaimer: string
   // Signature of the pliego documents this summary was built from. When the call's
   // current pliegoDocsSignature differs (a modification/aclaración added or changed

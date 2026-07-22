@@ -7,11 +7,17 @@ import {
   isPdfDocument,
   isSupportedPliegoDocument,
   isWordDocument,
+  normalizePliegoDownloadUrl,
 } from "../../shared/services/pliego-extractor";
 import { pliegoDocsSignature } from "../../shared/pliego/docs-signature";
 import { buildPliegoCorpus, buildPliegoCorpusWithDiagnostics } from "../../shared/pliego/document-corpus";
 
 assert.ok(MAX_EXTRACTED_PLIEGO_CHARS > 60_000, "extraction must not truncate at the model-input limit");
+assert.equal(
+  normalizePliegoDownloadUrl("http://www.comprasestatales.gub.uy/Aclaraciones/a.pdf"),
+  "https://www.comprasestatales.gub.uy/Aclaraciones/a.pdf",
+);
+assert.equal(normalizePliegoDownloadUrl("http://example.com/a.pdf"), "http://example.com/a.pdf");
 
 assert.equal(isWordDocument({ url: "https://x/pliego_1349474.doc" }), true);
 assert.equal(isWordDocument({ url: "https://x/pliego.docx?download=1" }), true);
@@ -87,5 +93,6 @@ for (const category of ["objeto", "requisitos", "documentos", "cotizacion", "eje
   assert.ok(focused.diagnostics.categories.includes(category), `diagnostics must report ${category}`);
 }
 assert.equal(focused.diagnostics.compressed, true);
+assert.deepEqual(focused.diagnostics.categories.sort(), focused.diagnostics.sourceCategories.sort());
 
 console.log("ok: Word pliegos + correction-aware corpus");

@@ -55,6 +55,7 @@ const PliegoSummarySchema = new Schema(
     model: { type: String },
     generatedAt: { type: Date },
     sourceDocs: { type: [String], default: undefined },
+    unreadableDocs: { type: [String], default: undefined },
     disclaimer: { type: String },
     // Signature of the supported pliego documents this summary was built from; compared against
     // the call's pliegoDocsSignature to invalidate a stale summary on modification.

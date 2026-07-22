@@ -1935,6 +1935,8 @@
     "summaryDisclaimer": "Resumen generado por IA. Verificá siempre el pliego oficial.",
     "summaryModel": "Modelo: {model}",
     "summarySources": "Documentos analizados: {n}",
+    "summarySourcesPartial": "Documentos analizados: {analyzed} de {total}",
+    "summaryUnreadable": "Adjuntos sin texto extraíble: {n}. Revisalos en la lista de documentos oficiales.",
     "benchmarksTitle": "Precios históricos y quién ganó",
     "benchmarksLead": "A cuánto adjudicó el Estado estos rubros, qué empresas ganaron antes y dónde ver el detalle — para preparar tu oferta.",
     "benchmarksEmpty": "No hay historial de precios para estos rubros.",

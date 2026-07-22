@@ -11,6 +11,7 @@ export interface PliegoCorpusDiagnostics {
   documentCount: number;
   compressed: boolean;
   categories: string[];
+  sourceCategories: string[];
 }
 
 const CATEGORY_TERMS = {
@@ -28,7 +29,7 @@ const CATEGORY_TERMS = {
 } as const;
 
 const RELEVANCE_TERMS = [...new Set(Object.values(CATEGORY_TERMS).flat())];
-const CHUNK_TARGET_CHARS = 750;
+const CHUNK_TARGET_CHARS = 500;
 const OMITTED = "\n[… fragmento omitido …]\n";
 
 function normalized(text: string): string {
@@ -63,7 +64,7 @@ function splitForCompression(text: string): string[] {
       chunks.push(current);
       current = "";
     }
-    if (paragraph.length > CHUNK_TARGET_CHARS * 2) {
+    if (paragraph.length > CHUNK_TARGET_CHARS) {
       if (current) chunks.push(current);
       current = "";
       for (let start = 0; start < paragraph.length; start += CHUNK_TARGET_CHARS) {
@@ -112,7 +113,10 @@ function fitAcrossDocument(text: string, maxChars: number): string {
   if (chunks.length <= 1) return text.slice(0, maxChars);
 
   const selected = new Set<number>();
-  const anchorCount = Math.min(3, chunks.length);
+  const estimatedCapacity = Math.max(1, Math.floor(
+    (maxChars + OMITTED.length) / (CHUNK_TARGET_CHARS + OMITTED.length),
+  ));
+  const anchorCount = Math.min(estimatedCapacity >= 4 ? 3 : 1, chunks.length);
   for (let index = 0; index < anchorCount; index++) {
     selected.add(Math.round(((chunks.length - 1) * index) / Math.max(1, anchorCount - 1)));
   }
@@ -154,7 +158,7 @@ function fitAcrossDocument(text: string, maxChars: number): string {
     .slice(0, maxChars);
 }
 
-function buildCorpus(extracted: ExtractedPliegoDocument[], maxChars: number): string {
+function buildBaseCorpus(extracted: ExtractedPliegoDocument[], maxChars: number): string {
   if (!extracted.length || maxChars <= 0) return "";
 
   const ordered = extracted
@@ -193,6 +197,60 @@ function buildCorpus(extracted: ExtractedPliegoDocument[], maxChars: number): st
     .slice(0, maxChars);
 }
 
+function buildCoverageExtracts(extracted: ExtractedPliegoDocument[], maxChars: number): string {
+  if (maxChars < 4_000) return "";
+  const ordered = extracted
+    .map((entry, index) => ({ ...entry, originalIndex: index }))
+    .sort((a, b) => dateMs(a.document) - dateMs(b.document) || a.originalIndex - b.originalIndex);
+  const sourceCategories = new Set(categoryMatches(ordered.map(entry => entry.text).join("\n")));
+  const candidates = ordered.flatMap((entry, documentIndex) => splitForCompression(entry.text)
+    .map((chunk, chunkIndex, chunks) => ({
+      chunk,
+      chunkIndex,
+      documentIndex,
+      categories: categoryMatches(chunk),
+      score: relevanceScore(chunk, chunkIndex, chunks.length) + documentIndex * 2,
+      title: entry.document.title?.trim() || `Documento ${documentIndex + 1}`,
+      date: entry.document.datePublished ? new Date(entry.document.datePublished).toISOString() : "sin fecha",
+    }))
+    .filter(candidate => candidate.categories.length));
+  const selected: typeof candidates = [];
+  const uncovered = new Set(sourceCategories);
+  const budget = Math.min(5_000, Math.floor(maxChars * 0.3));
+  const renderedLength = (candidate: (typeof candidates)[number]): number =>
+    candidate.chunk.length + candidate.title.length + candidate.date.length + 45;
+  let used = 0;
+
+  while (uncovered.size) {
+    const candidate = candidates
+      .filter(item => !selected.includes(item) && item.categories.some(category => uncovered.has(category)))
+      .filter(item => used + renderedLength(item) <= budget)
+      .sort((a, b) => {
+        const aNew = a.categories.filter(category => uncovered.has(category)).length;
+        const bNew = b.categories.filter(category => uncovered.has(category)).length;
+        return bNew - aNew || b.score - a.score || b.documentIndex - a.documentIndex;
+      })[0];
+    if (!candidate) break;
+    selected.push(candidate);
+    used += renderedLength(candidate);
+    for (const category of candidate.categories) uncovered.delete(category);
+  }
+
+  return selected
+    .sort((a, b) => a.documentIndex - b.documentIndex || a.chunkIndex - b.chunkIndex)
+    .map(candidate => `EXTRACTO ESENCIAL — DOCUMENTO ${candidate.documentIndex + 1} (${candidate.date}): ${candidate.title}\n${candidate.chunk}`)
+    .join(OMITTED);
+}
+
+function buildCorpus(extracted: ExtractedPliegoDocument[], maxChars: number): string {
+  if (!extracted.length || maxChars <= 0) return "";
+  const coverage = buildCoverageExtracts(extracted, maxChars);
+  if (!coverage) return buildBaseCorpus(extracted, maxChars);
+  const separator = "\n\n=== EXTRACTOS ESENCIALES PARA COBERTURA ===\n\n";
+  const base = buildBaseCorpus(extracted, Math.max(0, maxChars - coverage.length - separator.length));
+  return `${base}${separator}${coverage}`.slice(0, maxChars);
+}
+
 /** Builds a chronological, query-focused model input from all extracted sources. */
 export function buildPliegoCorpus(extracted: ExtractedPliegoDocument[], maxChars: number): string {
   return buildCorpus(extracted, maxChars);
@@ -212,6 +270,7 @@ export function buildPliegoCorpusWithDiagnostics(
       documentCount: extracted.length,
       compressed: sourceChars > corpus.length,
       categories: categoryMatches(corpus),
+      sourceCategories: categoryMatches(extracted.map(entry => entry.text).join("\n")),
     },
   };
 }

@@ -43,6 +43,7 @@
     "alert-digest": "tsx src/jobs/alert-digest.ts",
     "webhooks": "tsx src/jobs/webhooks/run.ts",
     "pliego-summary": "tsx src/jobs/pliego-summary.ts",
+    "refresh-pliego-summaries": "tsx scripts/refresh-pliego-summaries.ts",
     "ensure-indexes": "tsx scripts/ensure-indexes.ts",
     "create-text-index": "tsx scripts/create-text-index.ts",
     "update-text-index-exact": "tsx scripts/update-text-index-for-exact-search.ts",

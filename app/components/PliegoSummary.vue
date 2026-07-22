@@ -12,6 +12,7 @@ interface Summary {
   observaciones?: string[]
   model?: string
   sourceDocs?: string[]
+  unreadableDocs?: string[]
   disclaimer?: string
 }
 
@@ -253,11 +254,21 @@ async function generate() {
         {{ s.disclaimer || t('llamados.summaryDisclaimer') }}
       </p>
       <p
+        v-if="s.unreadableDocs?.length"
+        class="pliego__partial"
+      >
+        <v-icon size="15">mdi-file-alert-outline</v-icon>
+        {{ t('llamados.summaryUnreadable', { n: s.unreadableDocs.length }) }}
+      </p>
+      <p
         v-if="s.model"
         class="pliego__meta u-muted u-mono"
       >
         <span>{{ t('llamados.summaryModel', { model: s.model }) }}</span>
-        <span v-if="s.sourceDocs?.length">{{ t('llamados.summarySources', { n: s.sourceDocs.length }) }}</span>
+        <span v-if="s.unreadableDocs?.length">
+          {{ t('llamados.summarySourcesPartial', { analyzed: s.sourceDocs?.length || 0, total: (s.sourceDocs?.length || 0) + s.unreadableDocs.length }) }}
+        </span>
+        <span v-else-if="s.sourceDocs?.length">{{ t('llamados.summarySources', { n: s.sourceDocs.length }) }}</span>
       </p>
     </template>
 
@@ -325,6 +336,14 @@ async function generate() {
 .pliego__block li { margin-bottom: var(--s-1); line-height: 1.45; }
 .pliego__block p { margin: 0; line-height: 1.5; }
 .pliego__disc { font-size: var(--t-xs); margin: var(--s-4) 0 0; }
+.pliego__partial {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-1);
+  color: var(--alerta);
+  font-size: var(--t-xs);
+  margin: var(--s-2) 0 0;
+}
 .pliego__meta {
   display: flex;
   flex-wrap: wrap;

@@ -2,7 +2,7 @@ import type { IPliegoSummary } from "../types/monitor";
 
 export type PliegoSummaryContent = Omit<
   IPliegoSummary,
-  "model" | "generatedAt" | "sourceDocs" | "disclaimer" | "docsSignature"
+  "model" | "generatedAt" | "sourceDocs" | "unreadableDocs" | "disclaimer" | "docsSignature"
 >;
 
 export interface OfficialPliegoDates {

@@ -29,7 +29,10 @@ const MAX_INPUT_CHARS = 60_000;
 // tokens). Keep enough headroom for instructions/schema under its 6k TPM cap.
 const GROQ_MAX_INPUT_CHARS = 16_000;
 
-export type GeneratedSummary = Omit<IPliegoSummary, "model" | "generatedAt" | "sourceDocs" | "disclaimer">;
+export type GeneratedSummary = Omit<
+  IPliegoSummary,
+  "model" | "generatedAt" | "sourceDocs" | "unreadableDocs" | "disclaimer"
+>;
 
 export interface PliegoGenerationOptions {
   timeoutMs?: number | undefined;
@@ -39,6 +42,8 @@ export interface PliegoGenerationOptions {
   onProgress?: ((progress: ModelGenerationProgress) => void) | undefined;
   /** Preserve the concrete failure for interactive diagnostics. */
   throwOnFailure?: boolean | undefined;
+  /** Rebuild even when the current document signature matches the cache. */
+  force?: boolean | undefined;
 }
 
 const AI_ENV_KEYS = [
@@ -196,7 +201,9 @@ export async function summarizeOpenCall(
   // is unchanged. A modification (aclaración/ajuste that adds or replaces a pliego)
   // shifts the signature → regenerate. Legacy summaries with no stored signature
   // are treated as fresh (not force-regenerated) to protect the free budget.
-  if (call.aiSummary && (call.aiSummary.docsSignature === undefined || call.aiSummary.docsSignature === currentSig)) {
+  if (!generationOptions.force
+    && call.aiSummary
+    && (call.aiSummary.docsSignature === undefined || call.aiSummary.docsSignature === currentSig)) {
     return call.aiSummary;
   }
 
@@ -211,13 +218,14 @@ export async function summarizeOpenCall(
     const text = await extractPliegoText(document);
     if (text) extracted.push({ document, text });
   }
-  // Never cache a partial analysis as if it covered the whole publication set.
-  // A transient download/parser miss can be retried on the next run.
-  if (extracted.length !== documents.length) {
+  const extractedUrls = new Set(extracted.map(item => item.document.url));
+  const failedDocuments = documents.filter(document => !extractedUrls.has(document.url));
+  // Scanned PDFs commonly have no text layer. Analyze the readable sources and
+  // disclose the rest rather than leaving the call permanently stuck. Never
+  // replace a cached summary when no source at all can be read.
+  if (!extracted.length) {
     if (generationOptions.throwOnFailure) {
-      const extractedUrls = new Set(extracted.map(item => item.document.url));
-      const failed = documents.filter(document => !extractedUrls.has(document.url)).map(document => document.url);
-      throw new Error(`Could not extract every pliego document: ${failed.join(", ")}`);
+      throw new Error(`Could not extract any pliego document: ${failedDocuments.map(document => document.url).join(", ")}`);
     }
     return null;
   }
@@ -243,7 +251,8 @@ export async function summarizeOpenCall(
     ...generated,
     model: modelUsed,
     generatedAt: new Date(),
-    sourceDocs: documents.map(d => d.url),
+    sourceDocs: extracted.map(item => item.document.url),
+    ...(failedDocuments.length ? { unreadableDocs: failedDocuments.map(document => document.url) } : {}),
     disclaimer: DISCLAIMER,
     docsSignature: currentSig,
   };

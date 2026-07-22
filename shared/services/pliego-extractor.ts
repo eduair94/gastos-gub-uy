@@ -19,6 +19,20 @@ export interface PliegoDocumentLike {
 // whole document instead of silently discarding everything after character 60k.
 export const MAX_EXTRACTED_PLIEGO_CHARS = 500_000;
 
+/** comprasestatales still publishes some attachment links as HTTP although the
+ * host serves them correctly only over HTTPS. Upgrade that known host locally. */
+export function normalizePliegoDownloadUrl(rawUrl: string): string {
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol === "http:" && url.hostname.toLowerCase() === "www.comprasestatales.gub.uy") {
+      url.protocol = "https:";
+    }
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
 function normalizedUrl(url: string | undefined): string {
   return (url ?? "").toLowerCase().split(/[?#]/, 1)[0] ?? "";
 }
@@ -55,7 +69,7 @@ export async function extractPdfText(
   timeoutMs = 30_000,
 ): Promise<string | null> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    const res = await fetch(normalizePliegoDownloadUrl(url), { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok) return null;
     const buf = new Uint8Array(await res.arrayBuffer());
     const pdf = await getDocumentProxy(buf);
@@ -73,7 +87,7 @@ export async function extractWordText(
   timeoutMs = 30_000,
 ): Promise<string | null> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    const res = await fetch(normalizePliegoDownloadUrl(url), { signal: AbortSignal.timeout(timeoutMs) });
     if (!res.ok) return null;
     const extractor = new WordExtractor();
     const doc = await extractor.extract(Buffer.from(await res.arrayBuffer()));
@@ -89,7 +103,17 @@ export async function extractPliegoText(
   timeoutMs = 30_000,
 ): Promise<string | null> {
   if (!doc.url) return null;
-  if (isPdfDocument(doc)) return extractPdfText(doc.url, maxChars, timeoutMs);
-  if (isWordDocument(doc)) return extractWordText(doc.url, maxChars, timeoutMs);
-  return null;
+  const extract = isPdfDocument(doc)
+    ? () => extractPdfText(doc.url!, maxChars, timeoutMs)
+    : isWordDocument(doc)
+      ? () => extractWordText(doc.url!, maxChars, timeoutMs)
+      : undefined;
+  if (!extract) return null;
+  const first = await extract();
+  if (first) return first;
+  // Government attachment links occasionally reset or return a transient empty
+  // body. One bounded retry recovers those without introducing a dependency or
+  // turning scanned/image-only PDFs into an endless loop.
+  await new Promise(resolve => setTimeout(resolve, 400));
+  return extract();
 }
