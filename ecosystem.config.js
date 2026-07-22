@@ -1,3 +1,8 @@
+// Keep the cronserver definition in one place. Importing it here prevents
+// `npm run pm2:*` from silently replacing the production port/script declared
+// in cronserver.config.js with a second, stale definition.
+const [cronserverApp] = require('./cronserver.config.js').apps;
+
 module.exports = {
   apps: [
     {
@@ -35,39 +40,7 @@ module.exports = {
       // Additional environment variables
       env_file: '.env'
     },
-    {
-      name: 'gastos-gub-cronserver',
-      script: 'tsx',
-      args: 'src/cronserver.ts',
-      instances: 1,
-      exec_mode: 'fork',
-      env: {
-        NODE_ENV: 'production',
-        CRON_SERVER_PORT: 3002
-      },
-      env_production: {
-        NODE_ENV: 'production',
-        CRON_SERVER_PORT: 3002
-      },
-      // PM2 configuration
-      watch: false,
-      max_memory_restart: '512M',
-      time: true,
-      // Auto restart configuration
-      restart_delay: 4000,
-      max_restarts: 10,
-      min_uptime: '10s',
-      // Log configuration
-      log_file: './logs/cronserver.log',
-      out_file: './logs/cronserver-out.log',
-      error_file: './logs/cronserver-error.log',
-      merge_logs: true,
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      // Health monitoring
-      health_check_grace_period: 3000,
-      // Additional environment variables
-      env_file: '.env'
-    },
+    cronserverApp,
     {
       // Alternates RUPE-only and awarded suppliers through one globally paced
       // Crawl4AI transport so both populations receive the same enrichment.
