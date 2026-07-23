@@ -8,7 +8,39 @@ import {
 } from "../../src/jobs/enrich/match-score";
 import { createGeminiJudge, type MatchPair } from "../../src/jobs/enrich/match-judge";
 import { createGoogleMapsResolver, googleMapsQueries } from "../../src/jobs/enrich/resolvers/google-maps";
-import type { PlaceCandidate, PlaceDetails } from "../../src/jobs/enrich/backends";
+import { withMapsRetry, type PlaceCandidate, type PlaceDetails } from "../../src/jobs/enrich/backends";
+
+// --- Maps rate-limit retry --------------------------------------------------
+(async () => {
+  let calls = 0;
+  const delays: number[] = [];
+  const result = await withMapsRetry(async () => {
+    calls++;
+    if (calls === 1) {
+      throw { response: { status: 429, headers: { "retry-after": "2" } } };
+    }
+    return "ok";
+  }, {
+    attempts: 3,
+    baseDelayMs: 10,
+    maxDelayMs: 3000,
+    random: () => 0,
+    sleep: async delay => { delays.push(delay); },
+  });
+  assert.equal(result, "ok");
+  assert.equal(calls, 2);
+  assert.deepEqual(delays, [2000], "Retry-After must override the shorter exponential delay");
+
+  let badRequestCalls = 0;
+  await assert.rejects(
+    withMapsRetry(async () => {
+      badRequestCalls++;
+      throw { response: { status: 400, headers: {} } };
+    }, { attempts: 5, sleep: async () => undefined }),
+  );
+  assert.equal(badRequestCalls, 1, "non-transient 4xx responses must not be retried");
+  console.log("ok: Maps 429 retry");
+})();
 
 // --- match-score ------------------------------------------------------------
 (async () => {

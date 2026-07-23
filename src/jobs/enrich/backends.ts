@@ -36,6 +36,84 @@ const MAPS_PROXY = process.env.MAPS_PROXY_URL || "https://google-maps-proxy.chec
 // Location bias rectangle covering Uruguay (sw|ne), so candidates skew local.
 const UY_BIAS = "rectangle:-35.1,-58.5|-30.0,-53.0";
 
+export interface MapsRetryOptions {
+  attempts?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+  random?: () => number;
+  onRetry?: (event: { attempt: number; delayMs: number; status: number | null }) => void;
+}
+
+function errorStatus(error: unknown): number | null {
+  const status = Number((error as any)?.response?.status);
+  return Number.isFinite(status) ? status : null;
+}
+
+function retryAfterMs(error: unknown): number | null {
+  const headers = (error as any)?.response?.headers;
+  const raw = headers?.["retry-after"] ?? headers?.["Retry-After"];
+  if (raw == null) return null;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const timestamp = Date.parse(String(raw));
+  return Number.isFinite(timestamp) ? Math.max(0, timestamp - Date.now()) : null;
+}
+
+function retryableMapsError(error: unknown): boolean {
+  const status = errorStatus(error);
+  if (status === 429 || (status != null && status >= 500)) return true;
+  const code = String((error as any)?.code ?? "");
+  return ["ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "EAI_AGAIN"].includes(code);
+}
+
+/** Retry Maps throttling/transient failures, honoring Retry-After when provided. */
+export async function withMapsRetry<T>(
+  request: () => Promise<T>,
+  options: MapsRetryOptions = {},
+): Promise<T> {
+  const attempts = Math.max(1, options.attempts ?? Number(process.env.MAPS_RETRY_ATTEMPTS ?? 6));
+  const baseDelayMs = Math.max(1, options.baseDelayMs ?? Number(process.env.MAPS_RETRY_BASE_MS ?? 750));
+  const maxDelayMs = Math.max(baseDelayMs, options.maxDelayMs ?? Number(process.env.MAPS_RETRY_MAX_MS ?? 20_000));
+  const sleep = options.sleep ?? ((ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)));
+  const random = options.random ?? Math.random;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await request();
+    } catch (error) {
+      if (!retryableMapsError(error) || attempt === attempts) throw error;
+      const serverDelay = retryAfterMs(error);
+      const exponential = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1));
+      const jitter = Math.round(exponential * 0.25 * random());
+      const delayMs = Math.min(maxDelayMs, Math.max(serverDelay ?? 0, exponential + jitter));
+      const status = errorStatus(error);
+      options.onRetry?.({ attempt, delayMs, status });
+      await sleep(delayMs);
+    }
+  }
+  throw new Error("Google Maps retry loop exhausted");
+}
+
+async function mapsGet(path: string, config: Parameters<typeof axios.get>[1]) {
+  return withMapsRetry(async () => {
+    const response = await axios.get(`${MAPS_PROXY}${path}`, config);
+    const status = String(response.data?.status ?? "").toUpperCase();
+    if (status === "OVER_QUERY_LIMIT" || status === "RESOURCE_EXHAUSTED") {
+      const error = new Error(`Google Maps quota response: ${status}`) as Error & {
+        response?: { status: number; headers: Record<string, string> };
+      };
+      error.response = { status: 429, headers: {} };
+      throw error;
+    }
+    return response;
+  }, {
+    onRetry: ({ attempt, delayMs, status }) => {
+      console.warn(`🗺️  Maps ${status ?? "network"}; retry ${attempt} in ${delayMs}ms (${path})`);
+    },
+  });
+}
+
 export interface PlaceCandidate { placeId: string; name: string; address: string }
 export interface FindPlaceOptions {
   /** `undefined` keeps the Uruguay default; `null` performs a global search. */
@@ -59,7 +137,7 @@ export async function findPlace(
 ): Promise<PlaceCandidate[]> {
   try {
     const locationBias = options.locationBias === undefined ? UY_BIAS : options.locationBias;
-    const res = await axios.get(`${MAPS_PROXY}/findPlaceFromText`, {
+    const res = await mapsGet("/findPlaceFromText", {
       timeout: 15000,
       headers: { "User-Agent": UA },
       params: {
@@ -99,7 +177,7 @@ export async function geocode(address: string): Promise<GeocodeResult> {
   const empty = (status: string): GeocodeResult =>
     ({ status, lat: null, lng: null, placeId: null, confidence: null, formattedAddress: null, countryCode: null });
   try {
-    const res = await axios.get(`${MAPS_PROXY}/geocode`, {
+    const res = await mapsGet("/geocode", {
       timeout: 15000,
       headers: { "User-Agent": UA },
       params: { address, language: "es", region: "uy" },
@@ -124,7 +202,7 @@ export async function geocode(address: string): Promise<GeocodeResult> {
 /** place_id → full knowledge-panel details. Returns null on any failure. */
 export async function placeDetails(placeId: string): Promise<PlaceDetails | null> {
   try {
-    const res = await axios.get(`${MAPS_PROXY}/placeDetails`, {
+    const res = await mapsGet("/placeDetails", {
       timeout: 15000,
       headers: { "User-Agent": UA },
       params: {
