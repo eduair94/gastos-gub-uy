@@ -304,14 +304,9 @@ async function main() {
       const rubros = await deriveRubros(db, supplierId, 5).catch(() => []);
       const hasContact = emails.length > 0 || phones.size > 0 || !!website || !!phone || !!websitePhone || !!websiteAddress || !!contactFormUrl || socialLinks.size > 0;
       const status = hasContact ? "enriched" : "no_contact";
-      const storedPlace = mergeStoredPlace(place, existing ?? {});
-      // RUPE/DEI remain the authoritative address, but a confirmed Places
-      // listing still adds useful hours and a clickable Maps evidence URL.
-      if (mapsEvidence) {
-        storedPlace.mapsUrl = mapsEvidence.mapsUrl ?? storedPlace.mapsUrl ?? null;
-        storedPlace.hours = mapsEvidence.hours ?? storedPlace.hours ?? null;
-        storedPlace.placeId = mapsEvidence.placeId ?? storedPlace.placeId ?? null;
-      }
+      // RUPE/DEI remain authoritative for the registered address. A verified
+      // Maps listing supplies its coordinates, hours and clickable evidence.
+      const storedPlace = mergeStoredPlace(place, existing ?? {}, mapsEvidence);
 
       processed++;
       if (dryRun) {

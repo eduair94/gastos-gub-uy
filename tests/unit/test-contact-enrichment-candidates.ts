@@ -10,7 +10,7 @@ const staleBefore = new Date("2025-01-01T00:00:00.000Z");
 assert.deepEqual(registryContactQuery(staleBefore), {
   neverAwarded: true,
   $or: [
-    { enrichmentVersion: { $ne: 5 } },
+    { enrichmentVersion: { $ne: 6 } },
     { enrichedAt: null },
     { enrichedAt: { $exists: false } },
     { enrichedAt: { $lt: staleBefore } },
@@ -70,6 +70,42 @@ assert.deepEqual(
     mapsUrl: "https://maps.example/place",
     placeId: "place-1",
     placeSource: "googleMaps",
+  },
+);
+
+assert.deepEqual(
+  mergeStoredPlace(
+    {
+      address: "3, PLACES DES BERGUES, 1211 GENEVA",
+      locality: null,
+      lat: -32.522779,
+      lng: -55.765835,
+      hours: null,
+      mapsUrl: null,
+      placeId: "rupe-geocode",
+      source: "rupe",
+    },
+    {},
+    {
+      address: "Quai des Bergues 3, Genève, Suiza",
+      locality: null,
+      lat: 46.2070348,
+      lng: 6.145815,
+      hours: "lunes: 8:00–18:00",
+      mapsUrl: "https://maps.google.com/?cid=vitol",
+      placeId: "google-vitol",
+      source: "googleMaps",
+    },
+  ),
+  {
+    address: "3, PLACES DES BERGUES, 1211 GENEVA",
+    locality: null,
+    lat: 46.2070348,
+    lng: 6.145815,
+    hours: "lunes: 8:00–18:00",
+    mapsUrl: "https://maps.google.com/?cid=vitol",
+    placeId: "google-vitol",
+    placeSource: "rupe",
   },
 );
 

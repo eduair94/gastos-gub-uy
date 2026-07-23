@@ -19,7 +19,7 @@ export interface StoredPlace {
   placeSource?: FieldSource | null;
 }
 
-export const CONTACT_ENRICHMENT_VERSION = 5;
+export const CONTACT_ENRICHMENT_VERSION = 6;
 
 export function registryContactQuery(staleBefore: Date, enrichmentVersion = CONTACT_ENRICHMENT_VERSION) {
   return {
@@ -43,16 +43,23 @@ export function registryContactToSupplier(row: unknown): EnrichmentSupplier {
   };
 }
 
-/** Keep already-stored official RUPE/DEI fields when an external resolver has no replacement. */
-export function mergeStoredPlace(place: PlaceInfo | null, stored: StoredPlace) {
+/**
+ * Keep the official RUPE/DEI address provenance while applying coordinates and
+ * contact evidence from a separately verified Google Maps listing.
+ */
+export function mergeStoredPlace(
+  place: PlaceInfo | null,
+  stored: StoredPlace,
+  mapsEvidence: PlaceInfo | null = null,
+) {
   return {
     address: place?.address ?? stored.address ?? null,
     locality: place?.locality ?? stored.locality ?? null,
-    lat: place?.lat ?? stored.lat ?? null,
-    lng: place?.lng ?? stored.lng ?? null,
-    hours: place?.hours ?? stored.hours ?? null,
-    mapsUrl: place?.mapsUrl ?? stored.mapsUrl ?? null,
-    placeId: place?.placeId ?? stored.placeId ?? null,
+    lat: mapsEvidence?.lat ?? place?.lat ?? stored.lat ?? null,
+    lng: mapsEvidence?.lng ?? place?.lng ?? stored.lng ?? null,
+    hours: mapsEvidence?.hours ?? place?.hours ?? stored.hours ?? null,
+    mapsUrl: mapsEvidence?.mapsUrl ?? place?.mapsUrl ?? stored.mapsUrl ?? null,
+    placeId: mapsEvidence?.placeId ?? place?.placeId ?? stored.placeId ?? null,
     placeSource: place?.source ?? stored.placeSource ?? null,
   };
 }
