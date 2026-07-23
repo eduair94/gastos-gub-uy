@@ -312,7 +312,12 @@ async function main() {
             knownWebsiteAddress: websiteAddress,
           });
         } catch (error) {
-          if (mapsOnly && r.name === "googleMaps") throw error;
+          const status = Number((error as any)?.response?.status);
+          // Quota throttles and network failures must remain uncheckpointed so
+          // a later batch retries them. A proxy 5xx already exhausted seven
+          // retries; checkpoint it as attempted to avoid a permanent hot loop.
+          if (mapsOnly && r.name === "googleMaps"
+            && (status === 429 || !Number.isFinite(status))) throw error;
           res = { emails: [] as ContactCandidate[] };
         }
         const method = enrichmentMethod(r.name);
