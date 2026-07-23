@@ -86,7 +86,7 @@ import type { PlaceCandidate, PlaceDetails } from "../../src/jobs/enrich/backend
   const verdicts = await judge(pairs);
   assert.equal(verdicts.get(0)?.match, true);
   assert.equal(verdicts.get(1)?.match, false);
-  assert.match(lastPrompt, /direccion_registro="Camino Carrasco 123"/);
+  assert.match(lastPrompt, /direcciones_conocidas="Camino Carrasco 123"/);
   assert.match(lastPrompt, /direccion_candidata="Camino Carrasco 123, Montevideo, Uruguay"/);
 
   // A throwing Gemini call must not accept anything (fail closed).
@@ -117,9 +117,11 @@ const noJudge = (async (_p: MatchPair[]) => new Map()) as any;
       name: "ACME S.A.",
       knownAddress: "Cnel. Brandzen 1956",
       knownLocality: "Montevideo",
+      knownWebsiteAddress: "Av. Italia 1234",
     }),
     [
       "ACME S.A. Cnel. Brandzen 1956, Montevideo",
+      "ACME S.A. Av. Italia 1234, Montevideo",
       "ACME S.A. Montevideo",
       "ACME S.A. Uruguay",
     ],
@@ -178,6 +180,38 @@ const noJudge = (async (_p: MatchPair[]) => new Map()) as any;
   assert.equal(outForeignRegistered.place?.placeId, "vitol");
   assert.match(outForeignRegistered.place?.address ?? "", /Bergues/);
   assert.equal(foreignSearchOptions[0]?.locationBias, null);
+
+  // A verified website address can locate a business whose RUPE fiscal address differs.
+  let segalerbaPairs: MatchPair[] = [];
+  const segalerba = createGoogleMapsResolver({
+    findPlace: async query => query.includes("Brandzen")
+      ? [{
+        placeId: "segalerba",
+        name: "Segalerba & Asociados - Estudio Contable",
+        address: "C. Cnel. Brandzen 1956, Montevideo, Uruguay",
+      }]
+      : [],
+    placeDetails: async () => ({
+      ...DETAILS,
+      name: "Segalerba & Asociados - Estudio Contable",
+      address: "C. Cnel. Brandzen 1956, Montevideo, Uruguay",
+    }),
+    judge: async pairs => {
+      segalerbaPairs = pairs;
+      return new Map([[0, { i: 0, match: true, conf: 0.95 }]]);
+    },
+  });
+  const outSegalerba = await segalerba.resolve({
+    supplierId: "R/217210370014",
+    rut: "217210370014",
+    name: "SEGALERBA VANNI LUCIA",
+    knownAddress: "COLONIA 2276",
+    knownLocality: "Montevideo",
+    knownWebsiteAddress: "Cnel. Brandzen 1956 | 501, MVD",
+  });
+  assert.equal(outSegalerba.place?.placeId, "segalerba");
+  assert.match(segalerbaPairs[0]?.expectedAddress ?? "", /COLONIA 2276/);
+  assert.match(segalerbaPairs[0]?.expectedAddress ?? "", /Brandzen 1956/);
 
   // Same legal name at a contradictory address is not auto-accepted.
   const wrongAddress = createGoogleMapsResolver({ ...fakeBackends([{

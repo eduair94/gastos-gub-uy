@@ -268,6 +268,7 @@ async function main() {
           website,
           knownAddress: place?.address ?? existing?.address ?? null,
           knownLocality: place?.locality ?? existing?.locality ?? null,
+          knownWebsiteAddress: websiteAddress,
         }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
         const method = enrichmentMethod(r.name);
         if (method && hasResolverEvidence(res)) enrichmentMethods.add(method);

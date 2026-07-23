@@ -10,7 +10,7 @@ const staleBefore = new Date("2025-01-01T00:00:00.000Z");
 assert.deepEqual(registryContactQuery(staleBefore), {
   neverAwarded: true,
   $or: [
-    { enrichmentVersion: { $ne: 6 } },
+    { enrichmentVersion: { $ne: 7 } },
     { enrichedAt: null },
     { enrichedAt: { $exists: false } },
     { enrichedAt: { $lt: staleBefore } },

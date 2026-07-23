@@ -53,5 +53,7 @@ export interface ResolverInput {
   knownAddress?: string | null;
   /** Best official/stored locality/department known before external lookup. */
   knownLocality?: string | null;
+  /** Address published by the verified first-party website, if discovered. */
+  knownWebsiteAddress?: string | null;
 }
 export interface ContactResolver { name: EmailSource; resolve(input: ResolverInput): Promise<ResolverResult> }

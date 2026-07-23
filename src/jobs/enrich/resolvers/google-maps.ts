@@ -36,13 +36,20 @@ export function googleMapsQueries(input: ResolverInput): string[] {
   if (!name) return [];
 
   const address = cleanPart(input.knownAddress).slice(0, 220);
+  const websiteAddress = cleanPart(input.knownWebsiteAddress).slice(0, 220);
   const locality = cleanPart(input.knownLocality).slice(0, 100);
   const addressHasLocality = locality
     ? normalizeCompanyName(address).includes(normalizeCompanyName(locality))
     : false;
   const location = [address, addressHasLocality ? "" : locality].filter(Boolean).join(", ");
+  const websiteLocation = websiteAddress && normalizeCompanyName(websiteAddress) !== normalizeCompanyName(address)
+    ? [websiteAddress, normalizeCompanyName(websiteAddress).includes(normalizeCompanyName(locality)) ? "" : locality]
+      .filter(Boolean)
+      .join(", ")
+    : "";
   const queries = [
     location ? `${name} ${location}` : "",
+    websiteLocation ? `${name} ${websiteLocation}` : "",
     locality && !addressHasLocality ? `${name} ${locality}` : "",
     input.supplierId.startsWith("X/") ? name : `${name} Uruguay`,
   ];
@@ -66,10 +73,14 @@ export function createGoogleMapsResolver(deps: GoogleMapsDeps): ContactResolver 
     async resolve(input: ResolverInput): Promise<ResolverResult> {
       if (!input.name.trim()) return { emails: [] };
 
-      const knownLocation = [cleanPart(input.knownAddress), cleanPart(input.knownLocality)]
-        .filter(Boolean)
-        .join(", ");
-      const globalSearch = input.supplierId.startsWith("X/") && !addressInUruguay(knownLocation);
+      const locality = cleanPart(input.knownLocality);
+      const knownLocations = [
+        [cleanPart(input.knownAddress), locality].filter(Boolean).join(", "),
+        [cleanPart(input.knownWebsiteAddress), locality].filter(Boolean).join(", "),
+      ].filter(Boolean);
+      const knownLocation = knownLocations.join(" || ");
+      const globalSearch = input.supplierId.startsWith("X/")
+        && !knownLocations.some(addressInUruguay);
       const seenPlaceIds = new Set<string>();
 
       for (const query of googleMapsQueries(input)) {
@@ -86,9 +97,10 @@ export function createGoogleMapsResolver(deps: GoogleMapsDeps): ContactResolver 
           .map(c => ({
             c,
             nameScore: scoreMatch(input.name, c.name),
-            addressScore: knownLocation
-              ? scoreAddressOverlap(knownLocation, c.address ?? "")
-              : 0,
+            addressScore: knownLocations.reduce(
+              (best, known) => Math.max(best, scoreAddressOverlap(known, c.address ?? "")),
+              0,
+            ),
           }))
           .filter(x => addressInUruguay(x.c.address) || x.addressScore >= ADDRESS_MATCH_SCORE)
           .sort((a, b) =>
