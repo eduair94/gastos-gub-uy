@@ -21,6 +21,8 @@ const doc = new SupplierContactModel({
   socialLinks: [{ platform: "instagram", url: "https://instagram.com/example/", label: "@example", source: "website", sourceUrl: "https://example.uy/contacto" }],
   enrichmentMethods: ["crawl4ai", "googleMaps"],
   enrichmentVersion: 7,
+  mapsEnrichmentVersion: 1,
+  mapsEnrichedAt: new Date("2026-07-23T00:00:00.000Z"),
 });
 const err = doc.validateSync();
 assert.equal(err, undefined, `unexpected validation error: ${err?.message}`);
@@ -30,6 +32,7 @@ assert.equal(doc.socialLinks[0].platform, "instagram");
 assert.equal(doc.emails[0].sourceUrl, "https://example.uy/contacto");
 assert.equal(doc.phones.length, 2);
 assert.deepEqual(doc.enrichmentMethods, ["crawl4ai", "googleMaps"]);
+assert.equal(doc.mapsEnrichmentVersion, 1);
 console.log("ok: supplier_contacts model");
 
 // A RUPE-only ("registered, never awarded") seed row must also validate.

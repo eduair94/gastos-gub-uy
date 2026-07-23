@@ -99,6 +99,9 @@ export interface ISupplierContact {
   rupeEstado: string | null;
   /** Extractor contract version, used to reprocess rows after enrichment improves. */
   enrichmentVersion: number;
+  /** Independent Google Maps checkpoint so fast Maps passes do not skip Crawl4AI work. */
+  mapsEnrichedAt: Date | null;
+  mapsEnrichmentVersion: number;
 }
 
 const EmailEntrySchema = new Schema<IEmailEntry>({
@@ -164,6 +167,8 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
   neverAwarded: { type: Boolean, default: false },
   rupeEstado: { type: String, default: null },
   enrichmentVersion: { type: Number, default: 0 },
+  mapsEnrichedAt: { type: Date, default: null },
+  mapsEnrichmentVersion: { type: Number, default: 0 },
 }, { timestamps: true, collection: "supplier_contacts" });
 
 // Declared for parity; BUILT by scripts/ensure-indexes.ts (autoIndex is off).
@@ -176,6 +181,7 @@ SupplierContactSchema.index({ placeSource: 1 });
 SupplierContactSchema.index({ locality: 1 });
 SupplierContactSchema.index({ neverAwarded: 1, priorityScore: -1 });
 SupplierContactSchema.index({ neverAwarded: 1, enrichedAt: 1 });
+SupplierContactSchema.index({ neverAwarded: 1, mapsEnrichmentVersion: 1, mapsEnrichedAt: 1 });
 
 export const SupplierContactModel: Model<ISupplierContact> =
   (mongoose.models.SupplierContact as Model<ISupplierContact>) ||

@@ -151,7 +151,12 @@ export async function findPlace(
     return cands
       .map(c => ({ placeId: String(c.place_id ?? ""), name: String(c.name ?? ""), address: String(c.formatted_address ?? "") }))
       .filter(c => c.placeId);
-  } catch { return []; }
+  } catch (error) {
+    // Let an exhausted throttle/transient failure reach the Maps-only worker so
+    // it does not checkpoint this supplier for a year without a real attempt.
+    if (retryableMapsError(error)) throw error;
+    return [];
+  }
 }
 
 export interface GeocodeResult {
@@ -222,7 +227,10 @@ export async function placeDetails(placeId: string): Promise<PlaceDetails | null
       hours: Array.isArray(r.opening_hours?.weekday_text) ? r.opening_hours.weekday_text.join(" | ") : null,
       mapsUrl: r.url || null,
     };
-  } catch { return null; }
+  } catch (error) {
+    if (retryableMapsError(error)) throw error;
+    return null;
+  }
 }
 
 // impo gazette search → return the result page HTML blob(s) for regex scanning.

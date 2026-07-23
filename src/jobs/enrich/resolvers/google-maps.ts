@@ -87,7 +87,7 @@ export function createGoogleMapsResolver(deps: GoogleMapsDeps): ContactResolver 
         const candidates = await deps.findPlace(
           query,
           globalSearch ? { locationBias: null } : undefined,
-        ).catch(() => []);
+        );
         const scored = candidates
           .filter(c => {
             if (!c.placeId || seenPlaceIds.has(c.placeId)) return false;
@@ -135,7 +135,7 @@ export function createGoogleMapsResolver(deps: GoogleMapsDeps): ContactResolver 
         }
 
         for (const candidate of accepted) {
-          const d = await deps.placeDetails(candidate.placeId).catch(() => null);
+          const d = await deps.placeDetails(candidate.placeId);
           if (!d) continue;
 
           const place: PlaceInfo = {

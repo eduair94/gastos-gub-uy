@@ -3,16 +3,11 @@
 // in cronserver.config.js with a second, stale definition.
 const [cronserverApp] = require('./cronserver.config.js').apps;
 
-function contactEnrichmentApp(name, populationArgs, logSuffix) {
+function contactEnrichmentApp(name, args, logSuffix) {
   return {
     name,
     script: './node_modules/tsx/dist/cli.mjs',
-    args: [
-      'src/jobs/enrich-supplier-contacts.ts',
-      populationArgs,
-      '--loop --limit=100 --concurrency=10 --stale-days=365 --pause-ms=10000',
-      '--require-crawl4ai --require-google-maps'
-    ].filter(Boolean).join(' '),
+    args,
     instances: 1,
     exec_mode: 'fork',
     env: {
@@ -83,9 +78,17 @@ module.exports = {
       env_file: '.env'
     },
     cronserverApp,
-    // Split populations across two workers: no duplicate candidate selection,
-    // twice the useful throughput, and independent retry/backoff windows.
-    contactEnrichmentApp('gastos-gub-contact-enrichment', '', 'awarded'),
-    contactEnrichmentApp('gastos-gub-contact-enrichment-rupe', '--registry-only', 'rupe')
+    // Crawl4AI and Maps have independent checkpoints and workers. Slow page
+    // rendering can no longer hold up the high-concurrency Maps pass.
+    contactEnrichmentApp(
+      'gastos-gub-contact-enrichment',
+      'src/jobs/enrich-supplier-contacts.ts --all-populations --sources=dei,rupe,website,webSearch,impo --loop --limit=100 --concurrency=10 --stale-days=365 --pause-ms=10000 --require-crawl4ai',
+      'crawl',
+    ),
+    contactEnrichmentApp(
+      'gastos-gub-google-maps-enrichment',
+      'src/jobs/enrich-supplier-contacts.ts --maps-only --all-populations --sources=dei,rupe,googleMaps --loop --limit=500 --concurrency=20 --stale-days=365 --pause-ms=2000 --require-google-maps',
+      'maps',
+    )
   ],
 };

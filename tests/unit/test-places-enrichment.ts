@@ -297,5 +297,15 @@ const noJudge = (async (_p: MatchPair[]) => new Map()) as any;
   ]), judge: noJudge });
   const outN = await uncertainNo.resolve({ supplierId: "R/4", rut: "2...", name: "C I E M S A CONSTRUCCIONES E INSTALACIONES" });
   assert.equal(outN.place ?? null, null, "judge NO on uncertain band should reject");
+
+  const throttled = createGoogleMapsResolver({
+    findPlace: async () => { throw { response: { status: 429, headers: {} } }; },
+    placeDetails: async () => DETAILS,
+    judge: yesJudge,
+  });
+  await assert.rejects(
+    throttled.resolve({ supplierId: "R/429", rut: "2...", name: "ACME S.A." }),
+    "an exhausted Maps throttle must reach the worker so it can avoid checkpointing",
+  );
   console.log("ok: googleMaps resolver");
 })();

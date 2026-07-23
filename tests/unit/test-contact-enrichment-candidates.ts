@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import {
   mergeStoredPlace,
+  mapsContactQuery,
   registryContactQuery,
   registryContactToSupplier,
 } from "../../src/jobs/enrich/candidates";
@@ -14,6 +15,15 @@ assert.deepEqual(registryContactQuery(staleBefore), {
     { enrichedAt: null },
     { enrichedAt: { $exists: false } },
     { enrichedAt: { $lt: staleBefore } },
+  ],
+});
+
+assert.deepEqual(mapsContactQuery(staleBefore), {
+  $or: [
+    { mapsEnrichmentVersion: { $ne: 1 } },
+    { mapsEnrichedAt: null },
+    { mapsEnrichedAt: { $exists: false } },
+    { mapsEnrichedAt: { $lt: staleBefore } },
   ],
 });
 

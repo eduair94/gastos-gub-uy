@@ -16,7 +16,15 @@ import { createGeminiJudge } from "./enrich/match-judge";
 import { fetchHtml, search, searchGazette, findPlace, placeDetails } from "./enrich/backends";
 import { crawl4aiBaseUrl, createCrawl4aiTransport } from "./enrich/crawl4ai";
 import { createWebsiteVerifier, createWebsiteJudge, isDirectoryUrl, websiteSourceRank } from "./enrich/website-verify";
-import { CONTACT_ENRICHMENT_VERSION, mergeStoredPlace, registryContactQuery, registryContactToSupplier, type EnrichmentSupplier } from "./enrich/candidates";
+import {
+  CONTACT_ENRICHMENT_VERSION,
+  MAPS_ENRICHMENT_VERSION,
+  mapsContactQuery,
+  mergeStoredPlace,
+  registryContactQuery,
+  registryContactToSupplier,
+  type EnrichmentSupplier,
+} from "./enrich/candidates";
 import type { PlaceInfo } from "./enrich/types";
 import type { EnrichmentMethod, FieldSource, IPhoneEntry, ISocialLink, WebsiteSource } from "../../shared/models/supplier_contacts";
 
@@ -28,6 +36,7 @@ const flag = (name: string) => process.argv.includes(`--${name}`);
 const digits = (s: string) => (s || "").replace(/\D/g, "");
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 const POPULATION_STATE_ID = "supplier-contact-enrichment-population-v1";
+const MAPS_POPULATION_STATE_ID = "supplier-contact-enrichment-maps-population-v1";
 
 async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
   let next = 0;
@@ -60,32 +69,37 @@ async function main() {
   const staleDays = Number(arg("stale-days") ?? "90");
   const registryOnly = flag("registry-only");
   const allPopulations = flag("all-populations");
+  const mapsOnly = flag("maps-only");
   const targetSupplierId = arg("supplier-id");
   const loop = flag("loop");
   const requireCrawl4ai = flag("require-crawl4ai");
   const requireGoogleMaps = flag("require-google-maps");
   const concurrency = Math.max(1, Number(arg("concurrency") ?? process.env.CONTACT_ENRICHMENT_CONCURRENCY ?? "6"));
   const pauseMs = Math.max(1_000, Number(arg("pause-ms") ?? "60000"));
-  const wanted = new Set((arg("sources") ?? "dei,rupe,website,webSearch,impo,googleMaps").split(","));
+  const wanted = new Set((arg("sources")
+    ?? (mapsOnly ? "dei,rupe,googleMaps" : "dei,rupe,website,webSearch,impo,googleMaps")).split(","));
+  const populationStateId = mapsOnly ? MAPS_POPULATION_STATE_ID : POPULATION_STATE_ID;
 
   // DNS canary: if the runtime can't reach a resolver at all, mxValid() will
   // (correctly, per hygiene.ts) return false for every domain over the whole
   // run — draining every primaryEmail to null while the job still exits 0.
   // Prove DNS works, against a name that will always have MX records, before
   // touching the DB.
-  try {
-    await dns.resolveMx("gmail.com");
-  } catch (e: any) {
-    if (CONNECTIVITY_DNS_ERROR_CODES.has(e?.code)) {
-      console.error(
-        "❌ DNS unavailable in this environment; MX validation would mark every email invalid " +
-        "— aborting to avoid writing an all-null dataset. Run on a network-capable host.",
-      );
-      throw new Error("DNS unavailable; refusing to run contact enrichment");
+  if (!mapsOnly) {
+    try {
+      await dns.resolveMx("gmail.com");
+    } catch (e: any) {
+      if (CONNECTIVITY_DNS_ERROR_CODES.has(e?.code)) {
+        console.error(
+          "❌ DNS unavailable in this environment; MX validation would mark every email invalid " +
+          "— aborting to avoid writing an all-null dataset. Run on a network-capable host.",
+        );
+        throw new Error("DNS unavailable; refusing to run contact enrichment");
+      }
+      // Anything else (e.g. gmail.com genuinely returning no records) is not a
+      // connectivity failure — DNS clearly works enough to give a definitive
+      // answer, so proceed.
     }
-    // Anything else (e.g. gmail.com genuinely returning no records) is not a
-    // connectivity failure — DNS clearly works enough to give a definitive
-    // answer, so proceed.
   }
 
   await connectToDatabase();
@@ -97,13 +111,14 @@ async function main() {
   // higher confidence regardless of resolve order.
   // Fetch/search transport: crawl4ai (headless, server-side, JS-capable, paced to
   // avoid rate-limits) when CRAWL4AI_BASE_URL is set; else the direct axios backends.
-  const c4Base = crawl4aiBaseUrl();
+  const usesCrawl4ai = wanted.has("website") || wanted.has("webSearch");
+  const c4Base = usesCrawl4ai ? crawl4aiBaseUrl() : null;
   if (requireCrawl4ai && !c4Base) throw new Error("CRAWL4AI_BASE_URL is required for this enrichment worker");
   const transport = c4Base ? createCrawl4aiTransport({ baseUrl: c4Base }) : null;
   const fetchHtmlX = transport?.fetchHtml ?? fetchHtml;
   const searchX = transport?.search ?? search;
   if (c4Base) console.log(`🕷️  crawl4ai transport: ${c4Base} (min interval ${process.env.CRAWL4AI_MIN_INTERVAL_MS ?? 1500}ms)`);
-  else console.warn("⚠️ CRAWL4AI_BASE_URL unset — using direct axios fetch (no JS render; DuckDuckGo rate-limits sooner).");
+  else if (usesCrawl4ai) console.warn("⚠️ CRAWL4AI_BASE_URL unset — using direct axios fetch (no JS render; DuckDuckGo rate-limits sooner).");
 
   const resolvers: ContactResolver[] = [];
   if (wanted.has("dei")) resolvers.push(createDeiResolver(db));
@@ -141,7 +156,7 @@ async function main() {
   do {
   let processRegistry = registryOnly;
   if (allPopulations && !registryOnly) {
-    const state = await db.collection("contact_enrichment_state").findOne({ _id: POPULATION_STATE_ID as any });
+    const state = await db.collection("contact_enrichment_state").findOne({ _id: populationStateId as any });
     if (state?.nextPopulation === "registry" || state?.nextPopulation === "awarded") {
       processRegistry = state.nextPopulation === "registry";
     } else {
@@ -149,8 +164,18 @@ async function main() {
       // batches persist their successor so PM2/deploy restarts cannot starve
       // one population by resetting an in-memory counter.
       const [registryDone, awardedDone] = await Promise.all([
-        db.collection("supplier_contacts").countDocuments({ neverAwarded: true, enrichmentVersion: CONTACT_ENRICHMENT_VERSION }),
-        db.collection("supplier_contacts").countDocuments({ neverAwarded: { $ne: true }, enrichmentVersion: CONTACT_ENRICHMENT_VERSION }),
+        db.collection("supplier_contacts").countDocuments({
+          neverAwarded: true,
+          ...(mapsOnly
+            ? { mapsEnrichmentVersion: MAPS_ENRICHMENT_VERSION }
+            : { enrichmentVersion: CONTACT_ENRICHMENT_VERSION }),
+        }),
+        db.collection("supplier_contacts").countDocuments({
+          neverAwarded: { $ne: true },
+          ...(mapsOnly
+            ? { mapsEnrichmentVersion: MAPS_ENRICHMENT_VERSION }
+            : { enrichmentVersion: CONTACT_ENRICHMENT_VERSION }),
+        }),
       ]);
       processRegistry = registryDone <= awardedDone;
     }
@@ -161,10 +186,10 @@ async function main() {
   const suppliers: EnrichmentSupplier[] = processRegistry
     ? (await db.collection("supplier_contacts")
       .find({
-        ...registryContactQuery(staleBefore),
+        ...(mapsOnly ? mapsContactQuery(staleBefore) : registryContactQuery(staleBefore)),
         ...(targetSupplierId ? { supplierId: targetSupplierId } : {}),
       }, { projection: { supplierId: 1, name: 1 } })
-      .sort({ enrichedAt: 1, _id: 1 })
+      .sort(mapsOnly ? { mapsEnrichedAt: 1, _id: 1 } : { enrichedAt: 1, _id: 1 })
       .limit(limit)
       .toArray()).map(registryContactToSupplier)
     : (await db.collection("supplier_patterns").aggregate([
@@ -172,12 +197,19 @@ async function main() {
       { $sort: { totalValue: -1 } },
       { $lookup: { from: "supplier_contacts", localField: "supplierId", foreignField: "supplierId", as: "contact" } },
       { $set: { contact: { $arrayElemAt: ["$contact", 0] } } },
-      { $match: { $or: [
-        { "contact.enrichmentVersion": { $ne: CONTACT_ENRICHMENT_VERSION } },
-        { "contact.enrichedAt": null },
-        { "contact.enrichedAt": { $exists: false } },
-        { "contact.enrichedAt": { $lt: staleBefore } },
-      ] } },
+      { $match: mapsOnly
+        ? { $or: [
+          { "contact.mapsEnrichmentVersion": { $ne: MAPS_ENRICHMENT_VERSION } },
+          { "contact.mapsEnrichedAt": null },
+          { "contact.mapsEnrichedAt": { $exists: false } },
+          { "contact.mapsEnrichedAt": { $lt: staleBefore } },
+        ] }
+        : { $or: [
+          { "contact.enrichmentVersion": { $ne: CONTACT_ENRICHMENT_VERSION } },
+          { "contact.enrichedAt": null },
+          { "contact.enrichedAt": { $exists: false } },
+          { "contact.enrichedAt": { $lt: staleBefore } },
+        ] } },
       { $project: { supplierId: 1, name: 1, totalValue: 1, totalContracts: 1 } },
       { $limit: limit },
     ], { maxTimeMS: 120_000 }).toArray()).map(s => ({
@@ -203,9 +235,16 @@ async function main() {
         address: 1, locality: 1, lat: 1, lng: 1, hours: 1, mapsUrl: 1, placeId: 1, placeSource: 1,
         phones: 1, websitePhone: 1, websiteAddress: 1, contactFormUrl: 1, socialLinks: 1,
         enrichmentMethods: 1, rupeEstado: 1, enrichmentVersion: 1,
+        mapsEnrichedAt: 1, mapsEnrichmentVersion: 1, primaryEmail: 1, rubros: 1,
       }).lean();
-      if (existing && existing.enrichmentVersion === CONTACT_ENRICHMENT_VERSION
-        && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore) return;
+      if (existing) {
+        const fresh = mapsOnly
+          ? existing.mapsEnrichmentVersion === MAPS_ENRICHMENT_VERSION
+            && existing.mapsEnrichedAt && existing.mapsEnrichedAt > staleBefore
+          : existing.enrichmentVersion === CONTACT_ENRICHMENT_VERSION
+            && existing.status !== "pending" && existing.enrichedAt && existing.enrichedAt > staleBefore;
+        if (fresh) return;
+      }
 
       const rut = digits(supplierId);
       const name = String(s.name ?? "");
@@ -263,13 +302,19 @@ async function main() {
       let mapsEvidence: PlaceInfo | null = null;
       for (let i = 0; i < resolvers.length; i++) {
         const r = resolvers[i];
-        const res: ResolverResult = await r.resolve({
-          ...input,
-          website,
-          knownAddress: place?.address ?? existing?.address ?? null,
-          knownLocality: place?.locality ?? existing?.locality ?? null,
-          knownWebsiteAddress: websiteAddress,
-        }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
+        let res: ResolverResult;
+        try {
+          res = await r.resolve({
+            ...input,
+            website,
+            knownAddress: place?.address ?? existing?.address ?? null,
+            knownLocality: place?.locality ?? existing?.locality ?? null,
+            knownWebsiteAddress: websiteAddress,
+          });
+        } catch (error) {
+          if (mapsOnly && r.name === "googleMaps") throw error;
+          res = { emails: [] as ContactCandidate[] };
+        }
         const method = enrichmentMethod(r.name);
         if (method && hasResolverEvidence(res)) enrichmentMethods.add(method);
         all.push(...res.emails);
@@ -300,9 +345,9 @@ async function main() {
         // bounds the remaining backends, so no completed-request delay is needed.
       }
 
-      const emails = await mergeCandidates(all);
-      const primaryEmail = pickPrimary(emails);
-      const rubros = await deriveRubros(db, supplierId, 5).catch(() => []);
+      const emails = mapsOnly ? (existing?.emails ?? []) : await mergeCandidates(all);
+      const primaryEmail = mapsOnly ? (existing?.primaryEmail ?? pickPrimary(emails)) : pickPrimary(emails);
+      const rubros = mapsOnly ? (existing?.rubros ?? []) : await deriveRubros(db, supplierId, 5).catch(() => []);
       const hasContact = emails.length > 0 || phones.size > 0 || !!website || !!phone || !!websitePhone || !!websiteAddress || !!contactFormUrl || socialLinks.size > 0;
       const status = hasContact ? "enriched" : "no_contact";
       // RUPE/DEI remain authoritative for the registered address. A verified
@@ -314,25 +359,37 @@ async function main() {
         console.log(`${processed}. ${name} — ${primaryEmail ?? "(none)"} [${emails.length} email(s), ${rubros.length} rubro(s)]${place ? ` 📍${place.source}${phone ? " 📞" : ""}` : ""}`);
         return;
       }
-      await SupplierContactModel.updateOne(
-        { supplierId },
-        { $set: {
+      const now = new Date();
+      const set = mapsOnly
+        ? {
+          supplierId, rut, name, website, websiteSource, phone, phoneSource,
+          phones: [...phones.values()],
+          enrichmentMethods: [...enrichmentMethods],
+          rupeEstado,
+          ...storedPlace,
+          status,
+          priorityScore,
+          mapsEnrichedAt: now,
+          mapsEnrichmentVersion: MAPS_ENRICHMENT_VERSION,
+        }
+        : {
           supplierId, rut, name, emails, primaryEmail, website, websiteSource, phone, phoneSource,
           phones: [...phones.values()], websitePhone, websiteAddress, contactFormUrl, socialLinks: [...socialLinks.values()],
           enrichmentMethods: [...enrichmentMethods],
           rupeEstado,
           ...storedPlace,
-          rubros, status, priorityScore, enrichedAt: new Date(), enrichmentVersion: CONTACT_ENRICHMENT_VERSION,
-        } },
-        { upsert: true },
-      );
+          rubros, status, priorityScore, enrichedAt: now, enrichmentVersion: CONTACT_ENRICHMENT_VERSION,
+        };
+      await SupplierContactModel.updateOne({ supplierId }, { $set: set }, { upsert: true });
       if (processed % 25 === 0) console.log(`   …${processed}/${limit}`);
     } catch (e) {
       errors++;
-      await SupplierContactModel.updateOne(
-        { supplierId },
-        { $set: { status: "error", enrichedAt: new Date() } },
-      ).catch(() => undefined);
+      if (!mapsOnly) {
+        await SupplierContactModel.updateOne(
+          { supplierId },
+          { $set: { status: "error", enrichedAt: new Date() } },
+        ).catch(() => undefined);
+      }
       console.error(`   ⚠️ supplier ${supplierId} failed, skipping:`, e instanceof Error ? e.message : e);
     }
   });
@@ -341,7 +398,7 @@ async function main() {
   console.log(`✅ processed ${processed} ${processRegistry ? "RUPE-only" : "awarded"}; supplier_contacts with a primary email: ${withEmail}; errors: ${errors}`);
   if (allPopulations && !registryOnly) {
     await db.collection("contact_enrichment_state").updateOne(
-      { _id: POPULATION_STATE_ID as any },
+      { _id: populationStateId as any },
       { $set: { nextPopulation: processRegistry ? "awarded" : "registry", updatedAt: new Date() } },
       { upsert: true },
     );

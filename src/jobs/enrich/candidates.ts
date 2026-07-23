@@ -20,6 +20,7 @@ export interface StoredPlace {
 }
 
 export const CONTACT_ENRICHMENT_VERSION = 7;
+export const MAPS_ENRICHMENT_VERSION = 1;
 
 export function registryContactQuery(staleBefore: Date, enrichmentVersion = CONTACT_ENRICHMENT_VERSION) {
   return {
@@ -29,6 +30,17 @@ export function registryContactQuery(staleBefore: Date, enrichmentVersion = CONT
       { enrichedAt: null },
       { enrichedAt: { $exists: false } },
       { enrichedAt: { $lt: staleBefore } },
+    ],
+  };
+}
+
+export function mapsContactQuery(staleBefore: Date, mapsVersion = MAPS_ENRICHMENT_VERSION) {
+  return {
+    $or: [
+      { mapsEnrichmentVersion: { $ne: mapsVersion } },
+      { mapsEnrichedAt: null },
+      { mapsEnrichedAt: { $exists: false } },
+      { mapsEnrichedAt: { $lt: staleBefore } },
     ],
   };
 }

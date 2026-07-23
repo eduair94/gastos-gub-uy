@@ -565,6 +565,10 @@ async function main(): Promise<void> {
       await sc.createIndex({ locality: 1 }, { background: true, name: 'locality_1' })
       await sc.createIndex({ neverAwarded: 1, priorityScore: -1 }, { background: true, name: 'neverAwarded_1_priorityScore_-1' })
       await sc.createIndex({ neverAwarded: 1, enrichedAt: 1 }, { background: true, name: 'neverAwarded_1_enrichedAt_1' })
+      await sc.createIndex(
+        { neverAwarded: 1, mapsEnrichmentVersion: 1, mapsEnrichedAt: 1 },
+        { background: true, name: 'neverAwarded_1_mapsEnrichmentVersion_1_mapsEnrichedAt_1' },
+      )
       console.log('✅ supplier_contacts indexes ensured')
 
       // --- rupe_registry (RUPE supplier registry + geocode cache) ---
@@ -644,7 +648,7 @@ async function main(): Promise<void> {
       console.log('   plan: webhook_deliveries.{dedupeKey unique, status+nextAttemptAt}')
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
-      console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality, neverAwarded+priorityScore, neverAwarded+enrichedAt}')
+      console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality, neverAwarded+priorityScore, neverAwarded+enrichedAt, neverAwarded+mapsEnrichmentVersion+mapsEnrichedAt}')
       console.log('   plan: rupe_registry.{rut unique, normalizedName, estado, geocodeStatus, departamento}')
       console.log('   plan: procurement_contacts.{organismId unique, llamadosCount, dataVersion, searchText text}')
       console.log('   plan: supplier_patterns.{name, totalContracts, totalValue, buyerCount, avgContractValue, onlyDirectAward+supplierId}')
