@@ -20,7 +20,7 @@ const doc = new SupplierContactModel({
   contactFormUrl: "https://example.uy/#contact",
   socialLinks: [{ platform: "instagram", url: "https://instagram.com/example/", label: "@example", source: "website", sourceUrl: "https://example.uy/contacto" }],
   enrichmentMethods: ["crawl4ai", "googleMaps"],
-  enrichmentVersion: 4,
+  enrichmentVersion: 5,
 });
 const err = doc.validateSync();
 assert.equal(err, undefined, `unexpected validation error: ${err?.message}`);

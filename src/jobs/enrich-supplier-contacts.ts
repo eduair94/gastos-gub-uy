@@ -145,7 +145,7 @@ async function main() {
     if (state?.nextPopulation === "registry" || state?.nextPopulation === "awarded") {
       processRegistry = state.nextPopulation === "registry";
     } else {
-      // Start with whichever population has fewer v4 checkpoints. Subsequent
+      // Start with whichever population has fewer current-version checkpoints. Subsequent
       // batches persist their successor so PM2/deploy restarts cannot starve
       // one population by resetting an in-memory counter.
       const [registryDone, awardedDone] = await Promise.all([
@@ -263,7 +263,12 @@ async function main() {
       let mapsEvidence: PlaceInfo | null = null;
       for (let i = 0; i < resolvers.length; i++) {
         const r = resolvers[i];
-        const res: ResolverResult = await r.resolve({ ...input, website }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
+        const res: ResolverResult = await r.resolve({
+          ...input,
+          website,
+          knownAddress: place?.address ?? existing?.address ?? null,
+          knownLocality: place?.locality ?? existing?.locality ?? null,
+        }).catch((): ResolverResult => ({ emails: [] as ContactCandidate[] }));
         const method = enrichmentMethod(r.name);
         if (method && hasResolverEvidence(res)) enrichmentMethods.add(method);
         all.push(...res.emails);

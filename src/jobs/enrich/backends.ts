@@ -37,6 +37,10 @@ const MAPS_PROXY = process.env.MAPS_PROXY_URL || "https://google-maps-proxy.chec
 const UY_BIAS = "rectangle:-35.1,-58.5|-30.0,-53.0";
 
 export interface PlaceCandidate { placeId: string; name: string; address: string }
+export interface FindPlaceOptions {
+  /** `undefined` keeps the Uruguay default; `null` performs a global search. */
+  locationBias?: string | null;
+}
 export interface PlaceDetails {
   name?: string;
   phone?: string | null;
@@ -49,15 +53,20 @@ export interface PlaceDetails {
 }
 
 /** Text → candidate places. Returns [] on any failure (same swallow contract as fetchHtml). */
-export async function findPlace(query: string): Promise<PlaceCandidate[]> {
+export async function findPlace(
+  query: string,
+  options: FindPlaceOptions = {},
+): Promise<PlaceCandidate[]> {
   try {
+    const locationBias = options.locationBias === undefined ? UY_BIAS : options.locationBias;
     const res = await axios.get(`${MAPS_PROXY}/findPlaceFromText`, {
       timeout: 15000,
       headers: { "User-Agent": UA },
       params: {
         input: query, inputtype: "textquery",
         fields: "place_id,name,formatted_address,business_status",
-        locationbias: UY_BIAS, language: "es",
+        ...(locationBias ? { locationbias: locationBias } : {}),
+        language: "es",
       },
     });
     const cands = (res.data?.candidates ?? []) as any[];

@@ -44,5 +44,14 @@ export interface ResolverResult {
   /** Literal ARCE RUPE CSV registration state, when the RUT matched. */
   rupeEstado?: string | null;
 }
-export interface ResolverInput { supplierId: string; rut: string; name: string; website?: string | null }
+export interface ResolverInput {
+  supplierId: string;
+  rut: string;
+  name: string;
+  website?: string | null;
+  /** Best official/stored address known before external lookup (DEI/RUPE first). */
+  knownAddress?: string | null;
+  /** Best official/stored locality/department known before external lookup. */
+  knownLocality?: string | null;
+}
 export interface ContactResolver { name: EmailSource; resolve(input: ResolverInput): Promise<ResolverResult> }

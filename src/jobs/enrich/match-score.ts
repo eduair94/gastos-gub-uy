@@ -3,8 +3,9 @@
 // Local, zero-cost prefilter that decides whether a Google Maps candidate is the
 // same company as a state supplier, BEFORE spending an LLM call. `findPlaceFromText`
 // always returns *something* (querying "Innovaluy SRL" returns Italian firms), so a
-// hard "is it even in Uruguay?" gate plus a fuzzy name score keeps the obvious
-// accepts/rejects off the judge and sends only the ambiguous middle band to Gemini.
+// geographic gate plus a fuzzy name score keeps the obvious accepts/rejects off
+// the judge and sends only the ambiguous middle band to Gemini. A registered
+// address can also validate foreign suppliers, which are legitimate RUPE entries.
 
 // Legal-form tokens carry no identifying signal — "S.A." / "SRL" / "Ltda" appear on
 // half the padrón — so they are stripped before scoring to avoid false matches on them.
@@ -66,10 +67,44 @@ export function scoreMatch(supplierName: string, candidateName: string): number 
   return recall * 0.7 + precision * 0.3;
 }
 
-/** Hard geographic gate — a candidate whose address is not in Uruguay is never the supplier. */
+const ADDRESS_STOP_TOKENS = new Set([
+  "calle", "avenida", "avenue", "street", "strasse", "strada", "ruta", "route",
+  "camino", "road", "departamento", "department", "codigo", "postal",
+]);
+
+/** Stable address fragments used to compare a registered address with Maps. */
+export function addressTokens(s: string): string[] {
+  return normalizeCompanyName(s)
+    .split(" ")
+    .filter(t => (/\d/.test(t) || t.length >= 4) && !ADDRESS_STOP_TOKENS.has(t));
+}
+
+function addressTokenMatches(reference: string, candidate: string): boolean {
+  if (reference === candidate) return true;
+  // Handles small language/spelling variants such as Geneva / Genève.
+  return reference.length >= 5 && candidate.length >= 5
+    && reference.slice(0, 5) === candidate.slice(0, 5);
+}
+
+/**
+ * Recall-oriented overlap of the registered address against a Maps address.
+ * Numbers and distinctive street/city tokens carry the strongest signal.
+ */
+export function scoreAddressOverlap(referenceAddress: string, candidateAddress: string): number {
+  const reference = [...new Set(addressTokens(referenceAddress))];
+  const candidate = [...new Set(addressTokens(candidateAddress))];
+  if (!reference.length || !candidate.length) return 0;
+  const hits = reference.filter(r => candidate.some(c => addressTokenMatches(r, c))).length;
+  return hits / reference.length;
+}
+
+/** True when Maps explicitly places the candidate in Uruguay. */
 export function addressInUruguay(address: string | null | undefined): boolean {
   return /\buruguay\b/i.test(address || "");
 }
+
+/** Registered-address overlap that is strong enough to relax the Uruguay gate. */
+export const ADDRESS_MATCH_SCORE = 0.35;
 
 /** ≥ HIGH_SCORE → accept without asking the LLM. */
 export const HIGH_SCORE = 0.75;

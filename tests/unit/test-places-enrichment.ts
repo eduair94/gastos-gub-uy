@@ -3,10 +3,11 @@
 // backends). No network, no DB — mirrors the node:assert convention of the repo.
 import assert from "node:assert";
 import {
-  normalizeCompanyName, contentTokens, scoreMatch, addressInUruguay, HIGH_SCORE, LOW_SCORE,
+  normalizeCompanyName, contentTokens, scoreMatch, scoreAddressOverlap,
+  addressInUruguay, ADDRESS_MATCH_SCORE, HIGH_SCORE, LOW_SCORE,
 } from "../../src/jobs/enrich/match-score";
 import { createGeminiJudge, type MatchPair } from "../../src/jobs/enrich/match-judge";
-import { createGoogleMapsResolver } from "../../src/jobs/enrich/resolvers/google-maps";
+import { createGoogleMapsResolver, googleMapsQueries } from "../../src/jobs/enrich/resolvers/google-maps";
 import type { PlaceCandidate, PlaceDetails } from "../../src/jobs/enrich/backends";
 
 // --- match-score ------------------------------------------------------------
@@ -34,6 +35,19 @@ import type { PlaceCandidate, PlaceDetails } from "../../src/jobs/enrich/backend
   assert.ok(addressInUruguay("Bolonia 2280, 11500 Montevideo, Uruguay"));
   assert.ok(!addressInUruguay("Via Stradonetto, 185, Pescara PE, Italy"));
   assert.ok(!addressInUruguay(null));
+  assert.ok(
+    scoreAddressOverlap(
+      "Cnel. Brandzen 1956, Montevideo",
+      "Coronel Brandzen 1956, Montevideo, Uruguay",
+    ) >= ADDRESS_MATCH_SCORE,
+  );
+  assert.ok(
+    scoreAddressOverlap(
+      "3, PLACES DES BERGUES, 1211 GENEVA",
+      "Pl. des Bergues 3, 1201 Genève, Switzerland",
+    ) >= ADDRESS_MATCH_SCORE,
+  );
+  assert.ok(scoreAddressOverlap("Brandzen 1956, Montevideo", "Ruta 8, Pando") < ADDRESS_MATCH_SCORE);
   console.log("ok: match-score");
 })();
 
@@ -47,7 +61,9 @@ import type { PlaceCandidate, PlaceDetails } from "../../src/jobs/enrich/backend
   assert.equal(calls, 0, "judge must not call Gemini for empty input");
 
   // Verdicts are de-multiplexed by index.
+  let lastPrompt = "";
   const call = (async (opts: any) => {
+    lastPrompt = opts.prompt as string;
     // echo a match for the item whose candidate contains "agam"
     const verdicts = (opts.prompt as string).split("\n").map((line: string) => {
       const i = Number(line.split(".")[0]);
@@ -58,12 +74,20 @@ import type { PlaceCandidate, PlaceDetails } from "../../src/jobs/enrich/backend
   }) as any;
   const judge = createGeminiJudge({ apiKey: "k", call });
   const pairs: MatchPair[] = [
-    { i: 0, name: "AGAM LIMITADA", candidate: "Laboratorio Agam Ltda.", address: "Montevideo, Uruguay" },
+    {
+      i: 0,
+      name: "AGAM LIMITADA",
+      candidate: "Laboratorio Agam Ltda.",
+      expectedAddress: "Camino Carrasco 123",
+      address: "Camino Carrasco 123, Montevideo, Uruguay",
+    },
     { i: 1, name: "SURYPARK S.A.", candidate: "SoluPark", address: "Montevideo, Uruguay" },
   ];
   const verdicts = await judge(pairs);
   assert.equal(verdicts.get(0)?.match, true);
   assert.equal(verdicts.get(1)?.match, false);
+  assert.match(lastPrompt, /direccion_registro="Camino Carrasco 123"/);
+  assert.match(lastPrompt, /direccion_candidata="Camino Carrasco 123, Montevideo, Uruguay"/);
 
   // A throwing Gemini call must not accept anything (fail closed).
   const throwing = createGeminiJudge({ apiKey: "k", call: (async () => { throw new Error("boom"); }) as any });
@@ -86,6 +110,21 @@ const yesJudge = (async (_p: MatchPair[]) => new Map(_p.map(p => [p.i, { i: p.i,
 const noJudge = (async (_p: MatchPair[]) => new Map()) as any;
 
 (async () => {
+  assert.deepEqual(
+    googleMapsQueries({
+      supplierId: "R/1",
+      rut: "216...",
+      name: "ACME S.A.",
+      knownAddress: "Cnel. Brandzen 1956",
+      knownLocality: "Montevideo",
+    }),
+    [
+      "ACME S.A. Cnel. Brandzen 1956, Montevideo",
+      "ACME S.A. Montevideo",
+      "ACME S.A. Uruguay",
+    ],
+  );
+
   // High-score candidate → accepted WITHOUT the judge (judge would throw if called).
   const throwJudge = (async () => { throw new Error("judge should not be called"); }) as any;
   const r = createGoogleMapsResolver({ ...fakeBackends([
@@ -109,6 +148,75 @@ const noJudge = (async (_p: MatchPair[]) => new Map()) as any;
   const outF = await foreign.resolve({ supplierId: "R/2", rut: "218121080019", name: "Innovaluy SRL" });
   assert.deepEqual(outF.place ?? null, null);
   assert.equal(outF.emails.length, 0);
+
+  // A foreign RUPE supplier is valid when its registered address matches Maps.
+  const vitolDetails: PlaceDetails = {
+    ...DETAILS,
+    name: "Vitol SA",
+    address: "Pl. des Bergues 3, 1201 Genève, Switzerland",
+    mapsUrl: "https://maps.google.com/?cid=vitol",
+  };
+  const foreignSearchOptions: Array<{ locationBias?: string | null } | undefined> = [];
+  const foreignRegistered = createGoogleMapsResolver({
+    findPlace: async (_query, options) => {
+      foreignSearchOptions.push(options);
+      return [{
+        placeId: "vitol",
+        name: "Vitol SA",
+        address: "Pl. des Bergues 3, 1201 Genève, Switzerland",
+      }];
+    },
+    placeDetails: async () => vitolDetails,
+    judge: throwJudge,
+  });
+  const outForeignRegistered = await foreignRegistered.resolve({
+    supplierId: "X/100",
+    rut: "",
+    name: "VITOL S.A.",
+    knownAddress: "3, PLACES DES BERGUES, 1211 GENEVA",
+  });
+  assert.equal(outForeignRegistered.place?.placeId, "vitol");
+  assert.match(outForeignRegistered.place?.address ?? "", /Bergues/);
+  assert.equal(foreignSearchOptions[0]?.locationBias, null);
+
+  // Same legal name at a contradictory address is not auto-accepted.
+  const wrongAddress = createGoogleMapsResolver({ ...fakeBackends([{
+    placeId: "wrong",
+    name: "ACME S.A.",
+    address: "Ruta 8, Pando, Uruguay",
+  }]), judge: noJudge });
+  const outWrongAddress = await wrongAddress.resolve({
+    supplierId: "R/5",
+    rut: "2...",
+    name: "ACME S.A.",
+    knownAddress: "Cnel. Brandzen 1956",
+    knownLocality: "Montevideo",
+  });
+  assert.equal(outWrongAddress.place ?? null, null);
+
+  // If the exact-address query has no result, the broader fallback still runs.
+  const attemptedQueries: string[] = [];
+  const fallback = createGoogleMapsResolver({
+    findPlace: async query => {
+      attemptedQueries.push(query);
+      return query.endsWith("Uruguay")
+        ? [{ placeId: "fallback", name: "ACME S.A.", address: "Montevideo, Uruguay" }]
+        : [];
+    },
+    placeDetails: async () => DETAILS,
+    judge: yesJudge,
+  });
+  const outFallback = await fallback.resolve({
+    supplierId: "R/6",
+    rut: "2...",
+    name: "ACME S.A.",
+    knownAddress: "Dirección desactualizada 999",
+  });
+  assert.equal(outFallback.place?.placeId, "fallback");
+  assert.deepEqual(attemptedQueries, [
+    "ACME S.A. Dirección desactualizada 999",
+    "ACME S.A. Uruguay",
+  ]);
 
   // Uncertain band (CIEMSA ≈ 0.53) + judge says YES → accepted.
   const uncertainYes = createGoogleMapsResolver({ ...fakeBackends([

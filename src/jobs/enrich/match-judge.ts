@@ -15,6 +15,7 @@ export interface MatchPair {
   i: number;
   name: string;
   candidate: string;
+  expectedAddress?: string;
   address?: string;
 }
 export interface MatchVerdict { i: number; match: boolean; conf: number }
@@ -33,7 +34,10 @@ const SYSTEM =
   "Sos un verificador de identidad de empresas uruguayas. Te doy la razon social legal de un " +
   "proveedor del Estado y un candidato de Google Maps. Decidis si son LA MISMA empresa. Las razones " +
   "sociales suelen diferir del nombre comercial (ej: 'BALUMA S.A.' opera como 'Enjoy Punta del Este'), " +
-  "pero NO aceptes coincidencias por una sola palabra generica ni por rubro parecido. Ante la duda, " +
+  "La direccion_registro es la direccion oficial conocida y direccion_candidata es la de Maps: una " +
+  "coincidencia clara de calle, numero o localidad es evidencia fuerte, incluso para proveedores del " +
+  "exterior; una contradiccion clara es motivo para rechazar. NO aceptes coincidencias por una sola " +
+  "palabra generica ni por rubro parecido. Ante la duda, " +
   "match=false. Devolves un veredicto por cada item, con su indice i.";
 
 const SCHEMA: GeminiSchema = {
@@ -72,7 +76,8 @@ export function createGeminiJudge(deps: JudgeDeps): JudgeFn {
     if (!pairs.length) return out;
     for (const group of chunk(pairs, batchSize)) {
       const prompt = group
-        .map(p => `${p.i}. razon_social="${p.name}" | candidato="${p.candidate}" | direccion="${p.address ?? ""}"`)
+        .map(p => `${p.i}. razon_social="${p.name}" | candidato="${p.candidate}" | ` +
+          `direccion_registro="${p.expectedAddress ?? ""}" | direccion_candidata="${p.address ?? ""}"`)
         .join("\n");
       try {
         const res = await call<{ verdicts: MatchVerdict[] }>({
