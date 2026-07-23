@@ -19,6 +19,7 @@ assert.deepEqual(registryContactQuery(staleBefore), {
 });
 
 assert.deepEqual(mapsContactQuery(staleBefore), {
+  neverAwarded: true,
   $or: [
     { mapsEnrichmentVersion: { $ne: 1 } },
     { mapsEnrichedAt: null },

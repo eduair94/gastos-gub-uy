@@ -36,6 +36,7 @@ export function registryContactQuery(staleBefore: Date, enrichmentVersion = CONT
 
 export function mapsContactQuery(staleBefore: Date, mapsVersion = MAPS_ENRICHMENT_VERSION) {
   return {
+    neverAwarded: true,
     $or: [
       { mapsEnrichmentVersion: { $ne: mapsVersion } },
       { mapsEnrichedAt: null },
