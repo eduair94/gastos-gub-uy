@@ -788,6 +788,20 @@
     "contactForm": "Contact form",
     "mapsLink": "View listing on Google Maps",
     "businessHours": "Business hours",
+    "location": {
+      "open": "View details",
+      "openFor": "View location and hours for {name}",
+      "eyebrow": "Location and hours",
+      "title": "Location details for {name}",
+      "address": "Primary address",
+      "websiteAddress": "Address published on the website",
+      "source": "Location source",
+      "openMaps": "Open in Google Maps"
+    },
+    "values": {
+      "showMore": "Show {count} more",
+      "showLess": "Show less"
+    },
     "sort": {
       "priorityDesc": "Most relevant",
       "nameAsc": "Name (A–Z)"

@@ -789,6 +789,20 @@
     "contactForm": "Formulario de contacto",
     "mapsLink": "Ver ficha en Google Maps",
     "businessHours": "Horarios",
+    "location": {
+      "open": "Ver datos",
+      "openFor": "Ver ubicación y horarios de {name}",
+      "eyebrow": "Ubicación y horarios",
+      "title": "Datos del local de {name}",
+      "address": "Dirección principal",
+      "websiteAddress": "Dirección publicada en el sitio",
+      "source": "Fuente de la ubicación",
+      "openMaps": "Abrir en Google Maps"
+    },
+    "values": {
+      "showMore": "Ver {count} más",
+      "showLess": "Mostrar menos"
+    },
     "sort": {
       "priorityDesc": "Mayor relevancia",
       "nameAsc": "Nombre (A–Z)"

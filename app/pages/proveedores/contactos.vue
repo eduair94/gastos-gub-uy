@@ -14,6 +14,7 @@ import type { DataColumn } from '~/components/DataTable.vue'
 interface EmailEntry { email: string, source: string, sourceUrl: string | null, confidence: number, mxValid: boolean, status: string }
 interface PhoneEntry { phone: string, source: string, sourceUrl: string | null, confidence: number }
 interface SocialLink { platform: string, url: string, label: string, source: string, sourceUrl: string | null }
+interface ContactChannel { key: string, label: string, href: string, sourceLabel: string, sourceUrl: string | null, external: boolean }
 interface ContactRow {
   supplierId: string
   rut: string
@@ -70,6 +71,50 @@ function displayPhones(row: ContactRow): PhoneEntry[] {
     fallback.push({ phone: row.websitePhone, source: 'website', sourceUrl: row.website, confidence: 0 })
   }
   return fallback
+}
+function emailChannels(row: ContactRow): ContactChannel[] {
+  return row.emails.map(entry => ({
+    key: entry.email,
+    label: entry.email,
+    href: `mailto:${entry.email}`,
+    sourceLabel: originLabel(entry.source),
+    sourceUrl: entry.sourceUrl,
+    external: false,
+  }))
+}
+function phoneChannels(row: ContactRow): ContactChannel[] {
+  return displayPhones(row).map(entry => ({
+    key: `${entry.phone}-${entry.source}-${entry.sourceUrl || ''}`,
+    label: entry.phone,
+    href: `tel:${entry.phone}`,
+    sourceLabel: originLabel(entry.source),
+    sourceUrl: entry.sourceUrl,
+    external: false,
+  }))
+}
+function moreContactChannels(row: ContactRow): ContactChannel[] {
+  const entries: ContactChannel[] = []
+  if (row.contactFormUrl) {
+    entries.push({
+      key: row.contactFormUrl,
+      label: t('contacts.contactForm'),
+      href: row.contactFormUrl,
+      sourceLabel: '',
+      sourceUrl: null,
+      external: true,
+    })
+  }
+  for (const social of row.socialLinks ?? []) {
+    entries.push({
+      key: social.url,
+      label: social.label || social.platform,
+      href: social.url,
+      sourceLabel: originLabel(social.source),
+      sourceUrl: social.sourceUrl,
+      external: true,
+    })
+  }
+  return entries
 }
 interface RubroFacet { classificationId: string, label: string, count: number }
 
@@ -129,6 +174,8 @@ const verifiedOnly = ref(route.query.verified !== '0')
 const hasPhone = ref(route.query.hasPhone === '1')
 const hasWebsite = ref(route.query.hasWebsite === '1')
 const sort = ref((route.query.sort as string) ?? 'priorityDesc')
+const locationDialogOpen = ref(false)
+const locationContact = shallowRef<ContactRow | null>(null)
 
 const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
   priorityDesc: { sortBy: 'priority', sortOrder: 'desc' },
@@ -219,6 +266,11 @@ function clearSearch() {
   page.value = 1
 }
 
+function openLocation(row: ContactRow) {
+  locationContact.value = row
+  locationDialogOpen.value = true
+}
+
 /** Supplier ids carry a slash; encode each segment for the catch-all detail route. */
 function supplierPath(id: string) {
   return localePath(`/suppliers/${id.split('/').map(encodeURIComponent).join('/')}`)
@@ -254,14 +306,14 @@ const CATEGORIA_ITEMS = computed(() => [
 ])
 
 const columns = computed<DataColumn<ContactRow>[]>(() => [
-  { key: 'name', label: t('contacts.table.name'), primary: true },
-  { key: 'rupeEstado', label: t('contacts.table.rupeStatus') },
-  { key: 'rubro', label: t('contacts.table.rubro') },
-  { key: 'locality', label: t('contacts.table.locality') },
-  { key: 'email', label: t('contacts.table.email') },
-  { key: 'website', label: t('contacts.table.website') },
-  { key: 'phone', label: t('contacts.table.phone'), mono: true },
-  { key: 'moreContact', label: t('contacts.table.moreContact') },
+  { key: 'name', label: t('contacts.table.name'), primary: true, width: '18%', cellClass: 'contact-col--name' },
+  { key: 'rupeEstado', label: t('contacts.table.rupeStatus'), width: '9%', cellClass: 'contact-col--status' },
+  { key: 'rubro', label: t('contacts.table.rubro'), width: '12%', cellClass: 'contact-col--rubro' },
+  { key: 'locality', label: t('contacts.table.locality'), width: '12%', cellClass: 'contact-col--locality' },
+  { key: 'email', label: t('contacts.table.email'), width: '18%', cellClass: 'contact-col--email' },
+  { key: 'website', label: t('contacts.table.website'), width: '12%', cellClass: 'contact-col--website' },
+  { key: 'phone', label: t('contacts.table.phone'), mono: true, width: '10%', cellClass: 'contact-col--phone' },
+  { key: 'moreContact', label: t('contacts.table.moreContact'), width: '9%', cellClass: 'contact-col--more' },
 ])
 
 const orgLd = useOrgLd()
@@ -593,10 +645,11 @@ useSeo(() => ({
 
       <DataTable
         v-else
+        class="contacts-table"
         :columns="columns"
         :rows="contacts"
         :row-key="(r) => r.supplierId"
-        min-width="820px"
+        min-width="0"
       >
         <template #cell:name="{ row }">
           <div class="namecell">
@@ -647,75 +700,24 @@ useSeo(() => ({
           <span v-else>—</span>
         </template>
         <template #cell:locality="{ row }">
-          <div>{{ row.locality || '—' }}</div>
-          <div
-            v-if="row.address"
-            class="fielddetail"
+          <button
+            class="locationcell"
+            type="button"
+            :aria-label="t('contacts.location.openFor', { name: row.name })"
+            @click="openLocation(row)"
           >
-            {{ row.address }}
-            <a
-              v-if="row.placeSource === 'googleMaps' && row.mapsUrl"
-              :href="row.mapsUrl"
-              target="_blank"
-              rel="nofollow noopener"
-              class="fieldsrc fieldsrc--link"
-            >{{ originLabel(row.placeSource) }}</a>
-            <span
-              v-else-if="originLabel(row.placeSource)"
-              class="fieldsrc"
-            >{{ originLabel(row.placeSource) }}</span>
-          </div>
-          <div
-            v-if="row.hours"
-            class="fielddetail"
-          >{{ t('contacts.businessHours') }}: {{ row.hours }}</div>
-          <a
-            v-if="row.mapsUrl"
-            :href="row.mapsUrl"
-            target="_blank"
-            rel="nofollow noopener"
-            class="link"
-          >{{ t('contacts.mapsLink') }}</a>
-          <div
-            v-if="row.websiteAddress && row.websiteAddress !== row.address"
-            class="fielddetail"
-          >
-            {{ row.websiteAddress }}
-            <span class="fieldsrc">{{ t('contacts.source.website') }}</span>
-          </div>
+            <span class="locationcell__summary">{{ row.locality || '—' }}</span>
+            <span class="locationcell__action">
+              {{ t('contacts.location.open') }}
+              <v-icon size="15">mdi-map-marker-outline</v-icon>
+            </span>
+          </button>
         </template>
         <template #cell:email="{ row }">
-          <div
-            v-if="row.emails.length"
-            style="display:flex;flex-direction:column;gap:2px"
-          >
-            <div
-              v-for="e in row.emails"
-              :key="e.email"
-              class="fieldstack"
-            >
-              <a
-                :href="`mailto:${e.email}`"
-                class="link"
-              >{{ e.email }}</a>
-              <a
-                v-if="e.sourceUrl"
-                :href="e.sourceUrl"
-                target="_blank"
-                rel="nofollow noopener"
-                class="fieldsrc fieldsrc--link"
-              >{{ originLabel(e.source) }}</a>
-              <span
-                v-else
-                class="fieldsrc"
-              >{{ originLabel(e.source) }}</span>
-            </div>
-          </div>
-          <span
-            v-else-if="row.neverAwarded"
-            style="opacity:0.7"
-          >{{ t('contacts.noPublicEmail') }}</span>
-          <span v-else>—</span>
+          <ContactChannelList
+            :entries="emailChannels(row)"
+            :empty-label="row.neverAwarded ? t('contacts.noPublicEmail') : '—'"
+          />
         </template>
         <template #cell:website="{ row }">
           <template v-if="row.website">
@@ -739,70 +741,19 @@ useSeo(() => ({
           <span v-else>—</span>
         </template>
         <template #cell:phone="{ row }">
-          <div
-            v-if="displayPhones(row).length"
-            class="fieldstack"
-          >
-            <div
-              v-for="entry in displayPhones(row)"
-              :key="`${entry.phone}-${entry.source}-${entry.sourceUrl || ''}`"
-              class="fieldstack"
-            >
-              <a
-                :href="`tel:${entry.phone}`"
-                class="link"
-              >{{ entry.phone }}</a>
-              <a
-                v-if="entry.sourceUrl"
-                :href="entry.sourceUrl"
-                target="_blank"
-                rel="nofollow noopener"
-                class="fieldsrc fieldsrc--link"
-              >{{ originLabel(entry.source) }}</a>
-              <span
-                v-else-if="originLabel(entry.source)"
-                class="fieldsrc"
-              >{{ originLabel(entry.source) }}</span>
-            </div>
-          </div>
-          <span v-else>—</span>
+          <ContactChannelList :entries="phoneChannels(row)" />
         </template>
         <template #cell:moreContact="{ row }">
-          <div
-            v-if="row.contactFormUrl || row.socialLinks?.length"
-            class="morecontact"
-          >
-            <a
-              v-if="row.contactFormUrl"
-              :href="row.contactFormUrl"
-              target="_blank"
-              rel="nofollow noopener"
-              class="link"
-            >{{ t('contacts.contactForm') }}</a>
-            <div
-              v-for="social in row.socialLinks"
-              :key="social.url"
-              class="fieldstack"
-            >
-              <a
-                :href="social.url"
-                target="_blank"
-                rel="nofollow noopener"
-                class="link"
-              >{{ social.label || social.platform }}</a>
-              <a
-                v-if="social.sourceUrl"
-                :href="social.sourceUrl"
-                target="_blank"
-                rel="nofollow noopener"
-                class="fieldsrc fieldsrc--link"
-              >{{ originLabel(social.source) }}</a>
-            </div>
-          </div>
-          <span v-else>—</span>
+          <ContactChannelList :entries="moreContactChannels(row)" />
         </template>
       </DataTable>
     </PaginatedList>
+
+    <ContactLocationDialog
+      v-model="locationDialogOpen"
+      :contact="locationContact"
+      :source-label="locationContact ? originLabel(locationContact.placeSource) : ''"
+    />
 
     <!-- ===== Compliance / source ===== -->
     <div class="notice">
@@ -997,6 +948,7 @@ useSeo(() => ({
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
+  min-width: 0;
   gap: var(--s-2);
 }
 
@@ -1004,10 +956,12 @@ useSeo(() => ({
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  min-width: 0;
   gap: 2px;
 }
 
 .namecell__link, .namecell__name {
+  overflow-wrap: anywhere;
   font-weight: 600;
   color: var(--text);
 }
@@ -1018,9 +972,57 @@ useSeo(() => ({
 
 .namecell__link:hover { color: var(--celeste-deep); text-decoration: underline; }
 
-.link { color: var(--celeste-deep); text-decoration: none; }
-.fieldstack { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
-.fielddetail { margin-top: 2px; font-size: 0.85em; color: var(--text-muted); }
+.contacts-table :deep(.dt__table) { table-layout: fixed; }
+.contacts-table :deep(.dt__td),
+.contacts-table :deep(.dt__value) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.locationcell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.locationcell__summary {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.locationcell__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: var(--s-1);
+  color: var(--celeste-deep);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+
+.locationcell:hover .locationcell__action {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link {
+  color: var(--celeste-deep);
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
 .fieldsrc {
   display: block;
   font-family: var(--font-mono);
@@ -1029,7 +1031,6 @@ useSeo(() => ({
   line-height: 1.25;
 }
 .fieldsrc--link { text-decoration: underline; text-underline-offset: 2px; }
-.morecontact { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 
 /* Source/method badges (which enrichment produced the record). */
 .srcbadges { display: flex; flex-wrap: wrap; gap: 4px; }

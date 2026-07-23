@@ -1,5 +1,6 @@
 import { load } from "cheerio";
 import type { ISocialLink, SocialPlatform } from "../../../shared/models/supplier_contacts";
+import { cleanContactText } from "../../../shared/utils/contact-text";
 import { safeSocialLabel } from "../../../shared/utils/social-label";
 
 export interface WebsiteContactDetails {
@@ -144,7 +145,10 @@ export function extractWebsiteContactDetails(html: string, pageUrl: string): Web
     const direct = cleanText($(element).contents().filter((_i, node) => node.type === "text").text());
     if (direct && direct.length <= 180) fragments.push(direct);
   });
-  if (!fragments.length) fragments.push(cleanText($.root().text()));
+  if (!fragments.length) {
+    const fallback = cleanContactText($.root().text(), 220);
+    if (fallback) fragments.push(fallback);
+  }
 
   for (const fragment of fragments) {
     for (const match of fragment.matchAll(PHONE_RE)) {
@@ -157,8 +161,11 @@ export function extractWebsiteContactDetails(html: string, pageUrl: string): Web
   let address: string | null = null;
   for (const fragment of fragments) {
     if (ADDRESS_HINT.test(fragment) && /\d{2,5}/.test(fragment) && !/^https?:/i.test(fragment)) {
-      address = fragment.replace(/^[\s:|,-]+|[\s:|,-]+$/g, "");
-      break;
+      const candidate = cleanContactText(fragment.replace(/^[\s:|,-]+|[\s:|,-]+$/g, ""), 220);
+      if (candidate) {
+        address = candidate;
+        break;
+      }
     }
   }
 

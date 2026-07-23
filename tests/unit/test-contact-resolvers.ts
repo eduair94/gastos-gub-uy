@@ -116,6 +116,15 @@ function fakeDb(rows: any[]) {
 })();
 
 (() => {
+  // A page without a real contact scope previously promoted the entire body
+  // (including CSS) to `websiteAddress`.
+  const html = `<main>Avenida Falsa 1234 ${"body{display:block}".repeat(30)}</main>`;
+  const details = extractWebsiteContactDetails(html, "https://example.com/");
+  assert.equal(details.address, null);
+  console.log("ok: oversized website body is not an address");
+})();
+
+(() => {
   // Production regression: Grupo Vía Central groups the last four landline
   // digits as 2+2 and wraps the country code, while exposing a canonical tel:.
   const html = `

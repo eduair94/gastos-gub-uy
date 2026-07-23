@@ -5,11 +5,12 @@
  * `sanitizeContact`, so contact visibility and suppressed-email handling
  * can only ever live in one place and cannot be bypassed by one endpoint.
  */
+import { cleanContactText } from '../../../shared/utils/contact-text'
+import { safeSocialLabel } from '../../../shared/utils/social-label'
 import type { ISupplierContact } from './models'
 import { DeiCompanyModel, RupeRegistryModel, SupplierPatternModel } from './models'
 import { escapeRegex, sanitizeSearch } from './query'
 import { fetchNamesByCategory, CATEGORIES } from './enrichment'
-import { safeSocialLabel } from '../../../shared/utils/social-label'
 
 /** The enrichment METHOD(s) that produced a record — shown as badges (never exported). */
 export type ContactMethod = 'crawl4ai' | 'googleMaps' | 'dei' | 'rupe' | 'impo'
@@ -406,14 +407,14 @@ export function sanitizeContact(
     phoneSource,
     phones,
     websitePhone: doc.websitePhone ?? null,
-    websiteAddress: doc.websiteAddress ?? null,
+    websiteAddress: cleanContactText(doc.websiteAddress, 240),
     contactFormUrl: publicSourceUrl(doc.contactFormUrl),
     socialLinks,
-    locality: doc.locality ?? null,
-    address: doc.address ?? null,
+    locality: cleanContactText(doc.locality, 160),
+    address: cleanContactText(doc.address, 320),
     placeSource: doc.placeSource ?? null,
     mapsUrl,
-    hours: doc.hours ?? null,
+    hours: cleanContactText(doc.hours, 800),
     lat: doc.lat ?? null,
     lng: doc.lng ?? null,
     rubro: rubros[0]?.label || null,

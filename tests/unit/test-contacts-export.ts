@@ -90,6 +90,20 @@ assert.equal(rawSocialDoc.contactFormUrl, null, "non-URL form evidence is suppre
 assert.equal(rawSocialDoc.socialLinks[0]?.label, "LinkedIn", "raw HTML social labels fall back to the platform");
 assert.ok(!JSON.stringify(rawSocialDoc).includes("<img"));
 
+// Historical Crawl4AI rows can contain an entire page stylesheet in an
+// address-like field. Public reads and every export share this sanitizer.
+const pollutedLocationDoc = sanitizeContact({
+  supplierId: "R/CSS", rut: "2", name: "CSS SA", emails: [],
+  locality: "<main>Montevideo</main>",
+  address: "Av. Italia 1234",
+  websiteAddress: `Dirección ${"body{display:block}".repeat(30)}`,
+  hours: `lunes: 9-18 ${"@media screen {}".repeat(60)}`,
+} as never);
+assert.equal(pollutedLocationDoc.locality, null, "markup is not exposed as a locality");
+assert.equal(pollutedLocationDoc.address, "Av. Italia 1234", "plausible addresses remain visible");
+assert.equal(pollutedLocationDoc.websiteAddress, null, "oversized scraped page text is suppressed");
+assert.equal(pollutedLocationDoc.hours, null, "oversized stylesheet-like hours are suppressed");
+
 // Google Maps phone/website/place remain visible with their listing URL.
 const gmapsDoc = sanitizeContact({
   supplierId: "R200", rut: "200", name: "BETA SA",
