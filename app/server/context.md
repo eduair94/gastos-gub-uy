@@ -8,9 +8,8 @@ The Nuxt/Nitro HTTP layer: 85 file-routed endpoints under [api/](api/) that read
 |---|---|
 | [middleware/apiAuth.ts](middleware/apiAuth.ts) | #1 alphabetically. `Authorization: Bearer gk_live_…` / `x-api-key` → `event.context.apiKey` + `.user`. Hard 401 on bad key (`apiAuth.ts:40,44`). Throttles `lastUsedAt` writes to 1/min/key. |
 | [middleware/auth.ts](middleware/auth.ts) | #2. Firebase `__session` cookie → `event.context.user` (lean doc) or `null`. Never throws. Bails if `apiKey` already set (`auth.ts:20`). |
-| [middleware/cache.ts](middleware/cache.ts) | #3. Read-through in-process cache (3 `SimpleCache` maps: query 5min / filter 30min / static 1h) for whitelisted public GETs. A HIT returns from middleware. Also exports `storeCachedResponse`. |
-| [middleware/rateLimit.ts](middleware/rateLimit.ts) | #4. Fixed-window limiters for `/api/*` only: anon 60/min, `/api/search` 30/min, keyed read 600/min, keyed write 120/min. |
-| [plugins/cache-store.ts](plugins/cache-store.ts) | Nitro `beforeResponse` hook — the WRITE half of the cache. Delete it and `cache.ts` is a silent 100%-miss no-op. |
+| [middleware/rateLimit.ts](middleware/rateLimit.ts) | #3. Fixed-window limiters for `/api/*` only: anon 60/min, `/api/search` 30/min, keyed read 600/min, keyed write 120/min. |
+| [../nuxt.config.ts](../nuxt.config.ts) `routeRules` / `nitro.storage` | Nitro SWR response cache for explicitly listed public GET routes. Production mount `apiCache` is loopback Redis (24h storage TTL); dev is memory. Redis errors fall through to the real handler. |
 | [routes/openapi.json.get.ts](routes/openapi.json.get.ts) | `GET /openapi.json`, CORS `*`, `cache-control: public, max-age=3600`. Not under `/api` → not rate-limited/cached. |
 | [routes/docs.get.ts](routes/docs.get.ts) | `GET /docs` Scalar reference. Scalar pinned to CDN `@scalar/api-reference@1.62.9` (`docs.get.ts:109`); has its OWN inline gtag block (`docs.get.ts:39-55`) because Nuxt plugins don't run on Nitro routes. |
 | [api/contracts/index.get.ts](api/contracts/index.get.ts) | Contract explorer AND the shared filter compiler: exports `ContractFilters`, `buildContractFilters()` (:96), `toMatchDocument()` (:265). Page cap 100, limit cap 50, count capped at 10001. |
@@ -53,7 +52,7 @@ cd app && npm run type-check     # nuxt typecheck
 cd app && npm run lint           # eslint .
 
 curl -s localhost:3600/api/health
-curl -si 'localhost:3600/api/contracts?limit=2' | grep -i x-cache      # HIT/MISS from middleware/cache.ts
+curl -si 'localhost:3600/api/contracts?limit=2' | grep -i cache-control # Nitro SWR policy
 curl -s 'localhost:3600/api/v1/tenders/changes?limit=2'                # cursor feed + nextCursor
 curl -s -H 'x-api-key: gk_live_XXXXXXXX_...' localhost:3600/api/v1/webhooks
 curl -s localhost:3600/openapi.json | head
@@ -79,14 +78,13 @@ npm run webhooks                 # repo root — src/jobs/webhooks/run.ts, produ
 
 ## Gotchas
 
-- **Middleware order is ALPHABETICAL and the code depends on it**: `apiAuth.ts → auth.ts → cache.ts → rateLimit.ts`. `auth.ts:20` bails when `event.context.apiKey` is set; `rateLimit.ts:141` reads `event.context.apiKey`. Renaming any middleware file reorders the chain and silently breaks both.
-- **A cache HIT ends the request from middleware** (`cache.ts:148-152`), so `rateLimit.ts` never runs on hits — cached endpoints are effectively unlimited for repeat queries.
-- **Cache leaks per-user data.** `cache.ts:107` routes anything containing `/analytics/` into the 1-hour `staticCache`, and the key (`cache.ts:90-101`) is url+query ONLY — no user dimension. But `api/analytics/anomalies.get.ts:221-224` and `api/analytics/anomalies/[id].get.ts:46` embed `feedback.myVote`/`myComment` for the *requesting* user. The first caller's vote is served to everyone else for an hour. The plugin's claim that "None of those read the session" (`plugins/cache-store.ts:14`) is stale. Fix by keying on uid or stripping `myVote` before storing.
-- **`/api/search` is NEVER cached.** The whitelist entry is `'/api/search/'` WITH a trailing slash (`cache.ts:127`) while the real URL is `/api/search?q=…`, so `startsWith` is always false. This is the exact bug class already fixed in `rateLimit.ts:117-124` — the cache copy was not fixed.
+- **Middleware order is ALPHABETICAL and the code depends on it**: `apiAuth.ts → auth.ts → rateLimit.ts`. `auth.ts:20` bails when `event.context.apiKey` is set; `rateLimit.ts:141` reads `event.context.apiKey`. Nitro route caching wraps the route handler, so rate limiting still runs on cache hits.
+- **Only routes explicitly listed in `nuxt.config.ts:routeRules` are Redis-cached.** The key includes the full path + query string. Do not replace the list with `/api/**`: account/write routes and arbitrary POSTs must never enter a shared response cache.
+- **The anomalies list is personalized.** Its rule varies by `cookie`, `authorization`, and `x-api-key`, preventing `feedback.myVote`/`myComment` from crossing callers. Any new cached route that embeds request-user state needs the same treatment or must stay uncached.
+- **Redis is an availability layer, not a boot dependency.** Nitro logs a cache read/write failure and executes the real handler. SWR serves the last good entry while one background refresh runs; the Redis mount evicts entries after 24h and production Redis is capped separately.
 - **`exportLimiter` (5/min, `rateLimit.ts:60,127-129`) is dead code**: `find api -name '*.ts'` shows no `export` route. Don't assume exports are throttled.
 - **Rate limiting is disabled for loopback/unknown-IP requests** (`rateLimit.ts:100-115,158-162`): `getClientId` returns `null` when there's no `cf-connecting-ip`/`x-forwarded-for`/`x-real-ip` and the socket is loopback. Deliberate — SSR `$fetch` would otherwise 429 itself and render "No encontramos ese contrato". Consequence: you cannot reproduce a 429 locally without faking a header, and a direct-to-origin attacker hitting 127.0.0.1 is unlimited.
-- **All limiter/cache state is per-process, in-memory `Map`s** (`rateLimit.ts:11`, `cache.ts:11`). Under pm2 cluster mode the effective limit is N× configured, and every deploy resets every window. Same for [utils/rates.ts](utils/rates.ts):11, [api/pauta.get.ts](api/pauta.get.ts):25, and the curros/recopilatorios index caches.
-- **The cache WRITE only exists in [plugins/cache-store.ts](plugins/cache-store.ts).** Delete it and `cache.ts` degrades silently to 100% MISS with no error (documented at `cache.ts:161-170` — that was its state for its whole life). `storeCachedResponse` refuses to store `success:false` bodies or anything with a `statusCode` key (`cache.ts:177-179`).
+- **Limiter state is still per-process** (`rateLimit.ts:11`), so two pm2 workers make its effective ceiling 2× configured. The Nitro response cache is shared through Redis, but [utils/rates.ts](utils/rates.ts):11, [api/pauta.get.ts](api/pauta.get.ts):25, and the curros/recopilatorios module caches remain per-worker.
 - **`/api/contracts` hard-caps `page` at 100 and throws 400 past it** (`api/contracts/index.get.ts:330-336`), caps `limit` at 50, and caps counts at 10001 with `totalIsCapped:true` (`:298-299`) → the UI must render "10,000+". `?count=false` skips the count and `total` comes back `null`; `hasMore` is then inferred from row count.
 - **`/api/v1/awards/changes` sorts on `date` ALONE with no `_id` tiebreak** so it can ride the `tag_1_date_-1` index over 2.2M releases (`api/v1/awards/changes.get.ts:8-13,33`). Awards sharing an identical `date` at a page boundary CAN be skipped. Do NOT "fix" this by adding the tiebreak — it forces a blocking in-memory sort and times out.
 - **`apiAuth.ts` throws a hard 401 on any malformed/revoked key** (`:40,44`); it never downgrades to anonymous. Sending a stale key to a *public* endpoint fails where sending no header succeeds.

@@ -9,6 +9,7 @@
 //  - The build runs on a Nuxt-supported Node (18/20/22); it refuses/relocates
 //    off Node >=23 (the original outage trigger).
 //  - A failed or broken build NEVER touches the live .output — the site stays up.
+//  - The old cluster workers keep serving during the atomic swap + rolling reload.
 //  - Every swap/rollback restores a serving .output if any single step fails.
 //  - After the swap the site is health-checked; a bad deploy auto-rolls-back.
 //
@@ -19,7 +20,7 @@
 import { spawnSync, spawn } from 'node:child_process'
 import {
   existsSync, openSync, closeSync, writeSync, readFileSync,
-  rmSync, renameSync, unlinkSync, readdirSync, statSync,
+  cpSync, rmSync, renameSync, unlinkSync, readdirSync, statSync,
 } from 'node:fs'
 import { resolve, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -42,6 +43,7 @@ const PM2_APP = 'gastos-gub-dashboard'
 const PORT = Number(process.env.DASHBOARD_PORT || 3600)
 const SMOKE_PORT = Number(process.env.SMOKE_PORT || 3799)
 const HEALTH_PATH = '/api/contracts?limit=1&hasAmount=true'
+const HEALTH_NONCE = `${Date.now()}-${process.pid}`
 const BUILD_RETRIES = 5
 const HEALTH_TIMEOUT_MS = 30_000
 const SMOKE_TIMEOUT_MS = 30_000
@@ -169,14 +171,33 @@ function pm2(args, { check = false } = {}) {
   return r
 }
 
-function pm2StartOrRestart() {
-  // Plain restart (NOT --update-env): reuse the launch env so the ecosystem
-  // env_file '.env' (Mongo/Firebase) is preserved. --update-env would overlay
-  // the caller's shell env and could drop those vars.
-  const r = pm2(['restart', PM2_APP])
+function pm2RollingReload() {
+  // Cluster reload starts replacement workers before retiring the old ones.
+  // Do NOT use --update-env: reusing the launch env preserves app/.env values.
+  const r = pm2(['reload', PM2_APP])
   if (r.status === 0) return
-  warn('pm2 restart failed (process may not exist); starting from ecosystem')
-  pm2(['start', ECOSYSTEM, '--only', PM2_APP], { check: true })
+
+  // Starting a genuinely missing app is safe. If the app exists, however, a
+  // failed rolling reload must trigger rollback — a blind restart would turn a
+  // deploy problem into the exact full-site interruption this script prevents.
+  const described = pm2(['describe', PM2_APP])
+  if (described.status === 0) {
+    throw new Error(`pm2 rolling reload failed: ${(r.stderr || r.stdout || 'unknown error').trim()}`)
+  }
+  const started = pm2(['start', ECOSYSTEM, '--only', PM2_APP])
+  if (started.status !== 0) {
+    throw new Error(`pm2 start failed: ${(started.stderr || started.stdout || 'unknown error').trim()}`)
+  }
+}
+
+function pm2RestartForRecovery() {
+  // Recovery-only fallback after files have already been restored.
+  const restarted = pm2(['restart', PM2_APP])
+  if (restarted.status === 0) return
+  const started = pm2(['start', ECOSYSTEM, '--only', PM2_APP], { check: true })
+  if (started.status !== 0) {
+    throw new Error(`pm2 recovery start failed: ${(started.stderr || started.stdout || 'unknown error').trim()}`)
+  }
 }
 
 // --------------------------------------------------------------- env for smoke
@@ -211,8 +232,11 @@ async function probe(port, path) {
 async function waitHealthy(port, timeoutMs, label) {
   const deadline = Date.now() + timeoutMs
   let last = 'no attempt'
+  // `/api/contracts` is Redis-backed. A per-stage nonce ensures deployment
+  // checks exercise this process + Mongo instead of accepting an old cache hit.
+  const healthPath = `${HEALTH_PATH}&__deploy_health=${encodeURIComponent(`${HEALTH_NONCE}-${label}`)}`
   while (Date.now() < deadline) {
-    const r = await probe(port, HEALTH_PATH)
+    const r = await probe(port, healthPath)
     if (r.ok) return true
     last = r.reason
     await new Promise(res => setTimeout(res, 2000))
@@ -282,6 +306,20 @@ function build(buildNode) {
   return false
 }
 
+// Keep the previous build's hashed server chunks and browser assets as fallback
+// files in the staged output. During pm2's rolling overlap an old worker can
+// still lazy-import one of its chunks, and an already-open browser can request
+// an old asset. Hashes make this merge collision-safe: the new build always wins.
+function mergePreviousBuildFallbacks() {
+  if (!existsSync(OUTPUT)) return
+  log('merging previous hashed chunks/assets into staging for rolling compatibility')
+  cpSync(OUTPUT, NEXT, {
+    recursive: true,
+    force: false,
+    errorOnExist: false,
+  })
+}
+
 // -------------------------------------------------------------- smoke (verify)
 async function smoke(dir) {
   const entry = join(dir, 'server', 'index.mjs')
@@ -302,7 +340,8 @@ async function smoke(dir) {
     let last = 'no attempt'
     while (Date.now() < deadline) {
       if (child.exitCode !== null) return { ok: false, reason: `smoke server exited early (code ${child.exitCode})` }
-      const r = await probe(SMOKE_PORT, HEALTH_PATH)
+      const smokeHealthPath = `${HEALTH_PATH}&__deploy_health=${encodeURIComponent(`${HEALTH_NONCE}-smoke`)}`
+      const r = await probe(SMOKE_PORT, smokeHealthPath)
       if (r.ok) return { ok: true }
       last = r.reason
       await new Promise(res => setTimeout(res, 2000))
@@ -320,9 +359,9 @@ async function smoke(dir) {
 }
 
 // -------------------------------------------------------------- swap / rollback
-// Precondition: pm2 stopped. Moves NEXT into OUTPUT, keeping the old build at
-// PREV. On ANY partial failure it restores a serving OUTPUT and throws, so the
-// caller can bring the previous build back up — the live dir is never left gone.
+// Moves NEXT into OUTPUT while old cluster workers keep serving, retaining the
+// old build at PREV until the replacement workers pass the health gate. On ANY
+// partial failure it restores a serving OUTPUT and throws.
 function swapInPlace() {
   if (existsSync(PREV)) {
     rmrf(PREV)
@@ -346,18 +385,22 @@ function swapInPlace() {
 function rollback() {
   warn('ROLLING BACK to previous build')
   if (!existsSync(PREV)) die('rollback impossible: no .output-prev. Investigate manually.', 2)
-  pm2(['stop', PM2_APP], { check: true })
-  // Move the bad build aside (do not delete before the good one is restored).
+  // Move the bad build aside while its workers can still answer, restore the
+  // previous files, then roll workers back without a full-process stop.
   rmrf(FAILED)
   if (existsSync(OUTPUT)) { try { safeRename(OUTPUT, FAILED) } catch { rmrf(OUTPUT) } }
   try { safeRename(PREV, OUTPUT) }
   catch (e) {
     if (!existsSync(OUTPUT) && existsSync(FAILED)) { try { safeRename(FAILED, OUTPUT) } catch { /* nothing left to try */ } }
-    pm2StartOrRestart()
+    pm2RestartForRecovery()
     die(`rollback rename failed: ${e.message}. MANUAL INTERVENTION NEEDED.`, 2)
   }
+  try { pm2RollingReload() }
+  catch (e) {
+    warn(`rolling rollback failed (${e.message}); using recovery restart`)
+    pm2RestartForRecovery()
+  }
   rmrf(FAILED)
-  pm2StartOrRestart()
   pm2(['save'])
 }
 
@@ -372,6 +415,7 @@ async function main() {
   const buildNode = resolveBuildNode()
 
   if (!build(buildNode)) die(`build failed after ${BUILD_RETRIES} attempts. Live site untouched.`)
+  mergePreviousBuildFallbacks()
 
   log('smoke-booting staged build…')
   const s = await smoke(NEXT)
@@ -380,19 +424,25 @@ async function main() {
 
   if (DRY_RUN) { log('dry-run: skipping swap + pm2. Staged build is at .output-next.'); return }
 
-  // ---- swap (with restore-on-failure) ----
+  // ---- atomic files swap + rolling workers (with restore-on-failure) ----
   log('swapping .output …')
-  pm2(['stop', PM2_APP], { check: true })
   try {
     swapInPlace()
   }
   catch (e) {
-    // swapInPlace restored the previous .output (when one existed); bring it up.
-    pm2StartOrRestart()
+    // swapInPlace restored the previous .output (when one existed).
     pm2(['save'])
     die(`swap failed: ${e.message}. Restored previous build.`, 3)
   }
-  pm2StartOrRestart()
+  try {
+    pm2RollingReload()
+  }
+  catch (e) {
+    warn(`rolling reload failed after swap: ${e.message}`)
+    rollback()
+    const back = await waitHealthy(PORT, HEALTH_TIMEOUT_MS, 'post-reload-rollback')
+    die(`deploy reload failed — rolled back (rollback healthy: ${back}).`, 3)
+  }
   pm2(['save'])
 
   // ---- health + auto-rollback ----

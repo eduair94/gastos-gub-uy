@@ -49,7 +49,9 @@ module.exports = {
       // process shows "online" but nothing listens). Use fork there; cluster
       // elsewhere where it works and scales across cores.
       exec_mode: process.platform === 'win32' ? 'fork' : 'cluster',
-      instances: 1,
+      // Two workers keep the site available if one crashes or is replaced
+      // during a rolling deployment. The 167 host has enough headroom for both.
+      instances: 2,
       script: './.output/server/index.mjs',
       cwd: './app',
       env: {

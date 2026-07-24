@@ -110,7 +110,7 @@ npm run screenshots
 
 Push to `master` → GitHub Actions on a self-hosted runner **on the prod box** →
 [scripts/deploy-dashboard.mjs](scripts/deploy-dashboard.mjs) builds to staging, health-checks, swaps
-atomically, and auto-rolls-back on failure. Full story: [docs/context.md](docs/context.md) and
+atomically, rolling-reloads two pm2 workers, and auto-rolls-back on failure. Full story: [docs/context.md](docs/context.md) and
 [docs/guides/](docs/guides/).
 
 ## Verifying work in a test-less repo

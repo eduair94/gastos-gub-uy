@@ -33,6 +33,21 @@ const firebaseWeb = (() => {
   return env
 })()
 
+// Nitro's cache key includes the complete request path + query string. These
+// rules therefore protect the hot, public read endpoints without conflating
+// different explorer filters. Redis is the production L2: entries survive a
+// rolling pm2 reload and SWR keeps serving the last good response while Mongo
+// refreshes in the background. Development uses the memory mount below.
+const apiCache = (maxAge: number, varies?: string[]) => ({
+  cache: {
+    base: 'apiCache',
+    maxAge,
+    swr: true,
+    staleMaxAge: 24 * 60 * 60,
+    ...(varies ? { varies } : {}),
+  },
+})
+
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
@@ -270,9 +285,65 @@ export default defineNuxtConfig({
     disallow: [],
   },
 
+  routeRules: {
+    // Homepage + explorer hot paths.
+    '/api/dashboard/**': apiCache(5 * 60),
+    '/api/contracts': apiCache(60),
+    '/api/contracts/stats': apiCache(5 * 60),
+    '/api/contracts/filters': apiCache(30 * 60),
+    '/api/search': apiCache(60),
+    '/api/contactos': apiCache(2 * 60),
+
+    // Public directories and profiles.
+    '/api/suppliers': apiCache(2 * 60),
+    '/api/suppliers/autocomplete': apiCache(5 * 60),
+    '/api/suppliers/dei-map': apiCache(10 * 60),
+    '/api/suppliers/**': apiCache(2 * 60),
+    '/api/buyers': apiCache(2 * 60),
+    '/api/buyers/**': apiCache(2 * 60),
+
+    // Precomputed/public analytics. The anomalies list includes the requesting
+    // user's vote/comment, so its cache must vary by every supported auth input.
+    '/api/analytics/anomalies': apiCache(2 * 60, ['cookie', 'authorization', 'x-api-key']),
+    '/api/analytics/anomalies/stats': apiCache(5 * 60),
+    '/api/analytics/anomalies/load-error-stats': apiCache(5 * 60),
+    '/api/analytics/anomalies/facets': apiCache(30 * 60),
+    '/api/analytics/top-suppliers': apiCache(10 * 60),
+    '/api/analytics/top-buyers': apiCache(10 * 60),
+    '/api/analytics/category-distribution': apiCache(10 * 60),
+    '/api/analytics/supplier-types': apiCache(10 * 60),
+    '/api/analytics/provider-load-errors': apiCache(5 * 60),
+    '/api/analytics/provider-anomalies': apiCache(5 * 60),
+    '/api/analytics/products': apiCache(5 * 60),
+    '/api/analytics/anticipacion': apiCache(5 * 60),
+    '/api/analytics/anticipacion/facets': apiCache(30 * 60),
+    '/api/analytics/intendencias': apiCache(10 * 60),
+    '/api/analytics/dei-signals': apiCache(10 * 60),
+    '/api/analytics/organism-groups': apiCache(10 * 60),
+    '/api/analytics/party-comparison': apiCache(10 * 60),
+  },
+
   nitro: {
     experimental: {
       wasm: true,
+    },
+    // Local, loopback-only Redis. Cache failures are caught by Nitro and fall
+    // through to the real handler, so Redis improves availability without
+    // becoming a dependency for correctness or boot.
+    storage: {
+      apiCache: {
+        driver: 'redis',
+        url: 'redis://127.0.0.1:6379',
+        base: 'gastos-gub:api-cache',
+        ttl: 24 * 60 * 60,
+        connectTimeout: 500,
+        maxRetriesPerRequest: 1,
+      },
+    },
+    devStorage: {
+      apiCache: {
+        driver: 'memory',
+      },
     },
     // Pre-compression is intentionally OFF. Nitro only writes a `.br`/`.gz` for
     // chunks above its size threshold (here 53 of 60 .js had a `.br`), yet its
