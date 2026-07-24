@@ -90,7 +90,7 @@ export function serializeProcurementContact(doc: Partial<IProcurementContact>): 
 
 // ---- Serializers (same guards as contacts.ts) --------------------------------
 
-const TABLE_COLUMNS: { key: keyof PublicProcurementContact | 'emailsJoined', header: string, width: number }[] = [
+export const PROCUREMENT_EXPORT_COLUMNS: { key: keyof PublicProcurementContact | 'emailsJoined', header: string, width: number }[] = [
   { key: 'organismName', header: 'Organismo', width: 44 },
   { key: 'organismId', header: 'ID', width: 12 },
   { key: 'group', header: 'Grupo', width: 24 },
@@ -102,7 +102,7 @@ const TABLE_COLUMNS: { key: keyof PublicProcurementContact | 'emailsJoined', hea
   { key: 'llamadosCount', header: 'Llamados', width: 12 },
 ]
 
-function cellValue(c: PublicProcurementContact, key: string): string {
+export function procurementExportCell(c: PublicProcurementContact, key: string): string {
   if (key === 'emailsJoined') return c.emails.join('; ')
   const v = (c as Record<string, unknown>)[key]
   return v == null ? '' : String(v)
@@ -118,16 +118,27 @@ function vcardEscape(v: string): string {
 }
 
 export function toCsv(rows: PublicProcurementContact[]): string {
-  const head = TABLE_COLUMNS.map(c => csvField(c.header)).join(',')
-  const body = rows.map(c => TABLE_COLUMNS.map(col => csvField(neutralizeFormula(cellValue(c, String(col.key))))).join(','))
-  return '﻿' + [head, ...body].join('\r\n') + '\r\n'
+  const body = procurementCsvRows(rows)
+  return `\uFEFF${procurementCsvHeader()}\r\n${body}${body ? '\r\n' : ''}`
 }
 
 export function toJsonExport(rows: PublicProcurementContact[]): string {
   return JSON.stringify(rows, null, 2)
 }
 
-export function toVcard(rows: PublicProcurementContact[]): string {
+export function procurementCsvHeader(): string {
+  return PROCUREMENT_EXPORT_COLUMNS.map(c => csvField(c.header)).join(',')
+}
+
+export function procurementCsvRows(rows: PublicProcurementContact[]): string {
+  return rows
+    .map(c => PROCUREMENT_EXPORT_COLUMNS
+      .map(col => csvField(neutralizeFormula(procurementExportCell(c, String(col.key)))))
+      .join(','))
+    .join('\r\n')
+}
+
+export function procurementVcardRows(rows: PublicProcurementContact[]): string {
   const cards = rows.map((c) => {
     const lines = ['BEGIN:VCARD', 'VERSION:3.0']
     lines.push(`FN:${vcardEscape(c.contactName || c.organismName)}`)
@@ -140,7 +151,11 @@ export function toVcard(rows: PublicProcurementContact[]): string {
     lines.push('END:VCARD')
     return lines.join('\r\n')
   })
-  return cards.join('\r\n') + '\r\n'
+  return cards.join('\r\n')
+}
+
+export function toVcard(rows: PublicProcurementContact[]): string {
+  return `${procurementVcardRows(rows)}\r\n`
 }
 
 export async function toXlsx(rows: PublicProcurementContact[]): Promise<Buffer> {
@@ -148,15 +163,17 @@ export async function toXlsx(rows: PublicProcurementContact[]): Promise<Buffer> 
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Con la tuya, contribuyente'
   const ws = wb.addWorksheet('Contactos de compras')
-  ws.columns = TABLE_COLUMNS.map(c => ({ header: c.header, key: String(c.key), width: c.width }))
+  ws.columns = PROCUREMENT_EXPORT_COLUMNS.map(c => ({ header: c.header, key: String(c.key), width: c.width }))
   for (const c of rows) {
-    ws.addRow(Object.fromEntries(TABLE_COLUMNS.map(col => [String(col.key), cellValue(c, String(col.key))])))
+    ws.addRow(Object.fromEntries(PROCUREMENT_EXPORT_COLUMNS.map(col => [String(col.key), procurementExportCell(c, String(col.key))])))
   }
   const header = ws.getRow(1)
   header.font = { bold: true }
-  header.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } } })
+  header.eachCell((cell) => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }
+  })
   ws.views = [{ state: 'frozen', ySplit: 1 }]
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: TABLE_COLUMNS.length } }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: PROCUREMENT_EXPORT_COLUMNS.length } }
   return Buffer.from(await wb.xlsx.writeBuffer())
 }
 

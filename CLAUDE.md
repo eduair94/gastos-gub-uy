@@ -105,6 +105,9 @@ npm run screenshots
 - **No `npm test` framework.** Tests are standalone `tsx` scripts; discover them by listing `tests/`.
 - The Express API under `src/api/**` and the `precalculate-dashboard`/`populate-analytics` scripts are
   **legacy/dead** — the live API is `app/server/api/**` and the live rollups are `src/jobs/refresh-*`.
+- Contact-directory exports deliberately use Mongo cursors, 250-row serializers and one shared heavy
+  export slot per dashboard worker ([app/server/utils/heavy-export.ts](app/server/utils/heavy-export.ts)).
+  Do not restore a 50k-document `.lean()` array or ExcelJS `writeBuffer()` on a request path.
 
 ## Deploy
 

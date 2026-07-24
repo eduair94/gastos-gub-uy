@@ -34,6 +34,9 @@ const nuxt = readFileSync(join(root, 'app/nuxt.config.ts'), 'utf8')
 assert.match(nuxt, /driver: 'redis'/, 'production Nitro cache must use Redis')
 assert.match(nuxt, /driver: 'memory'/, 'development cache must retain a dependency-free fallback')
 assert.match(nuxt, /base: 'apiCache'/, 'cached routes must use the Redis-backed mount')
+assert.match(nuxt, /'\/api\/contacts': apiCache\(2 \* 60\)/, 'supplier contacts list must use Redis SWR')
+assert.match(nuxt, /'\/api\/contacts\/rubros': apiCache\(10 \* 60\)/, 'contact facets must use Redis SWR')
+assert.doesNotMatch(nuxt, /'\/api\/contacts\/\*\*'/, 'large contact exports must never enter Redis')
 assert.match(
   nuxt,
   /'\/api\/analytics\/anomalies': apiCache\(2 \* 60, \['cookie', 'authorization', 'x-api-key'\]\)/,

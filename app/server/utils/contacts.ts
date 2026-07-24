@@ -432,7 +432,7 @@ export function sanitizeContact(
 // ---- Serializers -------------------------------------------------------------
 
 /** Curated table order used by CSV + XLSX. */
-const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'phonesJoined' | 'socialsJoined' | 'awarded', header: string, width: number }[] = [
+export const CONTACT_EXPORT_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'phonesJoined' | 'socialsJoined' | 'awarded', header: string, width: number }[] = [
   { key: 'name', header: 'Nombre', width: 42 },
   { key: 'rut', header: 'RUT', width: 14 },
   { key: 'awarded', header: 'Adjudicó', width: 10 },
@@ -456,7 +456,7 @@ const TABLE_COLUMNS: { key: keyof PublicContact | 'emailsJoined' | 'phonesJoined
   { key: 'supplierId', header: 'ID proveedor', width: 18 },
 ]
 
-function cellValue(c: PublicContact, key: string): string {
+export function contactExportCell(c: PublicContact, key: string): string {
   if (key === 'emailsJoined') {
     return c.emails.map(e => `${e.email} [${e.source}${e.sourceUrl ? `: ${e.sourceUrl}` : ''}]`).join('; ')
   }
@@ -489,14 +489,26 @@ function neutralizeFormula(v: string): string {
 }
 
 export function toCsv(contacts: PublicContact[]): string {
-  const head = TABLE_COLUMNS.map(c => csvField(c.header)).join(',')
-  const rows = contacts.map(c => TABLE_COLUMNS.map(col => csvField(neutralizeFormula(cellValue(c, String(col.key))))).join(','))
+  const head = contactCsvHeader()
+  const rows = contactCsvRows(contacts)
   // BOM so Excel reads UTF-8 (accents) correctly; CRLF per RFC-4180.
-  return '﻿' + [head, ...rows].join('\r\n') + '\r\n'
+  return `\uFEFF${head}\r\n${rows}${rows ? '\r\n' : ''}`
 }
 
 export function toJsonExport(contacts: PublicContact[]): string {
   return JSON.stringify(contacts, null, 2)
+}
+
+export function contactCsvHeader(): string {
+  return CONTACT_EXPORT_COLUMNS.map(c => csvField(c.header)).join(',')
+}
+
+export function contactCsvRows(contacts: PublicContact[]): string {
+  return contacts
+    .map(c => CONTACT_EXPORT_COLUMNS
+      .map(col => csvField(neutralizeFormula(contactExportCell(c, String(col.key)))))
+      .join(','))
+    .join('\r\n')
 }
 
 /** vCard 3.0 text escape: backslash, comma, semicolon, and ANY line break
@@ -505,7 +517,7 @@ function vcardEscape(v: string): string {
   return v.replace(/\\/g, '\\\\').replace(/\r\n|\r|\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
 }
 
-export function toVcard(contacts: PublicContact[]): string {
+export function contactVcardRows(contacts: PublicContact[]): string {
   const cards = contacts.map((c) => {
     const lines = ['BEGIN:VCARD', 'VERSION:3.0']
     lines.push(`FN:${vcardEscape(c.name)}`)
@@ -527,7 +539,11 @@ export function toVcard(contacts: PublicContact[]): string {
     lines.push('END:VCARD')
     return lines.join('\r\n')
   })
-  return cards.join('\r\n') + '\r\n'
+  return cards.join('\r\n')
+}
+
+export function toVcard(contacts: PublicContact[]): string {
+  return `${contactVcardRows(contacts)}\r\n`
 }
 
 /** Build an .xlsx buffer. exceljs is imported lazily so it never touches non-export paths. */
@@ -536,9 +552,9 @@ export async function toXlsx(contacts: PublicContact[]): Promise<Buffer> {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Con la tuya, contribuyente'
   const ws = wb.addWorksheet('Contactos')
-  ws.columns = TABLE_COLUMNS.map(c => ({ header: c.header, key: String(c.key), width: c.width }))
+  ws.columns = CONTACT_EXPORT_COLUMNS.map(c => ({ header: c.header, key: String(c.key), width: c.width }))
   for (const c of contacts) {
-    ws.addRow(Object.fromEntries(TABLE_COLUMNS.map(col => [String(col.key), cellValue(c, String(col.key))])))
+    ws.addRow(Object.fromEntries(CONTACT_EXPORT_COLUMNS.map(col => [String(col.key), contactExportCell(c, String(col.key))])))
   }
   const header = ws.getRow(1)
   header.font = { bold: true }
@@ -546,7 +562,7 @@ export async function toXlsx(contacts: PublicContact[]): Promise<Buffer> {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }
   })
   ws.views = [{ state: 'frozen', ySplit: 1 }]
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: TABLE_COLUMNS.length } }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: CONTACT_EXPORT_COLUMNS.length } }
   const buf = await wb.xlsx.writeBuffer()
   return Buffer.from(buf)
 }

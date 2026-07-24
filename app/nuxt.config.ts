@@ -293,6 +293,8 @@ export default defineNuxtConfig({
     '/api/contracts/filters': apiCache(30 * 60),
     '/api/search': apiCache(60),
     '/api/contactos': apiCache(2 * 60),
+    '/api/contacts': apiCache(2 * 60),
+    '/api/contacts/rubros': apiCache(10 * 60),
 
     // Public directories and profiles.
     '/api/suppliers': apiCache(2 * 60),
