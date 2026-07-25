@@ -25,6 +25,7 @@ export interface AnomalyRssRow {
   currency?: string
   expectedRange?: { min?: number, max?: number }
   firstDetectedAt?: Date | string
+  sourceDate?: Date | string
   metadata?: {
     supplierName?: string
     buyerName?: string
@@ -241,14 +242,15 @@ export function buildAnomalyRssXml(input: {
   const lang = scope.lang
   const title = `${lang === 'es' ? 'Alertas de precio' : 'Price flags'}${scopeSuffix(scope)}`
   const description = lang === 'es'
-    ? 'Nuevas anomalías de precio detectadas en las compras públicas del Uruguay. Una alerta es una señal estadística, no una acusación.'
-    : 'New price anomalies detected in Uruguay’s public procurement. A flag is a statistical signal, not an accusation.'
+    ? 'Anomalías de precio en las compras públicas del Uruguay, ordenadas por la fecha más reciente de la compra. Una alerta es una señal estadística, no una acusación.'
+    : 'Price anomalies in Uruguay’s public procurement, ordered by the newest procurement date. A flag is a statistical signal, not an accusation.'
 
   const listQuery = scopeQuery(scope)
   listQuery.set('sort', 'recent')
   const listPath = lang === 'en' ? '/en/analytics/anomalies' : '/analytics/anomalies'
   const listUrl = `${siteUrl}${listPath}?${listQuery.toString()}`
-  const newest = rows.find(row => row.firstDetectedAt)?.firstDetectedAt
+  const newest = rows.find(row => row.sourceDate)?.sourceDate
+    ?? rows.find(row => row.firstDetectedAt)?.firstDetectedAt
   const buildDate = newest ? new Date(newest) : new Date()
   const validBuildDate = Number.isNaN(buildDate.getTime()) ? new Date() : buildDate
 
@@ -279,8 +281,9 @@ export function buildAnomalyRssXml(input: {
     const link = releaseId
       ? `${siteUrl}${lang === 'en' ? '/en' : ''}/contracts/${encodeURIComponent(releaseId)}`
       : listUrl
-    const firstDetectedAt = row.firstDetectedAt ? new Date(row.firstDetectedAt) : validBuildDate
-    const pubDate = Number.isNaN(firstDetectedAt.getTime()) ? validBuildDate : firstDetectedAt
+    const itemDateValue = row.sourceDate ?? row.firstDetectedAt
+    const itemDate = itemDateValue ? new Date(itemDateValue) : validBuildDate
+    const pubDate = Number.isNaN(itemDate.getTime()) ? validBuildDate : itemDate
     const categories = [
       row.severity,
       row.metadata?.itemClassification?.rubro,

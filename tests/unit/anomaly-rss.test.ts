@@ -55,6 +55,7 @@ const xml = buildAnomalyRssXml({
     currency: 'UYU',
     expectedRange: { min: 100, max: 250 },
     firstDetectedAt: '2026-07-24T13:05:11.584Z',
+    sourceDate: '2026-07-22T00:00:00.000Z',
     metadata: {
       supplierName: 'Proveedor & Hijos',
       buyerName: 'Hospital <Central>',
@@ -78,7 +79,7 @@ assert.match(xml, /SALUD &amp; BIENESTAR/)
 assert.match(xml, /Hospital &lt;Central&gt;/)
 assert.match(xml, /Proveedor &amp; Hijos/)
 assert.match(xml, /urn:conlatuya:anomaly:abc123/)
-assert.match(xml, /Fri, 24 Jul 2026 13:05:11 GMT/)
+assert.match(xml, /Wed, 22 Jul 2026 00:00:00 GMT/)
 assert.match(xml, /\/contracts\/adjudicacion-42/)
 assert.match(xml, /sort=recent/)
 assert.doesNotMatch(xml, /<script/i)

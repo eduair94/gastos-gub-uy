@@ -1,10 +1,11 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
-import { AnomalyModel } from '../../utils/models'
+import { AnomalyModel, ReleaseModel } from '../../utils/models'
 import { escapeRegex } from '../../utils/query'
 import { feedbackSummaries } from '../../utils/anomaly-feedback'
 import { parseToken } from '../../../../shared/utils/rubro-tokens'
 import { parseCategories } from '../../../../shared/utils/anomaly-categories'
+import { ANOMALY_RECENT_SORT_FIELD } from '../../../utils/anomaly-list'
 
 /**
  * Normalise a query value that may be a single string or a repeated param into a
@@ -160,6 +161,7 @@ export default defineEventHandler(async (event) => {
     const SORT_FIELDS: Record<string, string> = {
       createdAt: 'createdAt',
       firstDetectedAt: 'firstDetectedAt',
+      sourceDate: ANOMALY_RECENT_SORT_FIELD,
       confidence: 'confidence',
       severity: 'severityRank',
       severityRank: 'severityRank',
@@ -180,6 +182,7 @@ export default defineEventHandler(async (event) => {
     if (sortField !== 'severityRank') sortOptions.severityRank = -1
     if (sortField !== 'metadata.zScore') sortOptions['metadata.zScore'] = -1
     if (sortField !== 'createdAt') sortOptions.createdAt = -1
+    sortOptions._id = -1
 
     // Calculate pagination
     const skip = (Number(page) - 1) * Number(limit)
@@ -205,23 +208,63 @@ export default defineEventHandler(async (event) => {
       'aiVerdict.explainable': { $exists: false },
     }
 
+    // The source procurement date lives on `releases`, not on historical anomaly
+    // documents. For the recent view, join before sorting so pagination follows
+    // the date users actually see. The anomaly collection is small (~6k rows) and
+    // releases.id is unique/indexed; allowDiskUse keeps the sort safe on Mongo 4.4.
+    const anomalyRows = sortField === ANOMALY_RECENT_SORT_FIELD
+      ? AnomalyModel.aggregate([
+          { $match: filter },
+          {
+            $lookup: {
+              from: 'releases',
+              localField: 'releaseId',
+              foreignField: 'id',
+              as: 'sourceRelease',
+            },
+          },
+          { $set: { sourceDate: { $arrayElemAt: ['$sourceRelease.date', 0] } } },
+          { $project: { sourceRelease: 0 } },
+          { $sort: sortOptions },
+          { $skip: skip },
+          { $limit: Number(limit) },
+        ]).allowDiskUse(true)
+      : AnomalyModel.find(filter)
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(Number(limit))
+          .lean()
+
     // Execute query
     const [anomalies, total, pendingTriage] = await Promise.all([
-      AnomalyModel.find(filter)
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
+      anomalyRows,
       AnomalyModel.countDocuments(filter),
       wantPending ? AnomalyModel.countDocuments(pendingFilter) : Promise.resolve(0),
     ])
 
-    // Attach community feedback (public up/down counts + the requesting user's own
-    // vote/comment) to each row so the list can render the vote widget without a
-    // per-row round-trip. Anonymous callers still get the public counts.
-    const summaries = await feedbackSummaries(event, anomalies.map((a: any) => String(a._id)))
+    // Other sort modes still show the full source date. Enrich only their current
+    // page with one indexed batch lookup — never one query per card.
+    const missingDateReleaseIds = [...new Set(
+      anomalies
+        .filter((a: any) => !a.sourceDate)
+        .map((a: any) => a.releaseId)
+        .filter((id): id is string => typeof id === 'string' && id !== ''),
+    )]
+    const [summaries, releases] = await Promise.all([
+      feedbackSummaries(event, anomalies.map((a: any) => String(a._id))),
+      missingDateReleaseIds.length
+        ? ReleaseModel.find(
+            { id: { $in: missingDateReleaseIds } },
+            { _id: 0, id: 1, date: 1 },
+          ).lean()
+        : Promise.resolve([]),
+    ])
+    const sourceDateByRelease = new Map(
+      releases.map((release: any) => [release.id, release.date]),
+    )
     const anomaliesWithFeedback = anomalies.map((a: any) => ({
       ...a,
+      sourceDate: a.sourceDate ?? sourceDateByRelease.get(a.releaseId) ?? null,
       feedback: summaries.get(String(a._id)) ?? { up: 0, down: 0, myVote: null, myComment: null },
     }))
 

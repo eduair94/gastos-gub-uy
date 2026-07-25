@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ANOMALY_DEFAULT_SORT, ANOMALY_RECENT_SORT_FIELD, formatAnomalySourceDate } from '~/utils/anomaly-list'
+
 const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
@@ -22,12 +24,10 @@ const ai = ref((route.query.ai as string) ?? '')
 // sin-explicacion | moneda-erronea | ... A different axis from the `ai` explainable bucket:
 // this isolates WHY the flag exists (e.g. a data-load error vs a real, unexplained overprice).
 const category = ref((route.query.category as string) ?? '')
-// Ordering, and the minimum price divergence (robust z-score) to show. Default:
-// worst divergence first — the point of the page is the biggest overprices, and
-// divergence is relative to each item's own recent baseline, so it ranks fairly
-// across years without needing an inflation adjustment (every flag here is from
-// the detector's trailing 24-month window anyway).
-const sort = ref((route.query.sort as string) ?? 'divergence')
+// Ordering, and the minimum price divergence (robust z-score) to show. The
+// source procurement date leads by default, matching the RSS feed and the full
+// date rendered on each card. Divergence remains available as an explicit sort.
+const sort = ref((route.query.sort as string) ?? ANOMALY_DEFAULT_SORT)
 const minZ = ref(Number(route.query.minZ) || 0)
 // Currency of the prices shown. USD and UYU amounts are never comparable by
 // magnitude and we hold no historical FX rate, so keep one currency at a time
@@ -77,7 +77,7 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
   divergence: { sortBy: 'divergence', sortOrder: 'desc' },
   amount: { sortBy: 'amount', sortOrder: 'desc' },
   severity: { sortBy: 'severity', sortOrder: 'desc' },
-  recent: { sortBy: 'createdAt', sortOrder: 'desc' },
+  recent: { sortBy: ANOMALY_RECENT_SORT_FIELD, sortOrder: 'desc' },
 }
 /** Minimum robust deviation: any, or ≥ N× the baseline spread. */
 const MINZ_STEPS = [0, 10, 25, 50] as const
@@ -124,7 +124,7 @@ watch([severity, ai, category, sort, minZ, currency, supplier, buyer, rubroName,
   if (severity.value) q.severity = severity.value
   if (ai.value) q.ai = ai.value
   if (category.value) q.category = category.value
-  if (sort.value !== 'divergence') q.sort = sort.value
+  if (sort.value !== ANOMALY_DEFAULT_SORT) q.sort = sort.value
   if (minZ.value > 0) q.minZ = String(minZ.value)
   if (currency.value) q.currency = currency.value
   if (supplier.value.length) q.supplier = supplier.value
@@ -140,7 +140,7 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/anomal
   query: computed(() => ({
     limit: 20,
     page: page.value,
-    ...(SORTS[sort.value] ?? SORTS.divergence),
+    ...(SORTS[sort.value] ?? SORTS[ANOMALY_DEFAULT_SORT]),
     ...(severity.value ? { severity: severity.value } : {}),
     ...(ai.value ? { ai: ai.value } : {}),
     ...(category.value ? { category: category.value } : {}),
@@ -204,6 +204,13 @@ function baselineN(a: any): number | null {
 
 function unitName(a: any): string | null {
   return a?.metadata?.itemUnit?.name ?? null
+}
+
+function sourceDateLabel(a: any): string {
+  const fullDate = formatAnomalySourceDate(a?.sourceDate)
+  if (fullDate) return fullDate
+  const sourceYear = a?.sourceYear ?? a?.metadata?.year
+  return sourceYear ? String(sourceYear) : ''
 }
 
 /** Robust price divergence (z-score) — how far above its baseline the price sits. */
@@ -689,10 +696,11 @@ useSeo(() => ({
               <p class="flags__who">
                 {{ a.metadata?.buyerName }}
                 <span v-if="a.metadata?.supplierName"> · {{ a.metadata.supplierName }}</span>
-                <span
-                  v-if="a.sourceYear ?? a.metadata?.year"
+                <time
+                  v-if="sourceDateLabel(a)"
                   class="u-mono"
-                > · {{ a.sourceYear ?? a.metadata?.year }}</span>
+                  :datetime="a.sourceDate ?? String(a.sourceYear ?? a.metadata?.year)"
+                > · {{ sourceDateLabel(a) }}</time>
               </p>
 
               <!-- Advisory AI verdict, compact. Accent when unexplained (the real signal),
