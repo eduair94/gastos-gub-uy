@@ -7,6 +7,7 @@ export interface ContactMapWindow {
 
 function finiteNumber(value: unknown): number | null {
   const raw = Array.isArray(value) ? value[0] : value
+  if (raw === undefined || raw === null || raw === '') return null
   const parsed = typeof raw === 'number' ? raw : Number(String(raw ?? ''))
   return Number.isFinite(parsed) ? parsed : null
 }

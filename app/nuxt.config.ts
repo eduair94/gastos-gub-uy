@@ -300,6 +300,10 @@ export default defineNuxtConfig({
     '/api/contactos': apiCache(2 * 60),
     '/api/contacts': apiCache(2 * 60),
     '/api/contacts/rubros': apiCache(10 * 60),
+    '/api/contacts/map': apiCache(30),
+    '/api/contacts/map-detail': apiCache(5 * 60),
+    // Nominatim policy requires user-triggered queries and caching; no autocomplete.
+    '/api/geo/search': apiCache(24 * 60 * 60),
 
     // Public directories and profiles.
     '/api/suppliers': apiCache(2 * 60),

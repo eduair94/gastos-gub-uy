@@ -21,8 +21,12 @@ export default defineEventHandler(async (event) => {
 
   await connectToDatabase()
   const built = await buildContactFilter(query)
+  const scan = {
+    center: window.center,
+    radiusMeters: window.radiusMeters,
+  }
   if ('empty' in built) {
-    return { success: true, data: { points: [], loaded: 0, truncated: false } }
+    return { success: true, data: { points: [], loaded: 0, truncated: false, scan } }
   }
 
   const { center, bounds, radiusMeters, limit } = window
@@ -93,6 +97,7 @@ export default defineEventHandler(async (event) => {
       points,
       loaded: points.length,
       truncated,
+      scan,
     },
   }
 })
