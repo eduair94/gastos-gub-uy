@@ -76,6 +76,11 @@ export interface Provider {
   /** Reclamo de validación jurídica, casi textual, o "ninguna". */
   legalValidation: Bi
   ux: Bi
+  /** Acompañamiento humano incluido en la suscripción, confirmado por el proveedor. */
+  includedSupport?: {
+    description: Bi
+    confirmedOn: string
+  }
   sources: string[]
   confidence: 'alta' | 'media' | 'baja'
   /** Salvedades a mostrar junto a la ficha (moneda inferida, add-on pago, etc.). */
@@ -145,6 +150,13 @@ export const PROVIDERS: Provider[] = [
     coverage: { es: 'SICE/comprasestatales: llamados abiertos, PAC y adjudicaciones desde 2002; cada empresa puede consultar y exportar su histórico por RUT.', en: 'SICE/comprasestatales: open calls, annual plans (PAC) and awards since 2002; each company can view and export its history by tax ID.' },
     legalValidation: { es: 'Asesoría jurídica personalizada del estudio asociado Grupo Deana (RUPE, revisión de ofertas, aclaraciones, impugnaciones y recursos ante el Tribunal de Cuentas).', en: 'Personalized legal advice from partner firm Grupo Deana (RUPE, offer review, clarifications, challenges and appeals before the Court of Accounts).' },
     ux: { es: 'Sitio en español claro para PYMEs; reúne constructor de ofertas ítem por ítem, checklist, calendario, dashboard, histórico por empresa y precios adjudicados de cada artículo.', en: 'Clear Spanish site for SMEs; combines an item-by-item offer builder, checklist, calendar, dashboard, company history and historical awarded prices for each item.' },
+    includedSupport: {
+      description: {
+        es: 'Gratis en todos los planes: asignan una persona del equipo para ayudar a configurar la cuenta, explicar cómo usar la plataforma y responder consultas.',
+        en: 'Free with every plan: a team member is assigned to help set up the account, explain how to use the platform and answer questions.',
+      },
+      confirmedOn: '2026-07-24',
+    },
     sources: ['https://proveedoruy.com/', 'https://proveedoruy.com/#funcionalidades', 'https://proveedoruy.com/#planes', 'https://proveedoruy.com/#asesoria'],
     confidence: 'alta',
     caveats: [
@@ -493,8 +505,8 @@ export const RECOMMENDATION = {
   title: { es: 'Nuestra recomendación para PYMES', en: 'Our recommendation for SMEs' },
   disclosure: { es: 'Opinión propia · sin patrocinio · sin vínculo comercial', en: 'Our own opinion · no sponsorship · no commercial ties' },
   body: {
-    es: 'Para quien recién empieza a presentarse a licitaciones del Estado — el perfil más común entre las PYMEs uruguayas — nuestra recomendación es ProveedorUY. Es el único servicio del relevamiento que publica asesoría jurídica de un estudio asociado (Grupo Deana): registro y gestión del RUPE, revisión previa de ofertas, aclaraciones e impugnaciones ante el Tribunal de Cuentas. También publica un constructor de ofertas ítem por ítem, checklist, calendario, histórico de adjudicaciones por empresa desde 2002, consulta de precios adjudicados y una prueba de 10 días sin tarjeta. Tenderis ofrece checklist y calendario, pero no anuncia un constructor equivalente ni asesoría jurídica. Para un proveedor sin equipo jurídico propio, ese acompañamiento reduce el riesgo de quedar afuera por un error formal.',
-    en: 'For those just starting to bid on state tenders — the most common profile among Uruguayan SMEs — our recommendation is ProveedorUY. It is the only service in the survey that publishes legal advice from a partner firm (Grupo Deana): RUPE registration and management, prior review of offers, clarifications and challenges before the Court of Accounts. It also publishes an item-by-item offer builder, checklist, calendar, company award history since 2002, awarded-price lookup and a 10-day no-card trial. Tenderis offers checklists and a calendar but does not advertise an equivalent offer builder or legal advice. For a supplier without an in-house legal team, that support reduces the risk of being disqualified over a formal error.',
+    es: 'Para quien recién empieza a presentarse a licitaciones del Estado — el perfil más común entre las PYMEs uruguayas — nuestra recomendación es ProveedorUY. Es el único servicio del relevamiento que publica asesoría jurídica de un estudio asociado (Grupo Deana): registro y gestión del RUPE, revisión previa de ofertas, aclaraciones e impugnaciones ante el Tribunal de Cuentas. También publica un constructor de ofertas ítem por ítem, checklist, calendario, histórico de adjudicaciones por empresa desde 2002, consulta de precios adjudicados y una prueba de 10 días sin tarjeta. Además, confirmó que todos los planes incluyen sin costo una persona del equipo para configurar la cuenta, explicar la plataforma y atender consultas. Tenderis ofrece checklist y calendario, pero no anuncia un constructor equivalente ni asesoría jurídica. Para un proveedor sin equipo jurídico propio, esa combinación de herramientas y acompañamiento reduce el riesgo de quedar afuera por un error formal.',
+    en: 'For those just starting to bid on state tenders — the most common profile among Uruguayan SMEs — our recommendation is ProveedorUY. It is the only service in the survey that publishes legal advice from a partner firm (Grupo Deana): RUPE registration and management, prior review of offers, clarifications and challenges before the Court of Accounts. It also publishes an item-by-item offer builder, checklist, calendar, company award history since 2002, awarded-price lookup and a 10-day no-card trial. It also confirmed that every plan includes, at no extra cost, a team member who helps set up the account, explains the platform and answers questions. Tenderis offers checklists and a calendar but does not advertise an equivalent offer builder or legal advice. For a supplier without an in-house legal team, that combination of tools and guidance reduces the risk of being disqualified over a formal error.',
   },
   caveat: {
     es: 'Con salvedades objetivas: es un servicio nuevo (dominio registrado en 2026), el sitio todavía no etiqueta UYU junto al símbolo "$", WhatsApp está anunciado pero apagado en la versión actual y la asesoría jurídica es un servicio aparte, con costo no incluido en la suscripción.',

@@ -414,6 +414,15 @@ useSeo(() => ({
                 <strong>{{ t('comparativa.legalLabel') }}:</strong> {{ bi(p.legalValidation) }}
               </p>
 
+              <div
+                v-if="p.includedSupport"
+                class="pcard__support"
+              >
+                <strong>{{ t('comparativa.includedSupportLabel') }}</strong>
+                <p>{{ bi(p.includedSupport.description) }}</p>
+                <small>{{ t('comparativa.confirmedByProvider', { date: p.includedSupport.confirmedOn }) }}</small>
+              </div>
+
               <ul
                 v-if="p.caveats?.length"
                 class="pcard__caveats"
@@ -650,6 +659,16 @@ useSeo(() => ({
 .chipf { color: var(--text-muted); }
 .chipf--legal { color: var(--verde); font-weight: 600; }
 .pcard__row { font-size: var(--t-sm); line-height: 1.45; margin: 0 0 var(--s-2); }
+.pcard__support {
+  margin: var(--s-3) 0;
+  padding: var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+}
+.pcard__support strong { display: block; margin-bottom: var(--s-1); color: var(--verde); }
+.pcard__support p { margin: 0; font-size: var(--t-sm); line-height: 1.45; }
+.pcard__support small { display: block; margin-top: var(--s-2); color: var(--text-muted); font-size: var(--t-xs); }
 .pcard__caveats { margin: 0 0 var(--s-2); padding-left: var(--s-4); }
 .pcard__caveats li { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.4; margin-bottom: var(--s-1); }
 .pcard__src { font-size: var(--t-xs); }

@@ -1885,6 +1885,8 @@
     "methodologyTitle": "Metodología y objetividad",
     "coverageLabel": "Cobertura",
     "legalLabel": "Jurídica",
+    "includedSupportLabel": "Acompañamiento incluido",
+    "confirmedByProvider": "Confirmado directamente por el proveedor · {date}",
     "sourcesLabel": "Fuentes",
     "consultar": "Consultar",
     "currencyInferred": "moneda inferida",

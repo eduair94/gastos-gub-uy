@@ -1884,6 +1884,8 @@
     "methodologyTitle": "Methodology and objectivity",
     "coverageLabel": "Coverage",
     "legalLabel": "Legal",
+    "includedSupportLabel": "Guided onboarding included",
+    "confirmedByProvider": "Confirmed directly by the provider · {date}",
     "sourcesLabel": "Sources",
     "consultar": "Contact",
     "currencyInferred": "inferred currency",
