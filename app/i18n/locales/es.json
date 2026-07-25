@@ -955,6 +955,7 @@
     },
     "seeUnexplained": "Ver las peores sin explicación",
     "seeProviders": "Ver proveedores señalados",
+    "seeRss": "Suscribirme por RSS",
     "supplierFilter": "Proveedor",
     "buyerFilter": "Comprador",
     "filters": {
@@ -1023,6 +1024,57 @@
       "reasonLabel": "Justificación (opcional)",
       "confirm": "Confirmar voto",
       "retract": "Quitar mi voto"
+    }
+  },
+  "rssAnomalies": {
+    "back": "Volver a las alertas",
+    "eyebrow": "Alertas sin algoritmo de por medio",
+    "title": "Las anomalías llegan a vos",
+    "lead": "Suscribite al feed general o armá uno a medida por rubro, organismo, proveedor y tipo de señal. Tu lector RSS lo revisa por vos y te muestra solo lo nuevo.",
+    "privacy": "No precisa cuenta, correo ni seguimiento. Las preferencias viven únicamente en la URL que guardás en tu lector.",
+    "feedTitle": "Alertas de precio — Con la tuya, contribuyente",
+    "previewFallback": "Compra señalada",
+    "noRecent": "sin detecciones",
+    "schedule": {
+      "live": "Ritmo de actualización",
+      "title": "De la fuente a tu lector",
+      "hourly": "Se sincronizan contratos y correcciones cada hora.",
+      "daily": "El detector completo corre todos los días, hora de Uruguay.",
+      "ai": "Después se revisan las alertas altas y críticas; ese triaje puede demorar."
+    },
+    "builder": {
+      "eyebrow": "Feed personalizado",
+      "title": "Elegí qué querés seguir"
+    },
+    "filters": {
+      "rubro": "Rubro",
+      "rubroHelp": "Podés elegir hasta cinco. Si no elegís ninguno, entran todos.",
+      "anySeverity": "Cualquier severidad",
+      "focus": "Tipo de señal",
+      "allFlags": "Todas las alertas",
+      "loadErrors": "Errores de carga",
+      "optional": "Afinar por organismo o proveedor",
+      "optionalHint": "opcional"
+    },
+    "subscription": {
+      "eyebrow": "Tu suscripción",
+      "title": "Este es tu feed",
+      "matches": "alertas coinciden con esta selección",
+      "latest": "Última detección",
+      "urlLabel": "URL del RSS",
+      "copy": "Copiar enlace",
+      "copied": "Enlace copiado",
+      "copyError": "No se pudo copiar",
+      "open": "Abrir feed",
+      "help": "Copiá esta URL y pegala en cualquier lector RSS. El feed publica las 50 detecciones más nuevas y se puede consultar sin iniciar sesión.",
+      "general": "Prefiero el RSS general, sin filtros"
+    },
+    "preview": {
+      "eyebrow": "Vista previa",
+      "title": "Lo último que recibirías",
+      "all": "Ver la lista completa",
+      "empty": "Todavía no hay alertas para esta combinación. Podés guardar el feed igual: empezará a mostrar entradas cuando aparezca una.",
+      "note": "Cada entrada conserva la fecha en que la alerta apareció por primera vez. Una actualización del detector no vuelve a publicar alertas viejas como si fueran nuevas."
     }
   },
   "errors": {
@@ -1111,6 +1163,10 @@
       "alertas": {
         "title": "Alertas de precio",
         "dek": "Contratos con un precio unitario muy por encima del habitual para el mismo artículo."
+      },
+      "rss": {
+        "title": "RSS de anomalías",
+        "dek": "Suscribite a las alertas nuevas o armá un feed por rubro, organismo y preferencias."
       },
       "unexplained": {
         "title": "Sin explicación",
@@ -1681,6 +1737,10 @@
     "anomalies": {
       "title": "Alertas en compras públicas del Uruguay",
       "description": "Contratos del Estado uruguayo que se apartan del patrón habitual de precio, proveedor o frecuencia."
+    },
+    "anomalyRss": {
+      "title": "RSS de anomalías en las compras públicas del Uruguay",
+      "description": "Suscribite a nuevas alertas de precio de las compras públicas por RSS, con feeds personalizados por rubro, organismo, proveedor, severidad y revisión con IA."
     },
     "unexplained": {
       "title": "Sobreprecios sin explicación — compras públicas del Uruguay",

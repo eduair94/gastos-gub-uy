@@ -954,6 +954,7 @@
     },
     "seeUnexplained": "See the worst unexplained ones",
     "seeProviders": "See flagged providers",
+    "seeRss": "Subscribe by RSS",
     "supplierFilter": "Provider",
     "buyerFilter": "Buyer",
     "filters": {
@@ -1022,6 +1023,57 @@
       "reasonLabel": "Reason (optional)",
       "confirm": "Confirm vote",
       "retract": "Remove my vote"
+    }
+  },
+  "rssAnomalies": {
+    "back": "Back to flags",
+    "eyebrow": "Alerts without an algorithmic inbox",
+    "title": "Let the anomalies come to you",
+    "lead": "Subscribe to the general feed or build one around categories, buyers, suppliers and signal type. Your RSS reader checks it for you and shows only what is new.",
+    "privacy": "No account, email or tracking required. Your preferences live only in the URL you save in your reader.",
+    "feedTitle": "Price flags — Con la tuya, contribuyente",
+    "previewFallback": "Flagged purchase",
+    "noRecent": "no detections",
+    "schedule": {
+      "live": "Update cadence",
+      "title": "From the source to your reader",
+      "hourly": "Contracts and corrections sync every hour.",
+      "daily": "The full detector runs every day, Uruguay time.",
+      "ai": "High and critical flags are reviewed afterwards; that triage can take a while."
+    },
+    "builder": {
+      "eyebrow": "Personal feed",
+      "title": "Choose what to follow"
+    },
+    "filters": {
+      "rubro": "Category",
+      "rubroHelp": "Pick up to five. Leave empty to include every category.",
+      "anySeverity": "Any severity",
+      "focus": "Signal type",
+      "allFlags": "All flags",
+      "loadErrors": "Data-entry errors",
+      "optional": "Narrow by buyer or supplier",
+      "optionalHint": "optional"
+    },
+    "subscription": {
+      "eyebrow": "Your subscription",
+      "title": "This is your feed",
+      "matches": "flags match this selection",
+      "latest": "Latest detection",
+      "urlLabel": "RSS URL",
+      "copy": "Copy link",
+      "copied": "Link copied",
+      "copyError": "Could not copy",
+      "open": "Open feed",
+      "help": "Copy this URL into any RSS reader. The feed publishes the 50 newest detections and is available without signing in.",
+      "general": "Use the unfiltered general feed"
+    },
+    "preview": {
+      "eyebrow": "Preview",
+      "title": "What you would receive now",
+      "all": "See the full list",
+      "empty": "There are no flags for this combination yet. You can still save the feed: entries will appear when a match is detected.",
+      "note": "Each entry keeps the date when the flag first appeared. A detector refresh does not republish old flags as though they were new."
     }
   },
   "errors": {
@@ -1110,6 +1162,10 @@
       "alertas": {
         "title": "Price flags",
         "dek": "Contracts with a unit price far above the usual for the same item."
+      },
+      "rss": {
+        "title": "Anomaly RSS",
+        "dek": "Subscribe to new flags or build a feed by category, buyer and preferences."
       },
       "unexplained": {
         "title": "Unexplained",
@@ -1680,6 +1736,10 @@
     "anomalies": {
       "title": "Flags in Uruguay's public procurement",
       "description": "Uruguayan state contracts that depart from the usual pattern of price, supplier, or frequency."
+    },
+    "anomalyRss": {
+      "title": "RSS feeds for anomalies in Uruguay's public procurement",
+      "description": "Subscribe to new public-procurement price flags by RSS, with personalised feeds by category, buyer, supplier, severity and AI review."
     },
     "unexplained": {
       "title": "Unexplained overprices — Uruguay's public procurement",

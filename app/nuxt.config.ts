@@ -286,6 +286,11 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
+    // RSS readers poll frequently. Cache each personalised query independently
+    // in the same Redis-backed SWR layer as the public APIs, so subscriptions
+    // keep receiving the last good feed through a brief Mongo or deploy blip.
+    '/rss/**': apiCache(5 * 60),
+
     // Homepage + explorer hot paths.
     '/api/dashboard/**': apiCache(5 * 60),
     '/api/contracts': apiCache(60),

@@ -28,6 +28,7 @@ const counts = computed<Record<string, number | null>>(() => ({
 
 const cards = computed(() => [
   { key: 'alertas', to: '/analytics/anomalies', icon: 'mdi-flag-outline', emoji: '🚩' },
+  { key: 'rss', to: '/analytics/rss-anomalias', icon: 'mdi-flag-outline', emoji: '📡' },
   { key: 'unexplained', to: '/analytics/unexplained', icon: 'mdi-help-rhombus-outline', emoji: '🔎' },
   { key: 'erroresCarga', to: '/analytics/errores-carga', icon: 'mdi-database-alert-outline', emoji: '🧾', feature: true },
   { key: 'providerAnomalies', to: '/analytics/proveedores-anomalias', icon: 'mdi-account-alert-outline', emoji: '🏢' },

@@ -159,6 +159,7 @@ export default defineEventHandler(async (event) => {
     // so existing callers get the ordering they actually wanted.
     const SORT_FIELDS: Record<string, string> = {
       createdAt: 'createdAt',
+      firstDetectedAt: 'firstDetectedAt',
       confidence: 'confidence',
       severity: 'severityRank',
       severityRank: 'severityRank',

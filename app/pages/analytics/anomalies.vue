@@ -4,6 +4,16 @@ const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
 const { track } = useAnalytics()
+const rssFeedUrl = `${(useRuntimeConfig().public.siteUrl as string).replace(/\/+$/, '')}/rss/anomalies.xml`
+
+useHead(() => ({
+  link: [{
+    rel: 'alternate',
+    type: 'application/rss+xml',
+    title: t('rssAnomalies.feedTitle'),
+    href: rssFeedUrl,
+  }],
+}))
 
 const severity = ref((route.query.severity as string) ?? '')
 // Second-stage AI triage filter: '' | unexplained | uncertain | explainable | unscored.
@@ -324,6 +334,12 @@ useSeo(() => ({
           class="head__cta head__cta--alt"
         >
           {{ t('anomalies.seeProviders') }} →
+        </NuxtLink>
+        <NuxtLink
+          :to="localePath('/analytics/rss-anomalias')"
+          class="head__cta"
+        >
+          {{ t('anomalies.seeRss') }} →
         </NuxtLink>
       </div>
     </header>

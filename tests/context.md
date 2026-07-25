@@ -32,6 +32,7 @@ The entire automated-test surface of gastos-gub: 41 files in [unit/](unit/), 7 i
 | [unit/variants-rollup.test.ts](unit/variants-rollup.test.ts) | `rollupVariants` from `src/jobs/variants/rollup`. |
 | [unit/test-rubro-watch.ts](unit/test-rubro-watch.ts) | `buildRubroWatchPayload` from `app/utils/rubro-watch` — the ONLY test of Nuxt front-end code. |
 | [unit/test-dashboard-resilience.ts](unit/test-dashboard-resilience.ts) | Structural guard for two pm2 workers, rolling deploy/rollback, Redis SWR mounts, auth-varying cache and excluded dead middleware. |
+| [unit/anomaly-rss.test.ts](unit/anomaly-rss.test.ts) | Pure RSS scope/parser + XML escaping, stable GUID/date and filtered list-link contract. |
 | [unit/test-heavy-export.ts](unit/test-heavy-export.ts) | Pure export-slot test plus multi-batch CSV/JSON/vCard and streaming ExcelJS workbook verification. |
 | [unit/test-campaign-models.ts](unit/test-campaign-models.ts) | `shared/models/{email_suppression,email_campaign,campaign_send}` via `validateSync()` + `collection.name`, no DB. |
 | [unit/test-campaign-recipients.ts](unit/test-campaign-recipients.ts) | `src/jobs/campaign/recipients`. |
