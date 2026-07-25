@@ -44,11 +44,13 @@ assert.deepEqual(pipeline[5], { $limit: 60 });
 assert.equal(parseArgs(["--min-rank=1", "--limit=60", "--rpm=18"]).minRank, 1);
 
 const cronSource = fs.readFileSync(path.resolve(__dirname, "../../src/cronserver.ts"), "utf8");
+const scorerSource = fs.readFileSync(path.resolve(__dirname, "../../src/jobs/score-anomalies-ai.ts"), "utf8");
 assert.match(cronSource, /const anomalyAiExpression = "50 \* \* \* \*"/);
 assert.match(cronSource, /\["--min-rank=1", `--limit=\$\{this\.anomalyAiBatchLimit\(\)\}`/);
 assert.match(cronSource, /this\.app\.get\("\/cron\/anomaly-ai\/status"/);
 assert.match(cronSource, /this\.isPliegoSummaryRunning \|\| this\.isAnomalyAiRunning/);
 assert.match(cronSource, /AI_TRIAGE_SUMMARY candidates=/);
+assert.match(scorerSource, /timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS/);
 
 const deployWorkflow = fs.readFileSync(path.resolve(__dirname, "../../.github/workflows/deploy.yml"), "utf8");
 assert.ok(

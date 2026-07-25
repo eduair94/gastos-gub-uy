@@ -50,6 +50,7 @@ import { adjudicacionUrl, compraIdFromOcid, llamadoUrl, ScrapedItem, scrapeCompr
 const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const DEFAULT_MIN_RANK = 3; // high + critical
 const DEFAULT_CONCURRENCY = 6;
+const DEFAULT_REQUEST_TIMEOUT_MS = 60_000; // complex multi-line contracts regularly exceed the shared client's 30s default
 const DEFAULT_SCRAPE_CONCURRENCY = 4; // parallel gov-page fetches when populating the características cache
 const MAX_SIBLING_ITEMS = 15;
 const MAX_FEATURE_ROWS = 12; // características rows fed per item
@@ -958,6 +959,7 @@ async function main(): Promise<void> {
         systemInstruction: SYSTEM_INSTRUCTION,
         prompt,
         schema: RESPONSE_SCHEMA,
+        timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
       });
       totalUsage.promptTokens += usage.promptTokens;
       totalUsage.candidatesTokens += usage.candidatesTokens;
