@@ -34,6 +34,28 @@ export interface ScrapedItem {
   grossTotal?: Money
 }
 
+/**
+ * Removes exact characteristic duplicates while preserving source order.
+ *
+ * Award pages repeat the same item table once per awarded supplier, using the
+ * same item number each time. Keeping every copy made a single characteristic
+ * such as "Tipo: EN RADIO" appear dozens of times in the contract detail.
+ */
+export function deduplicateItemFeatures<T extends { features: { name: string, value: string }[] }>(items: T[]): T[] {
+  return items.map((item) => {
+    const seen = new Set<string>()
+    return {
+      ...item,
+      features: item.features.filter((feature) => {
+        const key = `${feature.name}\u0000${feature.value}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      }),
+    }
+  })
+}
+
 /** The handful of entities these pages actually emit, plus numeric refs. */
 function decodeEntities(s: string): string {
   return s
@@ -155,7 +177,7 @@ export function parseItemFeatures(rawHtml: string): ScrapedItem[] {
     if (gross) item(nro).grossTotal = gross
   }
 
-  return [...byNro.values()].sort((a, b) => a.nro - b.nro)
+  return deduplicateItemFeatures([...byNro.values()].sort((a, b) => a.nro - b.nro))
 }
 
 const FETCH_OPTS: RequestInit = {

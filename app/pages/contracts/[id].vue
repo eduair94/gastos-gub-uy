@@ -335,7 +335,14 @@ const itemFeatures = computed<Map<number, ItemFeatures>>(() => {
   const map = new Map<number, ItemFeatures>()
   for (const it of featRes.value?.data?.items ?? []) {
     if (typeof it?.nro !== 'number') continue
-    const features = (it.features ?? []).filter((f: any) => f?.name && f?.value)
+    const seen = new Set<string>()
+    const features = (it.features ?? []).filter((f: any) => {
+      if (!f?.name || !f?.value) return false
+      const key = `${f.name}\u0000${f.value}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
     const variation = typeof it.variation === 'string' && it.variation.trim() ? it.variation.trim() : undefined
     if (features.length || variation) map.set(it.nro, { features, variation })
   }

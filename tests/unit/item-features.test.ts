@@ -10,7 +10,11 @@ const html = `
 <tr><td>Presentaci&oacute;n</td><td>CAJA</td></tr>
 <tr><td>Medida presentaci&oacute;n</td><td>72 ENVASE FLEXIBLE</td></tr>
 </tbody></table>
-<ul><li>Variación:</li><li><strong>72 ENVASES 100 ML</strong></li></ul>`
+<ul><li>Variación:</li><li><strong>72 ENVASES 100 ML</strong></li></ul>
+<table><caption>Características del Ítem Nº 1</caption><tbody>
+<tr><td>Marca</td><td>FARMACO URUGUAYO</td></tr>
+<tr><td>Presentaci&oacute;n</td><td>CAJA</td></tr>
+</tbody></table>`
 
 const items = parseItemFeatures(html)
 assert.equal(items.length, 1, 'one item')
@@ -19,6 +23,7 @@ const f = Object.fromEntries(items[0]!.features.map(x => [x.name, x.value]))
 assert.equal(f['Marca'], 'FARMACO URUGUAYO', 'marca')
 assert.equal(f['Concentración'], '8.4 %', 'concentración decoded')
 assert.equal(f['Presentación'], 'CAJA', 'presentación decoded')
+assert.equal(items[0]!.features.length, 4, 'repeated award tables are deduplicated')
 assert.equal(items[0]!.variation, '72 ENVASES 100 ML', 'variación')
 assert.equal(parseBuyObject(html), 'Solución bicarbonatada molar', 'object')
 console.log('item-features.test OK')

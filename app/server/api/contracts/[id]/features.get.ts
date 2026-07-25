@@ -3,7 +3,7 @@ import { isValidObjectId } from 'mongoose'
 import { connectToDatabase } from '../../../utils/database'
 import { ContractItemFeaturesModel, ReleaseModel } from '../../../utils/models'
 import { awardUrl, compraIdFromOcid, sourceUrl } from '../../../utils/query'
-import { scrapeItemFeatures, type ScrapedItem } from '../../../../../shared/utils/item-features'
+import { deduplicateItemFeatures, scrapeItemFeatures, type ScrapedItem } from '../../../../../shared/utils/item-features'
 
 /**
  * Per-item "Características" scraped from the government's HTML pages.
@@ -56,7 +56,13 @@ export default defineEventHandler(async (event) => {
     if (cached && cached.object !== undefined && cached.total !== undefined) {
       return {
         success: true,
-        data: { compraId, source: cached.source, items: cached.items ?? [], object: cached.object || null, total: cached.total ?? null },
+        data: {
+          compraId,
+          source: cached.source,
+          items: deduplicateItemFeatures((cached.items ?? []) as ScrapedItem[]),
+          object: cached.object || null,
+          total: cached.total ?? null,
+        },
       }
     }
 
@@ -111,7 +117,7 @@ export default defineEventHandler(async (event) => {
         data: {
           compraId,
           source: cached?.source ?? source,
-          items: cached?.items ?? [],
+          items: deduplicateItemFeatures((cached?.items ?? []) as ScrapedItem[]),
           object: object ?? (cached?.object || null),
           total: total ?? (cached?.total ?? null),
           transient: true,

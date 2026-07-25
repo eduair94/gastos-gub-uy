@@ -1,7 +1,7 @@
 import { createError, defineEventHandler, readBody, setHeader } from 'h3'
 import { connectToDatabase } from '../../../utils/database'
 import { ContractItemFeaturesModel } from '../../../utils/models'
-import { scrapeItemFeatures } from '../../../../../shared/utils/item-features'
+import { deduplicateItemFeatures, scrapeItemFeatures, type ScrapedItem } from '../../../../../shared/utils/item-features'
 import { awardUrl, sourceUrl } from '../../../utils/query'
 
 /**
@@ -44,7 +44,12 @@ export default defineEventHandler(async (event) => {
     const c = cachedBy.get(it.compraId)
     // `object === undefined` is a pre-buy-object cache entry — treat as a miss so
     // it re-scrapes once and backfills, matching the single endpoint's guard.
-    if (c && c.object !== undefined) out[it.compraId] = { items: c.items ?? [], object: c.object || null }
+    if (c && c.object !== undefined) {
+      out[it.compraId] = {
+        items: deduplicateItemFeatures((c.items ?? []) as ScrapedItem[]),
+        object: c.object || null,
+      }
+    }
     else misses.push(it)
   }
 
