@@ -43,14 +43,16 @@ import path from "path";
 import type { PipelineStage } from "mongoose";
 import { AnomalyModel, ContractItemFeaturesModel, ReleaseModel } from "../../shared/models";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
+import { ProviderRotator } from "../../shared/ai/rotator";
 import { canonicalUnit } from "../../shared/utils/units";
-import { callGeminiStructured, estimateCostUsd, FLASH_LITE_PRICING, GeminiSchema, GeminiUsage } from "./ai/gemini-client";
+import { estimateCostUsd, FLASH_LITE_PRICING, GeminiSchema, GeminiUsage } from "./ai/gemini-client";
 import { adjudicacionUrl, compraIdFromOcid, llamadoUrl, ScrapedItem, scrapeCompraFeatures } from "./ai/item-features";
 
 const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const DEFAULT_MIN_RANK = 3; // high + critical
 const DEFAULT_CONCURRENCY = 6;
-const DEFAULT_REQUEST_TIMEOUT_MS = 60_000; // complex multi-line contracts regularly exceed the shared client's 30s default
+const DEFAULT_REQUEST_TIMEOUT_MS = 45_000; // inactivity timeout; streaming renews it as response chunks arrive
+const DEFAULT_TOTAL_REQUEST_TIMEOUT_MS = 180_000; // whole Gemini → Groq ladder budget for one anomaly
 const DEFAULT_SCRAPE_CONCURRENCY = 4; // parallel gov-page fetches when populating the características cache
 const MAX_SIBLING_ITEMS = 15;
 const MAX_FEATURE_ROWS = 12; // características rows fed per item
@@ -757,9 +759,15 @@ async function main(): Promise<void> {
   }
 
   const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? "";
-  if (!apiKey && !options.dryRun) {
-    throw new Error("GEMINI_API_KEY is not set (add it to .env). Use --dry-run to plan without it.");
+  const groqApiKey = process.env.GROQ_API_KEY ?? "";
+  if (!apiKey && !groqApiKey && !options.dryRun) {
+    throw new Error("GEMINI_API_KEY/GOOGLE_API_KEY or GROQ_API_KEY is required. Use --dry-run to plan without it.");
   }
+  const rotator = new ProviderRotator({
+    ...(apiKey ? { geminiApiKey: apiKey } : {}),
+    ...(groqApiKey ? { groqApiKey } : {}),
+    ...(options.model !== DEFAULT_MODEL ? { geminiModels: [options.model] } : {}),
+  });
 
   // ---- Selection ----
   const filter: Record<string, unknown> = { type: "price_spike", severityRank: { $gte: options.minRank } };
@@ -932,6 +940,7 @@ async function main(): Promise<void> {
 
   // ---- Triage ----
   const totalUsage: GeminiUsage = { promptTokens: 0, candidatesTokens: 0, totalTokens: 0 };
+  const modelCounts: Record<string, number> = {};
   let errors = 0;
   let done = 0;
 
@@ -953,17 +962,19 @@ async function main(): Promise<void> {
     const prompt = buildPrompt(anomaly, ctx);
     try {
       await acquireSlot();
-      const { data, usage } = await callGeminiStructured<Verdict>({
-        apiKey,
-        model: options.model,
+      const { data, usage, modelUsed } = await rotator.generateStructured<Verdict>({
         systemInstruction: SYSTEM_INSTRUCTION,
         prompt,
         schema: RESPONSE_SCHEMA,
         timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
+        totalTimeoutMs: DEFAULT_TOTAL_REQUEST_TIMEOUT_MS,
+        maxRetriesPerModel: 0,
+        stream: true,
       });
       totalUsage.promptTokens += usage.promptTokens;
       totalUsage.candidatesTokens += usage.candidatesTokens;
       totalUsage.totalTokens += usage.totalTokens;
+      modelCounts[modelUsed] = (modelCounts[modelUsed] ?? 0) + 1;
 
       if (!isValidVerdict(data)) {
         errors++;
@@ -990,7 +1001,7 @@ async function main(): Promise<void> {
           $set: {
             aiVerdict: {
               ...verdict,
-              model: options.model,
+              model: modelUsed,
               dataVersion: anomaly.dataVersion,
               scoredAt: runStart,
               usedFeatures: ctx.features.length,
@@ -1053,6 +1064,7 @@ async function main(): Promise<void> {
   const summary = {
     generatedAt: runStart.toISOString(),
     model: options.model,
+    models: modelCounts,
     scope: { minRank: options.minRank, all: options.all, limit: options.limit, severities: options.severities },
     scored: results.length,
     errors,

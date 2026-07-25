@@ -50,7 +50,9 @@ assert.match(cronSource, /\["--min-rank=1", `--limit=\$\{this\.anomalyAiBatchLim
 assert.match(cronSource, /this\.app\.get\("\/cron\/anomaly-ai\/status"/);
 assert.match(cronSource, /this\.isPliegoSummaryRunning \|\| this\.isAnomalyAiRunning/);
 assert.match(cronSource, /AI_TRIAGE_SUMMARY candidates=/);
-assert.match(scorerSource, /timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS/);
+assert.match(scorerSource, /new ProviderRotator/);
+assert.match(scorerSource, /totalTimeoutMs: DEFAULT_TOTAL_REQUEST_TIMEOUT_MS/);
+assert.match(scorerSource, /stream: true/);
 
 const deployWorkflow = fs.readFileSync(path.resolve(__dirname, "../../.github/workflows/deploy.yml"), "utf8");
 assert.ok(

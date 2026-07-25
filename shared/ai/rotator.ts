@@ -9,7 +9,7 @@
  * model for the rest of the process run and advances to the next. A single
  * rotator instance shared across many summaries keeps that cooldown between them.
  */
-import type { GeminiSchema } from "./gemini-client";
+import type { GeminiSchema, GeminiUsage } from "./gemini-client";
 import { callGeminiStructured, GeminiHttpError } from "./gemini-client";
 import { callGroqStructured, GroqHttpError } from "./groq-client";
 
@@ -53,6 +53,7 @@ export interface ModelGenerationProgress {
 
 export interface GenerateResult<T> {
   data: T;
+  usage: GeminiUsage;
   /** Traceable label of the model that produced it, e.g. "gemini-3.0-flash-lite"
    *  or "groq:llama-3.3-70b-versatile". Stored on the summary. */
   modelUsed: string;
@@ -144,7 +145,7 @@ export class ProviderRotator {
         };
         onProgress(0);
         if (m.provider === "gemini") {
-          const { data } = await callGeminiStructured<T>({
+          const { data, usage } = await callGeminiStructured<T>({
             apiKey: this.geminiApiKey!,
             model: m.model,
             systemInstruction: args.systemInstruction,
@@ -157,9 +158,9 @@ export class ProviderRotator {
             ...(deadline === null ? {} : { deadlineAtMs: deadline }),
             ...(args.maxRetriesPerModel === undefined ? {} : { maxRetries: args.maxRetriesPerModel }),
           });
-          return { data, modelUsed: key };
+          return { data, modelUsed: key, usage };
         } else {
-          const { data } = await callGroqStructured<T>({
+          const { data, usage } = await callGroqStructured<T>({
             apiKey: this.groqApiKey!,
             model: m.model,
             systemInstruction: args.systemInstruction,
@@ -172,7 +173,7 @@ export class ProviderRotator {
             ...(deadline === null ? {} : { deadlineAtMs: deadline }),
             ...(args.maxRetriesPerModel === undefined ? {} : { maxRetries: args.maxRetriesPerModel }),
           });
-          return { data, modelUsed: key };
+          return { data, modelUsed: key, usage };
         }
       } catch (error) {
         const err = error as Error;
