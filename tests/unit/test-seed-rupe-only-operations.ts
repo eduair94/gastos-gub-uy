@@ -22,6 +22,7 @@ const row = buildRegistryRow({
   estado: "ACTIVO",
   lat: -34.9,
   lng: -54.9,
+  location: { type: "Point", coordinates: [-54.9, -34.9] },
   placeId: "ChIJ123",
   geocodeStatus: "ok",
 });

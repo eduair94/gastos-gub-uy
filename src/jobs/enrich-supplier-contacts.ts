@@ -3,6 +3,7 @@
 import { promises as dns } from "node:dns";
 import { connectToDatabase, disconnectFromDatabase, mongoose } from "../../shared/connection/database";
 import { SupplierContactModel } from "../../shared/models/supplier_contacts";
+import { geoPoint } from "../../shared/utils/geo-point";
 import type { ContactResolver, ContactCandidate, ResolverResult } from "./enrich/types";
 import { existingEmailCandidates, mergeCandidates, pickPrimary, CONNECTIVITY_DNS_ERROR_CODES } from "./enrich/hygiene";
 import { deriveRubros } from "./enrich/rubros";
@@ -358,6 +359,7 @@ async function main() {
       // RUPE/DEI remain authoritative for the registered address. A verified
       // Maps listing supplies its coordinates, hours and clickable evidence.
       const storedPlace = mergeStoredPlace(place, existing ?? {}, mapsEvidence);
+      const location = geoPoint(storedPlace.lat, storedPlace.lng);
 
       processed++;
       if (dryRun) {
@@ -372,6 +374,7 @@ async function main() {
           enrichmentMethods: [...enrichmentMethods],
           rupeEstado,
           ...storedPlace,
+          location,
           status,
           priorityScore,
           mapsEnrichedAt: now,
@@ -383,6 +386,7 @@ async function main() {
           enrichmentMethods: [...enrichmentMethods],
           rupeEstado,
           ...storedPlace,
+          location,
           rubros, status, priorityScore, enrichedAt: now, enrichmentVersion: CONTACT_ENRICHMENT_VERSION,
         };
       await SupplierContactModel.updateOne({ supplierId }, { $set: set }, { upsert: true });

@@ -962,6 +962,9 @@ class CronServer {
           this.logger.info("Seeding registered-never-awarded companies into supplier_contacts...");
           await this.runJobProcess("jobs/seed-rupe-only-contacts");
           this.logger.info("RUPE-only contact seeding completed successfully");
+          this.logger.info("Syncing supplier coordinates into the geospatial map index...");
+          await this.runJobProcess("jobs/sync-contact-locations");
+          this.logger.info("Supplier map locations synchronized successfully");
         } catch (error) {
           this.logger.error("RUPE registry refresh failed:", error instanceof Error ? error : String(error));
         }

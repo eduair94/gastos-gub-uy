@@ -340,6 +340,8 @@ useSeo(() => ({
       </p>
     </header>
 
+    <ContactsViewTabs />
+
     <!-- ===== Toolbar: search + sort ===== -->
     <div class="toolbar">
       <form

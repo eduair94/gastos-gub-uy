@@ -766,6 +766,24 @@
   "contacts": {
     "title": "Directorio de contactos de proveedores",
     "lead": "Datos de contacto de {total} proveedores del Estado, para investigación y contacto comercial. Descargá la lista filtrada en CSV, Excel, JSON o vCard.",
+    "views": {
+      "label": "Vistas del directorio",
+      "list": "Lista de contactos",
+      "map": "Mapa mundial"
+    },
+    "map": {
+      "title": "Dónde están los proveedores",
+      "lead": "Explorá las ubicaciones registradas de proveedores en Uruguay y el mundo. El mapa carga sólo las empresas del área visible: movelo o acercate para descubrir más.",
+      "aria": "Mapa interactivo de ubicaciones de proveedores",
+      "loading": "Buscando empresas en esta zona…",
+      "loaded": "{count} ubicaciones visibles",
+      "zoomHint": "Hay más resultados: acercate para verlos.",
+      "error": "No se pudieron cargar las ubicaciones de esta zona.",
+      "retry": "Reintentar",
+      "viewSupplier": "Ver proveedor",
+      "legend": "Cada punto representa un proveedor con coordenadas disponibles.",
+      "source": "Las direcciones provienen de registros públicos y fuentes de enriquecimiento. La base cartográfica y sus teselas son de OpenStreetMap."
+    },
     "searchPlaceholder": "Buscar proveedor por nombre…",
     "resultsSummary": "{count} contactos",
     "table": {
@@ -1717,6 +1735,10 @@
     "contacts": {
       "title": "Contactos de proveedores del Estado uruguayo",
       "description": "Directorio descargable de datos de contacto de {total} proveedores del Estado uruguayo: email, sitio web, teléfono y rubro. CSV, Excel, JSON y vCard."
+    },
+    "contactsMap": {
+      "title": "Mapa mundial de proveedores del Estado uruguayo",
+      "description": "Mapa interactivo con las ubicaciones registradas de proveedores del Estado uruguayo en Uruguay y el mundo."
     },
     "contactos": {
       "title": "Contactos de compras del Estado uruguayo",

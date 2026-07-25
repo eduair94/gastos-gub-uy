@@ -3,6 +3,7 @@
 // Pure transform: one rupe_registry row → the supplier_contacts $set fields for
 // a "registered, never awarded" seed row. No I/O — testable without a DB.
 import type { ISupplierContact, FieldSource } from "../../../shared/models/supplier_contacts";
+import { geoPoint } from "../../../shared/utils/geo-point";
 
 export interface RupeSeedInput {
   rut: string;
@@ -25,7 +26,7 @@ export function synthesizeSupplierId(rut: string): string {
 export type RegistryRowSet = Pick<
   ISupplierContact,
   "supplierId" | "rut" | "name" | "address" | "locality" | "placeSource"
-  | "lat" | "lng" | "placeId" | "rupeEstado" | "neverAwarded"
+  | "lat" | "lng" | "location" | "placeId" | "rupeEstado" | "neverAwarded"
 >;
 
 /**
@@ -40,6 +41,8 @@ export function buildRegistryRow(input: RupeSeedInput): RegistryRowSet {
     .filter(Boolean)
     .join(", ") || null;
   const geocoded = input.geocodeStatus === "ok";
+  const lat = geocoded ? (input.lat ?? null) : null;
+  const lng = geocoded ? (input.lng ?? null) : null;
   const placeSource: FieldSource = "rupe";
 
   return {
@@ -49,8 +52,9 @@ export function buildRegistryRow(input: RupeSeedInput): RegistryRowSet {
     address: input.domicilioFiscal ?? null,
     locality,
     placeSource,
-    lat: geocoded ? (input.lat ?? null) : null,
-    lng: geocoded ? (input.lng ?? null) : null,
+    lat,
+    lng,
+    location: geoPoint(lat, lng),
     placeId: geocoded ? (input.placeId ?? null) : null,
     rupeEstado: input.estado,
     neverAwarded: true,

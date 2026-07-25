@@ -2,6 +2,7 @@
 import { Schema } from "mongoose";
 import type { Model } from "mongoose";
 import { mongoose } from "../connection/database";
+import type { GeoPoint } from "../utils/geo-point";
 
 export type EmailSource = "dei" | "website" | "webSearch" | "impo" | "rupe" | "manual" | "googleMaps";
 export type EmailStatus = "candidate" | "valid" | "invalid" | "suppressed";
@@ -83,6 +84,8 @@ export interface ISupplierContact {
   locality: string | null;
   lat: number | null;
   lng: number | null;
+  /** WGS84 GeoJSON point used by viewport/distance queries. */
+  location: GeoPoint | null;
   hours: string | null;
   mapsUrl: string | null;
   /** Google place_id — the only Places field safe to cache indefinitely per ToS. */
@@ -136,6 +139,22 @@ const SocialLinkSchema = new Schema<ISocialLink>({
   sourceUrl: { type: String, default: null, trim: true },
 }, { _id: false });
 
+const GeoPointSchema = new Schema<GeoPoint>({
+  type: {
+    type: String,
+    enum: ["Point"],
+    required: true,
+  },
+  coordinates: {
+    type: [Number],
+    required: true,
+    validate: {
+      validator: (coordinates: number[]) => coordinates.length === 2,
+      message: "GeoJSON Point coordinates must contain [lng, lat]",
+    },
+  },
+}, { _id: false });
+
 const SupplierContactSchema = new Schema<ISupplierContact>({
   supplierId: { type: String, required: true },
   rut: { type: String, default: "" },
@@ -156,6 +175,7 @@ const SupplierContactSchema = new Schema<ISupplierContact>({
   locality: { type: String, default: null },
   lat: { type: Number, default: null },
   lng: { type: Number, default: null },
+  location: { type: GeoPointSchema, default: null },
   hours: { type: String, default: null },
   mapsUrl: { type: String, default: null },
   placeId: { type: String, default: null },
@@ -182,6 +202,7 @@ SupplierContactSchema.index({ locality: 1 });
 SupplierContactSchema.index({ neverAwarded: 1, priorityScore: -1 });
 SupplierContactSchema.index({ neverAwarded: 1, enrichedAt: 1 });
 SupplierContactSchema.index({ neverAwarded: 1, mapsEnrichmentVersion: 1, mapsEnrichedAt: 1 });
+SupplierContactSchema.index({ location: "2dsphere" });
 
 export const SupplierContactModel: Model<ISupplierContact> =
   (mongoose.models.SupplierContact as Model<ISupplierContact>) ||

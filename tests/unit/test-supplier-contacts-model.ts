@@ -19,6 +19,9 @@ const doc = new SupplierContactModel({
   websiteAddress: "Cnel. Brandzen 1956",
   contactFormUrl: "https://example.uy/#contact",
   socialLinks: [{ platform: "instagram", url: "https://instagram.com/example/", label: "@example", source: "website", sourceUrl: "https://example.uy/contacto" }],
+  lat: -34.9011,
+  lng: -56.1645,
+  location: { type: "Point", coordinates: [-56.1645, -34.9011] },
   enrichmentMethods: ["crawl4ai", "googleMaps"],
   enrichmentVersion: 7,
   mapsEnrichmentVersion: 1,
@@ -33,6 +36,7 @@ assert.equal(doc.emails[0].sourceUrl, "https://example.uy/contacto");
 assert.equal(doc.phones.length, 2);
 assert.deepEqual(doc.enrichmentMethods, ["crawl4ai", "googleMaps"]);
 assert.equal(doc.mapsEnrichmentVersion, 1);
+assert.deepEqual(doc.location?.coordinates, [-56.1645, -34.9011]);
 console.log("ok: supplier_contacts model");
 
 // A RUPE-only ("registered, never awarded") seed row must also validate.

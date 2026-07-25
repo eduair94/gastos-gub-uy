@@ -569,6 +569,9 @@ async function main(): Promise<void> {
         { neverAwarded: 1, mapsEnrichmentVersion: 1, mapsEnrichedAt: 1 },
         { background: true, name: 'neverAwarded_1_mapsEnrichmentVersion_1_mapsEnrichedAt_1' },
       )
+      // Nearest/viewport reads for /api/contacts/map. Coordinates are
+      // materialized as GeoJSON by sync-contact-locations and every writer.
+      await sc.createIndex({ location: '2dsphere' }, { background: true, name: 'location_2dsphere' })
       console.log('✅ supplier_contacts indexes ensured')
 
       // --- rupe_registry (RUPE supplier registry + geocode cache) ---
@@ -648,7 +651,7 @@ async function main(): Promise<void> {
       console.log('   plan: webhook_deliveries.{dedupeKey unique, status+nextAttemptAt}')
       console.log('   plan: sice_catalog.{code unique, rubroPath, rubroTokens, dataVersion, text}')
       console.log('   plan: sice_rubro.{token unique, parentToken, level, dataVersion, text}')
-      console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality, neverAwarded+priorityScore, neverAwarded+enrichedAt, neverAwarded+mapsEnrichmentVersion+mapsEnrichedAt}')
+      console.log('   plan: supplier_contacts.{supplierId unique, rut, status+priorityScore, rubros.classificationId, placeSource, locality, neverAwarded+priorityScore, neverAwarded+enrichedAt, neverAwarded+mapsEnrichmentVersion+mapsEnrichedAt, location 2dsphere}')
       console.log('   plan: rupe_registry.{rut unique, normalizedName, estado, geocodeStatus, departamento}')
       console.log('   plan: procurement_contacts.{organismId unique, llamadosCount, dataVersion, searchText text}')
       console.log('   plan: supplier_patterns.{name, totalContracts, totalValue, buyerCount, avgContractValue, onlyDirectAward+supplierId}')
