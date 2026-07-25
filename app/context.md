@@ -7,7 +7,9 @@ The public + signed-in web UI of "Con la tuya, contribuyente": Nuxt 3.19.3 SSR (
 | Path | Purpose |
 | --- | --- |
 | [nuxt.config.ts](nuxt.config.ts) | The whole build contract: modules, `#shared` alias, css subsets, Vuetify tree-shake hook, i18n, sitemap/robots, PWA, gtag, `runtimeConfig.public`, `app.head`, nitro. Every block carries a load-bearing comment. `devServer.port` 3600 (:373). |
-| [DESIGN.md](DESIGN.md) | Binding design contract — read before ANY UI change: gold=money, peso magnitude rule, tokens, CellLink/ChartBlock/StatusChip rules, copy rules, data truths. |
+| [PRODUCT.md](PRODUCT.md) | Product truth: audience, jobs, evidence contract, supplier-map meaning, platform constraints and success criteria. |
+| [DESIGN.md](DESIGN.md) | Binding design contract — canonical tokens, hierarchy, depth, responsive rules and signature components. |
+| [COMPONENTS.md](COMPONENTS.md) | Vuetify 4 foundation + custom component catalog, composition patterns and review checklist. |
 | [app.vue](app.vue) | Root: `NuxtLayout`+`NuxtPage`, `useLocaleHead`, titleTemplate fallback, `<ConsentBanner>` mounted outside the page tree. |
 | [error.vue](error.vue) | 404/500 page. Renders outside the page tree so it calls `useSeo({ noindex: true })` itself. |
 | [layouts/default.vue](layouts/default.vue) | The ONLY layout (~1450 lines). Top bar + priority-overflow nav (hidden measuring rail + "Más" menu), Análisis/Investigaciones dropdowns, search, locale/theme toggles, TourLauncher, DonationLauncher, NotificationBell, account menu, mobile drawer, footer, `<DonationCard>`, `<TourHost>`. Add a nav section by editing `nav` (:26). |

@@ -1,206 +1,248 @@
-# Con la tuya, contribuyente — design system
+---
+name: Con la tuya, contribuyente
+version: 2.0.0
+colors:
+  ink: "#0f2233"
+  inkRaised: "#1b3348"
+  paper: "#eef1f2"
+  surface: "#ffffff"
+  surfaceSunken: "#e2e7e9"
+  celeste: "#5e93c4"
+  celesteDeep: "#3c6d9c"
+  celesteWash: "#dce8f3"
+  money: "#8a6318"
+  moneyRule: "#d9a441"
+  alert: "#b2423b"
+  active: "#3c7860"
+  muted: "#596b76"
+  rule: "#d3dade"
+  ruleStrong: "#b6c1c7"
+  focus: "#1f6feb"
+typography:
+  display: '"Archivo", "Archivo Expanded", system-ui, sans-serif'
+  body: '"Public Sans", system-ui, -apple-system, sans-serif'
+  mono: '"IBM Plex Mono", ui-monospace, "SF Mono", monospace'
+rounded:
+  small: 3px
+  medium: 6px
+  large: 10px
+  full: 999px
+spacing:
+  1: 0.25rem
+  2: 0.5rem
+  3: 0.75rem
+  4: 1rem
+  5: 1.5rem
+  6: 2rem
+  7: 3rem
+  8: 4rem
+  9: 6rem
+components:
+  button:
+    background: "{colors.celesteDeep}"
+    color: "{colors.surface}"
+    radius: "{rounded.medium}"
+  card:
+    background: "{colors.surface}"
+    border: "{colors.rule}"
+    radius: "{rounded.large}"
+  dialog:
+    background: "{colors.surface}"
+    border: "{colors.ruleStrong}"
+    radius: "{rounded.large}"
+  field:
+    background: "{colors.surface}"
+    border: "{colors.ruleStrong}"
+    radius: "{rounded.medium}"
+  status:
+    background: "{colors.surfaceSunken}"
+    color: "{colors.ink}"
+    radius: "{rounded.small}"
+---
 
-The one-page contract every screen follows. Read this before touching UI.
+# Design system
 
-## The subject
+## Overview
 
-Uruguayan public procurement (OCDS data from Compras Estatales). The
-audience is citizens, journalists, watchdogs and suppliers. The job of
-every page: **find where public money went, and judge whether it looks
-right.** The product name is an Uruguayan idiom — roughly "on your dime,
-taxpayer". The register is plain and a little wry, never salesy.
+The visual world is an **expediente público vivo**: the clarity of an official
+record, made responsive and explorable. The interface is sober, modern and
+evidence-first. Structural borders organize information; shadows are reserved
+for dialogs, floating controls and other true overlays.
 
-## The one rule: gold is money
+The canonical implementation tokens live in `assets/scss/_tokens.scss`. This
+document names how to use them. Product meaning and data constraints live in
+`PRODUCT.md`; component implementation details live in `COMPONENTS.md`.
 
-`--sol` / `--money` is reserved for peso amounts. **Nothing else on the
-site is gold.** Not a CTA, not an icon, not an accent. If it isn't public
-money, it isn't gold.
+The central rule is immutable: **gold is money**. `--sol`, `--money`,
+`--money-rule` and their Vuetify accent equivalents are reserved for monetary
+amounts. Gold is never a generic accent, CTA, icon or decorative highlight.
 
-## Signature: the peso magnitude rule
+## Colors
 
-Every amount renders through `<MoneyAmount>`, which draws a hairline gold
-bar under the figure. Its length is `log10(amount)` normalised over a
-**fixed, site-wide domain** (1e2..1e10 UYU) — see `utils/money.ts`.
+| Role | Token | Use |
+| --- | --- | --- |
+| Document ink | `--ink`, `--text` | Headings, body copy, dark evidence headers |
+| Paper | `--paper`, `--bg` | Page background |
+| Record surface | `--surface` | Cards, table cells, dialog body |
+| Sunken surface | `--surface-sunken` | Toolbars, grouped metadata, inactive controls |
+| Structural blue | `--celeste`, `--celeste-deep` | Links, focusable actions, selected state |
+| Money | `--money`, `--money-rule`, `--money-track` | Amount text and magnitude rule only |
+| Watchdog alert | `--alerta`, `--alerta-wash` | Anomalies, failures and destructive actions |
+| Active | `--verde` | Verified active/completed state |
+| Rules | `--rule`, `--rule-strong` | Grouping, dividers, form structure |
 
-The scale is deliberately global: a bar means the same thing on the
-dashboard, in the explorer table and on a detail page, so readers learn
-to read magnitude before digits. **Never** derive the scale from the max
-of the current view — that would make it shift under the reader as they
-filter.
+Never hardcode a hex value inside a component. Use semantic CSS variables.
+Filled custom CTAs pair `--cta-fill` with `--cta-fg`; filled alert actions pair
+`--alerta` with `--alerta-fg`. These pairs invert safely in dark mode.
 
-```vue
-<MoneyAmount :amount="contractAmount(c)" :currency="contractCurrency(c)" compact />
-<MoneyAmount :amount="total" size="xl" align="start" />   <!-- headline -->
-<MoneyAmount :amount="x" :rule="false" />                 <!-- no siblings to compare -->
-```
+The dark theme is “the expediente under a desk lamp”: paper becomes ink while
+money remains gold. Content placed on the permanent `--ink` surface uses
+`--ink-fg`, `--ink-fg-dim`, `--ink-rule` and `--ink-alerta`.
 
-Never format an amount by hand. Never put a peso figure in a plain `<span>`.
+## Typography
 
-## Tokens — `assets/scss/_tokens.scss`
+- **Archivo** (`--font-display`) gives page and section headings the authority
+  of a title block. Use it sparingly and keep headings compact.
+- **Public Sans** (`--font-body`) carries controls, body text and explanatory
+  content.
+- **IBM Plex Mono** (`--font-mono`) carries RUTs, OCIDs, dates, amounts,
+  metrics, field labels and eyebrows. Numeric content uses tabular figures.
 
-Use CSS custom properties. Never hardcode a hex value in a component.
+The scale is `--t-xs` through `--t-3xl`. Controls favor `--t-sm` or
+`--t-base`; tiny mono text is metadata, never the only way to understand an
+action. Headings use sentence case. Spanish is the source of truth and English
+mirrors it exactly.
 
-| Token | Role |
-|---|---|
-| `--ink` `#0f2233` | document ink; text, dark surfaces |
-| `--paper` `#eef1f2` | official form paper (cool — NOT cream) |
-| `--celeste` `#5e93c4` / `--celeste-deep` | structure, links, interactive |
-| `--sol` `#d9a441` | **money only** |
-| `--money` | money as *text* (auto-swaps per theme for contrast) |
-| `--alerta` `#b2423b` | anomalies / flags |
-| `--verde` `#3f7d62` | active status |
-| `--text` `--text-muted` `--rule` `--surface` `--bg` | semantic |
+Use plain verbs, active voice and specific empty/error states. User-facing copy
+always comes from i18n. Format amounts, counts and dates through shared helpers.
 
-Spacing `--s-1..--s-9`, radius `--r-sm/md/lg/full`, type `--t-xs..--t-3xl`.
+## Layout
 
-## Type
+The maximum reading/work surface is `--container: 1400px`. Build layout with
+responsive CSS Grid using `minmax(0, 1fr)` so dense records cannot widen the
+page. Wide charts and tables own their scroll container; the body never scrolls
+horizontally.
 
-- **Archivo** (`--font-display`) — headings. Wide cut (`font-stretch: 112%`),
-  it reads like the title block of an official form. Used with restraint.
-- **Public Sans** (`--font-body`) — body. A face designed for public information.
-- **IBM Plex Mono** (`--font-mono`) — money, IDs, dates, table labels, eyebrows.
-  Always `font-variant-numeric: tabular-nums` for figures.
+The first viewport should communicate:
 
-Utility classes in `main.scss`: `.u-hero .u-eyebrow .u-lead .u-mono .u-muted
-.u-container .u-splitrow .u-truncate .u-clamp-2 .u-scroll-x .panel .tag
-.tag--activo .tag--alerta .tag--celeste .tag--neutral`.
+1. what record or question is being examined;
+2. which filters are active;
+3. the primary evidence surface;
+4. the next useful action.
 
-`.u-splitrow` is the canonical record-row layout: a growing identity block
-and a fixed figures block that **top-align**. Reach for it instead of
-re-rolling `flex; justify-content: space-between; align-items: center` — the
-centred variant lets the figure column drift down tall rows.
+Use `--s-1..--s-9` for spacing. Prefer dense but calm information: compact
+controls, visible group boundaries, predictable field labels and progressive
+disclosure for secondary evidence.
 
-## Table action links — `<CellLink>`
+`.u-splitrow` is the canonical record row: a growing identity block and a fixed,
+top-aligned figures block. Do not reproduce it with centered flex alignment.
 
-The row-level "go here" affordance ("Ver contratos →") is always `<CellLink>`,
-never a hand-rolled `<v-btn append-icon>`. One home for the size/colour and,
-the reason it exists, a trailing arrow pinned to an **integer icon box** so it
-stays optically centred on the label at every zoom / DPR (a bare
-`append-icon` box is ~15.43px and drifts ~1px off the text on fractional
-zoom). The `.cell-link` class in `main.scss` carries the fix, so it applies
-even if the class is used on a raw `v-btn`.
+Map surfaces are workbenches, not decorative hero imagery. Search, locate,
+radius and result count remain legible over or adjacent to the map. Supplier
+markers must remain recognizable against light and dark cartography.
 
-```vue
-<CellLink :to="contractsLink(item)" :label="t('intend.viewContracts')" />
-<CellLink :to="drillTo(x)" :disabled="row.total <= 0" :label="t('...')" />
-```
+## Elevation & Depth
 
-## Charts live in `<ChartBlock>`
+The base hierarchy is flat and border-led:
 
-Never hand-roll a chart section. `<ChartBlock>` owns the heading, the help
-line, the panel and — the reason it exists — the overflow:
+- page and inline cards: no shadow;
+- selected or raised form group: `--shadow-1` only when depth is meaningful;
+- floating map controls: `--shadow-2`;
+- modal dialogs: `--shadow-3`.
 
-```vue
-<ChartBlock :title="t('x.title')" :help="t('x.help')">
-  <InvHBars :items="bars" format="money" />
-</ChartBlock>
-<ChartBlock :title="t('y.title')" :scroll="false">  <!-- already-fluid charts -->
-  <YearBars :data="byYear" unit="count" />
-</ChartBlock>
-```
+Never stack shadowed cards inside shadowed cards. Use background tone, spacing
+and a one-pixel rule to explain structure first.
 
-It carries `min-width: 0` at every level, keeps the sideways scroll **inside**
-the chart body, and signals it (edge fade + a `⇄` on the heading) so data behind
-a gesture is never silently hidden. `InvHBars` additionally switches to a
-label-above-the-bar layout under 640px, so phones usually need no gesture at all.
+## Shapes
 
-**Never write a bare `1fr` grid track around a chart.** `1fr` means
-`minmax(auto, 1fr)`, whose auto floor is the chart's own min-width, so the track
-widens past the viewport and the whole page scrolls sideways — even though the
-chart has its own scroller. Always `minmax(0, 1fr)`, plus `min-width: 0` on the
-grid items. This shipped as a real bug on `/curros/[slug]`.
+Radii are restrained: `--r-sm` for chips and small metadata, `--r-md` for
+controls, and `--r-lg` for cards/dialogs. `--r-full` is limited to circular icon
+buttons, map markers and true pills.
 
-## Status is `<StatusChip>`, prose is not a chip
+Avoid capsule containers for prose. A chip represents a value from a fixed
+vocabulary; a sentence belongs in normal text.
 
-Legal/case status uses `<StatusChip :status="slug" :label="t(...)" />` — one
-vocabulary, one colour map, `on="ink"` for the dark hero (`--ink` does not flip
-per theme, so paper tokens go dark-on-dark there). It never stretches in a flex
-row and never widens the page.
+## Components
 
-A chip is a token from a fixed vocabulary. A sentence is not: an attributed
-claim goes in `<ReportedFigure>` (mono caption + prose), never a `nowrap` pill.
-Quoted source prose keeps its figures as plain ink — `<MoneyAmount>` gold means
-"a figure this site derived from the data", and a press claim has not earned it.
+### Vuetify 4 foundation
 
-## Structure is information
+Vuetify components are auto-resolved by `vite-plugin-vuetify`; never import and
+register the complete component set. Global defaults in `plugins/vuetify.ts`
+govern `VCard`, `VBtn`, form fields, data tables, chips and tooltips. Prefer
+those defaults over per-page variants.
 
-Eyebrows name a real category of thing. **Do not use numbered markers
-(01/02/03)** unless the content genuinely is an ordered sequence — a
-timeline of tender→award qualifies; a list of suppliers does not.
+Breakpoints intentionally match Vuetify 3 values (`sm 600`, `md 960`,
+`lg 1280`, `xl 1920`) with `mobileBreakpoint: lg`. The theme palette mirrors
+the SCSS tokens by hand and both files must move together.
 
-## Copy
+### MoneyAmount
 
-- Spanish is the source of truth (`i18n/locales/es.json`); `en.json` mirrors it 1:1.
-- **Never hardcode a user-facing string.** Always `t('...')`. Add keys to
-  BOTH locale files, same key order.
-- Plain verbs, sentence case, active voice, no filler. Be specific over clever.
-- Errors say what happened and how to fix it. They never apologise, never vague.
-- Empty states invite an action.
-- Number/date formatting: `formatMoney` `formatNumber` `formatCount`
-  `formatDate` `formatDateLong` (all es-UY) from `utils/`.
+Every amount renders through `<MoneyAmount>`. Its gold magnitude rule uses the
+fixed site-wide logarithmic domain from `utils/money.ts`; never normalize it to
+the current result set and never hand-format an amount.
 
-## Data helpers — `utils/contract.ts`
+### CellLink
 
-The OCDS shape is deep and inconsistent. Never re-improvise extraction:
-`contractTitle` `contractAmount` `contractCurrency` `contractSuppliers`
-`contractDate` `contractYear` `contractItems` `isMixedCurrency`
-`statusTagClass` `govSourceUrl`.
+Use `<CellLink>` for row-level navigation. Its arrow has an integer icon box so
+label and arrow stay optically aligned at fractional zoom.
 
-## Data truths (verified against the live DB — do not contradict these)
+### ChartBlock
 
-- **The dev server reads `app/.env`, not the repo-root `.env`.** `app/.env`
-  points at `mongodb://localhost:27017` — a stale ~1.89M-doc local copy.
-  The live DB is in the root `.env`. To verify against real data, override:
-  `MONGODB_URI=<root value> npm run dev`. Anyone testing from `app/` is
-  otherwise testing the wrong database.
-- `releases` holds **2,171,928** docs (live). `date` is a real **BSON Date**
-  — the schema comments it out and it survives via `strict:false`, but a
-  `scripts/migrate-dates.ts` run already converted it (`$type:'string'` matches 0).
-  No `$dateFromString` needed.
-- Money lives at `awards[].items[].unit.value.amount`; pre-normalised to UYU
-  at `amount.primaryAmount` = **unit price × quantity**.
-- **Never show an all-time grand total.** A handful of source records carry
-  corrupt quantities: `adjudicacion-1318822` multiplies USD 519,788.85 by a
-  quantity of 1,200,007 generators → USD 623bn, ~8× Uruguay's GDP, in one
-  contract. **3 records = 86% of the 30.9T sum; 13 records = 92.8%.**
-  Excluding them the real total is ~2.24T UYU, and the median contract is
-  **16,680 UYU**. Use the median (`stats.medianValue`) for headline money.
-  Do NOT hide the outliers from filtered views — the source's number is the
-  source's number, and the page links to the official PDF.
-- **`tender.status` is null on 91.56%** of docs. Never present it as a
-  primary filter or imply coverage it doesn't have.
-- **`tender.procurementMethodDetails`** carries the real Spanish procedure
-  names (Compra Directa, Licitación Abreviada, Concurso de Precios, Compra
-  por Excepción, Licitación Pública). It is null on 69.31%.
-  `tender.procurementMethod` is only the English OCDS enum — don't show it.
-- **All 964 anomalies are `price_spike`.** The other enum types are never
-  generated. Don't build UI for types that don't exist.
-- `dashboard_metrics` is a **stale snapshot** (says 1.89M vs 2.17M actual,
-  and `currentYearGrowth: -100` is garbage). Never render `currentYearGrowth`.
-  Label totals with `calculatedAt`.
-- Every release links to its official **public page**:
-  `https://www.comprasestatales.gub.uy/consultas/detalle/mostrar-llamado/1/id/{id_compra}`
-  where `id_compra` is the **ocid** with `ocds-<prefix>-` stripped. Use the API's
-  `sourceUrl` field, or `govSourceUrl(ocid)`. **Every detail page must link to the source.**
-  - **Derive from `ocid`, NEVER from `id`.** They differ on adjustment/cancellation
-    releases and `id` lands on an unrelated contract: `ajuste_llamado-47064` has ocid
-    `ocds-yfs5dr-1356289` → `/id/1356289` is Compra Directa 1240/2026, while `/id/47064`
-    is Compra Directa 1023/2005. Verified for numeric, legacy `a100` and `i455643` ocids.
-  - `/ocds/release/{id}` is the raw OCDS **JSON API**, not a human page — that's
-    `ocdsJsonUrl(id)`, a secondary link at most.
+All charts render inside `<ChartBlock>`, which owns heading, help, panel and
+overflow. Every grid ancestor uses `minmax(0, 1fr)` and `min-width: 0`.
 
-## Quality floor (non-negotiable)
+### StatusChip and ReportedFigure
 
-- Responsive to 360px. Wide content scrolls in its own `.u-scroll-x`; the
-  page body never scrolls sideways.
-- Visible keyboard focus (handled globally — don't remove outlines).
-- `prefers-reduced-motion` respected (handled globally).
-- Every page calls `useSeo({ title, description, path })` with its own copy.
-  Detail pages add JSON-LD. Never ship the same title on two routes.
-- SSR: use `useFetch` (not client-only fetch) so content is in the HTML.
-- Vuetify defaults are set in `plugins/vuetify.ts`; don't re-style per page.
+Use `<StatusChip>` for fixed legal/record states. Use `<ReportedFigure>` for an
+attributed prose claim. A source quotation does not earn the gold language used
+for site-derived money.
 
-## Motion
+### DataTable and PaginatedList
 
-Restrained. Hover/focus transitions and one page-load reveal at most.
-Scattered animation is what makes a page read as machine-made.
+`<DataTable>` is the semantic table/card reflow primitive.
+`<PaginatedList>` owns both pagers and return-to-results behavior. Do not compose
+raw Vuetify data tables for public record directories unless the shared
+component cannot represent the data.
+
+### ContactsDirectoryFilters
+
+The list and map views share `<ContactsDirectoryFilters>`. Query keys, labels,
+defaults and apply/reset behavior must stay identical across both routes.
+
+### SupplierLocationsMap and supplier dialog
+
+`<SupplierLocationsMap>` owns OpenStreetMap interaction, viewport loading,
+radius, geolocation and marker selection. A supplier marker opens a real
+Vuetify dialog on the first click. The dialog loads the full available business
+record immediately and groups it into identity, contact, activity, registry and
+procurement evidence. There is no intermediate Leaflet popup.
+
+The dialog has one clear close action, keyboard focus containment, direct
+contact actions, provenance beside values and a link to the complete supplier
+profile. Loading and partial-data states preserve the dialog frame so the
+selection never feels lost.
+
+## Do's and Don'ts
+
+### Do
+
+- Put record identity, source and state before interpretation.
+- Use borders and background tone to group fields.
+- Show provenance beside contact and registry facts.
+- Make markers opaque, high-contrast and keyboard-reachable where supported.
+- Use one click to open the complete supplier record.
+- Respect focus visibility and `prefers-reduced-motion`.
+- Verify public pages at 360px and desktop widths.
+- Call `useSeo` on every page and use SSR for public data.
+
+### Don't
+
+- Use gold for anything except money.
+- Hardcode user-facing strings or color literals in components.
+- Turn prose into chips or use numbered markers for unordered content.
+- Create a second popup or “load details” click before the real dialog.
+- Show enrichment scores, provider IDs or internal versions as business facts.
+- Re-derive OCDS extraction or official URLs inside components.
+- Remove outlines, hide missing data or imply a map point is exact when its
+  source does not support that certainty.
+- Use a bare `1fr` around charts or dense records.

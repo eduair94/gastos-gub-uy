@@ -1,3 +1,10 @@
+<!--
+THESIS: Expediente público vivo; el mapa convierte ubicación en evidencia consultable.
+OWN-WORLD: Cartografía, RUT, RUPE/DEI, canales con procedencia y contratación pública.
+STORY: Buscar lugar, leer radio, seleccionar proveedor y revisar su ficha completa.
+FIRST VIEWPORT: Alcance, vistas, filtros compartidos, controles geográficos y mapa.
+FORM: Bordes estructurales, controles compactos; sombra sólo en flotantes y diálogo.
+-->
 <script setup lang="ts">
 interface RubroFacet {
   classificationId: string
@@ -45,6 +52,7 @@ const { data: rubroRes } = await useFetch<any>('/api/contacts/rubros', {
   key: 'contacts-rubros',
 })
 const rubros = computed<RubroFacet[]>(() => rubroRes.value?.data?.rubros ?? [])
+const activeFilterCount = computed(() => Object.keys(filterQuery.value).length)
 
 function clearSearch() {
   search.value = ''
@@ -83,14 +91,30 @@ useSeo(() => ({
 
 <template>
   <div class="u-container page">
-    <header class="page__head">
-      <p class="u-eyebrow">
-        {{ t('nav.suppliers') }}
-      </p>
-      <h1>{{ t('contacts.map.title') }}</h1>
-      <p class="u-lead page__lead">
-        {{ t('contacts.map.lead') }}
-      </p>
+    <header class="map-hero">
+      <div class="map-hero__copy">
+        <p class="u-eyebrow">
+          {{ t('nav.suppliers') }}
+        </p>
+        <h1>{{ t('contacts.map.title') }}</h1>
+        <p class="u-lead page__lead">
+          {{ t('contacts.map.lead') }}
+        </p>
+      </div>
+      <dl class="map-hero__facts">
+        <div>
+          <dt>{{ t('contacts.map.heroBase') }}</dt>
+          <dd>{{ t('contacts.map.heroBaseValue') }}</dd>
+        </div>
+        <div>
+          <dt>{{ t('contacts.map.heroLoading') }}</dt>
+          <dd>{{ t('contacts.map.heroLoadingValue') }}</dd>
+        </div>
+        <div>
+          <dt>{{ t('contacts.map.heroSelection') }}</dt>
+          <dd>{{ t('contacts.map.heroSelectionValue') }}</dd>
+        </div>
+      </dl>
     </header>
 
     <ContactsViewTabs />
@@ -119,6 +143,17 @@ useSeo(() => ({
       class="map-stage"
       :aria-label="t('contacts.map.title')"
     >
+      <header class="map-stage__head">
+        <div>
+          <p>{{ t('contacts.map.workbenchEyebrow') }}</p>
+          <h2>{{ t('contacts.map.workbenchTitle') }}</h2>
+        </div>
+        <span class="map-stage__filter-count">
+          {{ activeFilterCount
+            ? t('filters.active', activeFilterCount)
+            : t('contacts.map.noActiveFilters') }}
+        </span>
+      </header>
       <SupplierLocationsMap :filters="filterQuery" />
     </section>
 
@@ -142,9 +177,59 @@ useSeo(() => ({
   padding-block: var(--s-6) var(--s-8);
 }
 
-.page__head {
-  max-width: 58rem;
+.map-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 0.6fr);
+  gap: var(--s-7);
+  align-items: end;
   margin-bottom: var(--s-5);
+  padding-bottom: var(--s-5);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.map-hero__copy {
+  max-width: 58rem;
+}
+
+.map-hero h1 {
+  max-width: 18ch;
+  text-wrap: balance;
+}
+
+.map-hero__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.map-hero__facts > div {
+  min-width: 0;
+  padding: var(--s-3);
+  border-right: 1px solid var(--rule);
+}
+
+.map-hero__facts > div:last-child {
+  border-right: 0;
+}
+
+.map-hero__facts dt,
+.map-stage__head p {
+  margin: 0 0 var(--s-1);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.map-hero__facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--t-xs);
+  font-weight: 650;
 }
 
 .page__lead {
@@ -153,6 +238,33 @@ useSeo(() => ({
 
 .map-stage {
   min-width: 0;
+  margin-top: var(--s-5);
+  padding: var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.map-stage__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.map-stage__head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--t-lg);
+}
+
+.map-stage__filter-count {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
 }
 
 .map-notes {
@@ -189,6 +301,33 @@ useSeo(() => ({
 }
 
 @media (max-width: 720px) {
+  .map-hero {
+    grid-template-columns: 1fr;
+    gap: var(--s-4);
+  }
+
+  .map-hero__facts {
+    grid-template-columns: 1fr;
+  }
+
+  .map-hero__facts > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .map-hero__facts > div:last-child {
+    border-bottom: 0;
+  }
+
+  .map-stage {
+    padding: var(--s-3);
+  }
+
+  .map-stage__head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .map-notes {
     grid-template-columns: 1fr;
   }

@@ -1,24 +1,15 @@
 <script setup lang="ts">
 /**
  * Client-only Leaflet map over the geospatial supplier_contacts endpoint.
- * The viewport payload stays small; complete contact details load only after
- * the user asks for them inside a marker popup.
+ * The viewport payload stays small; selecting a marker immediately opens the
+ * complete supplier dialog while its bounded detail request resolves.
  */
 import 'leaflet/dist/leaflet.css'
-
-interface SupplierMapPoint {
-  supplierId: string
-  rut: string
-  name: string
-  lat: number
-  lng: number
-  locality: string | null
-  address: string | null
-  placeSource: string | null
-  rubro: string | null
-  neverAwarded: boolean
-  rupeEstado: string | null
-}
+import type {
+  SupplierBusinessDetail,
+  SupplierBusinessDetailResponse,
+  SupplierMapPoint,
+} from '~/types/supplier-business'
 
 interface ScanArea {
   center: { lat: number, lng: number }
@@ -33,28 +24,6 @@ interface MapResponse {
     truncated: boolean
     scan: ScanArea
   }
-}
-
-interface PopupDetail {
-  supplierId: string
-  rut: string
-  name: string
-  rubro: string | null
-  emails: string[]
-  phones: string[]
-  website: string | null
-  contactFormUrl: string | null
-  socialLinks: Array<{ platform: string, label: string, url: string }>
-  locality: string | null
-  address: string | null
-  websiteAddress: string | null
-  hours: string | null
-  mapsUrl: string | null
-}
-
-interface DetailResponse {
-  success: true
-  data: PopupDetail
 }
 
 interface LocationResult {
@@ -85,7 +54,6 @@ const props = withDefaults(defineProps<{
 })
 
 const { t } = useI18n()
-const localePath = useLocalePath()
 const el = ref<HTMLElement | null>(null)
 const loading = ref(true)
 const error = ref(false)
@@ -97,6 +65,11 @@ const locationSearching = ref(false)
 const locationResults = ref<LocationResult[]>([])
 const locationError = ref('')
 const locating = ref(false)
+const dialogOpen = ref(false)
+const selectedPoint = ref<SupplierMapPoint | null>(null)
+const selectedDetail = ref<SupplierBusinessDetail | null>(null)
+const detailLoading = ref(false)
+const detailError = ref(false)
 
 let L: any = null
 let map: any = null
@@ -108,198 +81,11 @@ let userAccuracyCircle: any = null
 let controller: AbortController | null = null
 let locationController: AbortController | null = null
 let requestSequence = 0
+let detailRequestSequence = 0
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let selectedMarker: any = null
 
-const detailCache = new Map<string, PopupDetail>()
-
-function supplierHref(id: string): string {
-  return localePath(`/suppliers/${id.split('/').map(encodeURIComponent).join('/')}`)
-}
-
-function externalHref(value: string): string | null {
-  try {
-    const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`)
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null
-  }
-  catch {
-    return null
-  }
-}
-
-function externalLabel(value: string): string {
-  try {
-    return new URL(value).hostname.replace(/^www\./, '')
-  }
-  catch {
-    return value
-  }
-}
-
-function node<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const item = document.createElement(tag)
-  item.className = className
-  if (text !== undefined) item.textContent = text
-  return item
-}
-
-function link(label: string, href: string, external = false): HTMLAnchorElement {
-  const item = node('a', 'supplier-card__link', label)
-  item.href = href
-  if (external) {
-    item.target = '_blank'
-    item.rel = 'noopener noreferrer'
-  }
-  return item
-}
-
-function appendField(
-  card: HTMLElement,
-  label: string,
-  values: Array<HTMLElement | null>,
-): boolean {
-  const usable = values.filter((value): value is HTMLElement => !!value)
-  if (!usable.length) return false
-  const field = node('div', 'supplier-card__field')
-  field.append(node('span', 'supplier-card__label', label))
-  const content = node('div', 'supplier-card__values')
-  usable.forEach(value => content.append(value))
-  field.append(content)
-  card.append(field)
-  return true
-}
-
-function popupHeader(name: string, rubro: string | null, place: string | null): HTMLElement {
-  const header = node('header', 'supplier-card__header')
-  header.append(node('strong', 'supplier-card__title', name))
-  if (rubro) header.append(node('span', 'supplier-card__meta', rubro))
-  if (place) header.append(node('span', 'supplier-card__place', place))
-  return header
-}
-
-function popupActions(supplierId: string): HTMLElement {
-  const actions = node('div', 'supplier-card__actions')
-  actions.append(link(t('contacts.map.openProfile'), supplierHref(supplierId)))
-  return actions
-}
-
-function contactCard(detail: PopupDetail): HTMLElement {
-  const card = node('article', 'supplier-card')
-  const place = detail.locality || detail.address
-  card.append(popupHeader(detail.name, detail.rubro, place))
-
-  let hasContact = false
-  hasContact = appendField(
-    card,
-    t('contacts.table.email'),
-    detail.emails.map(email => link(email, `mailto:${email}`)),
-  ) || hasContact
-  hasContact = appendField(
-    card,
-    t('contacts.table.phone'),
-    detail.phones.map(phone => link(phone, `tel:${phone}`)),
-  ) || hasContact
-
-  const website = detail.website ? externalHref(detail.website) : null
-  hasContact = appendField(
-    card,
-    t('contacts.table.website'),
-    website ? [link(externalLabel(website), website, true)] : [],
-  ) || hasContact
-  hasContact = appendField(
-    card,
-    t('contacts.contactForm'),
-    detail.contactFormUrl
-      ? [link(t('contacts.contactForm'), detail.contactFormUrl, true)]
-      : [],
-  ) || hasContact
-  hasContact = appendField(
-    card,
-    t('contacts.map.socialChannels'),
-    detail.socialLinks.map(item => link(item.label || item.platform, item.url, true)),
-  ) || hasContact
-
-  appendField(
-    card,
-    t('contacts.location.address'),
-    detail.address ? [node('span', '', detail.address)] : [],
-  )
-  appendField(
-    card,
-    t('contacts.location.websiteAddress'),
-    detail.websiteAddress && detail.websiteAddress !== detail.address
-      ? [node('span', '', detail.websiteAddress)]
-      : [],
-  )
-  appendField(
-    card,
-    t('contacts.businessHours'),
-    detail.hours ? [node('span', '', detail.hours)] : [],
-  )
-  appendField(
-    card,
-    t('contacts.location.openMaps'),
-    detail.mapsUrl ? [link(t('contacts.location.openMaps'), detail.mapsUrl, true)] : [],
-  )
-
-  if (!hasContact) {
-    card.append(node('p', 'supplier-card__empty', t('contacts.map.noContact')))
-  }
-  card.append(popupActions(detail.supplierId))
-  return card
-}
-
-function errorCard(point: SupplierMapPoint, marker: any): HTMLElement {
-  const card = node('article', 'supplier-card')
-  card.append(popupHeader(point.name, point.rubro, point.locality || point.address))
-  card.append(node('p', 'supplier-card__empty', t('contacts.map.contactError')))
-  const retry = node('button', 'supplier-card__button', t('contacts.map.retryContact'))
-  retry.type = 'button'
-  retry.addEventListener('click', () => void showContactDetails(point, marker, retry))
-  card.append(retry, popupActions(point.supplierId))
-  return card
-}
-
-async function showContactDetails(
-  point: SupplierMapPoint,
-  marker: any,
-  trigger: HTMLButtonElement,
-): Promise<void> {
-  const cached = detailCache.get(point.supplierId)
-  if (cached) {
-    marker.setPopupContent(contactCard(cached)).openPopup()
-    return
-  }
-
-  trigger.disabled = true
-  trigger.textContent = t('contacts.map.loadingContact')
-  try {
-    const response = await $fetch<DetailResponse>('/api/contacts/map-detail', {
-      query: { supplierId: point.supplierId },
-    })
-    detailCache.set(point.supplierId, response.data)
-    marker.setPopupContent(contactCard(response.data)).openPopup()
-  }
-  catch {
-    marker.setPopupContent(errorCard(point, marker)).openPopup()
-  }
-}
-
-function summaryCard(point: SupplierMapPoint, marker: any): HTMLElement {
-  const card = node('article', 'supplier-card')
-  card.append(popupHeader(point.name, point.rubro, point.locality || point.address))
-  if (point.neverAwarded) {
-    card.append(node('span', 'supplier-card__note', t('contacts.chip.neverAwarded')))
-  }
-  const button = node('button', 'supplier-card__button', t('contacts.map.viewContacts'))
-  button.type = 'button'
-  button.addEventListener('click', () => void showContactDetails(point, marker, button))
-  card.append(button)
-  return card
-}
+const detailCache = new Map<string, SupplierBusinessDetail>()
 
 function markerLimit(): number {
   const zoom = map?.getZoom?.() ?? 6
@@ -310,6 +96,58 @@ function markerLimit(): number {
 
 function rootColor(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
+function setMarkerSelected(marker: any, selected: boolean): void {
+  if (!marker) return
+  marker.setRadius(selected ? 11 : 8)
+  marker.setStyle({
+    color: selected ? rootColor('--celeste-deep') : rootColor('--ink'),
+    fillColor: selected ? rootColor('--ink') : rootColor('--celeste'),
+    weight: selected ? 4 : 2.5,
+  })
+  if (selected) marker.bringToFront()
+}
+
+async function loadSupplierDetail(point = selectedPoint.value): Promise<void> {
+  if (!point) return
+  const cached = detailCache.get(point.supplierId)
+  if (cached) {
+    selectedDetail.value = cached
+    detailLoading.value = false
+    detailError.value = false
+    return
+  }
+
+  const sequence = ++detailRequestSequence
+  detailLoading.value = true
+  detailError.value = false
+  try {
+    const response = await $fetch<SupplierBusinessDetailResponse>('/api/contacts/map-detail', {
+      query: { supplierId: point.supplierId },
+    })
+    if (sequence !== detailRequestSequence || selectedPoint.value?.supplierId !== point.supplierId) return
+    detailCache.set(point.supplierId, response.data)
+    selectedDetail.value = response.data
+  }
+  catch {
+    if (sequence !== detailRequestSequence) return
+    detailError.value = true
+  }
+  finally {
+    if (sequence === detailRequestSequence) detailLoading.value = false
+  }
+}
+
+function selectSupplier(point: SupplierMapPoint, marker: any): void {
+  if (selectedMarker && selectedMarker !== marker) setMarkerSelected(selectedMarker, false)
+  selectedMarker = marker
+  setMarkerSelected(marker, true)
+  selectedPoint.value = point
+  selectedDetail.value = detailCache.get(point.supplierId) ?? null
+  detailError.value = false
+  dialogOpen.value = true
+  void loadSupplierDetail(point)
 }
 
 function renderScanArea(scan: ScanArea): void {
@@ -331,12 +169,14 @@ function renderScanArea(scan: ScanArea): void {
 
 function renderPoints(points: SupplierMapPoint[]): void {
   if (!map || !L) return
-  if (pointLayer) pointLayer.remove()
+  if (pointLayer) {
+    pointLayer.remove()
+    selectedMarker = null
+  }
   pointLayer = L.layerGroup().addTo(map)
 
   const ink = rootColor('--ink')
   const celeste = rootColor('--celeste')
-  const verde = rootColor('--verde')
   for (const point of points) {
     if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) continue
     const marker = L.circleMarker([point.lat, point.lng], {
@@ -347,25 +187,33 @@ function renderPoints(points: SupplierMapPoint[]): void {
       fillColor: celeste,
       fillOpacity: 1,
     })
-    marker.bindPopup(() => summaryCard(point, marker), {
-      closeButton: true,
-      minWidth: 280,
-      maxWidth: 380,
-      autoPanPadding: [24, 24],
+    marker.bindTooltip(point.name, {
+      direction: 'top',
+      offset: [0, -8],
+      opacity: 0.96,
     })
     marker.on('mouseover', () => marker.setRadius(10))
     marker.on('mouseout', () => {
-      if (!marker.isPopupOpen()) marker.setRadius(8)
+      if (marker !== selectedMarker) marker.setRadius(8)
     })
-    marker.on('popupopen', () => {
-      marker.setRadius(10)
-      marker.setStyle({ fillColor: verde })
-    })
-    marker.on('popupclose', () => {
-      marker.setRadius(8)
-      marker.setStyle({ fillColor: celeste })
-    })
+    marker.on('click', () => selectSupplier(point, marker))
     marker.addTo(pointLayer)
+
+    const markerElement = marker.getElement?.() as SVGElement | null
+    if (markerElement) {
+      markerElement.setAttribute('tabindex', '0')
+      markerElement.setAttribute('role', 'button')
+      markerElement.setAttribute('aria-label', t('contacts.map.markerLabel', { name: point.name }))
+      markerElement.addEventListener('focus', () => marker.setRadius(10))
+      markerElement.addEventListener('blur', () => {
+        if (marker !== selectedMarker) marker.setRadius(8)
+      })
+      markerElement.addEventListener('keydown', (event: KeyboardEvent) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        selectSupplier(point, marker)
+      })
+    }
   }
 }
 
@@ -515,18 +363,25 @@ watch(
   () => props.filters,
   () => {
     if (!map) return
-    map.closePopup()
+    dialogOpen.value = false
     queueLoad(0)
   },
   { deep: true },
 )
+
+watch(dialogOpen, (isOpen) => {
+  if (isOpen) return
+  detailRequestSequence++
+  detailLoading.value = false
+  if (selectedMarker) setMarkerSelected(selectedMarker, false)
+  selectedMarker = null
+})
 
 onMounted(async () => {
   if (!el.value) return
   const leaflet = await import('leaflet')
   L = leaflet.default ?? leaflet
   map = L.map(el.value, {
-    preferCanvas: true,
     scrollWheelZoom: true,
     minZoom: 2,
     maxBounds: [[-85, -180], [85, 180]],
@@ -545,6 +400,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   requestSequence++
+  detailRequestSequence++
   controller?.abort()
   locationController?.abort()
   if (debounceTimer) clearTimeout(debounceTimer)
@@ -641,7 +497,7 @@ onBeforeUnmount(() => {
       ref="el"
       class="supplier-map"
       :style="{ height: `${height}px` }"
-      role="application"
+      role="region"
       :aria-label="t('contacts.map.aria')"
     />
 
@@ -679,6 +535,15 @@ onBeforeUnmount(() => {
         {{ t('contacts.map.retry') }}
       </button>
     </div>
+
+    <SupplierBusinessDialog
+      v-model="dialogOpen"
+      :point="selectedPoint"
+      :detail="selectedDetail"
+      :loading="detailLoading"
+      :error="detailError"
+      @retry="loadSupplierDetail()"
+    />
   </div>
 </template>
 
@@ -874,130 +739,22 @@ onBeforeUnmount(() => {
   font-family: var(--font-body);
 }
 
-.supplier-map :deep(.leaflet-popup-content-wrapper),
-.supplier-map :deep(.leaflet-popup-tip) {
-  background: var(--surface);
-  color: var(--text);
-}
-
-.supplier-map :deep(.leaflet-popup-content-wrapper) {
-  overflow: hidden;
+.supplier-map :deep(.leaflet-tooltip) {
+  max-width: 24rem;
+  padding: var(--s-2) var(--s-3);
   border: 1px solid var(--rule-strong);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-md);
+  background: var(--ink);
   box-shadow: var(--shadow-2);
-}
-
-.supplier-map :deep(.leaflet-popup-content) {
-  min-width: 0;
-  margin: 0;
-  color: var(--text);
+  color: var(--ink-fg);
   font-family: var(--font-body);
   font-size: var(--t-xs);
-  line-height: 1.5;
+  font-weight: 650;
+  line-height: 1.35;
 }
 
-.supplier-map :deep(.leaflet-popup-close-button) {
-  top: var(--s-2);
-  right: var(--s-2);
-  width: 2rem;
-  height: 2rem;
-  color: var(--text-muted);
-  font-size: 1.5rem;
-}
-
-.supplier-map :deep(.supplier-card) {
-  display: grid;
-  gap: var(--s-3);
-  max-height: min(62vh, 460px);
-  overflow-y: auto;
-  padding: var(--s-4);
-}
-
-.supplier-map :deep(.supplier-card__header) {
-  display: grid;
-  gap: var(--s-1);
-  padding-right: var(--s-6);
-  padding-bottom: var(--s-3);
-  border-bottom: 1px solid var(--rule);
-}
-
-.supplier-map :deep(.supplier-card__title) {
-  color: var(--text);
-  font-family: var(--font-display);
-  font-size: var(--t-base);
-  line-height: 1.2;
-}
-
-.supplier-map :deep(.supplier-card__meta),
-.supplier-map :deep(.supplier-card__place),
-.supplier-map :deep(.supplier-card__note) {
-  color: var(--text-muted);
-}
-
-.supplier-map :deep(.supplier-card__note) {
-  font-family: var(--font-mono);
-}
-
-.supplier-map :deep(.supplier-card__field) {
-  display: grid;
-  grid-template-columns: minmax(5.5rem, auto) minmax(0, 1fr);
-  gap: var(--s-3);
-  align-items: start;
-}
-
-.supplier-map :deep(.supplier-card__label) {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.supplier-map :deep(.supplier-card__values) {
-  display: grid;
-  gap: var(--s-1);
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.supplier-map :deep(.supplier-card__link) {
-  color: var(--celeste-deep);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.supplier-map :deep(.supplier-card__link:hover) {
-  text-decoration: underline;
-}
-
-.supplier-map :deep(.supplier-card__button) {
-  justify-self: start;
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--celeste-deep);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  color: var(--celeste-deep);
-  font: 700 var(--t-sm)/1.2 var(--font-body);
-  cursor: pointer;
-}
-
-.supplier-map :deep(.supplier-card__button:hover) {
-  background: var(--surface-sunken);
-}
-
-.supplier-map :deep(.supplier-card__button:disabled) {
-  cursor: wait;
-  opacity: 0.7;
-}
-
-.supplier-map :deep(.supplier-card__empty) {
-  margin: 0;
-  color: var(--text-muted);
-}
-
-.supplier-map :deep(.supplier-card__actions) {
-  padding-top: var(--s-3);
-  border-top: 1px solid var(--rule);
+.supplier-map :deep(.leaflet-tooltip::before) {
+  border-top-color: var(--ink);
 }
 
 @keyframes map-pulse {
@@ -1037,9 +794,5 @@ onBeforeUnmount(() => {
     padding-left: calc(0.55rem + var(--s-2));
   }
 
-  .supplier-map :deep(.supplier-card__field) {
-    grid-template-columns: 1fr;
-    gap: var(--s-1);
-  }
 }
 </style>

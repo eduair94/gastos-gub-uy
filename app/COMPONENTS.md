@@ -1,0 +1,136 @@
+# Component handbook
+
+This is the implementation companion to `DESIGN.md`. It documents the supported
+Vuetify 4 foundation and the custom primitives that define the product.
+
+## Runtime contract
+
+- Nuxt 3 and Vue 3 render public pages SSR-first.
+- Vuetify 4 components are auto-resolved by `vite-plugin-vuetify`.
+- Do not add `import * as components from 'vuetify/components'`.
+- Directives remain eagerly registered because templates reference them by name.
+- Global themes and defaults live in `plugins/vuetify.ts`.
+- Component CSS uses variables from `assets/scss/_tokens.scss`; no component hex.
+- User-facing strings come from both locale files in identical key order.
+
+## Vuetify primitives
+
+| Primitive | Product use | Default |
+| --- | --- | --- |
+| `VBtn` | Primary/secondary actions, icon controls | flat, no elevation, medium radius |
+| `VCard` | Dialog frame and bounded record surface | zero elevation, large radius |
+| `VDialog` | Focused record/action overlay | use `scrollable`, explicit max width |
+| `VTextField` | Search and short text filters | outlined, comfortable, auto details |
+| `VSelect` / `VAutocomplete` | Controlled vocabularies and server search | outlined, comfortable |
+| `VChip` | Fixed statuses and compact filters | tonal, small radius |
+| `VDataTable` | Low-level table engine only | comfortable density |
+| `VTabs` | Peer views inside one bounded context | use sparingly; preserve all content |
+| `VTooltip` | Icon action clarification | top |
+| `VProgressCircular` | In-place asynchronous wait | include adjacent readable label |
+
+Use semantic HTML inside Vuetify shells. A dialog record remains a `<section>`
+with headings, lists and definition lists; Vuetify provides focus, overlay and
+interaction behavior.
+
+## Custom primitives
+
+### MoneyAmount
+
+Required for every amount. It formats value/currency and draws the shared,
+fixed-domain magnitude rule.
+
+```vue
+<MoneyAmount :amount="total" currency="UYU" size="xl" align="start" />
+```
+
+### CellLink
+
+Required for row-level navigation and trailing-arrow actions.
+
+```vue
+<CellLink :to="supplierPath" :label="t('sup.view')" />
+```
+
+### StatusChip, RupeStatusChip and NeverAwardedChip
+
+Use for finite status vocabularies. Do not put sentences or uncertain
+interpretations in chips.
+
+### DataTable, PaginatedList and DataPager
+
+Use this trio for directory results. `DataTable` preserves table semantics on
+desktop and reflows records on narrow screens. `PaginatedList` owns both pagers
+and scroll restoration.
+
+### ChartBlock
+
+Required wrapper for every chart. It contains overflow locally and preserves
+responsive grid behavior.
+
+### ContactsDirectoryFilters
+
+The canonical contact-directory filter form. Both list and map routes pass the
+same model shape and handle `apply`/`reset` identically. Extend this component
+first when adding a directory filter.
+
+### SupplierLocationsMap
+
+Owns OpenStreetMap, geocoding search, geolocation, radius visualization,
+viewport/radius API loading and supplier selection. It emits no navigation
+side-effects: selecting a marker opens the supplier dialog in place.
+
+### SupplierBusinessDialog
+
+The complete supplier overlay. Its input is a selected map point plus a detail
+record. It opens immediately, displays a stable loading skeleton and then
+organizes all available evidence:
+
+- identity and registry state;
+- direct contact actions with source;
+- address and business hours;
+- DEI activity/classification;
+- procurement totals, years, buyers and categories;
+- data provenance and update dates;
+- route to the full supplier profile.
+
+The dialog owns presentation only. Sanitization and aggregation belong in the
+map-detail API.
+
+### ContactChannelList and ContactLocationDialog
+
+`ContactChannelList` is still the compact list/table renderer for sourced
+contact values. `ContactLocationDialog` remains the narrow location-only
+overlay used by the table. The map uses `SupplierBusinessDialog` because its
+selection needs the complete record, not a second drill-in.
+
+## Composition patterns
+
+### Public record page
+
+1. `useSeo` and SSR data fetch in setup.
+2. Page header with eyebrow, title and concise evidence note.
+3. Shared filters.
+4. Results/status line.
+5. One primary table, map or chart surface.
+6. Source/caveat nearest to the data it qualifies.
+
+### Complete record dialog
+
+1. Open the `VDialog` on selection before the network request resolves.
+2. Keep the selected identity visible during loading.
+3. Cache records by supplier ID for repeated map selections.
+4. Put direct actions in the header but leave evidence in semantic sections.
+5. Show only sections with useful content; missing individual fields use an
+   em dash or an explicit localized empty state.
+6. External links use `target="_blank"` plus `rel="nofollow noopener"`.
+
+## Review checklist
+
+- Same behavior with keyboard, pointer and touch.
+- Dialog focus is trapped and close is named.
+- Page has no horizontal scroll at 360px.
+- Text and markers meet contrast in both themes.
+- Loading, empty, error and partial-data states are visible.
+- All new copy exists in Spanish and English at matching positions.
+- Any new MDI icon is included in the generated subset.
+- Lint, build and a real-browser pass cover the changed route.
