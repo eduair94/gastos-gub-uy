@@ -45,6 +45,11 @@ class CronServer {
   private isAnalyticsRunning: boolean = false;
   private anomalyStatus: CronJobStatus;
   private isAnomalyRunning: boolean = false;
+  // Bounded AI anomaly queue. Separate from the detector so transient Gemini
+  // failures retry hourly and recent medium/low flags do not wait for a new
+  // nightly detection pass.
+  private anomalyAiStatus: CronJobStatus;
+  private isAnomalyAiRunning: boolean = false;
   // Monitor de Llamados jobs. Independent of the release writers/aggregations
   // above (they read `releases` and write open_calls/notifications), so they use
   // their own guards rather than busyWith().
@@ -100,6 +105,7 @@ class CronServer {
     this.reconcileStatus = freshStatus();
     this.analyticsStatus = freshStatus();
     this.anomalyStatus = freshStatus();
+    this.anomalyAiStatus = freshStatus();
     this.openCallsStatus = freshStatus();
     this.remindersStatus = freshStatus();
     this.digestStatus = freshStatus();
@@ -119,7 +125,7 @@ class CronServer {
   /**
    * Names whichever job currently holds the box, or null when idle.
    *
-   * All four jobs are mutually exclusive, and this is the single place that decides it. Each guard
+   * All five jobs are mutually exclusive, and this is the single place that decides it. Each guard
    * used to be hand-written at its own call site and every one checked a different subset: ingest
    * never looked at reconcile, analytics never looked at reconcile, and the HTTP reconcile trigger
    * checked neither of the other two. Ingest and reconcile both WRITE releases; analytics and the
@@ -139,6 +145,7 @@ class CronServer {
     if (this.isReconcileRunning) return "reconciliation";
     if (this.isAnalyticsRunning) return "analytics refresh";
     if (this.isAnomalyRunning) return "anomaly detection";
+    if (this.isAnomalyAiRunning) return "anomaly AI triage";
     return null;
   }
 
@@ -390,6 +397,32 @@ class CronServer {
     this.app.post("/cron/anomalies", triggerAnomalies);
     this.app.get("/cron/anomalies", triggerAnomalies);
 
+    // AI anomaly triage: status + bounded manual retry/backfill trigger.
+    this.app.get("/cron/anomaly-ai/status", (_req, res) => {
+      res.json({ ...this.anomalyAiStatus, isRunning: this.isAnomalyAiRunning });
+    });
+    const triggerAnomalyAi = (_req: express.Request, res: express.Response): void => {
+      if (this.isAnomalyAiRunning) {
+        res.status(409).json({ error: "AI anomaly triage already running", status: this.anomalyAiStatus });
+        return;
+      }
+      const busy = this.busyWith();
+      if (busy || this.isPliegoSummaryRunning) {
+        res.status(409).json({
+          error: `Cannot start AI anomaly triage - ${busy ?? "pliego AI"} is running`,
+          status: this.anomalyAiStatus,
+        });
+        return;
+      }
+      this.logger.info("Manual AI anomaly triage trigger initiated");
+      this.runRecentAnomalyAiBatch(true).catch((error) => {
+        this.logger.error("Manual AI anomaly triage trigger failed:", error);
+      });
+      res.json({ message: "Recent AI anomaly triage triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/anomaly-ai", triggerAnomalyAi);
+    this.app.get("/cron/anomaly-ai", triggerAnomalyAi);
+
     // Provider × unexplained-anomaly cross-reference: status + manual trigger. Independent guard
     // (does not touch releases), so it never consults busyWith().
     this.app.get("/cron/cross-provider/status", (_req, res) => {
@@ -596,6 +629,10 @@ class CronServer {
         ...this.anomalyStatus,
         isRunning: this.isAnomalyRunning,
       },
+      anomalyAi: {
+        ...this.anomalyAiStatus,
+        isRunning: this.isAnomalyAiRunning,
+      },
     };
 
     // Check MongoDB connection
@@ -731,6 +768,19 @@ class CronServer {
     );
     this.logger.info(`Anomaly job scheduled with expression: ${anomalyExpression} (Uruguay timezone)`);
 
+    // Hourly bounded retry/backfill. Source-date ordering means the public page's
+    // newest flags get explanations first, regardless of severity. The nightly
+    // lane below still drains every high/critical flag without a limit.
+    const anomalyAiExpression = "50 * * * *";
+    cron.schedule(
+      anomalyAiExpression,
+      async () => {
+        await this.runRecentAnomalyAiBatch(true);
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`AI anomaly retry/backfill scheduled with expression: ${anomalyAiExpression} (Uruguay timezone)`);
+
     // Weekly reconciliation: every Sunday at 02:00 (Uruguay time) re-check non-final releases
     // from the last N months against the live API to catch late awards / silent edits.
     const reconcileExpression = "0 2 * * 0";
@@ -792,8 +842,8 @@ class CronServer {
     cron.schedule(
       pliegoSummaryExpression,
       async () => {
-        if (this.isPliegoSummaryRunning) {
-          this.logger.warn("Pliego AI summary already running, skipping this tick");
+        if (this.isPliegoSummaryRunning || this.isAnomalyAiRunning) {
+          this.logger.warn(`Pliego AI summary skipped - ${this.isPliegoSummaryRunning ? "already running" : "anomaly AI triage is using the shared model quota"}`);
           return;
         }
         this.isPliegoSummaryRunning = true;
@@ -1159,20 +1209,16 @@ class CronServer {
       this.logger.info("Starting anomaly detection...");
       await this.runJobProcess("jobs/detect-anomalies");
 
-      // Second-stage LLM triage of the fresh flags. Runs right after detection so new/changed
-      // anomalies get an aiVerdict the same night. Non-fatal and last, like the analytics tail
-      // jobs: a Gemini/network hiccup (or a missing GEMINI_API_KEY) must not mark the statistical
-      // detection — which is the source of truth — as failed. It is incremental by construction,
-      // so it only spends on flags that changed since its last run.
-      // --rpm=18 keeps the run under the Gemini free tier's 20 req/min. It is harmless on the paid
-      // tier (just slower than necessary) and REQUIRED on the free tier, where an unthrottled burst
-      // 429-storms. Drop it (or raise it) once the project's paid quota is confirmed live.
-      // Configurable via AI_TRIAGE_RPM without a redeploy.
-      this.logger.info("Starting AI anomaly triage...");
+      // Drain every new/changed high or critical flag first. Failures are non-fatal:
+      // the bounded all-severity lane immediately below, and then its hourly cron,
+      // will retry them without waiting for tomorrow's detector.
       const aiRpm = process.env.AI_TRIAGE_RPM || "18";
-      await this.runJobProcess("jobs/score-anomalies-ai", [`--rpm=${aiRpm}`]).catch((error) => {
-        this.logger.error("AI anomaly triage failed (non-fatal):", error);
-      });
+      await this.runAnomalyAiJob(
+        ["--min-rank=3", `--rpm=${aiRpm}`],
+        "nightly high/critical",
+        false
+      );
+      await this.runRecentAnomalyAiBatch(false);
 
       this.anomalyStatus.status = "idle";
       this.anomalyStatus.successfulRuns++;
@@ -1185,6 +1231,74 @@ class CronServer {
       this.logger.error("Anomaly detection failed:", errorMessage);
     } finally {
       this.isAnomalyRunning = false;
+    }
+  }
+
+  /** Environment-bounded recent queue; defaults to 60 calls (~3.3 min at 18 RPM). */
+  private anomalyAiBatchLimit(): number {
+    const configured = Number.parseInt(process.env.AI_TRIAGE_BATCH_LIMIT || "60", 10);
+    return Number.isInteger(configured) && configured > 0 ? configured : 60;
+  }
+
+  private async runRecentAnomalyAiBatch(skipWhenBusy: boolean): Promise<void> {
+    const aiRpm = process.env.AI_TRIAGE_RPM || "18";
+    await this.runAnomalyAiJob(
+      ["--min-rank=1", `--limit=${this.anomalyAiBatchLimit()}`, `--rpm=${aiRpm}`],
+      "recent all-severity retry/backfill",
+      skipWhenBusy
+    );
+  }
+
+  /**
+   * Serialises all anomaly-AI callers and records their own health independently
+   * from statistical detection. Scheduled batches stand down for heavy base jobs
+   * and pliego AI so neither Mongo nor the shared model quota is double-booked.
+   */
+  private async runAnomalyAiJob(args: string[], reason: string, skipWhenBusy: boolean): Promise<void> {
+    if (this.isAnomalyAiRunning) {
+      this.logger.warn(`Skipping ${reason} AI anomaly triage - already running`);
+      return;
+    }
+    if (skipWhenBusy) {
+      const busy = this.busyWith();
+      if (busy) {
+        this.logger.warn(`Skipping ${reason} AI anomaly triage - ${busy} is running`);
+        return;
+      }
+    }
+    if (this.isPliegoSummaryRunning) {
+      this.logger.warn(`Skipping ${reason} AI anomaly triage - pliego AI is using the shared model quota`);
+      return;
+    }
+
+    this.isAnomalyAiRunning = true;
+    this.anomalyAiStatus.status = "running";
+    this.anomalyAiStatus.lastRun = new Date();
+    this.anomalyAiStatus.lastError = null;
+    try {
+      this.logger.info(`Starting ${reason} AI anomaly triage...`);
+      const output = await this.runJobProcess("jobs/score-anomalies-ai", args);
+      const summary = output.match(/AI_TRIAGE_SUMMARY candidates=(\d+) scored=(\d+) errors=(\d+)/);
+      const errors = summary ? Number.parseInt(summary[3]!, 10) : 0;
+      if (errors > 0) {
+        const scored = Number.parseInt(summary![2]!, 10);
+        this.anomalyAiStatus.status = "error";
+        this.anomalyAiStatus.lastError = `${errors} AI request(s) failed after ${scored} successful verdict(s); pending flags will retry automatically`;
+        this.anomalyAiStatus.failedRuns++;
+        this.logger.warn(`${reason} AI anomaly triage completed partially: ${this.anomalyAiStatus.lastError}`);
+        return;
+      }
+      this.anomalyAiStatus.status = "idle";
+      this.anomalyAiStatus.successfulRuns++;
+      this.logger.info(`${reason} AI anomaly triage completed successfully`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.anomalyAiStatus.status = "error";
+      this.anomalyAiStatus.lastError = errorMessage;
+      this.anomalyAiStatus.failedRuns++;
+      this.logger.error(`${reason} AI anomaly triage failed:`, errorMessage);
+    } finally {
+      this.isAnomalyAiRunning = false;
     }
   }
 

@@ -9,7 +9,7 @@ Every offline computation in gastos-gub. Jobs turn the raw OCDS `releases` colle
 | Path | Purpose |
 |---|---|
 | [detect-anomalies.ts](detect-anomalies.ts) | Stage 1 builds per-{classificationId, currency, canonicalUnit} price baselines → `item_price_baselines`; stage 2 scores award item unit prices with a robust log modified z-score and reconciles `anomalies` (self-healing delete scoped to rescanned releases). Exports `rescoreReleaseIds`, `anomalyContentVersion`, `AnomalyDetector`, `parseArgs` (detect-anomalies.ts:1023). **Contains a NUL byte — see Gotchas.** |
-| [score-anomalies-ai.ts](score-anomalies-ai.ts) | Gemini second-stage triage of `price_spike` flags → advisory `anomalies.aiVerdict {explainable, category, reason, analysis, evidence, confidence, usedFeatures, dataVersion}`. Incremental via `dataVersion`. Also writes `contract_item_features` (scrape cache) and `data/anomaly-ai-verdicts/*.json`. |
+| [score-anomalies-ai.ts](score-anomalies-ai.ts) | Gemini second-stage triage of `price_spike` flags → advisory `anomalies.aiVerdict {explainable, category, reason, analysis, evidence, confidence, usedFeatures, dataVersion}`. Incremental via `dataVersion`; joins `releases.date` so bounded batches prioritize the newest public purchases. Also writes `contract_item_features` (scrape cache) and `data/anomaly-ai-verdicts/*.json`. |
 | [refresh-analytics.ts](refresh-analytics.ts) | Rebuilds `supplier_patterns` + `buyer_patterns`, then compute-then-swaps `spending_trends`, `top_entities`, `category_distribution`, `dashboard_metrics` (`swapCollection`, refresh-analytics.ts:600). |
 | [refresh-product-analytics.ts](refresh-product-analytics.ts) | Per catalogue-code rollup → `product_analytics`. Swap-by-`dataVersion`. Reads `releases` + `sice_catalog`. |
 | [refresh-product-variants.ts](refresh-product-variants.ts) | For codes carrying an unexplained anomaly: sample awards, ensure características cached, roll up Marca/Presentación/… → `product_variants`. |
@@ -119,7 +119,8 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 | `20 * * * *` | `jobs/sync-open-calls` |
 | `*/2 * * * *` | `jobs/webhooks/run` |
 | `30 */6 * * *` | `jobs/refresh-exchange-rates` → `jobs/refresh-analytics` → `populate-filters` → `jobs/refresh-product-analytics` |
-| `15 4 * * *` | `jobs/detect-anomalies` → `jobs/score-anomalies-ai --rpm=$AI_TRIAGE_RPM` |
+| `15 4 * * *` | `jobs/detect-anomalies` → unlimited high/critical AI lane → bounded recent all-severity lane |
+| `50 * * * *` | bounded `jobs/score-anomalies-ai --min-rank=1 --limit=$AI_TRIAGE_BATCH_LIMIT` retry/backfill, newest source date first |
 | `0 5 * * *` / `0 6 * * *` / `0 8 * * *` | `jobs/deadline-reminders` / `jobs/cross-provider-anomalies` / `jobs/alert-digest` |
 | `0 2 * * 0` / `0 7 * * 0` | weekly reconcileNonFinalReleases → full `jobs/reconcile-award-amendments` / `jobs/refresh-product-variants` |
 | `0 3 * * 1` / `0 3 1 * *` / `0 4 1 * *` | `jobs/import-sice-catalog` / `jobs/refresh-organism-groups` / `jobs/refresh-dept-indicators` |
@@ -137,7 +138,7 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 - **Any write to stored money must record an audit override** as ONE complete `$set`: `amount.verifiedOverride { source, sourceUrl, officialTotal, officialCurrency, rateMonth, previousPrimaryAmount, previousComputedTotal, verifiedAt, reason }` (correct-lumpsum-artifacts.ts). A partial write permanently masks the release from recomputation. Every job writing `release.amount` must first call `hasVerifiedOverride()` from `shared/utils/verified-override` and skip.
 - **Gemini prompts are Spanish, inline in the job**, always with a structured `responseSchema` (never free chat). Verdicts are ADVISORY — they never delete a statistical flag.
 - **Concurrency helpers are local, not a dependency**: `runPool()` (score-anomalies-ai.ts:647), `mapLimit()` (open-calls/pliego-probe.ts:60).
-- **Non-fatal tail jobs**: the cronserver `.catch()`es exchange-rates (cronserver.ts:952), product-analytics (:971) and AI triage (:1017) so a network/Gemini hiccup never marks the primary job failed.
+- **Non-fatal tail jobs**: exchange-rates, product-analytics and AI triage record/log their own failures so a network/Gemini hiccup never marks the primary job failed. Anomaly AI has its own health state and hourly retry lane.
 
 ## Gotchas
 
@@ -169,6 +170,7 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 | `MONGO_SOCKET_TIMEOUT_MS` | Idle socket timeout; jobs self-set it before connecting. |
 | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | Gemini for anomaly triage, pliego summaries, supplier enrichment, the Maps match-judge. |
 | `AI_TRIAGE_RPM` | Throttle passed as `--rpm` by the cronserver (default 18; free tier is 20 RPM). |
+| `AI_TRIAGE_BATCH_LIMIT` | Hourly all-severity recent/retry queue size (default 60). |
 | `ANALYTICS_MAX_RELEASE_UYU` | Plausibility ceiling for aggregates, default 50e9; 0 disables (analytics-pipeline.ts:47-48). |
 | `MAX_PLAUSIBLE_RELEASE_UYU`, `LUMPSUM_QTY_THRESHOLD` (1000), `LUMPSUM_SUSPECT_MIN_UYU` (1e9), `LUMPSUM_RATIO_MIN` (5), `LUMPSUM_MAX_ITEMS` (2) | Lump-sum candidate band (lumpsum-candidates.ts:60-71). |
 | `PROVIDER_OVERPRICE_CEILING_UYU` (1e8), `PROVIDER_OVERPRICE_CEILING_OTHER` (2.5e6), `PROVIDER_OVERPRICE_UYU_TODAY_CEILING` (1.5e8) | Overprice clamps (cross-provider-anomalies.ts:64-75). |

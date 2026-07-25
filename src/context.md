@@ -1,6 +1,6 @@
 # src/ — ingestion, services and batch entrypoints
 
-Everything that gets Uruguayan OCDS procurement data **into** Mongo and turns it into the precomputed collections the Nuxt app reads. One long-running process ([cronserver.ts](cronserver.ts), pm2) schedules 13 cron jobs and spawns each heavy one as a child process from [jobs/](jobs/). Nothing here serves HTTP to users — the real API is `app/server/api/**`. A large part of this tree is dead legacy (the 2025 zip-scrape path, `src/api/**`); the map below marks it.
+Everything that gets Uruguayan OCDS procurement data **into** Mongo and turns it into the precomputed collections the Nuxt app reads. One long-running process ([cronserver.ts](cronserver.ts), pm2) schedules 19 cron jobs and spawns each heavy one as a child process from [jobs/](jobs/). Nothing here serves HTTP to users — the real API is `app/server/api/**`. A large part of this tree is dead legacy (the 2025 zip-scrape path, `src/api/**`); the map below marks it.
 
 ## Map
 
@@ -8,7 +8,7 @@ Everything that gets Uruguayan OCDS procurement data **into** Mongo and turns it
 
 | path | purpose |
 |---|---|
-| [cronserver.ts](cronserver.ts) | 1300-line Express scheduler + control plane. 13 `cron.schedule` calls (`:645`–`:811`, all tz `America/Montevideo`), child spawner `runJobProcess()` `:137`, mutual-exclusion guard `busyWith()` `:121`, HTTP triggers/status routes, `start(port = 3002)` `:1286`. Runs `ReleaseUploaderNew` **in-process**; everything else is a spawned child. |
+| [cronserver.ts](cronserver.ts) | Express scheduler + control plane. All schedules use `America/Montevideo`; anomaly AI has a nightly unlimited high/critical lane plus a bounded hourly recent all-severity retry/backfill lane. Heavy work is spawned via `runJobProcess()`. |
 | [uploaders/release-uploader-new.ts](uploaders/release-uploader-new.ts) | LIVE RSS/API ingestion → `releases`. 4 public methods (`:17-20`): `uploadReleasesFromWeb` `:34`, `uploadCurrentMonthFromWeb` `:119`, `uploadLastSevenDaysFromWeb` `:165`, `reconcileNonFinalReleases(monthsBack=5)` `:676`. Freshness diff `filterReleasesNeedingSync()` `:637`. `require.main` block `:847`. |
 | [services/release-rss-fetcher.ts](services/release-rss-fetcher.ts) | Where raw OCDS enters. `comprasestatales.gub.uy/ocds/rss/{year}/{MM}` → xml2js → `{id,title,link,publishDate}`; `fetchReleaseData(url)` GETs the per-release JSON. |
 | [utils/amount-calculator.ts](utils/amount-calculator.ts) | THE money computation. `calculateTotalAmounts()` `:153`, `AMOUNT_CALCULATION_VERSION = 2` `:58`, `FALLBACK_RATES` `:46`, `createAmountUpdateQuery()` `:250`, `needsAmountUpdate()` `:260`. Live FX from two third-party endpoints. |
@@ -192,7 +192,7 @@ npm run lint     # eslint src --ext .ts
 | `0 3 * * 1` | `jobs/import-sice-catalog` |
 | `0 3 1 * *` / `0 4 1 * *` | `jobs/refresh-organism-groups` / `jobs/refresh-dept-indicators` |
 
-Non-fatal tails: exchange-rates, product-analytics and AI triage are `.catch()`ed so a hiccup never marks the primary job failed.
+Non-fatal tails: exchange-rates, product-analytics and AI triage record/log their own failures so a hiccup never marks the primary job failed.
 
 ## Env
 

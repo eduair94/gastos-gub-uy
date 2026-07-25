@@ -38,6 +38,9 @@ jobs:
           # The root lockfile is intentionally gitignored in this repository;
           # install reconciles the runner's local lock instead of failing on it.
           npm install --include=dev --no-audit --no-fund
+          # PM2 runs the compiled dist/src/cronserver.js, not the TypeScript source.
+          # Compile before any restart so scheduler changes cannot deploy as stale dist.
+          npm run build
           npm --prefix app ci
           node scripts/deploy-dashboard.mjs
           npm run ensure-indexes

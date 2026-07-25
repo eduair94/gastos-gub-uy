@@ -15,8 +15,8 @@
  *
  * It is deliberately a SECOND stage, not a replacement:
  *   - Statistics find the candidates over ~1.4M award lines for free.
- *   - The LLM only adjudicates the tail (high + critical by default), so the spend
- *     is a few US dollars for the whole corpus and pennies per nightly delta.
+ *   - The nightly priority lane adjudicates high + critical flags first; a bounded
+ *     hourly lane fills recent medium/low flags and retries transient failures.
  *   - The verdict is ADVISORY: it annotates the flag, never deletes it. The
  *     `explainable: 'no'` flags are the real signal surfaced to readers.
  *
@@ -40,6 +40,7 @@
 
 import fs from "fs";
 import path from "path";
+import type { PipelineStage } from "mongoose";
 import { AnomalyModel, ContractItemFeaturesModel, ReleaseModel } from "../../shared/models";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
 import { canonicalUnit } from "../../shared/utils/units";
@@ -112,6 +113,52 @@ interface CliOptions {
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Join each anomaly to the procurement release before sorting. This keeps the AI
+ * queue aligned with the human "Más recientes" view instead of letting a large
+ * old price or Mongo insertion order starve newly published purchases.
+ */
+function buildTriageSelectionPipeline(
+  filter: Record<string, unknown>,
+  order: CliOptions["order"],
+  limit: number | null
+): PipelineStage[] {
+  const detectedValueOrder: 1 | -1 = order === "asc" ? 1 : -1;
+  const pipeline: PipelineStage[] = [
+    { $match: filter },
+    {
+      $lookup: {
+        from: "releases",
+        localField: "releaseId",
+        foreignField: "id",
+        as: "sourceRelease",
+      },
+    },
+    {
+      $set: {
+        sourceDate: {
+          $ifNull: [
+            { $arrayElemAt: ["$sourceRelease.date", 0] },
+            "$firstDetectedAt",
+          ],
+        },
+      },
+    },
+    { $project: { sourceRelease: 0 } },
+    {
+      $sort: {
+        sourceDate: -1,
+        severityRank: -1,
+        firstDetectedAt: -1,
+        detectedValue: detectedValueOrder,
+        _id: -1,
+      },
+    },
+  ];
+  if (limit) pipeline.push({ $limit: limit });
+  return pipeline;
+}
 
 const RESPONSE_SCHEMA: GeminiSchema = {
   type: "OBJECT",
@@ -725,9 +772,9 @@ async function main(): Promise<void> {
     filter.$expr = { $ne: ["$aiVerdict.dataVersion", "$dataVersion"] };
   }
 
-  const query = AnomalyModel.find(filter).sort({ severityRank: -1, detectedValue: options.order === "asc" ? 1 : -1 }).lean();
-  if (options.limit) query.limit(options.limit);
-  const anomalies = (await query) as unknown as AnomalyDoc[];
+  const anomalies = (await AnomalyModel.aggregate(
+    buildTriageSelectionPipeline(filter, options.order, options.limit)
+  ).allowDiskUse(true)) as unknown as AnomalyDoc[];
 
   const scopeLabel = options.all ? ", --all" : options.rescoreFeatureless ? ", rescore-featureless (pre-narrow)" : options.onlyUnexplained ? ", only-unexplained (re-check 'no')" : ", new/changed only";
   console.log(`   candidates in scope     : ${anomalies.length} (min-rank ${options.minRank}${scopeLabel}${options.limit ? `, limit ${options.limit}` : ""})`);
@@ -1020,6 +1067,7 @@ async function main(): Promise<void> {
   console.log(`     explainable=uncertain : ${explainableCounts.uncertain}`);
   console.log(`   tokens                  : ${totalUsage.totalTokens.toLocaleString()} (${totalUsage.promptTokens.toLocaleString()} in / ${totalUsage.candidatesTokens.toLocaleString()} out)`);
   console.log(`   estimated cost          : US$${summary.estimatedCostUsd}`);
+  console.log(`AI_TRIAGE_SUMMARY candidates=${anomalies.length} scored=${results.length} errors=${errors}`);
 
   // ---- JSON dump: full record + decisive latest.json (the unexplained flags, worst first) ----
   const outDir = path.resolve(__dirname, "../../data/anomaly-ai-verdicts");
@@ -1075,6 +1123,7 @@ interface AnomalyDoc {
   expectedRange?: { min?: number; max?: number };
   currency?: string;
   sourceYear?: number;
+  sourceDate?: Date;
   dataVersion?: string;
   aiVerdict?: { usedFeatures?: number };
   metadata?: {
@@ -1135,5 +1184,5 @@ if (require.main === module) {
     });
 }
 
-export { parseArgs, buildPrompt, buildContext, isValidVerdict, normalizeVerdict, publicUrlFromOcid, RESPONSE_SCHEMA, SYSTEM_INSTRUCTION };
+export { parseArgs, buildPrompt, buildContext, buildTriageSelectionPipeline, isValidVerdict, normalizeVerdict, publicUrlFromOcid, RESPONSE_SCHEMA, SYSTEM_INSTRUCTION };
 export type { CliOptions, Verdict };

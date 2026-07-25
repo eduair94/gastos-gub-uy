@@ -34,6 +34,7 @@ The entire automated-test surface of gastos-gub: 41 files in [unit/](unit/), 7 i
 | [unit/test-dashboard-resilience.ts](unit/test-dashboard-resilience.ts) | Structural guard for two pm2 workers, rolling deploy/rollback, Redis SWR mounts, auth-varying cache and excluded dead middleware. |
 | [unit/anomaly-rss.test.ts](unit/anomaly-rss.test.ts) | Pure RSS scope/parser + XML escaping, stable GUID/date and filtered list-link contract. |
 | [unit/anomaly-list.test.ts](unit/anomaly-list.test.ts) | Pins the source-date newest-first default/field and UTC-safe dd/mm/yyyy card formatter. |
+| [unit/anomaly-ai-priority.test.ts](unit/anomaly-ai-priority.test.ts) | Pins the release-date lookup, newest-first AI queue and bounded all-severity batch policy. |
 | [unit/test-heavy-export.ts](unit/test-heavy-export.ts) | Pure export-slot test plus multi-batch CSV/JSON/vCard and streaming ExcelJS workbook verification. |
 | [unit/test-campaign-models.ts](unit/test-campaign-models.ts) | `shared/models/{email_suppression,email_campaign,campaign_send}` via `validateSync()` + `collection.name`, no DB. |
 | [unit/test-campaign-recipients.ts](unit/test-campaign-recipients.ts) | `src/jobs/campaign/recipients`. |
