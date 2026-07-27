@@ -27,7 +27,7 @@ const rupeEstado = ref((route.query.rupeEstado as string) ?? '')
 const deiOnly = ref(route.query.dei === '1')
 const onlyDirect = ref(route.query.onlyDirect === '1')
 const origen = ref((route.query.origen as string) ?? 'todas')
-const verifiedOnly = ref(route.query.verified !== '0')
+const verifiedOnly = ref(route.query.verified === '1')
 const hasPhone = ref(route.query.hasPhone === '1')
 const hasWebsite = ref(route.query.hasWebsite === '1')
 
@@ -43,7 +43,7 @@ const filterQuery = computed<Record<string, string>>(() => ({
   ...(rupeEstado.value ? { rupeEstado: rupeEstado.value } : {}),
   ...(departamento.value ? { departamento: departamento.value } : {}),
   ...(origen.value !== 'todas' ? { origen: origen.value } : {}),
-  ...(verifiedOnly.value ? {} : { verified: '0' }),
+  verified: verifiedOnly.value ? '1' : '0',
   ...(hasPhone.value ? { hasPhone: '1' } : {}),
   ...(hasWebsite.value ? { hasWebsite: '1' } : {}),
 }))
@@ -52,7 +52,20 @@ const { data: rubroRes } = await useFetch<any>('/api/contacts/rubros', {
   key: 'contacts-rubros',
 })
 const rubros = computed<RubroFacet[]>(() => rubroRes.value?.data?.rubros ?? [])
-const activeFilterCount = computed(() => Object.keys(filterQuery.value).length)
+const activeFilterCount = computed(() => [
+  searchTerm.value,
+  rubro.value,
+  departamento.value,
+  tamano.value,
+  categoria.value,
+  rupeEstado.value,
+  deiOnly.value,
+  onlyDirect.value,
+  verifiedOnly.value,
+  hasPhone.value,
+  hasWebsite.value,
+  origen.value !== 'todas',
+].filter(Boolean).length)
 
 function clearSearch() {
   search.value = ''
@@ -67,7 +80,7 @@ function clearFilters() {
   deiOnly.value = false
   onlyDirect.value = false
   origen.value = 'todas'
-  verifiedOnly.value = true
+  verifiedOnly.value = false
   hasPhone.value = false
   hasWebsite.value = false
 }
@@ -75,7 +88,9 @@ function clearFilters() {
 watch(
   [searchTerm, rubro, departamento, tamano, categoria, rupeEstado, deiOnly, onlyDirect, origen, verifiedOnly, hasPhone, hasWebsite],
   () => {
-    router.replace({ query: { ...filterQuery.value } })
+    const query: Record<string, string> = { ...filterQuery.value }
+    if (!verifiedOnly.value) delete query.verified
+    router.replace({ query })
   },
 )
 
@@ -133,6 +148,7 @@ useSeo(() => ({
       v-model:verified-only="verifiedOnly"
       v-model:has-phone="hasPhone"
       v-model:has-website="hasWebsite"
+      class="directory-filters"
       :rubros="rubros"
       :show-sort="false"
       @clear="clearFilters"
@@ -175,6 +191,10 @@ useSeo(() => ({
 <style scoped>
 .page {
   padding-block: var(--s-6) var(--s-8);
+}
+
+.directory-filters {
+  margin-bottom: var(--s-5);
 }
 
 .map-hero {
@@ -238,7 +258,6 @@ useSeo(() => ({
 
 .map-stage {
   min-width: 0;
-  margin-top: var(--s-5);
   padding: var(--s-4);
   border: 1px solid var(--rule-strong);
   border-radius: var(--r-lg);

@@ -58,14 +58,59 @@ const hasFilters = computed(() =>
   || !!rupeEstado.value
   || deiOnly.value
   || onlyDirect.value
-  || !verifiedOnly.value
+  || verifiedOnly.value
   || hasPhone.value
   || hasWebsite.value
   || origen.value !== 'todas')
+
+const activeFilterCount = computed(() => [
+  rubro.value,
+  departamento.value,
+  tamano.value,
+  categoria.value,
+  rupeEstado.value,
+  deiOnly.value,
+  onlyDirect.value,
+  verifiedOnly.value,
+  hasPhone.value,
+  hasWebsite.value,
+  origen.value !== 'todas',
+].filter(Boolean).length)
 </script>
 
 <template>
-  <div class="contact-filter-set">
+  <section
+    class="contact-filter-set"
+    aria-labelledby="contact-filters-title"
+  >
+    <header class="filter-head">
+      <div>
+        <h2 id="contact-filters-title">
+          {{ t('filters.title') }}
+        </h2>
+        <p
+          v-if="activeFilterCount"
+          class="filter-head__count"
+        >
+          {{ t('filters.active', activeFilterCount) }}
+        </p>
+      </div>
+      <button
+        v-if="hasFilters"
+        class="filters__clear"
+        type="button"
+        @click="emit('clear')"
+      >
+        <v-icon
+          size="18"
+          aria-hidden="true"
+        >
+          mdi-close
+        </v-icon>
+        {{ t('contacts.filter.clear') }}
+      </button>
+    </header>
+
     <div class="toolbar">
       <form
         class="find"
@@ -73,40 +118,43 @@ const hasFilters = computed(() =>
         @submit.prevent
       >
         <label
-          class="u-sr-only"
+          class="field__label"
           for="contact-q"
         >{{ t('common.search') }}</label>
-        <v-icon
-          class="find__icon"
-          size="20"
-        >
-          mdi-magnify
-        </v-icon>
-        <input
-          id="contact-q"
-          v-model="search"
-          class="find__input"
-          type="search"
-          :placeholder="t('contacts.searchPlaceholder')"
-        >
-        <button
-          v-if="search"
-          class="find__x"
-          type="button"
-          :aria-label="t('common.clear')"
-          @click="emit('clearSearch')"
-        >
-          <v-icon size="18">
-            mdi-close
+        <div class="find__control">
+          <v-icon
+            class="find__icon"
+            size="20"
+            aria-hidden="true"
+          >
+            mdi-magnify
           </v-icon>
-        </button>
+          <input
+            id="contact-q"
+            v-model="search"
+            class="find__input"
+            type="search"
+            :placeholder="t('contacts.searchPlaceholder')"
+          >
+          <button
+            v-if="search"
+            class="find__x"
+            type="button"
+            :aria-label="t('common.clear')"
+            @click="emit('clearSearch')"
+          >
+            <v-icon size="18">
+              mdi-close
+            </v-icon>
+          </button>
+        </div>
       </form>
 
       <label
         v-if="showSort"
-        class="toolbar__sort"
+        class="field toolbar__sort"
       >
-        <span class="u-sr-only">{{ t('common.sortBy') }}</span>
+        <span class="field__label">{{ t('common.sortBy') }}</span>
         <select
           v-model="sort"
           class="sel"
@@ -121,193 +169,234 @@ const hasFilters = computed(() =>
       </label>
     </div>
 
-    <div class="filters">
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('contacts.filter.origin') }}</span>
-        <select
-          v-model="origen"
-          class="sel"
-        >
-          <option value="todas">
-            {{ t('contacts.filter.originTodas') }}
-          </option>
-          <option value="con-email">
-            {{ t('contacts.filter.originConEmail') }}
-          </option>
-          <option value="sin-adjudicaciones">
-            {{ t('contacts.filter.originSinAdjudicaciones') }}
-          </option>
-        </select>
-      </label>
-
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('contacts.filter.rupeStatus') }}</span>
-        <select
-          v-model="rupeEstado"
-          class="sel"
-        >
-          <option value="">
-            {{ t('contacts.filter.rupeStatusAny') }}
-          </option>
-          <option
-            v-for="estado in rupeEstados"
-            :key="estado"
-            :value="estado"
+    <fieldset class="filter-group">
+      <legend>{{ t('contacts.filter.facets') }}</legend>
+      <div class="facet-grid">
+        <label class="field">
+          <span class="field__label">{{ t('contacts.filter.origin') }}</span>
+          <select
+            v-model="origen"
+            class="sel"
           >
-            {{ estado }}
-          </option>
-        </select>
-      </label>
+            <option value="todas">
+              {{ t('contacts.filter.originTodas') }}
+            </option>
+            <option value="con-email">
+              {{ t('contacts.filter.originConEmail') }}
+            </option>
+            <option value="sin-adjudicaciones">
+              {{ t('contacts.filter.originSinAdjudicaciones') }}
+            </option>
+          </select>
+        </label>
 
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('contacts.filter.rubro') }}</span>
-        <select
-          v-model="rubro"
-          class="sel"
-        >
-          <option value="">
-            {{ t('contacts.filter.rubroAny') }}
-          </option>
-          <option
-            v-for="item in rubros"
-            :key="item.classificationId"
-            :value="item.classificationId"
+        <label class="field">
+          <span class="field__label">{{ t('contacts.filter.rupeStatus') }}</span>
+          <select
+            v-model="rupeEstado"
+            class="sel"
           >
-            {{ item.label || item.classificationId }} ({{ formatNumber(item.count) }})
-          </option>
-        </select>
-      </label>
+            <option value="">
+              {{ t('contacts.filter.rupeStatusAny') }}
+            </option>
+            <option
+              v-for="estado in rupeEstados"
+              :key="estado"
+              :value="estado"
+            >
+              {{ estado }}
+            </option>
+          </select>
+        </label>
 
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('contacts.filter.dept') }}</span>
-        <select
-          v-model="departamento"
-          class="sel"
-        >
-          <option value="">
-            {{ t('contacts.filter.deptAny') }}
-          </option>
-          <option
-            v-for="item in departamentos"
-            :key="item"
-            :value="item"
+        <label class="field field--rubro">
+          <span class="field__label">{{ t('contacts.filter.rubro') }}</span>
+          <select
+            v-model="rubro"
+            class="sel"
           >
-            {{ item }}
-          </option>
-        </select>
-      </label>
+            <option value="">
+              {{ t('contacts.filter.rubroAny') }}
+            </option>
+            <option
+              v-for="item in rubros"
+              :key="item.classificationId"
+              :value="item.classificationId"
+            >
+              {{ item.label || item.classificationId }} ({{ formatNumber(item.count) }})
+            </option>
+          </select>
+        </label>
 
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('contacts.filter.size') }}</span>
-        <select
-          v-model="tamano"
-          class="sel"
-        >
-          <option value="">
-            {{ t('contacts.filter.sizeAny') }}
-          </option>
-          <option value="micro">
-            {{ t('sup.dei.size.micro') }}
-          </option>
-          <option value="pequena">
-            {{ t('sup.dei.size.pequena') }}
-          </option>
-          <option value="mediana">
-            {{ t('sup.dei.size.mediana') }}
-          </option>
-          <option value="gran">
-            {{ t('sup.dei.size.gran') }}
-          </option>
-        </select>
-      </label>
-
-      <label class="filters__sel">
-        <span class="u-sr-only">{{ t('sup.filter.category') }}</span>
-        <select
-          v-model="categoria"
-          class="sel"
-        >
-          <option
-            v-for="item in categoriaItems"
-            :key="item.value"
-            :value="item.value"
+        <label class="field">
+          <span class="field__label">{{ t('contacts.filter.dept') }}</span>
+          <select
+            v-model="departamento"
+            class="sel"
           >
-            {{ item.title }}
-          </option>
-        </select>
-      </label>
+            <option value="">
+              {{ t('contacts.filter.deptAny') }}
+            </option>
+            <option
+              v-for="item in departamentos"
+              :key="item"
+              :value="item"
+            >
+              {{ item }}
+            </option>
+          </select>
+        </label>
 
-      <label class="chk">
-        <input
-          v-model="deiOnly"
-          type="checkbox"
-        >
-        <span>{{ t('contacts.filter.deiOnly') }}</span>
-      </label>
-      <label class="chk">
-        <input
-          v-model="onlyDirect"
-          type="checkbox"
-        >
-        <span>{{ t('contacts.filter.onlyDirect') }}</span>
-      </label>
-      <label class="chk">
-        <input
-          v-model="verifiedOnly"
-          type="checkbox"
-        >
-        <span>{{ t('contacts.filter.verifiedOnly') }}</span>
-      </label>
-      <label class="chk">
-        <input
-          v-model="hasPhone"
-          type="checkbox"
-        >
-        <span>{{ t('contacts.filter.hasPhone') }}</span>
-      </label>
-      <label class="chk">
-        <input
-          v-model="hasWebsite"
-          type="checkbox"
-        >
-        <span>{{ t('contacts.filter.hasWebsite') }}</span>
-      </label>
+        <label class="field">
+          <span class="field__label">{{ t('contacts.filter.size') }}</span>
+          <select
+            v-model="tamano"
+            class="sel"
+          >
+            <option value="">
+              {{ t('contacts.filter.sizeAny') }}
+            </option>
+            <option value="micro">
+              {{ t('sup.dei.size.micro') }}
+            </option>
+            <option value="pequena">
+              {{ t('sup.dei.size.pequena') }}
+            </option>
+            <option value="mediana">
+              {{ t('sup.dei.size.mediana') }}
+            </option>
+            <option value="gran">
+              {{ t('sup.dei.size.gran') }}
+            </option>
+          </select>
+        </label>
 
-      <button
-        v-if="hasFilters"
-        class="filters__clear"
-        type="button"
-        @click="emit('clear')"
-      >
-        {{ t('contacts.filter.clear') }}
-      </button>
-    </div>
-  </div>
+        <label class="field">
+          <span class="field__label">{{ t('sup.filter.category') }}</span>
+          <select
+            v-model="categoria"
+            class="sel"
+          >
+            <option
+              v-for="item in categoriaItems"
+              :key="item.value"
+              :value="item.value"
+            >
+              {{ item.title }}
+            </option>
+          </select>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="filter-group filter-group--conditions">
+      <legend>{{ t('contacts.filter.availability') }}</legend>
+      <div class="condition-grid">
+        <label class="chk">
+          <input
+            v-model="deiOnly"
+            type="checkbox"
+          >
+          <span>{{ t('contacts.filter.deiOnly') }}</span>
+        </label>
+        <label class="chk">
+          <input
+            v-model="onlyDirect"
+            type="checkbox"
+          >
+          <span>{{ t('contacts.filter.onlyDirect') }}</span>
+        </label>
+        <label class="chk">
+          <input
+            v-model="verifiedOnly"
+            type="checkbox"
+          >
+          <span>{{ t('contacts.filter.verifiedOnly') }}</span>
+        </label>
+        <label class="chk">
+          <input
+            v-model="hasPhone"
+            type="checkbox"
+          >
+          <span>{{ t('contacts.filter.hasPhone') }}</span>
+        </label>
+        <label class="chk">
+          <input
+            v-model="hasWebsite"
+            type="checkbox"
+          >
+          <span>{{ t('contacts.filter.hasWebsite') }}</span>
+        </label>
+      </div>
+    </fieldset>
+  </section>
 </template>
 
 <style scoped>
-.toolbar {
+.contact-filter-set {
+  container: contact-filters / inline-size;
+  padding: var(--s-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.filter-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: var(--s-4);
-  margin-bottom: var(--s-3);
+  margin-bottom: var(--s-4);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.filter-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--t-lg);
+}
+
+.filter-head__count {
+  margin: var(--s-1) 0 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 18rem);
+  align-items: end;
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
 }
 
 .find {
+  display: grid;
+  min-width: 0;
+  gap: var(--s-2);
+}
+
+.find__control {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  flex: 1 1 auto;
   min-width: 0;
-  max-width: 420px;
-  padding: var(--s-1) var(--s-3);
-  background: var(--surface);
+  min-height: 44px;
+  padding-inline: var(--s-3) var(--s-1);
+  background: var(--surface-sunken);
   border: 1px solid var(--rule-strong);
   border-radius: var(--r-md);
   transition: border-color var(--dur) var(--ease);
 }
 
-.find:focus-within { border-color: var(--celeste); }
+.find__control:focus-within {
+  border-color: var(--focus);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .find__icon { color: var(--text-muted); flex: none; }
 
 .find__input {
@@ -318,7 +407,7 @@ const hasFilters = computed(() =>
   background: transparent;
   color: var(--text);
   font-family: var(--font-body);
-  font-size: var(--t-sm);
+  font-size: var(--t-base);
 }
 
 .find__input:focus { outline: none; }
@@ -329,8 +418,8 @@ const hasFilters = computed(() =>
   display: grid;
   place-items: center;
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
@@ -338,47 +427,126 @@ const hasFilters = computed(() =>
   cursor: pointer;
 }
 
-.find__x:hover { color: var(--text); }
-.toolbar__sort { margin-left: auto; }
+.find__x:hover {
+  background: var(--celeste-wash);
+  color: var(--celeste-deep);
+}
+
+.field {
+  display: grid;
+  min-width: 0;
+  gap: var(--s-2);
+}
+
+.field__label,
+.filter-group legend {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
 
 .sel {
-  max-width: 260px;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
   padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--rule-strong);
   border-radius: var(--r-md);
-  background: var(--surface);
+  background: var(--surface-sunken);
   color: var(--text);
   font-family: var(--font-body);
   font-size: var(--t-sm);
   cursor: pointer;
 }
 
-.filters {
+.filter-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filter-group legend {
+  margin-bottom: var(--s-3);
+  padding: 0;
+}
+
+.facet-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr)
+    minmax(0, 2fr)
+    repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.field--rubro {
+  min-width: 0;
+}
+
+.filter-group--conditions {
+  margin-top: var(--s-5);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--rule);
+}
+
+.condition-grid {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-3);
-  margin-bottom: var(--s-4);
+  gap: var(--s-2);
 }
 
 .chk {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
+  min-height: 44px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
   color: var(--text);
   font-size: var(--t-sm);
   cursor: pointer;
+  transition:
+    border-color var(--dur) var(--ease),
+    background-color var(--dur) var(--ease);
+}
+
+.chk:hover {
+  border-color: var(--celeste);
+}
+
+.chk:has(input:checked) {
+  border-color: var(--celeste);
+  background: var(--celeste-wash);
+}
+
+.chk:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .chk input {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  margin: 0;
   accent-color: var(--verde);
   cursor: pointer;
 }
 
 .filters__clear {
-  padding: var(--s-1) var(--s-3);
-  border: 0;
-  border-radius: var(--r-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 40px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
   background: transparent;
   color: var(--celeste-deep);
   font-family: var(--font-body);
@@ -387,25 +555,54 @@ const hasFilters = computed(() =>
   cursor: pointer;
 }
 
-.filters__clear:hover { text-decoration: underline; }
+.filters__clear:hover {
+  border-color: var(--celeste);
+  background: var(--celeste-wash);
+}
 
-@media (max-width: 640px) {
+@container contact-filters (max-width: 62rem) {
+  .facet-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container contact-filters (max-width: 48rem) {
   .toolbar {
+    grid-template-columns: 1fr;
+    gap: var(--s-3);
+  }
+
+  .facet-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container contact-filters (max-width: 34rem) {
+  .contact-filter-set {
+    padding: var(--s-3);
+  }
+
+  .filter-head {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .find {
-    max-width: none;
-  }
-
-  .toolbar__sort {
-    margin-left: 0;
-  }
-
-  .toolbar__sort .sel {
+  .filters__clear {
     width: 100%;
-    max-width: none;
+    justify-content: center;
+  }
+
+  .facet-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .condition-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .chk {
+    width: 100%;
   }
 }
 </style>

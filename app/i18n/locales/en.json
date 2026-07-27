@@ -864,6 +864,7 @@
       "sourceUnknown": "Public source without details"
     },
     "searchPlaceholder": "Search a provider by name…",
+    "resultsTitle": "Results",
     "resultsSummary": "{count} contacts",
     "table": {
       "name": "Provider",
@@ -909,6 +910,8 @@
       "nameAsc": "Name (A–Z)"
     },
     "filter": {
+      "facets": "Provider details",
+      "availability": "Availability and conditions",
       "origin": "Population",
       "originTodas": "All",
       "originConEmail": "With email",
@@ -937,12 +940,14 @@
     "noPublicEmail": "No public email (RUPE registry)",
     "download": {
       "label": "Download {count} contacts",
+      "actionsLabel": "Export",
       "aria": "Download as {format}",
       "capWarning": "The download includes the first {cap} contacts. Narrow the filters to export a smaller group."
     },
     "empty": {
       "title": "No contact matches those filters",
-      "body": "Try widening the filters or turning off “verified emails only”. The department and size filters use the DEI registry, which does not cover every provider."
+      "body": "Try broadening the search or removing a condition. Department and size filters use the DEI registry, which does not cover every provider.",
+      "bodyVerified": "Try turning off “verified emails only” or broadening the other filters. Department and size filters use the DEI registry, which does not cover every provider."
     },
     "notice": {
       "source": "Data gathered from public sources: DEI, RUPE, provider websites, Compras Estatales, and Google Maps listings. Each enriched value retains its origin and, when available, an evidence link.",

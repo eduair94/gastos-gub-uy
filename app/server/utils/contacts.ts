@@ -102,11 +102,13 @@ export async function buildContactFilter(
   //  - todas (default): contactable (valid email) OR registered-never-awarded
   //  - con-email: contactable only (the pre-existing default behaviour)
   //  - sin-adjudicaciones: registered-never-awarded only
-  // `verified=0` widens "contactable" to any non-suppressed/invalid email,
-  // exactly as before — it composes with any of the three origen values.
-  const hasUsableEmail = String(query.verified ?? '1') === '0'
+  // An omitted value keeps the historical API default. `verified=0` widens
+  // the email branch; explicit `verified=1` is a global verified-email filter.
+  const verified = String(query.verified ?? '')
+  const hasVerifiedEmail = { emails: { $elemMatch: { mxValid: true, status: 'valid' } } }
+  const hasUsableEmail = verified === '0'
     ? { emails: { $elemMatch: { status: { $nin: ['suppressed', 'invalid'] } } } }
-    : { emails: { $elemMatch: { mxValid: true, status: 'valid' } } }
+    : hasVerifiedEmail
   const origen = String(query.origen ?? 'todas')
   if (origen === 'con-email') andConditions.push(hasUsableEmail)
   else if (origen === 'sin-adjudicaciones') andConditions.push({ neverAwarded: true })
@@ -120,6 +122,7 @@ export async function buildContactFilter(
     { contactFormUrl: { $nin: [null, ''] } },
     { 'socialLinks.0': { $exists: true } },
   ] })
+  if (verified === '1' && origen !== 'con-email') andConditions.push(hasVerifiedEmail)
 
   // `search` and `categoria` both constrain `name`; each becomes its own $and
   // entry so one can't clobber the other (mirrors /api/suppliers).

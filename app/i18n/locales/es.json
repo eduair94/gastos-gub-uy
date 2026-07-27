@@ -865,6 +865,7 @@
       "sourceUnknown": "Fuente pública sin detalle"
     },
     "searchPlaceholder": "Buscar proveedor por nombre…",
+    "resultsTitle": "Resultados",
     "resultsSummary": "{count} contactos",
     "table": {
       "name": "Proveedor",
@@ -910,6 +911,8 @@
       "nameAsc": "Nombre (A–Z)"
     },
     "filter": {
+      "facets": "Datos del proveedor",
+      "availability": "Disponibilidad y condiciones",
       "origin": "Población",
       "originTodas": "Todas",
       "originConEmail": "Con email",
@@ -938,12 +941,14 @@
     "noPublicEmail": "Sin email público (registro RUPE)",
     "download": {
       "label": "Descargar {count} contactos",
+      "actionsLabel": "Exportar",
       "aria": "Descargar en {format}",
       "capWarning": "La descarga incluye los primeros {cap} contactos. Afiná los filtros para exportar un grupo más chico."
     },
     "empty": {
       "title": "Ningún contacto coincide con esos filtros",
-      "body": "Probá ampliar los filtros o desactivar «solo emails verificados». El filtro por departamento y tamaño usa el registro DEI, que no cubre a todos los proveedores."
+      "body": "Probá ampliar la búsqueda o quitar alguna condición. Los filtros por departamento y tamaño usan el registro DEI, que no cubre a todos los proveedores.",
+      "bodyVerified": "Probá desactivar «solo emails verificados» o ampliar los demás filtros. Los filtros por departamento y tamaño usan el registro DEI, que no cubre a todos los proveedores."
     },
     "notice": {
       "source": "Datos reunidos de fuentes públicas: DEI, RUPE, sitios web de proveedores, Compras Estatales y fichas de Google Maps. Cada dato enriquecido conserva su origen y, cuando existe, un enlace de evidencia.",

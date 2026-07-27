@@ -35,6 +35,31 @@ import { buildContactFilter } from "../../app/server/utils/contacts";
     { emails: { $elemMatch: { status: { $nin: ["suppressed", "invalid"] } } } },
   );
 
+  // verified=1 is an explicit global restriction. In the broad "todas"
+  // population, rows that only matched by website/phone/RUPE must also carry a
+  // verified email.
+  const verifiedOnly = await buildContactFilter({ verified: "1" });
+  const verifiedFilter = (verifiedOnly as { filter: Record<string, unknown> }).filter;
+  assert.ok(Array.isArray(verifiedFilter.$and) && verifiedFilter.$and.length === 2);
+  const verifiedAnd = verifiedFilter.$and as Record<string, unknown>[];
+  assert.ok(verifiedAnd.some(c => Array.isArray(c.$or)), "the broad population remains present");
+  assert.ok(verifiedAnd.some(c => {
+    const emails = c.emails as { $elemMatch?: Record<string, unknown> } | undefined;
+    return emails?.$elemMatch?.mxValid === true && emails.$elemMatch.status === "valid";
+  }), "verified email is required globally");
+
+  const verifiedNeverAwarded = await buildContactFilter({
+    origen: "sin-adjudicaciones",
+    verified: "1",
+  });
+  assert.deepEqual(
+    (verifiedNeverAwarded as { filter: Record<string, unknown> }).filter,
+    { $and: [
+      { neverAwarded: true },
+      { emails: { $elemMatch: { mxValid: true, status: "valid" } } },
+    ] },
+  );
+
   // origen composes with search via $and - two conditions, neither clobbers the other.
   const withSearch = await buildContactFilter({ origen: "sin-adjudicaciones", search: "acme" });
   const f4 = (withSearch as { filter: Record<string, unknown> }).filter;

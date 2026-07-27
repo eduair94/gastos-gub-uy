@@ -155,8 +155,9 @@ const deiOnly = ref(route.query.dei === '1')
 const onlyDirect = ref(route.query.onlyDirect === '1')
 // Which population to include: todas (default) | con-email | sin-adjudicaciones.
 const origen = ref((route.query.origen as string) ?? 'todas')
-// Verified-only is the default; the URL only records the widening (verified=0).
-const verifiedOnly = ref(route.query.verified !== '0')
+// Verified email is an opt-in global restriction. The API receives an explicit
+// 0/1 so the control has one unambiguous meaning across list, map and export.
+const verifiedOnly = ref(route.query.verified === '1')
 const hasPhone = ref(route.query.hasPhone === '1')
 const hasWebsite = ref(route.query.hasWebsite === '1')
 const sort = ref((route.query.sort as string) ?? 'priorityDesc')
@@ -170,7 +171,7 @@ const SORTS: Record<string, { sortBy: string, sortOrder: string }> = {
 
 const hasFilters = computed(() =>
   !!rubro.value || !!departamento.value || !!tamano.value || !!categoria.value || !!rupeEstado.value || deiOnly.value || onlyDirect.value
-  || !verifiedOnly.value || hasPhone.value || hasWebsite.value || origen.value !== 'todas')
+  || verifiedOnly.value || hasPhone.value || hasWebsite.value || origen.value !== 'todas')
 
 function clearFilters() {
   track('filter_clear', { surface: 'contacts' })
@@ -182,7 +183,7 @@ function clearFilters() {
   deiOnly.value = false
   onlyDirect.value = false
   origen.value = 'todas'
-  verifiedOnly.value = true
+  verifiedOnly.value = false
   hasPhone.value = false
   hasWebsite.value = false
   page.value = 1
@@ -202,7 +203,7 @@ const filterQuery = computed(() => ({
   ...(rupeEstado.value ? { rupeEstado: rupeEstado.value } : {}),
   ...(departamento.value ? { departamento: departamento.value } : {}),
   ...(origen.value !== 'todas' ? { origen: origen.value } : {}),
-  ...(verifiedOnly.value ? {} : { verified: '0' }),
+  verified: verifiedOnly.value ? '1' : '0',
   ...(hasPhone.value ? { hasPhone: '1' } : {}),
   ...(hasWebsite.value ? { hasWebsite: '1' } : {}),
   ...(SORTS[sort.value] ?? SORTS.priorityDesc),
@@ -226,7 +227,7 @@ watch([searchTerm, page, rubro, departamento, tamano, categoria, rupeEstado, dei
   if (deiOnly.value) q.dei = '1'
   if (onlyDirect.value) q.onlyDirect = '1'
   if (origen.value !== 'todas') q.origen = origen.value
-  if (!verifiedOnly.value) q.verified = '0'
+  if (verifiedOnly.value) q.verified = '1'
   if (hasPhone.value) q.hasPhone = '1'
   if (hasWebsite.value) q.hasWebsite = '1'
   if (sort.value !== 'priorityDesc') q.sort = sort.value
@@ -234,7 +235,10 @@ watch([searchTerm, page, rubro, departamento, tamano, categoria, rupeEstado, dei
 })
 
 const { data: listRes, pending, error } = await useFetch<any>('/api/contacts', { query: listQuery })
-const { data: totalRes } = await useFetch<any>('/api/contacts', { query: { limit: 1 }, key: 'contacts-directory-total' })
+const { data: totalRes } = await useFetch<any>('/api/contacts', {
+  query: { limit: 1, verified: '0' },
+  key: 'contacts-directory-total',
+})
 const { data: rubroRes } = await useFetch<any>('/api/contacts/rubros', { key: 'contacts-rubros' })
 
 const contacts = computed<ContactRow[]>(() => listRes.value?.data?.contacts ?? [])
@@ -250,6 +254,11 @@ const rubros = computed<RubroFacet[]>(() => rubroRes.value?.data?.rubros ?? [])
 function clearSearch() {
   search.value = ''
   page.value = 1
+}
+
+function resetDirectory() {
+  clearSearch()
+  clearFilters()
 }
 
 function openLocation(row: ContactRow) {
@@ -337,41 +346,45 @@ useSeo(() => ({
       v-model:verified-only="verifiedOnly"
       v-model:has-phone="hasPhone"
       v-model:has-website="hasWebsite"
+      class="directory-filters"
       :rubros="rubros"
       @clear="clearFilters"
       @clear-search="clearSearch"
     />
 
-    <!-- ===== Download bar ===== -->
-    <div class="dl">
-      <span class="dl__label">
-        {{ t('contacts.download.label', { count: formatNumber(filteredTotal) }) }}
-      </span>
-      <div class="dl__btns">
-        <a
-          v-for="f in FORMATS"
-          :key="f.fmt"
-          class="dl__btn"
-          :href="exportUrl(f.fmt)"
-          :aria-label="t('contacts.download.aria', { format: f.fmt.toUpperCase() })"
-          rel="nofollow"
-          @click="onExport(f.fmt)"
-        >
-          <v-icon size="18">{{ f.icon }}</v-icon>
-          <span>{{ f.fmt.toUpperCase() }}</span>
-        </a>
+    <section class="results-toolbar">
+      <div
+        class="results-toolbar__summary"
+        role="status"
+        aria-live="polite"
+      >
+        <span>{{ t('contacts.resultsTitle') }}</span>
+        <strong>{{ t('contacts.resultsSummary', { count: formatNumber(filteredTotal) }) }}</strong>
       </div>
-    </div>
+      <div class="results-toolbar__export">
+        <span class="results-toolbar__export-label">{{ t('contacts.download.actionsLabel') }}</span>
+        <div class="dl__btns">
+          <a
+            v-for="f in FORMATS"
+            :key="f.fmt"
+            class="dl__btn"
+            :href="exportUrl(f.fmt)"
+            :aria-label="t('contacts.download.aria', { format: f.fmt.toUpperCase() })"
+            rel="nofollow"
+            @click="onExport(f.fmt)"
+          >
+            <v-icon size="18">{{ f.icon }}</v-icon>
+            <span>{{ f.fmt.toUpperCase() }}</span>
+          </a>
+        </div>
+      </div>
+    </section>
 
     <p
       v-if="exportTruncated"
       class="dl__warn"
     >
       {{ t('contacts.download.capWarning', { cap: formatNumber(EXPORT_CAP) }) }}
-    </p>
-
-    <p class="count">
-      {{ t('contacts.resultsSummary', { count: formatNumber(filteredTotal) }) }}
     </p>
 
     <!-- ===== Results ===== -->
@@ -417,13 +430,13 @@ useSeo(() => ({
           {{ t('contacts.empty.title') }}
         </h2>
         <p class="state__b">
-          {{ t('contacts.empty.body') }}
+          {{ verifiedOnly ? t('contacts.empty.bodyVerified') : t('contacts.empty.body') }}
         </p>
         <button
           v-if="hasFilters || searchTerm"
           class="state__a"
           type="button"
-          @click="clearFilters"
+          @click="resetDirectory"
         >
           {{ t('contacts.filter.clear') }}
         </button>
@@ -570,26 +583,45 @@ useSeo(() => ({
 .page { padding-block: var(--s-6) var(--s-8); }
 .page__head { margin-bottom: var(--s-5); }
 .page__lead { margin: var(--s-3) 0 0; }
+.directory-filters { margin-bottom: var(--s-5); }
 
-/* ---- Toolbar ---- */
-/* ---- Download bar ---- */
-.dl {
+/* ---- Results / export toolbar ---- */
+.results-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-3);
-  padding: var(--s-4);
-  margin-bottom: var(--s-4);
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-3);
   background: var(--surface-sunken);
   border: 1px solid var(--rule);
   border-radius: var(--r-lg);
 }
 
-.dl__label {
+.results-toolbar__summary {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.results-toolbar__summary span,
+.results-toolbar__export-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.03em;
+}
+
+.results-toolbar__summary strong {
   font-size: var(--t-sm);
   font-weight: 600;
   color: var(--text);
+}
+
+.results-toolbar__export {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
 }
 
 .dl__btns { display: flex; flex-wrap: wrap; gap: var(--s-2); }
@@ -597,7 +629,9 @@ useSeo(() => ({
 .dl__btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--s-2);
+  min-height: 44px;
   padding: var(--s-2) var(--s-3);
   border: 1px solid var(--rule-strong);
   border-radius: var(--r-md);
@@ -617,13 +651,6 @@ useSeo(() => ({
 .dl__warn {
   margin: 0 0 var(--s-3);
   font-size: var(--t-sm);
-  color: var(--text-muted);
-}
-
-.count {
-  margin: 0 0 var(--s-3);
-  font-family: var(--font-mono);
-  font-size: var(--t-xs);
   color: var(--text-muted);
 }
 
@@ -753,11 +780,12 @@ useSeo(() => ({
 }
 
 .state__a {
+  min-height: 44px;
   padding: var(--s-2) var(--s-5);
   border: 0;
   border-radius: var(--r-md);
   background: var(--ink);
-  color: #fff;
+  color: var(--ink-fg);
   font-family: var(--font-body);
   font-weight: 600;
   font-size: var(--t-sm);
@@ -796,5 +824,22 @@ useSeo(() => ({
   margin: 0 0 var(--s-2);
   font-size: var(--t-sm);
   color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .results-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .results-toolbar__export {
+    display: grid;
+    gap: var(--s-2);
+  }
+
+  .dl__btns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>
