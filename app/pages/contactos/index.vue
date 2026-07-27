@@ -48,7 +48,9 @@ function clearFilters() {
   page.value = 1
 }
 
-watch([searchTerm, grupo, hasEmail, hasPhone, sort], () => { page.value = 1 })
+watch([searchTerm, grupo, hasEmail, hasPhone, sort], () => {
+  page.value = 1
+})
 watch([searchTerm, grupo, hasEmail, hasPhone, sort, page], () => {
   router.replace({ query: {
     ...(searchTerm.value ? { q: searchTerm.value } : {}),
@@ -68,6 +70,15 @@ const groups = computed<any[]>(() => listRes.value?.data?.groups ?? [])
 const pagination = computed(() => listRes.value?.data?.pagination ?? null)
 const directoryTotal = computed<number | null>(() => totalRes.value?.data?.pagination?.total ?? null)
 const totalPages = computed(() => Math.max(1, pagination.value?.totalPages ?? 1))
+
+const contactColumns = computed(() => [
+  { key: 'organismName', label: t('contactos.colOrganism'), primary: true },
+  { key: 'group', label: t('contactos.colGroup') },
+  { key: 'contactName', label: t('contactos.colContact') },
+  { key: 'emails', label: t('contactos.colEmail') },
+  { key: 'telephone', label: t('contactos.colPhone'), mono: true },
+  { key: 'llamadosCount', label: t('contactos.colCalls'), align: 'end' as const, mono: true },
+])
 
 const GROUP_ITEMS = computed(() => [
   { title: t('contactos.filter.groupAny'), value: '' },
@@ -285,79 +296,65 @@ useSeo(() => {
         </button>
       </div>
 
-      <div
+      <DataTable
         v-else
-        class="tablewrap"
+        :columns="contactColumns"
+        :rows="contacts"
+        :row-key="contact => contact.organismId"
+        min-width="760px"
       >
-        <table class="ctable">
-          <thead>
-            <tr>
-              <th>{{ t('contactos.colOrganism') }}</th>
-              <th>{{ t('contactos.colGroup') }}</th>
-              <th>{{ t('contactos.colContact') }}</th>
-              <th>{{ t('contactos.colEmail') }}</th>
-              <th>{{ t('contactos.colPhone') }}</th>
-              <th class="u-num">
-                {{ t('contactos.colCalls') }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="c in contacts"
-              :key="c.organismId"
+        <template #cell:organismName="{ row }">
+          <NuxtLink
+            :to="localePath(`/buyers/${encodeURIComponent(row.organismId)}`)"
+            class="ctable__link"
+          >
+            <span class="u-truncate">{{ row.organismName }}</span>
+          </NuxtLink>
+        </template>
+        <template #cell:group="{ row }">
+          <span
+            v-if="row.group"
+            class="grouptag"
+          >{{ row.group }}</span>
+          <span
+            v-else
+            class="u-muted"
+          >—</span>
+        </template>
+        <template #cell:contactName="{ row }">
+          {{ row.contactName || '—' }}
+        </template>
+        <template #cell:emails="{ row }">
+          <div
+            v-if="row.emails && row.emails.length"
+            class="emails"
+          >
+            <a
+              v-for="email in row.emails"
+              :key="email"
+              :href="`mailto:${email}`"
+              class="ctable__link"
             >
-              <td>
-                <NuxtLink
-                  :to="localePath(`/buyers/${encodeURIComponent(c.organismId)}`)"
-                  class="ctable__link"
-                >
-                  <span class="u-truncate">{{ c.organismName }}</span>
-                </NuxtLink>
-              </td>
-              <td>
-                <span
-                  v-if="c.group"
-                  class="grouptag"
-                >{{ c.group }}</span>
-                <span
-                  v-else
-                  class="u-muted"
-                >—</span>
-              </td>
-              <td>{{ c.contactName || '—' }}</td>
-              <td>
-                <div
-                  v-if="c.emails && c.emails.length"
-                  class="emails"
-                >
-                  <a
-                    v-for="e in c.emails"
-                    :key="e"
-                    :href="`mailto:${e}`"
-                    class="ctable__link"
-                  >{{ e }}</a>
-                </div>
-                <span
-                  v-else
-                  class="u-muted"
-                >—</span>
-              </td>
-              <td>
-                <a
-                  v-if="c.telephone && telHref(c.telephone)"
-                  :href="telHref(c.telephone)"
-                  class="ctable__link"
-                >{{ c.telephone }}</a>
-                <span v-else>{{ c.telephone || '—' }}</span>
-              </td>
-              <td class="u-num u-mono">
-                {{ formatNumber(c.llamadosCount) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              {{ email }}
+            </a>
+          </div>
+          <span
+            v-else
+            class="u-muted"
+          >—</span>
+        </template>
+        <template #cell:telephone="{ row }">
+          <a
+            v-if="row.telephone && telHref(row.telephone)"
+            :href="telHref(row.telephone)"
+            class="ctable__link"
+          >{{ row.telephone }}</a>
+          <span v-else>{{ row.telephone || '—' }}</span>
+        </template>
+        <template #cell:llamadosCount="{ row }">
+          {{ formatNumber(row.llamadosCount) }}
+        </template>
+      </DataTable>
     </PaginatedList>
 
     <p class="u-muted directory__note">
@@ -377,14 +374,9 @@ useSeo(() => {
 .dl__btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 9px; border: 1px solid var(--rule); border-radius: 8px; color: var(--celeste-deep); text-decoration: none; font-size: var(--t-xs); }
 .dl__btn:hover { border-color: var(--celeste-deep); }
 .dl__ext { text-transform: uppercase; }
-.tablewrap { overflow-x: auto; }
-.ctable { width: 100%; border-collapse: collapse; }
-.ctable th, .ctable td { text-align: left; padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--rule); font-size: var(--t-sm); vertical-align: top; }
-.ctable th { color: var(--text-muted); font-weight: 600; white-space: nowrap; }
 .ctable__link { color: var(--celeste-deep); text-decoration: none; display: inline-block; max-width: 100%; }
 .ctable__link:hover { text-decoration: underline; }
 .emails { display: flex; flex-direction: column; gap: 2px; }
 .grouptag { font-size: 0.78rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule); white-space: nowrap; color: var(--text-muted); }
-.u-num { text-align: right; }
 .directory__note { font-size: var(--t-xs); margin-top: var(--s-4); }
 </style>

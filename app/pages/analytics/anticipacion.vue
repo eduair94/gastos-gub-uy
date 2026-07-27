@@ -67,6 +67,16 @@ const rows = computed<any[]>(() => res.value?.data?.rows ?? [])
 const total = computed<number>(() => res.value?.data?.total ?? 0)
 const calculatedAt = computed(() => res.value?.data?.calculatedAt ?? null)
 
+const forecastColumns = computed(() => [
+  { key: 'buyer', label: t('anticipacion.col.organismo'), primary: true },
+  { key: 'rubro', label: t('anticipacion.col.rubro') },
+  { key: 'window', label: t('anticipacion.col.ventana'), mono: true },
+  { key: 'cadence', label: t('anticipacion.col.cadencia') },
+  { key: 'confidence', label: t('anticipacion.col.confianza') },
+  { key: 'incumbent', label: t('anticipacion.col.incumbente') },
+  { key: 'amount', label: t('anticipacion.col.monto'), align: 'end' as const },
+])
+
 // ---- Confidence → qualitative band (AMENDMENT 1) --------------------------
 // `confidence` saturates at exactly 1.0 for very tight cadences; showing
 // "100%" would print false certainty on a derived estimate. Mapped to a
@@ -244,88 +254,76 @@ useSeo(() => ({
             border
             class="tablecard"
           >
-            <div class="u-scroll-x">
-              <table class="dt">
-                <thead>
-                  <tr>
-                    <th>{{ t('anticipacion.col.organismo') }}</th>
-                    <th>{{ t('anticipacion.col.rubro') }}</th>
-                    <th>{{ t('anticipacion.col.ventana') }}</th>
-                    <th>{{ t('anticipacion.col.cadencia') }}</th>
-                    <th>{{ t('anticipacion.col.confianza') }}</th>
-                    <th>{{ t('anticipacion.col.incumbente') }}</th>
-                    <th>{{ t('anticipacion.col.monto') }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="r in rows"
-                    :key="r._id"
-                  >
-                    <td>
-                      <NuxtLink
-                        v-if="r.buyerId"
-                        :to="localePath(`/buyers/${r.buyerId}`)"
-                        class="dt__link"
-                      >
-                        {{ r.buyerName || r.buyerId }}
-                      </NuxtLink>
-                      <span v-else>{{ r.buyerName || '—' }}</span>
-                    </td>
-                    <td :title="evidenceTitle(r)">
-                      {{ r.rubroLabel }}
-                    </td>
-                    <td class="u-mono">
-                      <v-chip
-                        v-if="isOverdue(r)"
-                        size="x-small"
-                        color="error"
-                        variant="tonal"
-                        class="overdue-chip"
-                        :title="t('anticipacion.overdueHelp')"
-                      >
-                        {{ t('anticipacion.overdue') }}
-                      </v-chip>
-                      {{ windowLabel(r) }}
-                    </td>
-                    <td>
-                      {{ cadenceLabel(r) }}
-                      <span class="cell-sub u-mono">{{ t('anticipacion.events', { n: r.cadence.eventCount }) }}</span>
-                    </td>
-                    <td>
-                      <v-chip
-                        size="small"
-                        :color="BAND_COLOR[confidenceBand(r.confidence)]"
-                        variant="tonal"
-                        :title="t('anticipacion.confidenceHelp')"
-                      >
-                        {{ t(`anticipacion.confidence.${confidenceBand(r.confidence)}`) }}
-                      </v-chip>
-                    </td>
-                    <td>{{ r.incumbentSupplier?.name || '—' }}</td>
-                    <td>
-                      <span
-                        v-if="r.expectedAmount"
-                        class="amt"
-                      >
-                        <span class="amt__approx">≈</span>
-                        <MoneyAmount
-                          :amount="r.expectedAmount.p50"
-                          :currency="r.expectedAmount.currency"
-                          :rule="false"
-                          align="start"
-                        />
-                        <span class="amt__unit">{{ t('anticipacion.perUnit', { unit: r.expectedAmount.unitName || t('anticipacion.unitGeneric') }) }}</span>
-                      </span>
-                      <span
-                        v-else
-                        class="amt amt--none"
-                      >{{ t('anticipacion.noAmount') }}</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              :columns="forecastColumns"
+              :rows="rows"
+              :row-key="row => row._id"
+              min-width="900px"
+              :framed="false"
+            >
+              <template #cell:buyer="{ row }">
+                <NuxtLink
+                  v-if="row.buyerId"
+                  :to="localePath(`/buyers/${row.buyerId}`)"
+                  class="dt__link"
+                >
+                  {{ row.buyerName || row.buyerId }}
+                </NuxtLink>
+                <span v-else>{{ row.buyerName || '—' }}</span>
+              </template>
+              <template #cell:rubro="{ row }">
+                <span :title="evidenceTitle(row)">{{ row.rubroLabel }}</span>
+              </template>
+              <template #cell:window="{ row }">
+                <v-chip
+                  v-if="isOverdue(row)"
+                  size="x-small"
+                  color="error"
+                  variant="tonal"
+                  class="overdue-chip"
+                  :title="t('anticipacion.overdueHelp')"
+                >
+                  {{ t('anticipacion.overdue') }}
+                </v-chip>
+                {{ windowLabel(row) }}
+              </template>
+              <template #cell:cadence="{ row }">
+                {{ cadenceLabel(row) }}
+                <span class="cell-sub u-mono">{{ t('anticipacion.events', { n: row.cadence.eventCount }) }}</span>
+              </template>
+              <template #cell:confidence="{ row }">
+                <v-chip
+                  size="small"
+                  :color="BAND_COLOR[confidenceBand(row.confidence)]"
+                  variant="tonal"
+                  :title="t('anticipacion.confidenceHelp')"
+                >
+                  {{ t(`anticipacion.confidence.${confidenceBand(row.confidence)}`) }}
+                </v-chip>
+              </template>
+              <template #cell:incumbent="{ row }">
+                {{ row.incumbentSupplier?.name || '—' }}
+              </template>
+              <template #cell:amount="{ row }">
+                <span
+                  v-if="row.expectedAmount"
+                  class="amt"
+                >
+                  <span class="amt__approx">≈</span>
+                  <MoneyAmount
+                    :amount="row.expectedAmount.p50"
+                    :currency="row.expectedAmount.currency"
+                    :rule="false"
+                    align="start"
+                  />
+                  <span class="amt__unit">{{ t('anticipacion.perUnit', { unit: row.expectedAmount.unitName || t('anticipacion.unitGeneric') }) }}</span>
+                </span>
+                <span
+                  v-else
+                  class="amt amt--none"
+                >{{ t('anticipacion.noAmount') }}</span>
+              </template>
+            </DataTable>
             <p
               v-if="calculatedAt"
               class="tablecard__foot u-mono"
@@ -397,10 +395,6 @@ useSeo(() => ({
 .caveat { margin: 0 0 var(--s-3); font-size: var(--t-xs); color: var(--text-muted); }
 
 .tablecard { overflow: hidden; }
-.dt { width: 100%; border-collapse: collapse; }
-.dt th { padding: var(--s-3) var(--s-4); text-align: left; font-family: var(--font-mono); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); border-bottom: 1px solid var(--rule); white-space: nowrap; }
-.dt td { padding: var(--s-3) var(--s-4); font-size: var(--t-sm); border-bottom: 1px solid var(--rule); vertical-align: top; }
-.dt tr:last-child td { border-bottom: 0; }
 .dt__link { font-weight: 600; color: var(--text); text-decoration: none; }
 .dt__link:hover { color: var(--celeste-deep); text-decoration: underline; }
 .cell-sub { display: block; margin-top: 2px; font-size: var(--t-xs); color: var(--text-muted); }
@@ -420,5 +414,20 @@ useSeo(() => ({
 
 @media (max-width: 640px) {
   .controls__field { flex: 1 1 100%; }
+}
+
+@media (max-width: 760px) {
+  .tablecard {
+    overflow: visible;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .tablecard__foot {
+    margin-top: var(--s-3);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-md);
+    background: var(--surface-sunken);
+  }
 }
 </style>

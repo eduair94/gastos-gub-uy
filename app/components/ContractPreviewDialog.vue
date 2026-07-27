@@ -59,6 +59,13 @@ const items = computed(() => {
   })
 })
 
+const itemColumns = computed(() => [
+  { key: 'description', label: t('common.description'), primary: true },
+  { key: 'quantity', label: t('common.quantity'), align: 'end' as const },
+  { key: 'unitAmount', label: t('common.unitPrice'), align: 'end' as const },
+  { key: 'total', label: t('common.total'), align: 'end' as const },
+])
+
 /** The sum of the lines — only meaningful in a single currency. */
 const itemsTotal = computed(() => {
   const rows = allItems.value.filter(r => typeof r.total === 'number' && r.total > 0)
@@ -192,7 +199,7 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
         </button>
       </div>
 
-      <div class="idlg__body u-scroll-x">
+      <div class="idlg__body">
         <!-- Who: organismo + proveedor, each linked to its profile. -->
         <div class="idlg__meta">
           <div class="idlg__metacell">
@@ -332,113 +339,67 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
           <span class="idlg__filtercount u-mono">{{ items.length }}/{{ allItems.length }}</span>
         </div>
 
-        <table
+        <DataTable
           v-if="allItems.length"
-          class="itable"
+          class="idlg__items"
+          :columns="itemColumns"
+          :rows="items"
+          :row-key="(item, index) => `${item.code || 'item'}-${index}`"
+          min-width="640px"
         >
-          <thead>
-            <tr>
-              <th scope="col">
-                {{ t('common.description') }}
-              </th>
-              <th
-                scope="col"
-                class="itable__num"
-              >
-                {{ t('common.quantity') }}
-              </th>
-              <th
-                scope="col"
-                class="itable__num"
-                :title="verifiedOverride ? t('contract.verifiedTotalHelp') : undefined"
-              >
-                {{ t('common.unitPrice') }}
-              </th>
-              <th
-                scope="col"
-                class="itable__num"
-                :title="verifiedOverride ? t('contract.verifiedTotalHelp') : undefined"
-              >
-                {{ t('common.total') }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="!items.length">
-              <td
-                :colspan="4"
-                class="idlg__empty u-muted"
-              >
-                {{ t('contracts.itemFilterNoMatch') }}
-              </td>
-            </tr>
-            <tr
-              v-for="(it, i) in items"
-              :key="i"
-            >
-              <td data-primary>
-                <span class="idlg__desc">{{ it.description || '—' }}</span>
-                <NuxtLink
-                  v-if="it.code"
-                  :to="localePath(`/products/${encodeURIComponent(it.code)}`)"
-                  class="idlg__code u-mono"
-                  :title="t('contract.reference.viewProduct')"
-                >{{ t('products.codeLabel', { code: it.code }) }}</NuxtLink>
-              </td>
-              <td
-                class="itable__num"
-                :data-label="t('common.quantity')"
-              >
-                {{ qtyLabel(it) }}
-              </td>
-              <td
-                class="itable__num"
-                :data-label="t('common.unitPrice')"
-              >
-                <MoneyAmount
-                  :amount="it.unitAmount"
-                  :currency="it.currency"
-                  :rule="false"
-                  size="sm"
-                  decimals
-                />
-              </td>
-              <td
-                class="itable__num"
-                :data-label="t('common.total')"
-              >
-                <MoneyAmount
-                  :amount="it.total"
-                  :currency="it.currency"
-                  size="sm"
-                />
-              </td>
-            </tr>
-          </tbody>
-          <tfoot v-if="itemsTotal">
-            <tr v-if="verifiedOverride">
-              <td
-                :colspan="4"
-                class="idlg__verifiedcaption"
-              >
-                {{ t('contract.verifiedTotalHelp') }}
-              </td>
-            </tr>
-            <tr>
-              <td :colspan="3">
-                {{ t('common.total') }}
-              </td>
-              <td class="itable__num">
-                <MoneyAmount
-                  :amount="itemsTotal.amount"
-                  :currency="itemsTotal.currency"
-                  size="sm"
-                  decimals
-                />
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+          <template #empty>
+            {{ t('contracts.itemFilterNoMatch') }}
+          </template>
+          <template #cell:description="{ row }">
+            <span class="idlg__desc">{{ row.description || '—' }}</span>
+            <NuxtLink
+              v-if="row.code"
+              :to="localePath(`/products/${encodeURIComponent(row.code)}`)"
+              class="idlg__code u-mono"
+              :title="t('contract.reference.viewProduct')"
+            >{{ t('products.codeLabel', { code: row.code }) }}</NuxtLink>
+          </template>
+          <template #cell:quantity="{ row }">
+            {{ qtyLabel(row) }}
+          </template>
+          <template #cell:unitAmount="{ row }">
+            <MoneyAmount
+              :amount="row.unitAmount"
+              :currency="row.currency"
+              :rule="false"
+              size="sm"
+              decimals
+            />
+          </template>
+          <template #cell:total="{ row }">
+            <MoneyAmount
+              :amount="row.total"
+              :currency="row.currency"
+              size="sm"
+            />
+          </template>
+        </DataTable>
+
+        <div
+          v-if="itemsTotal"
+          class="idlg__itemstotal"
+        >
+          <p
+            v-if="verifiedOverride"
+            class="idlg__verifiedcaption"
+          >
+            {{ t('contract.verifiedTotalHelp') }}
+          </p>
+          <div class="idlg__totalrow">
+            <span>{{ t('common.total') }}</span>
+            <MoneyAmount
+              :amount="itemsTotal.amount"
+              :currency="itemsTotal.currency"
+              size="sm"
+              decimals
+            />
+          </div>
+        </div>
       </div>
 
       <div class="idlg__foot">
@@ -515,6 +476,9 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
 
 .idlg__body {
   flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: auto;
   padding: var(--s-4) var(--s-5);
 }
@@ -604,8 +568,6 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
 }
 .idlg__code:hover { text-decoration: underline; }
 
-.idlg__empty { padding: var(--s-6) var(--s-4); text-align: center; font-size: var(--t-sm); }
-
 .idlg__foot {
   padding: var(--s-3) var(--s-5);
   border-top: 1px solid var(--rule);
@@ -622,58 +584,62 @@ function qtyLabel(it: { quantity?: number | null, unitName?: string }): string {
 }
 .idlg__go:hover { text-decoration: underline; }
 
-.itable { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.itable th {
-  padding: var(--s-2) var(--s-3);
-  text-align: left;
+.idlg__items {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.idlg__itemstotal {
+  margin-top: var(--s-3);
+  overflow: hidden;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface-sunken);
+}
+
+.idlg__verifiedcaption {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.idlg__totalrow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
   font-family: var(--font-mono);
   font-size: var(--t-xs);
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--rule);
-  white-space: nowrap;
-}
-.itable td {
-  padding: var(--s-3);
-  font-size: var(--t-sm);
-  vertical-align: middle;
-  border-bottom: 1px solid var(--rule);
-  overflow-wrap: anywhere;
-}
-.itable tbody tr:hover { background: var(--surface-sunken); }
-.itable th.itable__num,
-.itable td.itable__num { text-align: right; white-space: nowrap; }
-.itable th:nth-child(1) { width: auto; }
-.itable th:nth-child(2) { width: 16%; }
-.itable th:nth-child(3) { width: 20%; }
-.itable th:nth-child(4) { width: 20%; }
-.itable td.itable__num :deep(.money) { align-items: flex-end; }
-.itable tfoot td {
-  padding-top: var(--s-3);
-  border-top: 2px solid var(--rule-strong);
-  border-bottom: 0;
-  font-family: var(--font-mono);
-  font-size: var(--t-xs);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
-/* The "raw feed" note above the total: a full sentence, not a label —
-   overrides the mono/uppercase/letter-spacing the total row uses. */
-.itable tfoot .idlg__verifiedcaption {
-  padding-top: var(--s-2);
-  font-family: var(--font-body);
-  font-size: var(--t-xs);
-  font-weight: 400;
-  letter-spacing: normal;
-  text-transform: none;
-  line-height: 1.5;
-  white-space: normal;
+.idlg__totalrow :deep(.money) {
+  flex: none;
+  align-items: flex-end;
 }
 
 @media (max-width: 760px) {
-  .itable { table-layout: auto; }
+  .idlg__head,
+  .idlg__foot {
+    padding-inline: var(--s-4);
+  }
+
+  .idlg__body {
+    padding: var(--s-3);
+  }
+
+  .idlg__totalrow {
+    align-items: stretch;
+  }
+
+  .idlg__totalrow :deep(.money) {
+    align-items: flex-start;
+  }
 }
 </style>

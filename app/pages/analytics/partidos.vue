@@ -67,7 +67,7 @@ const yearItems = computed(() => [...dataYears.value].reverse().map(y => ({
 })))
 const yearModel = computed<string>({
   get: () => (year.value != null ? String(year.value) : ''),
-  set: v => { yearParam.value = v },
+  set: (v) => { yearParam.value = v },
 })
 
 const METRIC_ITEMS = computed(() => (['perCapita', 'directShare', 'priceCoverage', 'top5', 'anomalyDensity'] as MetricKey[])
@@ -191,6 +191,14 @@ const tableRows = computed(() =>
     }))
     .sort((a, b) => (b.val ?? -Infinity) - (a.val ?? -Infinity)))
 
+const partyColumns = computed(() => [
+  { key: 'department', label: t('partidos.col.dept'), primary: true },
+  { key: 'party', label: t('partidos.col.party') },
+  { key: 'metric', label: t(`partidos.metric.${metric.value}`), align: 'end' as const, mono: true },
+  { key: 'contracts', label: t('partidos.col.contracts'), align: 'end' as const, mono: true },
+  { key: 'actions', label: '', align: 'end' as const, hideLabel: true },
+])
+
 function contractsLink(buyerId: string) {
   const q = new URLSearchParams({ buyerIds: buyerId, sort: 'amountDesc' })
   if (year.value) q.set('year', String(year.value))
@@ -283,10 +291,16 @@ useSeo(() => ({
             divided
             class="controls__mode"
           >
-            <v-btn value="party" size="small">
+            <v-btn
+              value="party"
+              size="small"
+            >
               {{ t('partidos.mode.party') }}
             </v-btn>
-            <v-btn value="metric" size="small">
+            <v-btn
+              value="metric"
+              size="small"
+            >
               {{ t('partidos.mode.metric') }}
             </v-btn>
           </v-btn-toggle>
@@ -504,59 +518,45 @@ useSeo(() => ({
           border
           class="tablecard"
         >
-          <table class="dt">
-            <thead>
-              <tr>
-                <th>{{ t('partidos.col.dept') }}</th>
-                <th>{{ t('partidos.col.party') }}</th>
-                <th class="dt--num">
-                  {{ t(`partidos.metric.${metric}`) }}
-                </th>
-                <th class="dt--num">
-                  {{ t('partidos.col.contracts') }}
-                </th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="r in tableRows"
-                :key="r.buyerId"
+          <DataTable
+            :columns="partyColumns"
+            :rows="tableRows"
+            :row-key="row => row.buyerId"
+            min-width="720px"
+            :framed="false"
+          >
+            <template #cell:department="{ row }">
+              <NuxtLink
+                :to="localePath(`/buyers/${row.buyerId}`)"
+                class="dt__dept"
               >
-                <td>
-                  <NuxtLink
-                    :to="localePath(`/buyers/${r.buyerId}`)"
-                    class="dt__dept"
-                  >
-                    {{ r.name }}
-                  </NuxtLink>
-                </td>
-                <td>
-                  <MandateChip
-                    :buyer-id="r.buyerId"
-                    :year="r.year"
-                    size="x-small"
-                    :show-holder="false"
-                  />
-                </td>
-                <td class="dt--num u-mono">
-                  {{ fmtMetric(r.val) }}<span
-                    v-if="metric === 'directShare'"
-                    class="dt__cover"
-                  > · {{ t('partidos.coverage', { n: r.cover }) }}</span>
-                </td>
-                <td class="dt--num u-mono">
-                  {{ formatNumber(r.contracts) }}
-                </td>
-                <td class="dt--num">
-                  <CellLink
-                    :to="contractsLink(r.buyerId)"
-                    :label="t('partidos.viewContracts')"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                {{ row.name }}
+              </NuxtLink>
+            </template>
+            <template #cell:party="{ row }">
+              <MandateChip
+                :buyer-id="row.buyerId"
+                :year="row.year"
+                size="x-small"
+                :show-holder="false"
+              />
+            </template>
+            <template #cell:metric="{ row }">
+              {{ fmtMetric(row.val) }}<span
+                v-if="metric === 'directShare'"
+                class="dt__cover"
+              > · {{ t('partidos.coverage', { n: row.cover }) }}</span>
+            </template>
+            <template #cell:contracts="{ row }">
+              {{ formatNumber(row.contracts) }}
+            </template>
+            <template #cell:actions="{ row }">
+              <CellLink
+                :to="contractsLink(row.buyerId)"
+                :label="t('partidos.viewContracts')"
+              />
+            </template>
+          </DataTable>
           <p
             v-if="calculatedAt"
             class="tablecard__foot u-mono"
@@ -654,11 +654,6 @@ useSeo(() => ({
 .conf__list li { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.6; margin-bottom: var(--s-1); }
 
 .tablecard { margin-top: var(--s-6); overflow: hidden; }
-.dt { width: 100%; border-collapse: collapse; }
-.dt th { padding: var(--s-3) var(--s-4); text-align: left; font-family: var(--font-mono); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); border-bottom: 1px solid var(--rule); }
-.dt td { padding: var(--s-3) var(--s-4); font-size: var(--t-sm); border-bottom: 1px solid var(--rule); }
-.dt tr:last-child td { border-bottom: 0; }
-.dt--num { text-align: right; }
 .dt__cover { color: var(--text-muted); font-weight: 400; font-size: var(--t-xs); }
 .dt__dept { font-weight: 600; color: var(--text); text-decoration: none; }
 .dt__dept:hover { color: var(--celeste-deep); text-decoration: underline; }
@@ -672,5 +667,20 @@ useSeo(() => ({
 @media (max-width: 860px) {
   .mapwrap { grid-template-columns: 1fr; }
   .controls__metric, .controls__year { max-width: 100%; flex: 1 1 100%; }
+}
+
+@media (max-width: 760px) {
+  .tablecard {
+    overflow: visible;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .tablecard__foot {
+    margin-top: var(--s-3);
+    border: 1px solid var(--rule);
+    border-radius: var(--r-md);
+    background: var(--surface-sunken);
+  }
 }
 </style>

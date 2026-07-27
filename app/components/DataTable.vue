@@ -104,6 +104,17 @@ function rowComponent(row: T) {
           </tr>
         </thead>
         <tbody>
+          <tr
+            v-if="!rows.length && $slots.empty"
+            class="dt__row dt__row--empty"
+          >
+            <td
+              :colspan="columns.length"
+              class="dt__td dt__td--empty"
+            >
+              <slot name="empty" />
+            </td>
+          </tr>
           <component
             :is="rowComponent(row)"
             v-for="(row, i) in rows"
@@ -165,10 +176,14 @@ function rowComponent(row: T) {
 <style scoped>
 .dt {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ---- Desktop: a real table ---- */
 .dt__scroll {
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
@@ -218,12 +233,23 @@ a.dt__row {
 .dt__row:last-child .dt__td { border-bottom: 0; }
 tbody .dt__row:hover .dt__td { background: var(--surface-sunken); }
 
+.dt__td--empty {
+  padding-block: var(--s-6);
+  text-align: center;
+  color: var(--text-muted);
+}
+
 .dt__td--end { text-align: right; }
 .dt__td--end .dt__value { justify-content: flex-end; }
 
 /* The inline label is desktop-invisible; the <thead> carries headers. */
 .dt__label { display: none; }
-.dt__value { display: block; }
+.dt__value {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 
 .dt__tfoot td {
   padding: var(--s-3) var(--s-4);
@@ -239,7 +265,8 @@ tbody .dt__row:hover .dt__td { background: var(--surface-sunken); }
 @media (max-width: 760px) {
   /* The scroll box stops being a surface — the cards are the surfaces. */
   .dt__scroll {
-    overflow-x: visible;
+    overflow-x: hidden;
+    overflow-x: clip;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -280,9 +307,12 @@ tbody .dt__row:hover .dt__td { background: var(--surface-sunken); }
 
   .dt__td {
     display: block;
+    min-width: 0;
+    max-width: 100%;
     padding: 0;
     border: 0 !important;
     text-align: left !important;
+    overflow-wrap: anywhere;
   }
 
   tbody .dt__row:hover .dt__td { background: transparent; }
@@ -293,6 +323,12 @@ tbody .dt__row:hover .dt__td { background: var(--surface-sunken); }
     padding-bottom: var(--s-3);
     border-bottom: 1px solid var(--rule) !important;
     font-weight: 600;
+  }
+
+  .dt__row--empty .dt__td--empty {
+    margin: 0;
+    padding: var(--s-3) 0;
+    border: 0 !important;
   }
 
   /* Every other cell: label above value, both left-read, full width. */
@@ -325,6 +361,7 @@ tbody .dt__row:hover .dt__td { background: var(--surface-sunken); }
   }
 
   .dt__td--end .dt__value { justify-content: flex-start; }
+  .dt__td :deep(.money) { align-items: flex-start; }
 
   .dt__tfoot { display: block; }
 

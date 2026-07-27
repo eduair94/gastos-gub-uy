@@ -6,6 +6,12 @@ const { track } = useAnalytics()
 const { state, reopen } = useConsent()
 
 const rows = computed(() => getCookieRows(locale.value === 'en' ? 'en' : 'es'))
+const cookieColumns = computed(() => [
+  { key: 'name', label: t('cookiesPage.colName'), primary: true, mono: true },
+  { key: 'purpose', label: t('cookiesPage.colPurpose') },
+  { key: 'duration', label: t('cookiesPage.colDuration') },
+  { key: 'kind', label: t('cookiesPage.colKind') },
+])
 
 const orgLd = useOrgLd()
 
@@ -83,40 +89,30 @@ function changeDecision() {
 
       <section class="ck__sec">
         <h2>{{ t('cookiesPage.tableTitle') }}</h2>
-        <div class="u-scroll-x">
-          <table class="ck__table">
-            <thead>
-              <tr>
-                <th>{{ t('cookiesPage.colName') }}</th>
-                <th>{{ t('cookiesPage.colPurpose') }}</th>
-                <th>{{ t('cookiesPage.colDuration') }}</th>
-                <th>{{ t('cookiesPage.colKind') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="row in rows"
-                :key="row.name"
-              >
-                <td class="u-mono ck__name">
-                  {{ row.name }}
-                </td>
-                <td>{{ row.purpose }}</td>
-                <td class="ck__dur">
-                  {{ row.duration }}
-                </td>
-                <td>
-                  <span
-                    class="tag"
-                    :class="row.kind === 'measure' ? 'tag--celeste' : 'tag--neutral'"
-                  >
-                    {{ row.kind === 'measure' ? t('cookiesPage.kindMeasure') : t('cookiesPage.kindNecessary') }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          :columns="cookieColumns"
+          :rows="rows"
+          :row-key="row => row.name"
+          min-width="640px"
+        >
+          <template #cell:name="{ row }">
+            <span class="ck__name">{{ row.name }}</span>
+          </template>
+          <template #cell:purpose="{ row }">
+            {{ row.purpose }}
+          </template>
+          <template #cell:duration="{ row }">
+            <span class="ck__dur">{{ row.duration }}</span>
+          </template>
+          <template #cell:kind="{ row }">
+            <span
+              class="tag"
+              :class="row.kind === 'measure' ? 'tag--celeste' : 'tag--neutral'"
+            >
+              {{ row.kind === 'measure' ? t('cookiesPage.kindMeasure') : t('cookiesPage.kindNecessary') }}
+            </span>
+          </template>
+        </DataTable>
       </section>
 
       <section class="ck__sec">
@@ -188,30 +184,6 @@ function changeDecision() {
 
 .ck__btn:hover { background: var(--celeste-deep); border-color: var(--celeste-deep); }
 .ck__btn:focus-visible { outline: 2px solid var(--celeste); outline-offset: 2px; }
-
-.ck__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--t-sm);
-  min-width: 40rem;
-}
-
-.ck__table th,
-.ck__table td {
-  text-align: left;
-  padding: var(--s-3);
-  border-bottom: 1px solid var(--rule);
-  vertical-align: top;
-  color: var(--text-muted);
-}
-
-.ck__table th {
-  font-family: var(--font-mono);
-  font-size: var(--t-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text);
-}
 
 .ck__name { white-space: nowrap; color: var(--text); }
 .ck__dur { white-space: nowrap; }
