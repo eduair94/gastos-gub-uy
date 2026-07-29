@@ -35,6 +35,18 @@ const UserSchema = new Schema<IUser>(
         default: undefined,
       },
     },
+    newsletter: {
+      type: new Schema(
+        {
+          subscribed: { type: Boolean, required: true },
+          subscribedAt: { type: Date },
+          unsubscribedAt: { type: Date },
+          source: { type: String, enum: ["registration", "login", "account"] },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     // Linked Telegram chat — written by the bot webhook on a valid /start token.
     telegram: {
       type: {
@@ -60,6 +72,7 @@ const UserSchema = new Schema<IUser>(
 UserSchema.index({ uid: 1 }, { unique: true });
 UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ unsubscribeToken: 1 }, { unique: true });
+UserSchema.index({ "newsletter.subscribed": 1, status: 1 });
 
 export const UserModel: Model<IUser> =
   (mongoose.models.User as Model<IUser>) || mongoose.model<IUser>("User", UserSchema);

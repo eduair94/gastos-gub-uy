@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
     enabled?: boolean
     frequency?: string
     locale?: string
+    newsletterSubscribed?: boolean
     channels?: Partial<Record<NotificationChannel, boolean>>
   }>(event)
 
@@ -22,6 +23,18 @@ export default defineEventHandler(async (event) => {
   if (typeof body?.enabled === 'boolean') set['notificationPrefs.enabled'] = body.enabled
   if (body?.frequency === 'instant' || body?.frequency === 'daily') set['notificationPrefs.frequency'] = body.frequency
   if (body?.locale === 'es' || body?.locale === 'en') set.locale = body.locale
+  const unset: Record<string, 1> = {}
+  if (typeof body?.newsletterSubscribed === 'boolean') {
+    set['newsletter.subscribed'] = body.newsletterSubscribed
+    set['newsletter.source'] = 'account'
+    if (body.newsletterSubscribed) {
+      set['newsletter.subscribedAt'] = new Date()
+      unset['newsletter.unsubscribedAt'] = 1
+    }
+    else {
+      set['newsletter.unsubscribedAt'] = new Date()
+    }
+  }
   if (body?.channels && typeof body.channels === 'object') {
     for (const ch of CHANNELS) {
       const v = body.channels[ch]
@@ -30,9 +43,20 @@ export default defineEventHandler(async (event) => {
   }
 
   await connectToDatabase()
-  const updated = await UserModel.findOneAndUpdate({ uid: user.uid }, { $set: set }, { new: true })
-    .select('notificationPrefs locale')
+  const updated = await UserModel.findOneAndUpdate(
+    { uid: user.uid },
+    { $set: set, ...(Object.keys(unset).length ? { $unset: unset } : {}) },
+    { new: true },
+  )
+    .select('notificationPrefs newsletter locale')
     .lean()
 
-  return { success: true, data: { notificationPrefs: updated?.notificationPrefs, locale: updated?.locale } }
+  return {
+    success: true,
+    data: {
+      notificationPrefs: updated?.notificationPrefs,
+      newsletter: updated?.newsletter ?? { subscribed: false },
+      locale: updated?.locale,
+    },
+  }
 })

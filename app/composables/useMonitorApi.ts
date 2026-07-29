@@ -69,6 +69,7 @@ export function useMonitorApi() {
       enabled?: boolean
       frequency?: string
       locale?: string
+      newsletterSubscribed?: boolean
       channels?: Partial<Record<'email' | 'push' | 'telegram' | 'inapp', boolean>>
     }) => $fetch<{ data: unknown }>('/api/account/preferences', { method: 'PUT', body }),
   }

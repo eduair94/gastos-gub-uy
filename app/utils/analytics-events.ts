@@ -64,6 +64,8 @@ export type AnalyticsEvent =
   | 'telegram_link_start'
   | 'telegram_unlink'
   | 'email_unsubscribe' //   { result }
+  | 'newsletter_subscribe'
+  | 'newsletter_unsubscribe'
 
   // ── Install ────────────────────────────────────────────────────────────
   | 'pwa_install_prompt' //  { outcome: 'accepted' | 'dismissed' }

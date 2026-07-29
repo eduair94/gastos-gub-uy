@@ -23,6 +23,7 @@ interface PushData {
   body?: string
   url?: string
   compraId?: string
+  tag?: string
 }
 
 self.addEventListener('push', (event: PushEvent) => {
@@ -42,7 +43,7 @@ self.addEventListener('push', (event: PushEvent) => {
       icon: '/pwa-192x192.png',
       badge: '/pwa-64x64.png',
       lang: 'es-UY',
-      tag: data.compraId ? `llamado-${data.compraId}` : undefined,
+      tag: data.tag || (data.compraId ? `llamado-${data.compraId}` : undefined),
       data: { url },
     }),
   )

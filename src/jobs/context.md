@@ -22,6 +22,7 @@ Every offline computation in gastos-gub. Jobs turn the raw OCDS `releases` colle
 | [backfill-open-calls.ts](backfill-open-calls.ts) | One-time day-1 backfill with alerts suppressed (`syncOpenCalls({ suppressAlerts: true })`). Idempotent. |
 | [deadline-reminders.ts](deadline-reminders.ts) | Daily reminder email for `saved_calls` nearing their reception deadline; writes `saved_calls.reminderSentAt` + `notifications`. |
 | [alert-digest.ts](alert-digest.ts) | Thin wrapper: `dispatchAlerts({ frequency: 'daily' })` — one bundled email per daily-frequency user. |
+| [weekly-newsletter.ts](weekly-newsletter.ts) | Monday publisher for the previous completed Uruguay week: computes top plausible awards + objective anomaly totals, asks Gemini for a schema-constrained editorial reading, upserts the public issue, then drains an idempotent Resend/Web Push outbox. `--dry-run` performs no writes or sends. |
 | [pliego-summary.ts](pliego-summary.ts) | Gemini pliego summaries cached on `open_calls.aiSummary`. Not on cron (sync-open-calls does a bounded eager pass). |
 | [import-sice-catalog.ts](import-sice-catalog.ts) | Downloads ACCE `imp_catalogo.tgz`, parses Latin-1 SQL INSERTs → `sice_catalog` + `sice_rubro`. Self-skips on unchanged ETag/Last-Modified via `sice_import_state`. |
 | [load-dei.ts](load-dei.ts) | Loads the MIEM DEI industrial-registry CSV → `dei_companies`, upsert-by-RUT. The RUT join happens at read time in `app/server/utils/dei.ts`. |
@@ -87,6 +88,7 @@ npm run sync-open-calls
 npm run backfill-open-calls
 npm run deadline-reminders
 npm run alert-digest
+npm run weekly-newsletter -- --dry-run
 npm run webhooks
 npm run pliego-summary -- --eager
 npm run import-sice-catalog -- --force
@@ -122,6 +124,7 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 | `15 4 * * *` | `jobs/detect-anomalies` → unlimited high/critical AI lane → bounded recent all-severity lane |
 | `50 * * * *` | bounded `jobs/score-anomalies-ai --min-rank=1 --limit=$AI_TRIAGE_BATCH_LIMIT` retry/backfill, newest source date first |
 | `0 5 * * *` / `0 6 * * *` / `0 8 * * *` | `jobs/deadline-reminders` / `jobs/cross-provider-anomalies` / `jobs/alert-digest` |
+| `15 9 * * 1` | `jobs/weekly-newsletter` for the previous completed Uruguay week |
 | `0 2 * * 0` / `0 7 * * 0` | weekly reconcileNonFinalReleases → full `jobs/reconcile-award-amendments` / `jobs/refresh-product-variants` |
 | `0 3 * * 1` / `0 3 1 * *` / `0 4 1 * *` | `jobs/import-sice-catalog` / `jobs/refresh-organism-groups` / `jobs/refresh-dept-indicators` |
 
@@ -170,6 +173,7 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 | `MONGODB_URI` | Mongo connection (via `shared/config.ts`). |
 | `MONGO_SOCKET_TIMEOUT_MS` | Idle socket timeout; jobs self-set it before connecting. |
 | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | Gemini for anomaly triage, pliego summaries, supplier enrichment, the Maps match-judge. |
+| `NEWSLETTER_GEMINI_MODEL` | Optional weekly editorial model override; defaults to `gemini-2.5-flash`. |
 | `AI_TRIAGE_RPM` | Throttle passed as `--rpm` by the cronserver (default 18; free tier is 20 RPM). |
 | `AI_TRIAGE_BATCH_LIMIT` | Hourly all-severity recent/retry queue size (default 60). |
 | `ANALYTICS_MAX_RELEASE_UYU` | Plausibility ceiling for aggregates, default 50e9; 0 disables (analytics-pipeline.ts:47-48). |

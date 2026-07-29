@@ -273,6 +273,7 @@ export default defineNuxtConfig({
       contracts: { sources: ['/api/__sitemap__/contracts'] },
       llamados: { sources: ['/api/__sitemap__/llamados'] },
       cases: { sources: ['/api/__sitemap__/cases'] },
+      blog: { sources: ['/api/__sitemap__/blog'] },
     },
   },
 

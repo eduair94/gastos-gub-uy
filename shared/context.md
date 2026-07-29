@@ -5,7 +5,7 @@ identically in a cron job and in an HTTP handler. Imported by **both** the batch
 `scripts/`) and the Nuxt app (`app/`). Nothing here is Nuxt- or Vue-aware — `app/server/utils/database.ts`
 and `app/server/utils/models.ts` are one-line re-exports of this directory.
 
-Holds: ~37 registered Mongoose models across 33 files ([models/](models/)), the process-wide connection
+Holds: ~39 registered Mongoose models across 35 files ([models/](models/)), the process-wide connection
 singleton ([connection/database.ts](connection/database.ts)), DB-free helpers (watch↔call matcher,
 text/unit normalization, OCID→gov-URL derivation, FX/inflation re-basing, rubro tokens, webhook
 HMAC+SSRF, alert-card renderer), and three curated static tables that are *data, not code*
@@ -21,8 +21,9 @@ HMAC+SSRF, alert-card renderer), and three curated static tables that are *data,
 | [connection/mongodb-client.ts](connection/mongodb-client.ts) | **LEGACY.** Raw `MongoClient` used only by `src/factories/scraper-factory.ts` → `src/extract.ts`/`src/analyzer.ts`. Options (:24-33) are driver-v3 era, meaningless under installed v6. `createRecommendedIndexes()` conflicts with `scripts/ensure-indexes.ts`. Do not extend. |
 
 ### models/ — collection = source of truth
-Barrel: [models/index.ts](models/index.ts) exports 32 of 37 models. **NOT exported** (import by file path):
-`supplier_contacts`, `supplier_enrichment`, `email_campaign`, `email_suppression`, `campaign_send`.
+Barrel: [models/index.ts](models/index.ts) exports 32 of 39 models. **NOT exported** (import by file path):
+`supplier_contacts`, `supplier_enrichment`, `email_campaign`, `email_suppression`, `campaign_send`,
+`newsletter_issue`, `newsletter_delivery`.
 
 | Model file | Collection | Notes |
 |---|---|---|
@@ -42,6 +43,8 @@ Barrel: [models/index.ts](models/index.ts) exports 32 of 37 models. **NOT export
 | [expense_insight.ts](models/expense_insight.ts) | `expense_insights` | PRECOMPUTED; only writer `src/populate-analytics.ts`, only reader the LEGACY Express API. Dormant for Nuxt. |
 | [filter_data.ts](models/filter_data.ts) | `filter_data` | PRECOMPUTED dropdown options, one doc per `type` (unique). Written only by `populate-filters`. |
 | [item_price_baseline.ts](models/item_price_baseline.ts) | `item_price_baselines` | PRECOMPUTED price distribution per `{classificationId,currency,canonicalUnit}` (unique). Log-space median/MAD. Built by `detect-anomalies`. `unitName` MUST be `canonicalUnit`. |
+| [newsletter_issue.ts](models/newsletter_issue.ts) | `newsletter_issues` | One immutable weekly blog/newsletter edition per `weekKey`/`slug` (both unique): source totals, top awards, deterministic anomaly counts and the clearly labeled Gemini editorial layer. |
+| [newsletter_delivery.ts](models/newsletter_delivery.ts) | `newsletter_deliveries` | Idempotent email/push outbox, unique `{issueId,userId,channel}`; `{status,nextAttemptAt}` drives bounded retries. |
 | [notification.ts](models/notification.ts) | `notifications` | Per-CHANNEL outbox + in-app inbox. `dedupeKey` unique = `alert:{channel}:{uid}:{compraId}`. channel enum email\|push\|telegram\|inapp. |
 | [open_call.ts](models/open_call.ts) | `open_calls` | PROJECTION of `releases` (`sync-open-calls`), unique `compraId`. `classificationSet` (multikey), normalized `searchText`, `documentsProbedAt`, `firstSeenAt` vs `lastSyncedAt`. Never derive gov link from `id` — use `ocid`. |
 | [organism_group_stats.ts](models/organism_group_stats.ts) | `organism_group_stats` | PRECOMPUTED per group, unique `groupKey`; monthly `refresh-organism-groups`. Capped amounts; over-cap in `excludedRecords`. |
@@ -55,7 +58,7 @@ Barrel: [models/index.ts](models/index.ts) exports 32 of 37 models. **NOT export
 | [sice_rubro.ts](models/sice_rubro.ts) | `sice_rubro` | ~2,170-node rubro tree, unique `token`, `parentToken` for the cascader. |
 | [supplier_contacts.ts](models/supplier_contacts.ts) | `supplier_contacts` | DERIVED contact record per `supplierId`: additive email/phone/social arrays retain `source` + exact `sourceUrl` evidence; singular phone/email remain compatibility primaries. Also website, first-party address/form and place metadata. `enrichmentMethods` records every attempted path for transparent chips; Google Maps contact/location values retain their Maps evidence link. Not in index barrel. |
 | [supplier_enrichment.ts](models/supplier_enrichment.ts) | `supplier_enrichment` | AI-WRITTEN (Gemini) blurb+category per supplier NAME. Exports `SUPPLIER_CATEGORIES`. NOT a fact of record — must be labeled AI. Not in index barrel. |
-| [user.ts](models/user.ts) | `users` | Keyed by Firebase `uid`. `notificationPrefs.channels` optional (absent ⇒ `DEFAULT_CHANNELS`). No field-level `unique` — uniqueness from ensure-indexes. |
+| [user.ts](models/user.ts) | `users` | Keyed by Firebase `uid`. `notificationPrefs.channels` optional (absent ⇒ `DEFAULT_CHANNELS`); `newsletter` stores explicit weekly-summary consent independently. No field-level `unique` — uniqueness from ensure-indexes. |
 | [watch.ts](models/watch.ts) | `watches` | Rubro subscription. categories+keywords = OR triggers; buyers/value/methods = AND refinements. Keywords stored PRE-NORMALIZED via `text.normalizeKeyword`. |
 | [webhook_delivery.ts](models/webhook_delivery.ts) | `webhook_deliveries` | Idempotent outbox, `dedupeKey` unique, `{status,nextAttemptAt}` for the drain. Exports `WEBHOOK_MAX_ATTEMPTS` (default 6). |
 | [webhook_subscription.ts](models/webhook_subscription.ts) | `webhook_subscriptions` | HTTPS endpoint + HMAC `secret` + event enum. Exports `WEBHOOK_SUBSCRIPTION_CAP` (default 10). |

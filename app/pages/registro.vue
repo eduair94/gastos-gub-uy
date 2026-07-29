@@ -11,6 +11,7 @@ useSeo({ title: t('auth.registerTitle'), description: t('auth.subtitle'), path: 
 
 const email = ref('')
 const password = ref('')
+const newsletterOptIn = ref(route.query.newsletter === '1')
 const loading = ref(false)
 const error = ref('')
 
@@ -52,7 +53,7 @@ async function doRegister() {
   error.value = ''
   loading.value = true
   try {
-    await registerEmail(email.value, password.value)
+    await registerEmail(email.value, password.value, newsletterOptIn.value)
     await preCreateRubroWatch()
     await navigateTo(redirectTarget())
   }
@@ -69,7 +70,7 @@ async function doGoogle() {
   error.value = ''
   loading.value = true
   try {
-    await loginGoogle()
+    await loginGoogle(newsletterOptIn.value, 'registration')
     await preCreateRubroWatch()
     await navigateTo(redirectTarget())
   }
@@ -108,6 +109,12 @@ async function doGoogle() {
           :label="t('auth.password')"
           type="password"
           autocomplete="new-password"
+        />
+        <v-checkbox
+          v-model="newsletterOptIn"
+          :label="t('auth.newsletterOptIn')"
+          hide-details
+          class="authcard__newsletter"
         />
 
         <p

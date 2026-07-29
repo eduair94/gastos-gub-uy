@@ -17,7 +17,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 503, statusMessage: 'La autenticación no está disponible.' })
   }
 
-  const body = await readBody<{ idToken?: string }>(event)
+  const body = await readBody<{
+    idToken?: string
+    newsletterOptIn?: boolean
+    newsletterSource?: 'registration' | 'login'
+  }>(event)
   const idToken = body?.idToken
   if (!idToken) {
     throw createError({ statusCode: 400, statusMessage: 'Falta idToken' })
@@ -41,21 +45,29 @@ export default defineEventHandler(async (event) => {
   }
   if (decoded.name) set.displayName = decoded.name
   if (decoded.picture) set.photoURL = decoded.picture
+  if (body.newsletterOptIn === true) {
+    set['newsletter.subscribed'] = true
+    set['newsletter.subscribedAt'] = new Date()
+    set['newsletter.source'] = body.newsletterSource === 'registration' ? 'registration' : 'login'
+  }
+
+  const update: Record<string, unknown> = {
+    $set: set,
+    ...(provider ? { $addToSet: { providers: provider } } : {}),
+    $setOnInsert: {
+      role: 'user',
+      locale: 'es',
+      status: 'active',
+      notificationPrefs: { enabled: true, frequency: 'instant' },
+      unsubscribeToken: randomUUID(),
+      watchCount: 0,
+    },
+    ...(body.newsletterOptIn === true ? { $unset: { 'newsletter.unsubscribedAt': 1 } } : {}),
+  }
 
   const user = await UserModel.findOneAndUpdate(
     { uid: decoded.uid },
-    {
-      $set: set,
-      ...(provider ? { $addToSet: { providers: provider } } : {}),
-      $setOnInsert: {
-        role: 'user',
-        locale: 'es',
-        status: 'active',
-        notificationPrefs: { enabled: true, frequency: 'instant' },
-        unsubscribeToken: randomUUID(),
-        watchCount: 0,
-      },
-    },
+    update,
     { upsert: true, new: true },
   ).lean()
 

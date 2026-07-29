@@ -446,7 +446,19 @@ async function main(): Promise<void> {
       await users.createIndex({ uid: 1 }, { unique: true, background: true })
       await users.createIndex({ email: 1 }, { unique: true, background: true })
       await users.createIndex({ unsubscribeToken: 1 }, { unique: true, background: true })
-      console.log('✅ users indexes ensured (uid, email, unsubscribeToken — all unique)')
+      await users.createIndex({ 'newsletter.subscribed': 1, status: 1 }, { background: true })
+      console.log('✅ users indexes ensured (uid, email, unsubscribeToken unique; newsletter subscription)')
+
+      const newsletterIssues = db.collection('newsletter_issues')
+      await newsletterIssues.createIndex({ weekKey: 1 }, { unique: true, background: true })
+      await newsletterIssues.createIndex({ slug: 1 }, { unique: true, background: true })
+      await newsletterIssues.createIndex({ status: 1, publishedAt: -1 }, { background: true })
+      console.log('✅ newsletter_issues indexes ensured (weekKey, slug unique; published archive)')
+
+      const newsletterDeliveries = db.collection('newsletter_deliveries')
+      await newsletterDeliveries.createIndex({ issueId: 1, userId: 1, channel: 1 }, { unique: true, background: true })
+      await newsletterDeliveries.createIndex({ issueId: 1, status: 1, channel: 1 }, { background: true })
+      console.log('✅ newsletter_deliveries indexes ensured (idempotent recipient/channel, delivery drain)')
 
       const watches = db.collection('watches')
       await watches.createIndex({ userId: 1 }, { background: true })

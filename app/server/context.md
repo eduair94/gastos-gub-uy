@@ -24,6 +24,8 @@ The Nuxt/Nitro HTTP layer: 85 file-routed endpoints under [api/](api/) that read
 | [api/watches/](api/watches/) | `index.{get,post}`, `[id].{get,put,delete}`, `test.post.ts` (dry-run matcher preview). Validation in [utils/watch-input.ts](utils/watch-input.ts). |
 | [api/account/](api/account/) | `preferences.{get,put}`, `api-keys/index.{get,post}`, `api-keys/[id].delete`. POST returns the raw `gk_live_…` token exactly once. |
 | [api/auth/](api/auth/) | `session.post.ts` (Firebase ID token → httpOnly `__session` cookie + user upsert), `me.get.ts`, `logout.post.ts`. |
+| [api/blog/](api/blog/) | Public weekly-issue archive and `[slug]` detail reads from `newsletter_issues`; listed in the dedicated blog sitemap source. |
+| [api/newsletter/unsubscribe.post.ts](api/newsletter/unsubscribe.post.ts) | Token-based newsletter-only opt-out. It does not change tender alert preferences. |
 | [api/notifications/](api/notifications/), [api/push/](api/push/), [api/telegram/](api/telegram/) | Multi-channel alert plumbing: in-app inbox + `read-all`/`[id]/read`; `push/{subscribe,unsubscribe}.post` + `vapid-key.get`; `telegram/{link,unlink}.post` + `webhook.post`. |
 | [api/campaign/](api/campaign/) | Cold-email surface: `unsubscribe.{get,post}` (GET renders HTML), `webhook.post.ts` (Brevo events, guarded by `CAMPAIGN_WEBHOOK_SECRET`). |
 | [api/unsubscribe.get.ts](api/unsubscribe.get.ts), [api/unsubscribe.post.ts](api/unsubscribe.post.ts) | DIFFERENT surface from `campaign/unsubscribe`: flips `users.notificationPrefs` by `users.unsubscribeToken` (List-Unsubscribe one-click). Do not merge them. |

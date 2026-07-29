@@ -46,6 +46,12 @@ export interface IUser extends Document {
     // Optional for backward compat — see resolveChannels() in shared/alerts.
     channels?: INotificationChannels | undefined
   }
+  newsletter?: {
+    subscribed: boolean
+    subscribedAt?: Date | undefined
+    unsubscribedAt?: Date | undefined
+    source?: 'registration' | 'login' | 'account' | undefined
+  } | undefined
   // Present only once the user links a Telegram chat.
   telegram?: ITelegramLink | undefined
   unsubscribeToken: string

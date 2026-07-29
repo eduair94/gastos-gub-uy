@@ -59,6 +59,9 @@ class CronServer {
   private isRemindersRunning: boolean = false;
   private digestStatus: CronJobStatus;
   private isDigestRunning: boolean = false;
+  // Weekly public blog issue + subscribed-user email/Web Push delivery.
+  private newsletterStatus: CronJobStatus;
+  private isNewsletterRunning: boolean = false;
   // SICE catalog import — independent (writes its own sice_catalog/sice_rubro).
   private catalogStatus: CronJobStatus;
   private isCatalogRunning: boolean = false;
@@ -109,6 +112,7 @@ class CronServer {
     this.openCallsStatus = freshStatus();
     this.remindersStatus = freshStatus();
     this.digestStatus = freshStatus();
+    this.newsletterStatus = freshStatus();
     this.catalogStatus = freshStatus();
     this.crossProviderStatus = freshStatus();
     this.loadErrorProviderStatus = freshStatus();
@@ -564,6 +568,21 @@ class CronServer {
     this.app.post("/cron/digest", triggerDigest);
     this.app.get("/cron/digest", triggerDigest);
 
+    this.app.get("/cron/newsletter/status", (_req, res) => {
+      res.json({ ...this.newsletterStatus, isRunning: this.isNewsletterRunning });
+    });
+    const triggerNewsletter = (_req: express.Request, res: express.Response): void => {
+      if (this.isNewsletterRunning) {
+        res.status(409).json({ error: "Weekly newsletter already running", status: this.newsletterStatus });
+        return;
+      }
+      this.logger.info("Manual weekly newsletter trigger initiated");
+      this.runNewsletterJob().catch((error) => this.logger.error("Manual weekly newsletter trigger failed:", error));
+      res.json({ message: "Weekly newsletter triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/newsletter", triggerNewsletter);
+    this.app.get("/cron/newsletter", triggerNewsletter);
+
     // SICE catalog import: status + manual trigger.
     this.app.get("/cron/import-catalog/status", (_req, res) => {
       res.json({ ...this.catalogStatus, isRunning: this.isCatalogRunning });
@@ -832,6 +851,19 @@ class CronServer {
       { scheduled: true, timezone: "America/Montevideo" }
     );
     this.logger.info(`Alert digest scheduled with expression: ${digestExpression} (Uruguay timezone)`);
+
+    // Monday 09:15 publishes the previous completed Monday–Sunday. It runs after
+    // the nightly anomaly detector/AI review and after the :05 ingest, so both the
+    // objective alert counts and the award ranking are settled before publication.
+    const newsletterExpression = "15 9 * * 1";
+    cron.schedule(
+      newsletterExpression,
+      async () => {
+        await this.runNewsletterJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Weekly newsletter scheduled with expression: ${newsletterExpression} (Uruguay timezone)`);
 
     // AI pliego summaries (eager), every 4 hours at :40 — offset from the :20
     // open-calls sync so fresh llamados already have their pliegos. Prioritizes
@@ -1586,6 +1618,34 @@ class CronServer {
       this.logger.error("Alert digest failed:", errorMessage);
     } finally {
       this.isDigestRunning = false;
+    }
+  }
+
+  /** Publishes and delivers the previous completed week's public issue. */
+  private async runNewsletterJob(): Promise<void> {
+    if (this.isNewsletterRunning) {
+      this.logger.warn("Skipping weekly newsletter - already running");
+      return;
+    }
+    this.isNewsletterRunning = true;
+    this.newsletterStatus.status = "running";
+    this.newsletterStatus.lastRun = new Date();
+    this.newsletterStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting weekly newsletter...");
+      await this.runJobProcess("jobs/weekly-newsletter");
+      this.newsletterStatus.status = "idle";
+      this.newsletterStatus.successfulRuns++;
+      this.logger.info("Weekly newsletter completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.newsletterStatus.status = "error";
+      this.newsletterStatus.lastError = errorMessage;
+      this.newsletterStatus.failedRuns++;
+      this.logger.error("Weekly newsletter failed:", errorMessage);
+    } finally {
+      this.isNewsletterRunning = false;
     }
   }
 

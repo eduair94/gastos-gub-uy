@@ -11,6 +11,7 @@ useSeo({ title: t('auth.loginTitle'), description: t('auth.subtitle'), path: '/l
 
 const email = ref('')
 const password = ref('')
+const newsletterOptIn = ref(route.query.newsletter === '1')
 const loading = ref(false)
 const error = ref('')
 const magicSent = ref(false)
@@ -30,7 +31,7 @@ async function doLogin() {
   error.value = ''
   loading.value = true
   try {
-    await loginEmail(email.value, password.value)
+    await loginEmail(email.value, password.value, newsletterOptIn.value)
     await navigateTo(redirectTarget())
   }
   catch (e) {
@@ -46,7 +47,7 @@ async function doGoogle() {
   error.value = ''
   loading.value = true
   try {
-    await loginGoogle()
+    await loginGoogle(newsletterOptIn.value, 'login')
     await navigateTo(redirectTarget())
   }
   catch (e) {
@@ -65,7 +66,7 @@ async function doMagic() {
     return
   }
   try {
-    await sendMagicLink(email.value)
+    await sendMagicLink(email.value, newsletterOptIn.value)
     magicSent.value = true
     track('magic_link_request')
   }
@@ -108,6 +109,17 @@ async function doMagic() {
           type="password"
           autocomplete="current-password"
         />
+        <div>
+          <v-checkbox
+            v-model="newsletterOptIn"
+            :label="t('auth.newsletterOptIn')"
+            hide-details
+            class="authcard__newsletter"
+          />
+          <p class="authcard__newsletterhint">
+            {{ t('auth.newsletterLoginHint') }}
+          </p>
+        </div>
 
         <p
           v-if="error"
@@ -225,4 +237,5 @@ async function doMagic() {
 .authcard__links a:hover { text-decoration: underline; }
 .authcard__err { color: var(--alerta); font-size: var(--t-sm); margin: 0; }
 .authcard__ok { color: var(--verde); font-size: var(--t-sm); margin: 0; }
+.authcard__newsletterhint { margin: 0 var(--s-3); color: var(--text-muted); font-size: var(--t-xs); line-height: 1.45; }
 </style>

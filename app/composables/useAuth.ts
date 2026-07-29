@@ -23,10 +23,12 @@ export interface AuthUser {
   locale: 'es' | 'en'
   status: 'active' | 'disabled'
   notificationPrefs: { enabled: boolean, frequency: 'instant' | 'daily' }
+  newsletter: { subscribed: boolean }
   watchCount: number
 }
 
 const MAGIC_EMAIL_KEY = 'monitor:magicEmail'
+const MAGIC_NEWSLETTER_KEY = 'monitor:magicNewsletter'
 
 /**
  * The Firebase error *code* ('auth/wrong-password'), which is the only part of a
@@ -55,19 +57,26 @@ export function useAuth() {
   }
 
   // Exchange a Firebase ID token for the httpOnly session cookie + Mongo user.
-  async function exchange(fbUser: FirebaseUser): Promise<void> {
+  async function exchange(
+    fbUser: FirebaseUser,
+    newsletterOptIn = false,
+    newsletterSource: 'registration' | 'login' = 'login',
+  ): Promise<void> {
     const idToken = await fbUser.getIdToken()
-    const res = await $fetch<{ data: AuthUser }>('/api/auth/session', { method: 'POST', body: { idToken } })
+    const res = await $fetch<{ data: AuthUser }>('/api/auth/session', {
+      method: 'POST',
+      body: { idToken, ...(newsletterOptIn ? { newsletterOptIn: true, newsletterSource } : {}) },
+    })
     user.value = res.data
   }
 
-  async function loginEmail(email: string, password: string): Promise<void> {
+  async function loginEmail(email: string, password: string, newsletterOptIn = false): Promise<void> {
     const cred = await signInWithEmailAndPassword(auth(), email, password)
-    await exchange(cred.user)
+    await exchange(cred.user, newsletterOptIn, 'login')
     track('login', { method: 'password' })
   }
 
-  async function registerEmail(email: string, password: string): Promise<void> {
+  async function registerEmail(email: string, password: string, newsletterOptIn = false): Promise<void> {
     const cred = await createUserWithEmailAndPassword(auth(), email, password)
     try {
       await sendEmailVerification(cred.user)
@@ -75,23 +84,25 @@ export function useAuth() {
     catch {
       // Non-fatal — the user can request verification again later.
     }
-    await exchange(cred.user)
+    await exchange(cred.user, newsletterOptIn, 'registration')
     track('sign_up', { method: 'password' })
   }
 
-  async function loginGoogle(): Promise<void> {
+  async function loginGoogle(newsletterOptIn = false, newsletterSource: 'registration' | 'login' = 'login'): Promise<void> {
     const cred = await signInWithPopup(auth(), new GoogleAuthProvider())
     // The same popup serves /login and /registro, so the account is what says which
     // it was — Firebase tells us whether this credential just created one.
     const isNew = getAdditionalUserInfo(cred)?.isNewUser === true
-    await exchange(cred.user)
+    await exchange(cred.user, newsletterOptIn, newsletterSource)
     track(isNew ? 'sign_up' : 'login', { method: 'google' })
   }
 
-  async function sendMagicLink(email: string): Promise<void> {
+  async function sendMagicLink(email: string, newsletterOptIn = false): Promise<void> {
     const url = `${window.location.origin}/auth/callback`
     await sendSignInLinkToEmail(auth(), email, { url, handleCodeInApp: true })
     window.localStorage.setItem(MAGIC_EMAIL_KEY, email)
+    if (newsletterOptIn) window.localStorage.setItem(MAGIC_NEWSLETTER_KEY, '1')
+    else window.localStorage.removeItem(MAGIC_NEWSLETTER_KEY)
   }
 
   async function completeMagicLink(): Promise<boolean> {
@@ -100,8 +111,10 @@ export function useAuth() {
     if (!email) email = window.prompt('Confirmá el email al que enviamos el enlace') || ''
     if (!email) return false
     const cred = await signInWithEmailLink(auth(), email, window.location.href)
+    const newsletterOptIn = window.localStorage.getItem(MAGIC_NEWSLETTER_KEY) === '1'
     window.localStorage.removeItem(MAGIC_EMAIL_KEY)
-    await exchange(cred.user)
+    window.localStorage.removeItem(MAGIC_NEWSLETTER_KEY)
+    await exchange(cred.user, newsletterOptIn, 'login')
     track('login', { method: 'magic_link' })
     return true
   }

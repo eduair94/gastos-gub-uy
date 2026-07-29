@@ -7,6 +7,7 @@
     "skip": "Skip to content",
     "home": "Dashboard",
     "gastos": "Spending",
+    "blog": "Weekly briefing",
     "recopilatorios": "Compilations",
     "pauta": "State advertising",
     "contracts": "Contracts",
@@ -1868,6 +1869,10 @@
       "title": "Cases on record — corruption in Uruguayan public procurement, cross-referenced",
       "description": "Documented corruption cases in Uruguay’s public procurement — surfaced by the press, audits and the courts — each cross-referenced with official procurement data and its sources."
     },
+    "blog": {
+      "title": "Weekly public-procurement spending and anomalies — Uruguay",
+      "description": "The largest awards published each week by the Uruguayan state, with Gemini analysis and an objective report of statistical signals."
+    },
     "currosDetail": {
       "title": "{title} — the case, cross-referenced with the data"
     }
@@ -1986,7 +1991,9 @@
     "callbackError": "We couldn't confirm the link. Try signing in again.",
     "notConfigured": "Authentication is unavailable right now.",
     "genericError": "We couldn't complete that. Check your details and try again.",
-    "verifyNotice": "We sent a verification email. Verify your account to activate alerts."
+    "verifyNotice": "We sent a verification email. Verify your account to activate alerts.",
+    "newsletterOptIn": "I want the weekly spending and anomalies briefing",
+    "newsletterLoginHint": "Checking this box subscribes you; leaving it empty does not change an existing subscription."
   },
   "contactPanel": {
     "title": "Contracting unit contact",
@@ -2263,7 +2270,87 @@
     "telegramOpenHint": "Telegram will open to confirm the link.",
     "installApp": "Install app",
     "installHint": "Add the app to your home screen.",
-    "installed": "App installed"
+    "installed": "App installed",
+    "newsletterTitle": "Weekly briefing",
+    "newsletterWeekly": "The week's spending and anomalies",
+    "newsletterHint": "A public post with the largest awards, Gemini analysis, and an objective report of flags.",
+    "newsletterPushHint": "If you enable push notifications on this device, we will also notify you when a new issue is published."
+  },
+  "newsletter": {
+    "eyebrow": "Weekly public record",
+    "indexTitle": "The state's largest purchases, week by week",
+    "indexLead": "A verifiable record of the largest awards published and new statistical signals. Facts come from the data; Gemini helps read them.",
+    "weeklyStamp": "Weekly public record",
+    "everyMonday": "New issue every Monday",
+    "archiveTitle": "Issue archive",
+    "weekTotal": "Total eligible amount for the week",
+    "awards": "Awards",
+    "anomalySignals": "New signals",
+    "unexplained": "Unexplained",
+    "highCritical": "High or critical",
+    "readIssue": "Read issue",
+    "emptyTitle": "The first issue is being prepared",
+    "emptyBody": "The next weekly briefing will appear in this archive when it is published.",
+    "subscriptionEyebrow": "Subscription",
+    "subscriptionTitle": "Get the public record by email",
+    "subscriptionBody": "Every week: large awards, a Gemini reading, and a separate anomaly report.",
+    "subscriptionPrivacy": "You can unsubscribe at any time from your account or from any email.",
+    "subscribeAction": "Subscribe to the briefing",
+    "unsubscribeAction": "Unsubscribe",
+    "subscribedState": "Subscription active",
+    "subscriptionError": "We could not save the change. Try again.",
+    "generatedWith": "Analysis generated with {model}",
+    "published": "Published on {date}",
+    "aiLabel": "AI reading",
+    "aiDisclosure": "Gemini wrote this interpretation over a closed data set. Amounts, rankings, and counts are computed without AI.",
+    "rankingEyebrow": "Award record",
+    "rankingTitle": "The largest purchases published",
+    "rankingLead": "One OCDS process at a time, ranked by amount.primaryAmount normalised to Uruguayan pesos.",
+    "patternsEyebrow": "Reading the week",
+    "patternsTitle": "Patterns observed by Gemini",
+    "anomaliesEyebrow": "Objective report",
+    "anomaliesTitle": "Signals worth reviewing",
+    "dataErrors": "Possible data-entry errors",
+    "pendingAi": "Review pending",
+    "methodologyEyebrow": "Scope and limits",
+    "methodologyTitle": "How this issue was assembled",
+    "notReported": "Not reported",
+    "detected": "Detected",
+    "expected": "Expected range",
+    "notFound": "Publication not found",
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "review": {
+      "dataError": "Possible data-entry error",
+      "unexplained": "No sufficient explanation",
+      "explained": "Possible explanation",
+      "pending": "Review pending"
+    },
+    "unsubscribeTitle": "Unsubscribe",
+    "unsubscribeDescription": "Unsubscribe from the weekly public-procurement briefing.",
+    "backToBlog": "Back to the archive",
+    "unsubscribe": {
+      "loading": {
+        "title": "Updating your subscription…",
+        "body": "We are processing the change."
+      },
+      "done": {
+        "title": "Subscription cancelled",
+        "body": "You will not receive future issues by email or their push notifications."
+      },
+      "invalid": {
+        "title": "This link is invalid",
+        "body": "We could not find a subscription associated with this link."
+      },
+      "error": {
+        "title": "We could not update the subscription",
+        "body": "Try again or change it from My account."
+      }
+    }
   },
   "apiKeys": {
     "title": "API keys",

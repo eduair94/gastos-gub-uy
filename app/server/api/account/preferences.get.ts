@@ -18,6 +18,7 @@ export default defineEventHandler(async (event) => {
       emailVerified: user.emailVerified,
       locale: user.locale,
       notificationPrefs: user.notificationPrefs,
+      newsletter: user.newsletter ?? { subscribed: false },
       telegram: {
         linked: !!user.telegram?.active,
         username: user.telegram?.username ?? null,

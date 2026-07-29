@@ -16,6 +16,12 @@ export interface SessionUser {
   locale: 'es' | 'en'
   status: 'active' | 'disabled'
   notificationPrefs: { enabled: boolean, frequency: 'instant' | 'daily', channels?: INotificationChannels | undefined }
+  newsletter?: {
+    subscribed: boolean
+    subscribedAt?: Date | undefined
+    unsubscribedAt?: Date | undefined
+    source?: 'registration' | 'login' | 'account' | undefined
+  } | undefined
   telegram?: ITelegramLink | undefined
   unsubscribeToken: string
   watchCount: number
@@ -96,6 +102,7 @@ export function toPublicUser(user: Record<string, unknown>): Record<string, unkn
     locale: user.locale,
     status: user.status,
     notificationPrefs: user.notificationPrefs,
+    newsletter: user.newsletter ?? { subscribed: false },
     watchCount: user.watchCount ?? 0,
     createdAt: user.createdAt ?? null,
   }

@@ -7,6 +7,7 @@
     "skip": "Ir al contenido",
     "home": "Panel",
     "gastos": "Gastos",
+    "blog": "Resumen semanal",
     "recopilatorios": "Recopilatorios",
     "pauta": "Pauta oficial",
     "contracts": "Contratos",
@@ -1869,6 +1870,10 @@
       "title": "Curros en evidencia — corrupción en compras del Estado uruguayo, cruzada con datos",
       "description": "Casos de corrupción en compras públicas del Uruguay destapados por prensa, auditorías y la Justicia, cada uno cruzado con los datos oficiales de Compras Estatales y con sus fuentes."
     },
+    "blog": {
+      "title": "Resumen semanal de compras públicas y anomalías — Uruguay",
+      "description": "Las adjudicaciones más grandes publicadas cada semana por el Estado uruguayo, con análisis de Gemini y un reporte objetivo de señales estadísticas."
+    },
     "currosDetail": {
       "title": "{title} — el caso, cruzado con los datos"
     }
@@ -1987,7 +1992,9 @@
     "callbackError": "No pudimos confirmar el enlace. Probá ingresar de nuevo.",
     "notConfigured": "La autenticación no está disponible en este momento.",
     "genericError": "No pudimos completar la operación. Revisá los datos e intentá de nuevo.",
-    "verifyNotice": "Te enviamos un email para verificar tu cuenta. Verificala para activar las alertas."
+    "verifyNotice": "Te enviamos un email para verificar tu cuenta. Verificala para activar las alertas.",
+    "newsletterOptIn": "Quiero recibir el resumen semanal de gastos y anomalías",
+    "newsletterLoginHint": "Marcar esta opción te suscribe; dejarla vacía no cambia una suscripción existente."
   },
   "contactPanel": {
     "title": "Contacto de la unidad compradora",
@@ -2264,7 +2271,87 @@
     "telegramOpenHint": "Se abrirá Telegram para confirmar la vinculación.",
     "installApp": "Instalar app",
     "installHint": "Agregá la app a tu pantalla de inicio.",
-    "installed": "App instalada"
+    "installed": "App instalada",
+    "newsletterTitle": "Resumen semanal",
+    "newsletterWeekly": "Gastos y anomalías de la semana",
+    "newsletterHint": "Una entrada pública con las adjudicaciones más grandes, análisis con Gemini y un reporte objetivo de alertas.",
+    "newsletterPushHint": "Si activás las notificaciones push en este dispositivo, también te avisaremos cuando se publique una nueva edición."
+  },
+  "newsletter": {
+    "eyebrow": "Expediente semanal",
+    "indexTitle": "Lo más grande que compró el Estado, semana a semana",
+    "indexLead": "Un registro verificable de las adjudicaciones más grandes publicadas y de las señales estadísticas nuevas. Los hechos salen de los datos; Gemini ayuda a leerlos.",
+    "weeklyStamp": "Expediente semanal",
+    "everyMonday": "Nueva edición los lunes",
+    "archiveTitle": "Archivo de ediciones",
+    "weekTotal": "Monto total elegible de la semana",
+    "awards": "Adjudicaciones",
+    "anomalySignals": "Señales nuevas",
+    "unexplained": "Sin explicación",
+    "highCritical": "Altas o críticas",
+    "readIssue": "Leer expediente",
+    "emptyTitle": "La primera edición está en preparación",
+    "emptyBody": "Cuando se publique el próximo resumen semanal aparecerá en este archivo.",
+    "subscriptionEyebrow": "Suscripción",
+    "subscriptionTitle": "Recibí el expediente en tu correo",
+    "subscriptionBody": "Cada semana: grandes adjudicaciones, lectura con Gemini y un reporte separado de anomalías.",
+    "subscriptionPrivacy": "Podés cancelar la suscripción en cualquier momento desde tu cuenta o desde cada correo.",
+    "subscribeAction": "Suscribirme al resumen",
+    "unsubscribeAction": "Cancelar suscripción",
+    "subscribedState": "Suscripción activa",
+    "subscriptionError": "No pudimos guardar el cambio. Intentá de nuevo.",
+    "generatedWith": "Análisis generado con {model}",
+    "published": "Publicado el {date}",
+    "aiLabel": "Lectura con IA",
+    "aiDisclosure": "Gemini redactó esta interpretación sobre un conjunto cerrado de datos. Los importes, rankings y conteos se calculan sin IA.",
+    "rankingEyebrow": "Registro de adjudicaciones",
+    "rankingTitle": "Las compras publicadas de mayor monto",
+    "rankingLead": "Un proceso OCDS por vez, ordenado por amount.primaryAmount normalizado a pesos uruguayos.",
+    "patternsEyebrow": "Lectura de la semana",
+    "patternsTitle": "Patrones observados por Gemini",
+    "anomaliesEyebrow": "Reporte objetivo",
+    "anomaliesTitle": "Señales que merecen revisión",
+    "dataErrors": "Posibles errores de carga",
+    "pendingAi": "Revisión pendiente",
+    "methodologyEyebrow": "Alcance y límites",
+    "methodologyTitle": "Cómo se armó esta edición",
+    "notReported": "No informado",
+    "detected": "Detectado",
+    "expected": "Rango esperado",
+    "notFound": "Publicación no encontrada",
+    "severity": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta",
+      "critical": "Crítica"
+    },
+    "review": {
+      "dataError": "Posible error de carga",
+      "unexplained": "Sin explicación suficiente",
+      "explained": "Con explicación posible",
+      "pending": "Pendiente de revisión"
+    },
+    "unsubscribeTitle": "Cancelar suscripción",
+    "unsubscribeDescription": "Cancelar el resumen semanal de compras públicas.",
+    "backToBlog": "Volver al archivo",
+    "unsubscribe": {
+      "loading": {
+        "title": "Actualizando tu suscripción…",
+        "body": "Estamos procesando el cambio."
+      },
+      "done": {
+        "title": "Suscripción cancelada",
+        "body": "No recibirás las próximas ediciones por correo ni sus avisos push."
+      },
+      "invalid": {
+        "title": "El enlace no es válido",
+        "body": "No encontramos una suscripción asociada a este enlace."
+      },
+      "error": {
+        "title": "No pudimos actualizar la suscripción",
+        "body": "Intentá de nuevo o cambiala desde Mi cuenta."
+      }
+    }
   },
   "apiKeys": {
     "title": "API keys",

@@ -27,6 +27,7 @@ watch(() => route.query.search, (q) => {
 const nav = computed(() => [
   { key: 'home', to: localePath('/'), icon: 'mdi-view-dashboard-outline' },
   { key: 'gastos', to: localePath('/gastos'), icon: 'mdi-cash-multiple' },
+  { key: 'blog', to: localePath('/blog'), icon: 'mdi-file-document-outline' },
   // The two dropdowns lead the bar (right after Panel/Gastos) so they stay visible
   // rather than folding into "Más": this site's whole point is the anomaly detection
   // and the investigations, and a dropdown hidden in the overflow defeats its purpose.

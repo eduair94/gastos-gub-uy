@@ -16,6 +16,7 @@ interface PrefsData {
   emailVerified: boolean
   locale: string
   notificationPrefs: { enabled: boolean, frequency: string, channels?: { email?: boolean, push?: boolean, telegram?: boolean, inapp?: boolean } }
+  newsletter: { subscribed: boolean }
   telegram: { linked: boolean, username: string | null }
   push: { devices: number }
 }
@@ -27,6 +28,7 @@ const form = reactive({
   frequency: 'instant',
   locale: 'es',
   channels: { email: true, inapp: true },
+  newsletterSubscribed: false,
 })
 const telegram = reactive({ linked: false, username: null as string | null })
 
@@ -38,6 +40,7 @@ watch(data, (d) => {
     form.locale = d.data.locale ?? 'es'
     form.channels.email = p?.channels?.email ?? true
     form.channels.inapp = p?.channels?.inapp ?? true
+    form.newsletterSubscribed = d.data.newsletter?.subscribed ?? false
     telegram.linked = d.data.telegram?.linked ?? false
     telegram.username = d.data.telegram?.username ?? null
   }
@@ -61,6 +64,7 @@ async function save() {
       enabled: form.enabled,
       frequency: form.frequency,
       locale: form.locale,
+      newsletterSubscribed: form.newsletterSubscribed,
       channels: { email: form.channels.email, inapp: form.channels.inapp },
     })
     savedOk.value = true
@@ -140,6 +144,39 @@ async function onLogout() {
           {{ user?.emailVerified ? t('accountPage.verified') : t('accountPage.notVerified') }}
         </span>
       </div>
+    </section>
+
+    <section class="panel cuenta__section">
+      <h2 class="u-eyebrow">
+        {{ t('accountPage.newsletterTitle') }}
+      </h2>
+      <div class="chan">
+        <div class="chan__info">
+          <v-icon
+            size="20"
+            class="chan__icon"
+          >
+            mdi-file-document-outline
+          </v-icon>
+          <div>
+            <p class="chan__name">
+              {{ t('accountPage.newsletterWeekly') }}
+            </p>
+            <p class="chan__hint">
+              {{ t('accountPage.newsletterHint') }}
+            </p>
+          </div>
+        </div>
+        <v-switch
+          v-model="form.newsletterSubscribed"
+          color="success"
+          hide-details
+          density="compact"
+        />
+      </div>
+      <p class="cuenta__note">
+        {{ t('accountPage.newsletterPushHint') }}
+      </p>
     </section>
 
     <!-- Master switch + frequency + language -->
@@ -384,6 +421,7 @@ async function onLogout() {
 .cuenta__field { max-width: 320px; }
 .cuenta__actions { display: flex; align-items: center; gap: var(--s-3); margin-top: var(--s-2); }
 .cuenta__ok { color: var(--verde); font-size: var(--t-sm); }
+.cuenta__note { margin: 0; color: var(--text-muted); font-size: var(--t-xs); line-height: 1.5; }
 
 .chan { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); padding: var(--s-2) 0; border-top: 1px solid var(--rule); }
 .chan:first-of-type { border-top: 0; }
