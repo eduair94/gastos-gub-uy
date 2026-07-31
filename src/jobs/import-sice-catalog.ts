@@ -36,6 +36,19 @@ const FALLBACK_TGZ = "http://www.comprasestatales.gub.uy/datos_abiertos/imp_cata
 const UA = "gastos-gub catalog importer (+https://github.com/eduair94)";
 const BULK_BATCH = 2000;
 const STATE_COLLECTION = "sice_import_state";
+const LEASE_ID = "catalog-lock";
+/** Generous next to the ~25s a real import takes; only bounds a crashed run's lease. */
+const LEASE_TTL_MS = 15 * 60 * 1000;
+
+/**
+ * The previous generation, and ONLY the previous generation.
+ *
+ * `dataVersion` is `v<epoch-ms>` — fixed width, so a string compare IS a time
+ * compare. Sweeping `$ne` instead of `$lt` is what emptied `sice_catalog` on
+ * 2026-07-27: two importers overlapped and each deleted the other's freshly
+ * written docs, leaving 9,483 of 90,330 articles and an empty /pauta page.
+ */
+export const staleVersionFilter = (dataVersion: string) => ({ dataVersion: { $lt: dataVersion } });
 
 interface RemoteMeta { url: string; etag?: string; lastModified?: string }
 
@@ -163,6 +176,15 @@ export class SiceCatalogImporter {
     return { catalog, rubros };
   }
 
+  /**
+   * Compute-then-swap: upsert every doc under this run's `dataVersion`, then drop
+   * the previous generation.
+   *
+   * Verify BEFORE sweeping. If the write phase did not land every doc, the old
+   * generation is still the better copy — fail and keep it rather than delete it
+   * in favour of a partial one. (`swap` had no such check when the 2026-07-27
+   * overlap truncated the catalog.)
+   */
   private async swap<T extends { code?: string; token?: string }>(model: any, docs: T[], key: "code" | "token"): Promise<void> {
     for (let i = 0; i < docs.length; i += BULK_BATCH) {
       const ops = docs.slice(i, i + BULK_BATCH).map((doc) => ({
@@ -170,8 +192,44 @@ export class SiceCatalogImporter {
       }));
       await model.bulkWrite(ops, { ordered: false });
     }
-    const swept = await model.deleteMany({ dataVersion: { $ne: this.dataVersion } });
+
+    const written = await model.countDocuments({ dataVersion: this.dataVersion });
+    if (written !== docs.length) {
+      throw new Error(
+        `${model.collection.name}: only ${written}/${docs.length} docs carry ${this.dataVersion} after the write phase — ` +
+          `refusing to sweep the previous generation in favour of a partial one`
+      );
+    }
+
+    const swept = await model.deleteMany(staleVersionFilter(this.dataVersion));
     this.logger.info(`  swept ${swept.deletedCount} stale docs from ${model.collection.name}`);
+  }
+
+  /**
+   * Exclusive, self-expiring lease so two importers cannot interleave their swaps.
+   * Upsert-on-a-filter: when the lease is held the filter misses, the upsert tries
+   * to insert the same `_id`, and the duplicate-key error IS the "already held"
+   * answer.
+   */
+  private async acquireLease(): Promise<boolean> {
+    const now = new Date();
+    try {
+      await mongoose.connection.db!.collection(STATE_COLLECTION).updateOne(
+        { _id: LEASE_ID as any, $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $lte: now } }] },
+        { $set: { expiresAt: new Date(now.getTime() + LEASE_TTL_MS), owner: this.dataVersion, acquiredAt: now } },
+        { upsert: true }
+      );
+      return true;
+    } catch (e) {
+      if ((e as { code?: number }).code === 11000) return false;
+      throw e;
+    }
+  }
+
+  private async releaseLease(): Promise<void> {
+    await mongoose.connection.db!
+      .collection(STATE_COLLECTION)
+      .updateOne({ _id: LEASE_ID as any, owner: this.dataVersion }, { $set: { expiresAt: new Date(0) } });
   }
 
   async run(force = false): Promise<void> {
@@ -187,20 +245,31 @@ export class SiceCatalogImporter {
       return;
     }
 
-    this.logger.info(`Downloading catalog: ${url}`);
-    const tgz = await this.download(url);
-    this.logger.info(`  downloaded ${(tgz.length / 1024 / 1024).toFixed(1)} MB; extracting`);
-    const files = extractTgz(tgz);
+    // Nothing downstream is safe to run twice at once: two swaps that overlap end
+    // up deleting each other's generation (see staleVersionFilter).
+    if (!(await this.acquireLease())) {
+      this.logger.warn("Another catalog import holds the lease; skipping this run.");
+      return;
+    }
 
-    const { catalog, rubros } = this.buildDocs(files);
-    this.logger.info(`  parsed ${catalog.length} articles, ${rubros.length} rubro nodes (version ${this.dataVersion})`);
+    try {
+      this.logger.info(`Downloading catalog: ${url}`);
+      const tgz = await this.download(url);
+      this.logger.info(`  downloaded ${(tgz.length / 1024 / 1024).toFixed(1)} MB; extracting`);
+      const files = extractTgz(tgz);
 
-    await this.swap(SiceCatalogModel, catalog, "code");
-    await this.swap(SiceRubroModel, rubros, "token");
+      const { catalog, rubros } = this.buildDocs(files);
+      this.logger.info(`  parsed ${catalog.length} articles, ${rubros.length} rubro nodes (version ${this.dataVersion})`);
 
-    const counts = { articles: catalog.length, rubros: rubros.length };
-    await this.saveWatermark(meta, counts);
-    this.logger.info(`Catalog import complete: ${catalog.length} articles in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+      await this.swap(SiceCatalogModel, catalog, "code");
+      await this.swap(SiceRubroModel, rubros, "token");
+
+      const counts = { articles: catalog.length, rubros: rubros.length };
+      await this.saveWatermark(meta, counts);
+      this.logger.info(`Catalog import complete: ${catalog.length} articles in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+    } finally {
+      await this.releaseLease();
+    }
   }
 }
 
