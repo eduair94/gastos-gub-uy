@@ -149,6 +149,26 @@ export interface IAnomaly extends Document {
     amount?: number
     currency?: string
     sourceFileName?: string
+    /**
+     * Present only on items whose price is fixed by law and did NOT match the legal schedule —
+     * today, the timbre profesional (classification 10233). Carries the exact menu the price was
+     * judged against so a reader can re-check the finding on the DGI page instead of trusting a
+     * z-score. See shared/timbre-values.ts.
+     */
+    officialTariff?: {
+      /** Provenance label, e.g. "DGI/CJPPU". */
+      source?: string
+      sourceUrl?: string
+      /** Year + semester of the release, i.e. the centre of the accepted window. */
+      year?: number
+      semester?: number
+      /** Every legal value inside the accepted window, ascending. */
+      values?: number[]
+      /** The legal value closest to what was actually paid. */
+      nearest?: number
+      /** True when the price exceeds every legal value in the window — it cannot be a denomination. */
+      aboveLegalMax?: boolean
+    }
   }
   createdAt: Date
   /** When the detector LAST confirmed this finding. Restamped every run: "is this still true?" */
