@@ -229,6 +229,22 @@ export interface BaselineInput {
   modeShare?: number | undefined;
 }
 
+/**
+ * Per-OBSERVATION context the scorer cannot derive from a frozen baseline.
+ *
+ * `recurringPrices` lives on the baseline because it is a property of the price distribution.
+ * `officialPrices` cannot: the legal value of a timbre profesional depends on WHEN the purchase
+ * happened (the schedule is raised by decree every semester), and a baseline is a 36-month pool with
+ * no single date. So the caller resolves it per row and passes it in. See shared/timbre-values.ts.
+ */
+export interface ScoringContext {
+  /**
+   * Administratively fixed prices that are legal for THIS observation's date. An exact match is
+   * never an anomaly, whatever the estimator would have said.
+   */
+  officialPrices?: ReadonlySet<number> | undefined;
+}
+
 export type ScoringMethod = "log_modified_zscore" | "iqr_fence" | "mode_deviation";
 
 export interface ScoredFinding {
@@ -434,8 +450,17 @@ export function confidenceFromZ(absZ: number, n: number): number {
  *
  * Returns null when the observation is not anomalous (or cannot be scored).
  */
-export function scoreUnitPrice(price: number, baseline: BaselineInput): ScoredFinding | null {
+export function scoreUnitPrice(price: number, baseline: BaselineInput, context?: ScoringContext): ScoredFinding | null {
   if (!Number.isFinite(price) || price <= 0) {
+    return null;
+  }
+
+  // Gates BOTH estimator paths: a price fixed by law is not an anomaly no matter which estimator
+  // would have scored it, and — unlike the recurrence rule below — it does not have to wait for the
+  // value to be purchased three times before it is recognised. Exact equality is right for the same
+  // reason it is right there: both sides are exact decimal values from the source, so a tolerance
+  // could only invent matches. Absent context => the rule is skipped. See shared/timbre-values.ts.
+  if (context?.officialPrices?.has(price)) {
     return null;
   }
 

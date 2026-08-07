@@ -10,7 +10,8 @@ The entire automated-test surface of gastos-gub: 41 files in [unit/](unit/), 7 i
 | [fixtures/bcu-cotizaciones-2005-06-28.xml](fixtures/bcu-cotizaciones-2005-06-28.xml) | BCU SOAP cotizaciones response; read by `test-bcu-historical-rates.ts:14`. |
 | [fixtures/comprasestatales-53193.html](fixtures/comprasestatales-53193.html) | Gov contract detail page (the SURYPARK lump-sum case); read by `test-comprasestatales-total.ts:31`. |
 | **unit/ — pure logic** | |
-| [unit/test-anomaly-stats.ts](unit/test-anomaly-stats.ts) | Largest test (481 L). `src/jobs/anomaly-stats`: computeBaselineStats, modifiedZScore, weightedPercentile, confidenceFromZ, scoreUnitPrice, severityRankFromAbsZ + tuning constants. |
+| [unit/test-anomaly-stats.ts](unit/test-anomaly-stats.ts) | Largest test (481 L). `src/jobs/anomaly-stats`: computeBaselineStats, modifiedZScore, weightedPercentile, confidenceFromZ, scoreUnitPrice, severityRankFromAbsZ + tuning constants, and the `ScoringContext.officialPrices` gate. |
+| [unit/test-timbre-values.ts](unit/test-timbre-values.ts) | `shared/timbre-values`: table integrity, source anchors, the −2/+1 semester window, the doorbell denylist, and the scorer gate. **Ends in a freshness guard that reads the real clock** and fails once the current semester is missing from the table — that is the forcing function for the twice-yearly DGI update, not a flake. |
 | [unit/test-anomaly-content-version.ts](unit/test-anomaly-content-version.ts) | `anomalyContentVersion` exported from `src/jobs/detect-anomalies` — the content-hash `dataVersion` that stops nightly AI re-triage. |
 | [unit/test-target-item-match.ts](unit/test-target-item-match.ts) | `findTargetItemIndex` from `src/jobs/score-anomalies-ai` (case-insensitive canonical-unit match). |
 | [unit/test-verdict-normalize.ts](unit/test-verdict-normalize.ts) | `normalizeVerdict` from `src/jobs/score-anomalies-ai` (explainable ⇔ category invariant). |
@@ -56,6 +57,7 @@ The entire automated-test surface of gastos-gub: 41 files in [unit/](unit/), 7 i
 | [unit/test-rss-fetcher.ts](unit/test-rss-fetcher.ts) | `src/services/release-rss-fetcher` against comprasestatales.gub.uy → **live HTTP**. |
 | [unit/test-url-structure.ts](unit/test-url-structure.ts) | Raw `axios` GET/HEAD probes of gov URLs → **live HTTP**. |
 | [unit/focus-item.verify.ts](unit/focus-item.verify.ts) | **Not a unit test.** Connects to Mongo (mongoose direct) and verifies the focusItem projection. Requires `MONGODB_URI`; exits 1 without it (:8). |
+| [unit/timbre-rescore-impact.verify.ts](unit/timbre-rescore-impact.verify.ts) | **Not a unit test.** Live-DB blast radius of `detect-anomalies --classification=10233`: anomalies in scope, breakdown by code/year, and which `10233` findings the official DGI schedule retires. Run it before and after the rescore. |
 | [unit/test-amount-calculation.ts](unit/test-amount-calculation.ts) | Zero imports — inline mock release + reimplemented logic. Documentation-grade, does not exercise the real calculator. |
 | **integration/ — all require a live Mongo** | |
 | [integration/test-open-calls-sync.ts](integration/test-open-calls-sync.ts) | Runs `syncOpenCalls({suppressAlerts:true})` → **WRITES `open_calls`**, then asserts shape. The only integration file written as a real pass/fail test. |

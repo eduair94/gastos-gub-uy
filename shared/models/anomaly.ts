@@ -71,6 +71,19 @@ const AnomalySchema = new Schema<IAnomaly>(
       amount: { type: Number },
       currency: { type: String },
       sourceFileName: { type: String },
+      // Legal price schedule this item was judged against (timbre profesional today). Declared
+      // explicitly or mongoose strict mode silently strips it on write — the same trap that dropped
+      // detectedAt and aiVerdict. Written by src/jobs/detect-anomalies.ts only for prices that are
+      // OFF the schedule; a price on the schedule is not an anomaly at all.
+      officialTariff: {
+        source: { type: String },
+        sourceUrl: { type: String },
+        year: { type: Number },
+        semester: { type: Number },
+        values: { type: [Number], default: undefined },
+        nearest: { type: Number },
+        aboveLegalMax: { type: Boolean },
+      },
     },
     // Second-stage LLM triage. Advisory only — never overrides the statistical
     // flag, only annotates it. Declared explicitly so mongoose strict mode does

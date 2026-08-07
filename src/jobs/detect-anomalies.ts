@@ -35,6 +35,11 @@
  *   npx tsx src/jobs/detect-anomalies.ts --all
  *   npx tsx src/jobs/detect-anomalies.ts --baselines-only  # rebuild stage 1 only
  *   npx tsx src/jobs/detect-anomalies.ts --dry-run         # score, write nothing
+ *   npx tsx src/jobs/detect-anomalies.ts --classification=10233 --score-only
+ *                                                          # re-score the releases carrying ONE
+ *                                                          # catalogue code, after its scoring rule
+ *                                                          # changed. Narrows only: combine with
+ *                                                          # --all/--year/--since to move the dates.
  */
 
 import { createHash } from "crypto";
@@ -42,6 +47,15 @@ import type { PipelineStage } from "mongoose";
 import { AnomalyModel, ItemPriceBaselineModel, ReleaseModel, SiceCatalogModel } from "../../shared/models";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
 import { canonicalUnit, canonicalUnitExpr } from "../../shared/utils/units";
+import {
+  isTimbreClassification,
+  nearestOfficialTimbrePrice,
+  officialTimbrePrices,
+  OfficialTimbreMenu,
+  TIMBRE_CURRENCY,
+  TIMBRE_SOURCE,
+  TIMBRE_SOURCE_URL,
+} from "../../shared/timbre-values";
 import { BaselineInput, computeBaselineStats, HistogramBin, ScoredFinding, scoreUnitPrice } from "./anomaly-stats";
 
 /** SICE catalog fields the detector attaches to each anomaly for like-for-like context + AI triage. */
@@ -86,6 +100,16 @@ interface CliOptions {
   // Skip the (expensive) baseline rebuild and score against the baselines already
   // in `item_price_baselines`. Only meaningful alongside a narrow scope (--ids).
   scoreOnly: boolean;
+  // Narrow the scope to releases carrying an award item of ONE catalogue code. The point is repair:
+  // after a scoring rule changes for a single code, this re-scores exactly that code's releases, and
+  // because reconcile() reuses the same filter, its self-healing delete stays bounded to them too.
+  //
+  // It NARROWS, never widens. It intersects with whatever date scope is in play and does not relax
+  // the default trailing window, because the corpus only holds findings for that window: dropping
+  // the date bound made a dry run emit 558 findings where 181 exist today, the extra ~380 being
+  // 2005-2023 flags in UNRELATED classifications that merely shared a release with a timbre. Reach
+  // the whole history explicitly with `--classification=<id> --all`.
+  classification: string | null;
 }
 
 interface BaselineKey {
@@ -122,6 +146,9 @@ interface ScoredRow {
   releaseId: string;
   awardId: string | null;
   sourceYear: number | null;
+  // The release's own date. Needed for rules whose answer depends on WHEN the purchase happened —
+  // the timbre schedule changes every semester, and sourceYear cannot tell first from second.
+  releaseDate: Date | null;
   buyerName: string | null;
   supplierName: string | null;
   sourceFileName: string | null;
@@ -154,6 +181,7 @@ function parseArgs(argv: string[]): CliOptions {
     since: null,
     ids: null,
     scoreOnly: false,
+    classification: null,
   };
 
   for (const arg of argv) {
@@ -172,6 +200,12 @@ function parseArgs(argv: string[]): CliOptions {
         .map((s) => s.trim())
         .filter(Boolean);
       options.ids = ids.length ? ids : null;
+    } else if (arg.startsWith("--classification=")) {
+      const code = arg.slice("--classification=".length).trim();
+      if (!code) {
+        throw new Error(`Invalid --classification value (expected a catalogue code): ${arg}`);
+      }
+      options.classification = code;
     } else if (arg.startsWith("--year=")) {
       const year = Number.parseInt(arg.slice("--year=".length), 10);
       if (!Number.isInteger(year) || year < 1900 || year > 2200) {
@@ -454,6 +488,13 @@ class AnomalyDetector {
   private buildScopeFilter(options: CliOptions): Record<string, unknown> {
     const filter: Record<string, unknown> = { tag: "award" };
 
+    // Additive, and deliberately applied before the mutually-exclusive date scopes so it intersects
+    // with whichever one is in play.
+    if (options.classification) {
+      filter["awards.items.classification.id"] = options.classification;
+      console.log(`   scope: releases carrying an award item of classification ${options.classification}`);
+    }
+
     if (options.ids && options.ids.length) {
       filter.id = { $in: options.ids };
       console.log(`   scope: ${options.ids.length} explicit release id(s)`);
@@ -556,6 +597,7 @@ class AnomalyDetector {
     let itemsScored = 0;
     let itemsWithoutBaseline = 0;
     let itemsAtRecurringPrice = 0;
+    let itemsAtOfficialTariff = 0;
     let itemsLineTotalArtifact = 0;
     let truncated = false;
 
@@ -593,13 +635,22 @@ class AnomalyDetector {
         continue;
       }
 
-      // Counted here purely for the run report; scoreUnitPrice re-checks it as its own gate.
+      // Prices fixed by law (timbre profesional) are judged against the official DGI schedule for
+      // the release's own semester, not against the pooled baseline. `null` means the table has no
+      // opinion for that date, and scoring then proceeds exactly as it did before.
+      const officialMenu = this.officialMenuFor(row);
+
+      // Counted here purely for the run report; scoreUnitPrice re-checks both as its own gates.
+      if (officialMenu?.values.has(row.unitPrice)) {
+        itemsAtOfficialTariff++;
+        continue;
+      }
       if (baseline.recurringPrices?.has(row.unitPrice)) {
         itemsAtRecurringPrice++;
         continue;
       }
 
-      const scored = scoreUnitPrice(row.unitPrice, baseline);
+      const scored = scoreUnitPrice(row.unitPrice, baseline, officialMenu ? { officialPrices: officialMenu.values } : undefined);
       if (!scored) {
         continue;
       }
@@ -619,7 +670,7 @@ class AnomalyDetector {
         releaseId: row.releaseId,
         awardId: row.awardId,
         method: scored.method,
-        doc: this.buildAnomalyDoc(row, scored, baseline),
+        doc: this.buildAnomalyDoc(row, scored, baseline, officialMenu),
       };
 
       // One award can contain several anomalous items, but the anomaly upsert key
@@ -645,6 +696,7 @@ class AnomalyDetector {
 
     console.log(`   award items scored      : ${itemsScored}`);
     console.log(`   items without baseline  : ${itemsWithoutBaseline}`);
+    console.log(`   at official tariff      : ${itemsAtOfficialTariff} (price fixed by law for that semester, never anomalous)`);
     console.log(`   at recurring list price : ${itemsAtRecurringPrice} (tariff/list prices, never anomalous)`);
     console.log(`   line-total artifacts    : ${itemsLineTotalArtifact} (total mis-stored as unit price, suppressed)`);
     console.log(`   anomalies found         : ${findings.length}${truncated ? " (capped)" : ""}`);
@@ -672,10 +724,13 @@ class AnomalyDetector {
       sourceYear = raw.releaseDate.getUTCFullYear();
     }
 
+    const releaseDate = raw.releaseDate instanceof Date && !Number.isNaN(raw.releaseDate.getTime()) ? raw.releaseDate : null;
+
     return {
       releaseId,
       awardId: asString(raw.awardId),
       sourceYear,
+      releaseDate,
       buyerName: asString(raw.buyerName),
       supplierName: asString(raw.supplierName),
       sourceFileName: asString(raw.sourceFileName),
@@ -691,7 +746,26 @@ class AnomalyDetector {
     };
   }
 
-  private buildAnomalyDoc(row: ScoredRow, scored: ScoredFinding, baseline: LoadedBaseline): Record<string, unknown> {
+  /**
+   * The legal price schedule applicable to this row, or null when there is none to apply.
+   *
+   * Gated on the catalogue code AND the currency: the schedule is denominated in pesos, so it says
+   * nothing about the handful of USD-denominated lines on the same code. A null date, or a year the
+   * table does not cover, also yields null — the rule then simply does not run.
+   */
+  private officialMenuFor(row: ScoredRow): OfficialTimbreMenu | null {
+    if (!isTimbreClassification(row.classificationId) || row.currency !== TIMBRE_CURRENCY) {
+      return null;
+    }
+    return officialTimbrePrices(row.releaseDate);
+  }
+
+  private buildAnomalyDoc(
+    row: ScoredRow,
+    scored: ScoredFinding,
+    baseline: LoadedBaseline,
+    officialMenu: OfficialTimbreMenu | null
+  ): Record<string, unknown> {
     const cat = this.catalog.get(row.classificationId);
     // Prefer the official catalog name for the human label when we have it.
     const label = cat?.canonicalName ?? row.classificationDescription ?? row.itemDescription ?? row.classificationId;
@@ -713,6 +787,34 @@ class AnomalyDetector {
       description = `Unit price ${row.unitPrice.toFixed(2)} ${row.currency} for "${label}" (per ${row.unitName}) sits ${scored.absZ.toFixed(1)} robust z ${scored.direction} the ${row.currency} baseline of ${baseline.n} comparable items [${methodWord}]`;
     }
 
+    // A price fixed by law is not judged against a statistic. Reaching here with a menu in hand
+    // means the item IS a timbre and its price matched NO legal denomination (a match returns null
+    // from the scorer), so reporting the baseline's p25..p95 would be actively misleading —
+    // "expected 140..170" for an item whose legal price can be 16 870. The legal menu replaces the
+    // range, and the description names the value that should have been paid, which a reader can
+    // check on the DGI page.
+    let expectedRange: { min: number; max: number } = { min: baseline.p25, max: baseline.p95 };
+    let officialTariff: Record<string, unknown> | undefined;
+    if (officialMenu) {
+      const nearest = nearestOfficialTimbrePrice(row.unitPrice, officialMenu);
+      const aboveLegalMax = row.unitPrice > officialMenu.max;
+      expectedRange = { min: officialMenu.min, max: officialMenu.max };
+      description =
+        `Unit price ${row.unitPrice.toFixed(2)} ${row.currency} for "${label}" matches no official timbre denomination for ${officialMenu.year}-${officialMenu.semester}S` +
+        (nearest !== null ? ` (nearest legal value ${nearest})` : "") +
+        (aboveLegalMax ? `; above the highest legal stamp of ${officialMenu.max}` : "") +
+        ` [official DGI schedule]`;
+      officialTariff = compact({
+        source: TIMBRE_SOURCE,
+        sourceUrl: TIMBRE_SOURCE_URL,
+        year: officialMenu.year,
+        semester: officialMenu.semester,
+        values: [...officialMenu.values].sort((a, b) => a - b),
+        nearest,
+        aboveLegalMax,
+      });
+    }
+
     // expectedRange is reported in the SAME currency as detectedValue. The old
     // detector stamped "UYU" on everything regardless of the actual currency.
     return compact({
@@ -722,10 +824,7 @@ class AnomalyDetector {
       releaseId: row.releaseId,
       description,
       detectedValue: row.unitPrice,
-      expectedRange: {
-        min: baseline.p25,
-        max: baseline.p95,
-      },
+      expectedRange,
       confidence: scored.confidence,
       currency: row.currency,
       sourceYear: row.sourceYear,
@@ -768,6 +867,7 @@ class AnomalyDetector {
         amount: row.unitPrice,
         currency: row.currency,
         sourceFileName: row.sourceFileName,
+        officialTariff,
       }),
     });
   }
@@ -984,6 +1084,7 @@ async function rescoreReleaseIds(ids: string[]): Promise<void> {
     all: false,
     year: null,
     since: null,
+    classification: null,
   });
 }
 

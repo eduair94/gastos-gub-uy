@@ -476,6 +476,24 @@ console.log("\n📊 upper-tail p95 floor: a price_spike must exceed the baseline
   check("absent p95 -> floor skipped", scoreUnitPrice(150, noFloor) !== null);
 }
 
+// --- administratively fixed prices ----------------------------------------
+// The per-observation gate. Unlike recurringPrices (a property of the baseline's distribution) this
+// depends on WHEN the purchase happened, so the caller resolves it and passes it in. The real table
+// and its date window are exercised in tests/unit/test-timbre-values.ts; this only pins the contract
+// of the scorer itself.
+console.log("\n📊 officialPrices gate (ScoringContext)");
+{
+  const b: BaselineInput = { n: 200, medianLn: Math.log(150), madLn: 0.07, p25: 140, p75: 160, p95: 170 };
+  check("no context -> scored as before", scoreUnitPrice(6540, b) !== null);
+  check("price on the official menu -> suppressed", scoreUnitPrice(6540, b, { officialPrices: new Set([6540]) }) === null);
+  check("price off the official menu -> still scored", scoreUnitPrice(6540, b, { officialPrices: new Set([6200]) }) !== null);
+  check("empty context -> scored as before", scoreUnitPrice(6540, b, {}) !== null);
+  check("undefined officialPrices -> scored as before", scoreUnitPrice(6540, b, { officialPrices: undefined }) !== null);
+  // The gate runs BEFORE the p95 floor and the effect-size floor, so it also covers a legal price
+  // that would not have flagged anyway — cheap, and it keeps the two rules independent.
+  check("an in-range price stays unflagged with a menu present", scoreUnitPrice(150, b, { officialPrices: new Set([150]) }) === null);
+}
+
 console.log("\n=====================");
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
