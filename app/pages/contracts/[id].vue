@@ -124,12 +124,20 @@ const ocdsUrl = computed(() =>
   (contract.value as any)?.ocdsUrl ?? ocdsJsonUrl(contract.value?.id),
 )
 
+// Each document, tagged with the stage it belongs to so its link can point at
+// the right official page. The feed links raw government files served over
+// `http`, which browsers block as insecure downloads from this https page —
+// `govDocumentUrl` resolves each to the official detail page instead.
 const documents = computed(() => {
   const c = contract.value as any
-  const tender = c?.tender?.documents ?? []
-  const award = (c?.awards ?? []).flatMap((a: any) => a.documents ?? [])
+  const tender = (c?.tender?.documents ?? []).map((d: any) => ({ ...d, scope: 'tender' }))
+  const award = (c?.awards ?? []).flatMap((a: any) => (a.documents ?? []).map((d: any) => ({ ...d, scope: 'award' })))
   return [...tender, ...award].filter((d: any) => d?.url)
 })
+
+function docHref(d: { scope?: string, documentType?: string, type?: string, url?: string }): string {
+  return govDocumentUrl(d, contract.value?.ocid)
+}
 
 // ---- What was bought ------------------------------------------------
 // `contractItems` flattens every award into one list, which loses both
@@ -1257,7 +1265,7 @@ useSeo(() => ({
                     :key="`aid${i}`"
                   >
                     <a
-                      :href="d.url"
+                      :href="docHref(d)"
                       target="_blank"
                       rel="noopener nofollow"
                     >{{ d.type || t('anomalies.ai.document') }}</a>
@@ -1927,7 +1935,7 @@ useSeo(() => ({
                 :key="i"
               >
                 <a
-                  :href="d.url"
+                  :href="docHref(d)"
                   target="_blank"
                   rel="noopener external"
                   class="docs__link"

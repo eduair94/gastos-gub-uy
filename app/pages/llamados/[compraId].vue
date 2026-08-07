@@ -137,6 +137,20 @@ async function setReminder(days: number) {
   saved.value = true
   track('call_reminder_set', { days })
 }
+
+/**
+ * Where a document row links.
+ *
+ * The OCDS feed points every pliego/anexo at a raw `http` file (a
+ * `pliego_*.pdf` served over plain http). From this https page the browser
+ * blocks that as an insecure download, so the click silently does nothing.
+ * Link instead to the official llamado page, which lists the same documents
+ * and opens in the browser (`govDocumentUrl`); prefer the API-provided
+ * `sourceUrl` when present.
+ */
+function docHref(d: { url?: string }): string {
+  return call.value.sourceUrl ?? govDocumentUrl(d, call.value.ocid)
+}
 </script>
 
 <template>
@@ -297,7 +311,7 @@ async function setReminder(days: number) {
               :key="`d-${i}`"
             >
               <a
-                :href="d.url"
+                :href="docHref(d)"
                 target="_blank"
                 rel="noopener"
                 class="calldetail__doc"
