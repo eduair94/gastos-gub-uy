@@ -407,3 +407,45 @@ export function ocdsJsonUrl(id?: string | null): string | null {
   if (!id) return null
   return `https://www.comprasestatales.gub.uy/ocds/release/${encodeURIComponent(id)}`
 }
+
+/**
+ * Award-stage OCDS document types — these are published on the adjudicación
+ * detail page; every other type (pliego, aclaraciones, …) belongs to the
+ * llamado page. Used to route a document to its official page (see
+ * `govDocumentUrl`).
+ */
+const AWARD_DOC_TYPES = new Set([
+  'awardNotice',
+  'reiteracionGasto',
+  'contractSigned',
+  'contractAnnexe',
+  'cancellationDetails',
+])
+
+/**
+ * A safe, working link for an OCDS contract document.
+ *
+ * The feed points every document at a raw government file — an `acta_*.doc`
+ * (Acta de adjudicación), `reiter_*.doc` (reiteración) or `pliego_*.pdf` —
+ * served over plain `http`. Opened from our https pages the browser blocks that
+ * as an insecure download, so the click silently does nothing ("no funciona");
+ * even unblocked a `.doc` just force-downloads a Word file. Resolve instead to
+ * the official HTML detail page the document is published on — the adjudicación
+ * page for award documents, the llamado page for tender ones — which opens in
+ * the browser and never downloads. Falls back to the raw file (upgraded to
+ * https so it is at least not blocked as mixed content) only when the ocid can't
+ * yield a page.
+ *
+ * Accepts either OCDS `documentType` (release feed) or `type` (AI evidence
+ * refs), and an explicit `scope` when the caller already knows the stage.
+ */
+export function govDocumentUrl(
+  doc: { url?: string | null, documentType?: string | null, type?: string | null, scope?: string | null },
+  ocid?: string | null,
+): string {
+  const docType = doc.documentType ?? doc.type ?? undefined
+  const isAward = doc.scope === 'award' || (!!docType && AWARD_DOC_TYPES.has(docType))
+  const page = isAward ? govAwardUrl(ocid) : govSourceUrl(ocid)
+  if (page) return page
+  return typeof doc.url === 'string' ? doc.url.replace(/^http:\/\//i, 'https://') : '#'
+}
