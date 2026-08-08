@@ -963,6 +963,26 @@ class CronServer {
     );
     this.logger.info(`Dept-indicators refresh scheduled with expression: ${deptIndicatorsExpression} (Uruguay timezone)`);
 
+    // Year-over-year spending decomposition, monthly at 05:00 on the 1st — after the two
+    // rollups above so the three heavy full-collection scans never overlap. Rebuilds
+    // spending_trend, which /analytics/evolucion-gasto reads. `--ai` is deliberately NOT
+    // passed here: the deterministic sentences are the safe default for an unattended run.
+    const spendingTrendExpression = "0 5 1 * *";
+    cron.schedule(
+      spendingTrendExpression,
+      async () => {
+        try {
+          this.logger.info("Starting spending-trend refresh...");
+          await this.runJobProcess("jobs/refresh-spending-trend");
+          this.logger.info("Spending-trend refresh completed successfully");
+        } catch (error) {
+          this.logger.error("Spending-trend refresh failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Spending-trend refresh scheduled with expression: ${spendingTrendExpression} (Uruguay timezone)`);
+
     // Purchasing-contacts directory, weekly on Sunday at 04:30 — a full-collection scan over
     // tender releases' parties[].contactPoint (no index), the same cost class as the rollups
     // above; the contact data changes slowly. Writes its own procurement_contacts collection,

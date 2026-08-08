@@ -43,6 +43,7 @@ const nav = computed(() => [
     { key: 'providerLoadErrors', to: localePath('/analytics/proveedores-errores-carga'), icon: 'mdi-clipboard-alert-outline' },
     { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
     { key: 'partidos', to: localePath('/analytics/partidos'), icon: 'mdi-vote-outline' },
+    { key: 'evolucion', to: localePath('/analytics/evolucion-gasto'), icon: 'mdi-chart-timeline-variant' },
     { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
     { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
     { key: 'anticipacion', to: localePath('/analytics/anticipacion'), icon: 'mdi-crystal-ball' },

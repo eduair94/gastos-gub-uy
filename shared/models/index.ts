@@ -15,6 +15,7 @@ export * from './provider_anomaly_stats';
 export * from './provider_load_error_stats';
 export * from './release';
 export * from './rupe_registry';
+export * from './spending_trend';
 export * from './supplier_contacts';
 export * from './supplier_pattern';
 export * from './tender_forecast';

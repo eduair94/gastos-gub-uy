@@ -22,6 +22,7 @@
     "providerLoadErrors": "Errores recurrentes",
     "intendencias": "Intendencias",
     "partidos": "Compras por partido",
+    "evolucion": "Evolución del gasto",
     "organismos": "Gasto por organismo",
     "mapa": "Mapa del gasto",
     "anticipacion": "Anticipación",
@@ -1263,6 +1264,124 @@
     "officialLink": "Ir a Compras Estatales",
     "disclaimer": "Este sitio no corrige los datos oficiales ni reenvía reportes: solo detecta posibles errores y te muestra a dónde llevarlos. La corrección la hace la fuente."
   },
+  "evolucion": {
+    "kicker": "Análisis",
+    "title": "¿Aumentó el gasto, o solo bajó el peso?",
+    "dek": "La compra pública año por año, con la inflación descontada y los artefactos de carga afuera. Para cada año: cuánto del cambio es precio, cuánto es más organismos reportando y cuánto es plata que efectivamente se movió.",
+    "unavailable": "Todavía no calculamos esta serie. Volvé en un rato.",
+    "partialShort": "año en curso",
+    "partialOpt": "{year} (en curso)",
+    "scope": {
+      "title": "Qué mide esta página",
+      "body": "Mide las compras y contrataciones del Estado publicadas como datos abiertos (OCDS de Compras Estatales). No es el presupuesto nacional: quedan afuera sueldos, jubilaciones, transferencias e intereses de deuda. Sobre esa base hacemos tres correcciones, porque sin ellas la serie miente:",
+      "fx": "Cada monto en moneda extranjera se convierte al tipo de cambio de su propio mes, no al de hoy.",
+      "inflation": "Todo se puede leer en pesos de hoy, deflactado por la Unidad Indexada del mes de cada contrato.",
+      "artifacts": "Se excluyen {n} registros con un monto imposible (un total de contrato cargado como precio unitario).",
+      "artifactsLink": "Ver la lista completa."
+    },
+    "kpi": {
+      "total": "Compras {year}",
+      "totalSub": "Último año completo, pesos corrientes",
+      "nominalChange": "Cambio nominal",
+      "nominalSub": "Contra {year}, en pesos corrientes",
+      "realChange": "Cambio real",
+      "realSub": "Descontada la inflación del período",
+      "longRun": "{from} → {to}",
+      "longRunSub": "En pesos constantes ({cagr} anual)"
+    },
+    "lens": {
+      "real": "Pesos de hoy",
+      "nominal": "Pesos corrientes",
+      "usd": "Dólares",
+      "pctGdp": "% del PIB",
+      "pctGov": "% del gasto central",
+      "perCapita": "Por habitante",
+      "raw": "Como fue reportado"
+    },
+    "lensHelp": {
+      "real": "Cada contrato deflactado por la Unidad Indexada de su mes y expresado en pesos de hoy. La línea punteada es el mismo dato en pesos corrientes: la distancia entre ambas ES la inflación.",
+      "nominal": "Pesos del año en que se gastó, con la moneda extranjera convertida al tipo de cambio de ese mes. No es comparable entre años.",
+      "usd": "Convertido a dólares al tipo de cambio promedio del mes de cada contrato.",
+      "pctGdp": "Compras sobre PIB nominal del año. Mide si el Estado compra más en relación al tamaño de la economía.",
+      "pctGov": "Compras sobre el gasto del Gobierno Central. Referencia imperfecta: nuestro universo incluye entes autónomos y servicios descentralizados que ese denominador no cuenta, así que el porcentaje se lee como orden de magnitud.",
+      "perCapita": "Dólares de compras por habitante, con población del Banco Mundial."
+    },
+    "series": {
+      "title": "La serie, año por año",
+      "rawToggle": "Mostrar la serie sin sanear",
+      "meta": "La serie sin sanear incluye los registros con monto imposible: en 2003 y en 2024 un solo contrato es más del 60% del año."
+    },
+    "bridge": {
+      "title": "De un año al siguiente",
+      "help": "El cambio de cada año, descompuesto en partes que suman exactamente. Primero se re-precia el año anterior al nivel de precios de este; lo que queda es cambio real, y ese se separa entre organismos que entran o salen del registro y los que están en los dos años.",
+      "yearLabel": "Año",
+      "empty": "Este año no tiene un año anterior con el cual compararse.",
+      "base": "Gasto {year}",
+      "inflation": "Inflación",
+      "inflationHelp": "Lo mismo del año anterior, a precios de este año",
+      "entrants": "Entran al registro ({n})",
+      "entrantsHelp": "Organismos que reportan este año y no el anterior",
+      "exits": "Salen del registro ({n})",
+      "exitsHelp": "Organismos que dejaron de reportar",
+      "panel": "Cambio real de los que están en ambos ({n})",
+      "panelHelp": "La parte que sí es más o menos compra",
+      "total": "Gasto {year}"
+    },
+    "contrib": {
+      "buyers": "Organismos que movieron el número",
+      "buyersHelp": "Diferencia de cada organismo contra su propio año anterior, ya re-preciado.",
+      "categories": "Rubros que movieron el número",
+      "categoriesHelp": "Por código de artículo del catálogo SICE, con el año anterior re-preciado."
+    },
+    "pq": {
+      "title": "¿Precio o cantidad?",
+      "help": "Sobre los códigos de artículo presentes en los dos años y con unidad comparable ({coverage} del gasto del año, {codes} códigos; {dropped} descartados por variación imposible).",
+      "price": "Por precio unitario",
+      "priceSub": "Misma cantidad, otro precio",
+      "quantity": "Por cantidad",
+      "quantitySub": "Mismo precio, otra cantidad",
+      "caveat": "Lectura parcial y de dirección, no contable: el feed guarda las cantidades truncadas a entero, así que la separación entre precio y cantidad tiene ruido. No suma al total del año."
+    },
+    "events": {
+      "title": "Los contratos más grandes de {year}",
+      "help": "Cuando un solo contrato pesa una fracción grande del cambio del año, el año no subió: subió ese contrato.",
+      "share": "{pct} del cambio real",
+      "untitled": "Sin descripción en el registro"
+    },
+    "coverage": {
+      "title": "Organismos que reportan",
+      "help": "Más organismos publicando no es más gasto. Este es el motivo por el que el puente separa entradas y salidas del registro.",
+      "buyers": "Organismos con compras",
+      "releasesTitle": "Registros publicados",
+      "releasesHelp": "Cantidad de adjudicaciones con monto por año.",
+      "releases": "Registros con monto"
+    },
+    "audit": {
+      "title": "Qué excluimos y por qué",
+      "help": "{n} registros por {amount} quedaron afuera de la serie: su valor en pesos de hoy supera {ceiling}, el techo por encima del cual un registro es un error de carga y no un contrato. Cada uno enlaza a su ficha para que lo verifiques.",
+      "year": "Año",
+      "contract": "Contrato",
+      "buyer": "Organismo",
+      "amount": "Monto cargado",
+      "reason": "Motivo",
+      "reasons": {
+        "artifact-ceiling": "Monto imposible",
+        "unconvertible-currency": "Moneda sin cotización"
+      }
+    },
+    "method": {
+      "title": "Método",
+      "deflator": "Deflactor",
+      "deflatorBody": "Unidad Indexada del BCU, promedio mensual. Es la unidad que el propio BCU ajusta con el IPC, así que no hay año base que se desactualice.",
+      "fx": "Tipo de cambio",
+      "fxBody": "Promedio mensual del BCU, aplicado al mes de cada contrato. El monto precalculado del feed usa el cambio del día en que se importó, y por eso no lo usamos acá.",
+      "bridge": "Puente",
+      "bridgeBody": "Base + inflación + entradas + salidas + cambio del panel = total. Es una identidad exacta, no una estimación.",
+      "macro": "PIB, gasto público y población",
+      "macroBody": "Serie curada y versionada en el repositorio, con fuente:",
+      "updated": "Calculado el {date}."
+    }
+  },
   "analyticsHub": {
     "kicker": "Análisis y alertas",
     "title": "El estado del gasto, mirado de cerca",
@@ -1291,6 +1410,10 @@
       "providerLoadErrors": {
         "title": "Errores recurrentes",
         "dek": "Qué proveedores y organismos repiten los mismos errores de carga."
+      },
+      "evolucion": {
+        "title": "Evolución del gasto",
+        "dek": "Cuánto subió o bajó la compra pública cada año, y cuánto de eso es inflación."
       },
       "intendencias": {
         "title": "Intendencias",
@@ -1750,6 +1873,10 @@
     "comoReportar": {
       "title": "Cómo reportar un error en los datos de compras públicas",
       "description": "Guía para reportar un error de carga en Compras Estatales: quién corrige los datos, a quién avisar y qué incluir."
+    },
+    "evolucion": {
+      "title": "Evolución del gasto público uruguayo, año por año",
+      "description": "Cuánto gastó el Estado uruguayo en compras cada año desde 2002, con la inflación descontada: qué parte del aumento es precio, qué parte es más organismos reportando y qué contratos explican cada salto."
     },
     "analyticsHub": {
       "title": "Análisis y alertas del gasto público del Uruguay",

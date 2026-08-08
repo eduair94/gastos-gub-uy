@@ -45,6 +45,9 @@ function rateForMonth(table: RateTable, month: string): MonthRate | null {
   return prev ? table.byMonth[prev]! : null
 }
 
+/** Spellings of the Unidad Indexada seen in the feed's currency codes. */
+const UI_CODES = new Set(['UYI', 'UI', 'UUYI'])
+
 /** Convert a native amount to nominal UYU of its own month. Null if unconvertible. */
 export function toNominalUyu(
   amount: number,
@@ -59,6 +62,9 @@ export function toNominalUyu(
   if (!r) return null
   if (cur === 'USD' && r.usd) return amount * r.usd
   if (cur === 'EUR' && r.eur) return amount * r.eur
+  // A UI-denominated contract is already inflation-constant; the month's UI is
+  // exactly the UYU it was worth then.
+  if (UI_CODES.has(cur) && r.ui) return amount * r.ui
   return null
 }
 

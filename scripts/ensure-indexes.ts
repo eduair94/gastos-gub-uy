@@ -436,6 +436,14 @@ async function main(): Promise<void> {
       await organismStats.createIndex({ dataVersion: 1 }, { background: true })
       console.log('✅ organism_group_stats indexes ensured (groupKey unique, dataVersion)')
 
+      // spending_trend: one document per calendar year with the deflated series and
+      // the year-over-year decomposition, rebuilt by src/jobs/refresh-spending-trend.ts.
+      // `year` unique is the upsert key; the read endpoint sorts on it.
+      const spendingTrend = client.db(DB_NAME).collection('spending_trend')
+      await spendingTrend.createIndex({ year: 1 }, { unique: true, background: true })
+      await spendingTrend.createIndex({ dataVersion: 1 }, { background: true })
+      console.log('✅ spending_trend indexes ensured (year unique, dataVersion)')
+
       // ---- Monitor de Llamados + auth collections ----
       // These are small, hot collections whose schema-declared indexes must be
       // ensured here (autoIndex off). Unique keys enforce idempotent upserts and
@@ -651,6 +659,7 @@ async function main(): Promise<void> {
       console.log('   plan: provider_anomaly_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
       console.log('   plan: provider_load_error_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
       console.log('   plan: organism_group_stats.{groupKey unique, dataVersion}')
+      console.log('   plan: spending_trend.{year unique, dataVersion}')
       console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')
       console.log('   plan: watches.{userId, active+categories, active}')
       console.log('   plan: open_calls.{compraId unique, classificationSet, tenderPeriod.endDate, buyer.id, status+endDate, firstSeenAt, text}')
