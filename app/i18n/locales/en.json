@@ -22,6 +22,7 @@
     "providerLoadErrors": "Recurring errors",
     "intendencias": "Intendencias",
     "partidos": "Procurement by party",
+    "evolucion": "Spending over time",
     "organismos": "Spending by body",
     "mapa": "Spending map",
     "anticipacion": "Anticipation",
@@ -1262,6 +1263,124 @@
     "officialLink": "Go to Compras Estatales",
     "disclaimer": "This site does not correct the official data or forward reports: it only detects possible errors and shows you where to take them. The correction is made at the source."
   },
+  "evolucion": {
+    "kicker": "Analysis",
+    "title": "Did spending rise, or did the peso just fall?",
+    "dek": "Public procurement year by year, with inflation stripped out and data artefacts removed. For each year: how much of the change is prices, how much is more bodies reporting, and how much is money that actually moved.",
+    "unavailable": "This series has not been computed yet. Check back shortly.",
+    "partialShort": "year in progress",
+    "partialOpt": "{year} (in progress)",
+    "scope": {
+      "title": "What this page measures",
+      "body": "It measures the State's purchases and contracts as published in open data (OCDS, Compras Estatales). It is not the national budget: wages, pensions, transfers and debt interest are out of scope. On that base we make three corrections, because without them the series lies:",
+      "fx": "Every foreign-currency amount is converted at the rate of its own month, not today's.",
+      "inflation": "Everything can be read in today's pesos, deflated by the Unidad Indexada of each contract's month.",
+      "artifacts": "{n} records with an impossible amount are excluded (a contract total loaded as a unit price).",
+      "artifactsLink": "See the full list."
+    },
+    "kpi": {
+      "total": "Procurement {year}",
+      "totalSub": "Last complete year, current pesos",
+      "nominalChange": "Nominal change",
+      "nominalSub": "Against {year}, in current pesos",
+      "realChange": "Real change",
+      "realSub": "Net of the period's inflation",
+      "longRun": "{from} → {to}",
+      "longRunSub": "In constant pesos ({cagr} a year)"
+    },
+    "lens": {
+      "real": "Today's pesos",
+      "nominal": "Current pesos",
+      "usd": "US dollars",
+      "pctGdp": "% of GDP",
+      "pctGov": "% of central spending",
+      "perCapita": "Per person",
+      "raw": "As reported"
+    },
+    "lensHelp": {
+      "real": "Each contract deflated by the Unidad Indexada of its month and expressed in today's pesos. The dashed line is the same data in current pesos: the gap between them IS inflation.",
+      "nominal": "Pesos of the year the money was spent, with foreign currency converted at that month's rate. Not comparable across years.",
+      "usd": "Converted to dollars at the average rate of each contract's month.",
+      "pctGdp": "Procurement over nominal GDP. Shows whether the State buys more relative to the size of the economy.",
+      "pctGov": "Procurement over central-government expense. An imperfect reference: our universe includes autonomous bodies that denominator does not count, so read the percentage as an order of magnitude.",
+      "perCapita": "Dollars of procurement per inhabitant, on World Bank population."
+    },
+    "series": {
+      "title": "The series, year by year",
+      "rawToggle": "Show the unsanitised series",
+      "meta": "The unsanitised series keeps the records with impossible amounts: in 2003 and in 2024 a single contract is over 60% of the year."
+    },
+    "bridge": {
+      "title": "From one year to the next",
+      "help": "Each year's change, split into parts that add up exactly. The previous year is first re-priced to this year's price level; what remains is real change, and that is split between bodies entering or leaving the record and those present in both years.",
+      "yearLabel": "Year",
+      "empty": "This year has no previous year to compare against.",
+      "base": "Spend {year}",
+      "inflation": "Inflation",
+      "inflationHelp": "Last year's spend at this year's prices",
+      "entrants": "Enter the record ({n})",
+      "entrantsHelp": "Bodies reporting this year but not last",
+      "exits": "Leave the record ({n})",
+      "exitsHelp": "Bodies that stopped reporting",
+      "panel": "Real change among those in both ({n})",
+      "panelHelp": "The part that really is more or less buying",
+      "total": "Spend {year}"
+    },
+    "contrib": {
+      "buyers": "Bodies that moved the number",
+      "buyersHelp": "Each body against its own previous year, already re-priced.",
+      "categories": "Categories that moved the number",
+      "categoriesHelp": "By SICE catalogue article code, with the previous year re-priced."
+    },
+    "pq": {
+      "title": "Price or quantity?",
+      "help": "Over article codes present in both years with a comparable unit ({coverage} of the year's spend, {codes} codes; {dropped} dropped for an impossible swing).",
+      "price": "From unit price",
+      "priceSub": "Same quantity, different price",
+      "quantity": "From quantity",
+      "quantitySub": "Same price, different quantity",
+      "caveat": "A partial, directional read rather than an accounting identity: the feed stores quantities truncated to integers, so the price/quantity split carries noise. It does not add up to the year's total."
+    },
+    "events": {
+      "title": "The largest contracts of {year}",
+      "help": "When a single contract is a large fraction of the year's change, the year did not rise — that contract did.",
+      "share": "{pct} of the real change",
+      "untitled": "No description in the record"
+    },
+    "coverage": {
+      "title": "Bodies reporting",
+      "help": "More bodies publishing is not more spending. This is why the bridge separates entries to and exits from the record.",
+      "buyers": "Bodies with purchases",
+      "releasesTitle": "Records published",
+      "releasesHelp": "Number of priced awards per year.",
+      "releases": "Priced records"
+    },
+    "audit": {
+      "title": "What we excluded, and why",
+      "help": "{n} records worth {amount} were left out of the series: their value in today's pesos exceeds {ceiling}, the ceiling above which a record is a load error rather than a contract. Each one links to its page so you can check it.",
+      "year": "Year",
+      "contract": "Contract",
+      "buyer": "Body",
+      "amount": "Loaded amount",
+      "reason": "Reason",
+      "reasons": {
+        "artifact-ceiling": "Impossible amount",
+        "unconvertible-currency": "Currency with no rate"
+      }
+    },
+    "method": {
+      "title": "Method",
+      "deflator": "Deflator",
+      "deflatorBody": "BCU Unidad Indexada, monthly average. It is the unit the BCU itself adjusts with the CPI, so there is no base year to go stale.",
+      "fx": "Exchange rate",
+      "fxBody": "BCU monthly average, applied at each contract's own month. The feed's precomputed amount uses the rate of the day it was imported, which is why it is not used here.",
+      "bridge": "Bridge",
+      "bridgeBody": "Base + inflation + entries + exits + panel change = total. An exact identity, not an estimate.",
+      "macro": "GDP, public spending and population",
+      "macroBody": "A curated series versioned in the repository, sourced from:",
+      "updated": "Computed on {date}."
+    }
+  },
   "analyticsHub": {
     "kicker": "Analysis & flags",
     "title": "The state of spending, up close",
@@ -1290,6 +1409,10 @@
       "providerLoadErrors": {
         "title": "Recurring errors",
         "dek": "Which providers and agencies repeat the same data-load errors."
+      },
+      "evolucion": {
+        "title": "Spending over time",
+        "dek": "How much public procurement rose or fell each year, and how much of that is inflation."
       },
       "intendencias": {
         "title": "Departmental governments",
@@ -1749,6 +1872,10 @@
     "comoReportar": {
       "title": "How to report an error in public-procurement data",
       "description": "A guide to reporting a data-load error on Compras Estatales: who corrects the data, who to notify and what to include."
+    },
+    "evolucion": {
+      "title": "Uruguay public procurement over time, year by year",
+      "description": "How much the Uruguayan State spent on procurement each year since 2002, net of inflation: how much of the rise is prices, how much is more bodies reporting, and which contracts explain each jump."
     },
     "analyticsHub": {
       "title": "Analysis & flags of Uruguay's public spending",
