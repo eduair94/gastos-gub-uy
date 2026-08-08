@@ -43,11 +43,18 @@ const laid = computed(() => {
     return { ...s, start, end, low: Math.min(start, end), high: Math.max(start, end) }
   })
   const max = Math.max(1, ...rows.map(r => r.high))
-  return rows.map(r => ({
-    ...r,
-    leftPct: `${((r.low / max) * 100).toFixed(2)}%`,
-    widthPct: `${(((r.high - r.low) / max) * 100).toFixed(2)}%`,
-  }))
+  // The bar has a 2px floor so a near-zero step still reads as a mark; clamp
+  // `left` so that floor cannot push the mark past the right edge of its track.
+  const MIN_PCT = 0.4
+  return rows.map((r) => {
+    const width = Math.max(MIN_PCT, ((r.high - r.low) / max) * 100)
+    const left = Math.min(((r.low / max) * 100), 100 - width)
+    return {
+      ...r,
+      leftPct: `${Math.max(0, left).toFixed(2)}%`,
+      widthPct: `${width.toFixed(2)}%`,
+    }
+  })
 })
 </script>
 

@@ -770,9 +770,13 @@ useSeo(() => ({
 }
 
 /* KPIs */
+/* 16rem, not 13rem: the money KPI is a 14-character mono figure
+   ("$ 179,58 mil M") and at 13rem the four cards each got ~250px, which the
+   figure and its gold rule overran past the card border. At 16rem the row
+   drops to three cards before that can happen. */
 .ev-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
   gap: var(--s-4);
   min-width: 0;
 }
@@ -796,10 +800,13 @@ useSeo(() => ({
   color: var(--text-muted);
 }
 
+/* --t-xl, not --t-2xl: at 2xl the percentages reach 44px and tower over the
+   money KPI beside them (<MoneyAmount size="lg"> is --t-xl), so the row read as
+   two different hierarchies. One size across all four. */
 .kpi__v {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: var(--t-2xl);
+  font-size: var(--t-xl);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
@@ -819,7 +826,16 @@ useSeo(() => ({
 }
 
 /* Lens switcher — a fixed vocabulary of views, so chips are the right shape. */
-.ev-lenses { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.ev-lenses { display: flex; flex-wrap: wrap; gap: var(--s-1); min-width: 0; }
+
+/* <ChartBlock> sets `.cb__actions { flex: 0 0 auto }`, which is right for a
+   one-word action but not for six chips: at 360px the row refused to shrink and
+   pushed the whole PAGE 288px wide. Letting it shrink (with min-width: 0) is
+   what lets the chips wrap inside it instead. */
+.ev-block :deep(.cb__actions) {
+  flex: 0 1 auto;
+  min-width: 0;
+}
 
 .ev-lens {
   padding: 4px var(--s-3);
