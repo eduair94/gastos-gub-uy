@@ -247,6 +247,23 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 
 .panel__foot > :first-child { margin-top: 0; }
 
+// Available to assistive technology, invisible on screen. Used where a chart
+// carries meaning a canvas cannot expose (the data table behind <TrendLines>)
+// and where a glyph is decorative but its meaning is not (the +/- in the
+// waterfall). The same declarations already existed inline inside the mobile
+// table reflow; this is the shared, reusable form.
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .u-container {
   width: 100%;
   max-width: var(--container);
