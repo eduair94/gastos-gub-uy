@@ -1269,6 +1269,12 @@
     "dek": "Public procurement year by year, with inflation stripped out and data artefacts removed. For each year: how much of the change is prices, how much is more bodies reporting, and how much is money that actually moved.",
     "unavailable": "This series has not been computed yet. Check back shortly.",
     "partialShort": "year in progress",
+    "a11y": {
+      "lensGroup": "How to read the series",
+      "lensAnnounce": "Series shown in {lens}.",
+      "seriesChart": "Public procurement by year, in {lens}. The same data follows as a table.",
+      "period": "Year"
+    },
     "partialOpt": "{year} (in progress)",
     "scope": {
       "title": "What this page measures",
@@ -1318,6 +1324,8 @@
       "base": "Spend {year}",
       "inflation": "Inflation",
       "inflationHelp": "Last year's spend at this year's prices",
+      "srPlus": "plus",
+      "srMinus": "minus",
       "entrants": "Enter the record ({n})",
       "entrantsHelp": "Bodies reporting this year but not last",
       "exits": "Leave the record ({n})",

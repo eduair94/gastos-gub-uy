@@ -1270,6 +1270,12 @@
     "dek": "La compra pública año por año, con la inflación descontada y los artefactos de carga afuera. Para cada año: cuánto del cambio es precio, cuánto es más organismos reportando y cuánto es plata que efectivamente se movió.",
     "unavailable": "Todavía no calculamos esta serie. Volvé en un rato.",
     "partialShort": "año en curso",
+    "a11y": {
+      "lensGroup": "Cómo leer la serie",
+      "lensAnnounce": "Serie mostrada en {lens}.",
+      "seriesChart": "Compras del Estado por año, en {lens}. Los datos también están en la tabla que sigue.",
+      "period": "Año"
+    },
     "partialOpt": "{year} (en curso)",
     "scope": {
       "title": "Qué mide esta página",
@@ -1319,6 +1325,8 @@
       "base": "Gasto {year}",
       "inflation": "Inflación",
       "inflationHelp": "Lo mismo del año anterior, a precios de este año",
+      "srPlus": "más",
+      "srMinus": "menos",
       "entrants": "Entran al registro ({n})",
       "entrantsHelp": "Organismos que reportan este año y no el anterior",
       "exits": "Salen del registro ({n})",

@@ -45,6 +45,8 @@ const props = withDefaults(defineProps<{
   height?: number
   /** Index of a year to mark as incomplete (drawn hollow). */
   partialIndex?: number | null
+  /** What the chart shows. Becomes its accessible name and the table caption. */
+  label: string
 }>(), { format: 'money', height: 300, partialIndex: null })
 
 const { t } = useI18n()
@@ -106,15 +108,37 @@ const chartData = computed(() => ({
     pointRadius: (ctx: any) => (ctx.dataIndex === props.partialIndex ? 4 : 2.5),
     pointStyle: (ctx: any) => (ctx.dataIndex === props.partialIndex ? 'crossRot' : 'circle'),
     pointHoverRadius: 5,
-    spanGaps: true,
+    // A missing year stays missing. `spanGaps: true` would draw straight
+    // through a year with no observation — on a page whose whole claim is that
+    // it does not invent data, an interpolated segment is a lie in ink.
+    spanGaps: false,
   })),
 }))
+
+/**
+ * Chart.js animates in JavaScript, so the global
+ * `@media (prefers-reduced-motion: reduce)` rule in main.scss cannot reach it —
+ * the 420ms sweep replayed on every lens switch regardless of the setting.
+ * Read the query directly and turn the animation off instead of shortening it:
+ * the chart still redraws, it just arrives without the motion.
+ */
+const reduceMotion = ref(false)
+onMounted(() => {
+  const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+  if (!mq) return
+  reduceMotion.value = mq.matches
+  const onChange = (e: MediaQueryListEvent) => {
+    reduceMotion.value = e.matches
+  }
+  mq.addEventListener('change', onChange)
+  onBeforeUnmount(() => mq.removeEventListener('change', onChange))
+})
 
 const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   interaction: { mode: 'index' as const, intersect: false },
-  animation: { duration: 420, easing: 'easeOutQuart' as const },
+  animation: reduceMotion.value ? (false as const) : { duration: 420, easing: 'easeOutQuart' as const },
   plugins: {
     legend: {
       display: props.series.length > 1,
@@ -176,28 +200,73 @@ const chartOptions = computed(() => ({
 </script>
 
 <template>
-  <div
-    ref="wrap"
-    class="tl"
-    :style="{ height: `${height}px` }"
-  >
-    <ClientOnly>
-      <Line
-        ref="lineRef"
-        :data="chartData"
-        :options="chartOptions"
-      />
-      <template #fallback>
-        <div
-          class="tl__ph"
-          aria-hidden="true"
+  <div class="tl-wrap">
+    <div
+      ref="wrap"
+      class="tl"
+      :style="{ height: `${height}px` }"
+    >
+      <ClientOnly>
+        <Line
+          ref="lineRef"
+          :data="chartData"
+          :options="chartOptions"
+          :aria-label="label"
         />
-      </template>
-    </ClientOnly>
+        <template #fallback>
+          <div
+            class="tl__ph"
+            aria-hidden="true"
+          />
+        </template>
+      </ClientOnly>
+    </div>
+
+    <!--
+      A canvas has no readable content: Chart.js stamps `role="img"` on it, so a
+      screen reader announces "image" and stops. On a transparency site the
+      series IS the evidence, and on this page it exists nowhere else in text —
+      so the same numbers ship as a real table, visually hidden. It is rendered
+      server-side, which also makes the figures crawlable.
+    -->
+    <table class="u-visually-hidden">
+      <caption>{{ label }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">
+            {{ t('evolucion.a11y.period') }}
+          </th>
+          <th
+            v-for="s in series"
+            :key="s.label"
+            scope="col"
+          >
+            {{ s.label }}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="(l, i) in labels"
+          :key="l"
+        >
+          <th scope="row">
+            {{ i === partialIndex ? `${l} (${t('evolucion.partialShort')})` : l }}
+          </th>
+          <td
+            v-for="s in series"
+            :key="s.label"
+          >
+            {{ fmt(s.values[i]) }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
 <style scoped>
+.tl-wrap { position: relative; min-width: 0; }
 .tl { position: relative; width: 100%; min-width: 0; }
 .tl__ph {
   width: 100%;

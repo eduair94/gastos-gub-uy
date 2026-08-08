@@ -17,7 +17,14 @@
  *   - inflation   the change that is only the price level (washed, dashed)
  *   - coverage    bodies entering or leaving the feed (slate)
  *   - real        what the comparable panel actually changed (celeste)
- *   - endpoints   the two totals (ink)
+ *   - endpoints   the two totals (the strongest mark on the track)
+ *
+ * Every bar colour must be a token that INVERTS with the theme. The endpoints
+ * were first painted `--ink`, which reads as "strongest mark" in the light
+ * theme but is a fixed surface colour: in the dark theme it stays #0f2233
+ * against a #0e2131 track — 1.01:1, i.e. the two bars that anchor the whole
+ * chart simply vanished. `--text` and a `color-mix` of `--celeste-deep` both
+ * flip, so the marks hold in either theme.
  */
 export interface BridgeStep {
   key: string
@@ -32,6 +39,8 @@ export interface BridgeStep {
 const props = defineProps<{
   steps: BridgeStep[]
 }>()
+
+const { t } = useI18n()
 
 /** Running geometry: every increment starts where the previous step ended. */
 const laid = computed(() => {
@@ -82,12 +91,16 @@ const laid = computed(() => {
       <div class="wf__val">
         <!-- The sign is rendered outside <MoneyAmount>: its magnitude rule is
              defined on a positive logarithmic domain, so a negative figure would
-             collapse the bar rather than mirror it. -->
-        <span
-          v-if="row.kind !== 'total'"
-          class="wf__sign"
-          aria-hidden="true"
-        >{{ row.value >= 0 ? '+' : '−' }}</span>
+             collapse the bar rather than mirror it. The glyph is hidden from
+             assistive tech and paired with a spoken word, because "−" read
+             aloud is unreliable and the direction is the whole point. -->
+        <template v-if="row.kind !== 'total'">
+          <span class="u-visually-hidden">{{ row.value >= 0 ? t('evolucion.bridge.srPlus') : t('evolucion.bridge.srMinus') }}</span>
+          <span
+            class="wf__sign"
+            aria-hidden="true"
+          >{{ row.value >= 0 ? '+' : '−' }}</span>
+        </template>
         <MoneyAmount
           :amount="row.kind === 'total' ? row.value : Math.abs(row.value)"
           currency="UYU"
@@ -149,10 +162,16 @@ const laid = computed(() => {
   min-width: 2px;
 }
 
-.wf__row--total .wf__bar { background: var(--ink); }
+.wf__row--total .wf__bar { background: var(--text); }
 .wf__row--coverage .wf__bar { background: var(--text-muted); }
+
+/* The inflation step is the one quantity on this chart that is NOT a decision
+   anyone made, so it reads as a hollow, dashed mark rather than a solid one.
+   The fill is mixed from --celeste-deep instead of --celeste-wash: the wash is
+   a light-theme tint and disappears on a dark track (1.24:1), while the mix
+   follows whichever way the token flips. */
 .wf__row--inflation .wf__bar {
-  background: var(--celeste-wash);
+  background: color-mix(in srgb, var(--celeste-deep) 22%, transparent);
   border: 1px dashed var(--celeste-deep);
 }
 .wf__row.is-neg .wf__bar { opacity: 0.72; }

@@ -35,6 +35,12 @@ const props = withDefaults(defineProps<{
   /** Called with the bar's index when activated. Return a URL to make the bar a
    *  link (pointer cursor + navigate on click). Omit for a static chart. */
   hrefFor?: (index: number) => string | undefined
+  /**
+   * Accessible name for the chart. Chart.js stamps `role="img"` on the canvas,
+   * so without this a screen reader announces "image" and nothing else. Pass
+   * the same wording as the surrounding <ChartBlock> heading.
+   */
+  label?: string
 }>(), { format: 'moneyM', rowHeight: 34 })
 
 const router = useRouter()
@@ -274,6 +280,7 @@ const chartOptions = computed(() => ({
         :data="chartData"
         :options="chartOptions as any"
         :plugins="[valueLabels, stackedLabels]"
+        :aria-label="label"
       />
       <template #fallback>
         <div

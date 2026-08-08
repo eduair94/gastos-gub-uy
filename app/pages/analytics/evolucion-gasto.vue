@@ -397,7 +397,14 @@ useSeo(() => ({
           class="ev-block"
         >
           <template #actions>
-            <div class="ev-lenses">
+            <!-- Six alternative readings of one series, not six independent
+                 toggles: the group carries the label so a screen reader hears
+                 what the buttons are choosing between. -->
+            <div
+              class="ev-lenses"
+              role="group"
+              :aria-label="t('evolucion.a11y.lensGroup')"
+            >
               <button
                 v-for="k in LENSES"
                 :key="k"
@@ -417,7 +424,16 @@ useSeo(() => ({
             :format="lensFormat"
             :partial-index="partialIndex"
             :height="340"
+            :label="t('evolucion.a11y.seriesChart', { lens: t(`evolucion.lens.${lens}`) })"
           />
+          <!-- Switching lens redraws a canvas, which is silent. Announce the
+               reading that is now on screen. -->
+          <p
+            class="u-visually-hidden"
+            role="status"
+          >
+            {{ t('evolucion.a11y.lensAnnounce', { lens: t(`evolucion.lens.${lens}`) }) }}
+          </p>
           <template #meta>
             <label class="ev-raw">
               <input
@@ -479,24 +495,26 @@ useSeo(() => ({
             :title="t('evolucion.contrib.buyers')"
             :help="t('evolucion.contrib.buyersHelp')"
             framed
-            level="3"
+            :level="3"
           >
             <InvHBars
               :items="buyerBars"
               format="moneyM"
               :row-height="32"
+              :label="t('evolucion.contrib.buyers')"
             />
           </ChartBlock>
           <ChartBlock
             :title="t('evolucion.contrib.categories')"
             :help="t('evolucion.contrib.categoriesHelp')"
             framed
-            level="3"
+            :level="3"
           >
             <InvHBars
               :items="categoryBars"
               format="moneyM"
               :row-height="32"
+              :label="t('evolucion.contrib.categories')"
             />
           </ChartBlock>
         </div>
@@ -599,7 +617,7 @@ useSeo(() => ({
             :help="t('evolucion.coverage.help')"
             :scroll="false"
             framed
-            level="3"
+            :level="3"
           >
             <TrendLines
               :labels="labels"
@@ -607,6 +625,7 @@ useSeo(() => ({
               format="count"
               :partial-index="partialIndex"
               :height="220"
+              :label="t('evolucion.coverage.title')"
             />
           </ChartBlock>
           <ChartBlock
@@ -614,7 +633,7 @@ useSeo(() => ({
             :help="t('evolucion.coverage.releasesHelp')"
             :scroll="false"
             framed
-            level="3"
+            :level="3"
           >
             <TrendLines
               :labels="labels"
@@ -622,6 +641,7 @@ useSeo(() => ({
               format="count"
               :partial-index="partialIndex"
               :height="220"
+              :label="t('evolucion.coverage.releasesTitle')"
             />
           </ChartBlock>
         </div>
@@ -811,12 +831,10 @@ useSeo(() => ({
   line-height: 1.1;
 }
 
-/* Deliberately NOT green-down / red-up. Spending falling is not "good" and
-   rising is not "bad" — that is the reader's call, not the page's. The sign
-   carries the direction; the colour stays neutral, same principle as
-   /analytics/partidos. (`--verde` also means "verified active" site-wide.) */
-.kpi__v.is-up,
-.kpi__v.is-down { color: var(--text); }
+/* No colour by direction anywhere on this page. Spending falling is not "good"
+   and rising is not "bad" — that is the reader's call, not the page's — so the
+   sign carries the direction and `.kpi__v` keeps the default ink. The `is-up` /
+   `is-down` classes stay in the template as hooks, deliberately unstyled. */
 
 .kpi__s {
   margin: var(--s-2) 0 0;
@@ -837,18 +855,22 @@ useSeo(() => ({
   min-width: 0;
 }
 
+/* --text, not --text-muted: muted on the sunken surface measures 4.44:1 at
+   11px, just under AA, and these are the page's primary controls. The selected
+   state is carried by the filled background, so the inactive chips do not need
+   to be dimmed to stay legible as the unselected option. */
 .ev-lens {
   padding: 4px var(--s-3);
   font-family: var(--font-mono);
   font-size: var(--t-xs);
-  color: var(--text-muted);
+  color: var(--text);
   background: var(--surface-sunken);
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   cursor: pointer;
 }
 
-.ev-lens:hover { color: var(--text); }
+.ev-lens:hover { background: var(--rule); }
 
 .ev-lens.is-on {
   color: var(--surface);
