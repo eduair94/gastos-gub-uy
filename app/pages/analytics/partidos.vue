@@ -153,8 +153,11 @@ const partiesPresent = computed(() => {
 })
 
 // ---- Hover / selection --------------------------------------------------
+// Hover wins while the mouse is over a department; once it leaves (hoverId
+// becomes null) the panel falls back to the last-clicked department, if any
 const hoverId = ref<string | null>(null)
-const focusId = computed(() => hoverId.value)
+const clickedId = ref<string | null>(null)
+const focusId = computed(() => hoverId.value ?? clickedId.value)
 const focusRow = computed(() => (focusId.value ? rowById.value[focusId.value] ?? null : null))
 
 function detailRows(r: DeptRow) {
@@ -355,7 +358,7 @@ useSeo(() => ({
               :active-id="focusId"
               :aria-label="t('partidos.mapAria')"
               @hover="hoverId = $event"
-              @select="hoverId = $event"
+              @select="clickedId = $event"
             />
           </v-card>
 
