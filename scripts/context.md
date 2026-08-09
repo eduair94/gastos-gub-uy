@@ -1,6 +1,6 @@
 # scripts/ — operational and build scripts
 
-The repo's one-shot CLI drawer: index migrations, DB export/import, the production deploy driver, generated-asset builders wired into the Nuxt `prebuild`, and live-feed diagnostics. **Recurring/scheduled work does NOT live here** — it lives in `../src/jobs/` and is scheduled by `../src/cronserver.ts`. 23 files, flat, no subdirectories; 11 have an npm alias in the root `package.json`, the rest are run with `npx tsx scripts/<f>.ts`. Nothing here is typechecked by `npm run build` (root `tsconfig.json` includes only `src/**/*` and `shared/**/*`).
+The repo's one-shot CLI drawer: index migrations, DB export/import, the production deploy driver, generated-asset builders wired into the Nuxt `prebuild`, and live-feed diagnostics. **Recurring/scheduled work does NOT live here** — it lives in `../src/jobs/` and is scheduled by `../src/cronserver.ts`. 25 script files, flat (plus a `verify/` directory); 14 have an npm alias in the root `package.json`, the rest are run with `npx tsx scripts/<f>.ts`. Nothing here is typechecked by `npm run build` (root `tsconfig.json` includes only `src/**/*` and `shared/**/*`).
 
 ## Map
 
@@ -14,6 +14,7 @@ The repo's one-shot CLI drawer: index migrations, DB export/import, the producti
 | [build-og-image.mjs](build-og-image.mjs) | Renders `app/public/og-default.png` by screenshotting inline HTML with the local Chrome (`CHROME_PATH` or a probe list). One-shot; output committed. `useSeo()` had always emitted an `og:image` that 404'd. |
 | [build-uruguay-geo.mjs](build-uruguay-geo.mjs) | One-shot geometry baker: geoBoundaries URY ADM1 (pinned commit `9469f09`) → Douglas-Peucker → Web-Mercator → `app/assets/geo/uruguay-dept-paths.ts`, keyed by Intendencia `buyer.id` `80-1`…`98-1`. Needs network once; runtime never fetches. |
 | [capture-screenshots.mjs](capture-screenshots.mjs) | Regenerates `docs/screenshots/*.png` from the LIVE site with Playwright. Defaults: `--base https://conlatuya.checkleaked.cc` (:26), `--out <cwd>/docs/screenshots` (:27). Playwright is deliberately NOT a repo dependency. No npm alias. |
+| [seed-dev-db.ts](seed-dev-db.ts) | **Local-dev fixture generator** (`npm run seed:dev`, driven by `just run`). WIPES `releases` + `supplier_contacts` and refills them with synthetic OCDS-shaped data — 19 Intendencias + ministries + salud/entes/educación buyers × 8 years — then shells out to the REAL jobs (`refresh-analytics`, `detect-anomalies`, `refresh-dept-indicators`, `refresh-organism-groups`, `refresh-product-analytics`, `backfill-open-calls`, `refresh-contacts`, `populate-filters`) so no derived-collection logic is duplicated. Seeded PRNG (`--seed=N`), `--releases-only` skips the job chain. **Refuses any `MONGODB_URI` that isn't `localhost`/`127.0.0.1`/`mongo`**, and exits non-zero if any chained job failed. Buyer ids are chosen to match `shared/organism-groups.ts` exactly. Not real spending data. |
 | [export-database.ts](export-database.ts) | Full DB export: `mongodump` and/or custom JSON (`--format mongodump\|json\|both`, `--output/-o`, `--collections a,b`, `--no-indexes`, `--no-compress`, `--help`; parsing at :296+). Also writes indexes + metadata. |
 | [import-database.ts](import-database.ts) | Counterpart importer (`mongorestore` / json / `auto` format detection at :61-63), optional index recreation (:85-86). |
 | [create-text-index.ts](create-text-index.ts) | Creates the `comprehensive_text_search` `$text` index on `releases` (:107). Drops pre-existing text indexes first (:39, :46). |
@@ -40,6 +41,12 @@ npm run ensure-indexes                          # build in background
 # Deploy the Nuxt dashboard
 npm run deploy:dashboard:dry                    # build + verify + smoke, no swap
 npm run deploy:dashboard                        # full atomic deploy + health check
+
+# Local dev fixture (WIPES releases + supplier_contacts; refuses a non-local URI)
+just run                                        # container + seed + dev server, from scratch
+npm run seed:dev                                # reseed an existing local Mongo
+npm run seed:dev -- --releases-only             # skip the derived-data job chain
+npm run seed:dev -- --seed=42                   # a different reproducible fixture
 
 # Generated assets (regenerate + COMMIT the output)
 npm run build:mdi-subset      && npm run check:mdi-subset

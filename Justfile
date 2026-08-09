@@ -1,0 +1,130 @@
+# Local dev bootstrap, for a contributor with no database. `just run` gets a
+# working dashboard from a clean checkout: creates .env if missing, creates and
+# starts a local Mongo container (persisted in a named volume), seeds it with
+# the synthetic dev fixture (scripts/seed-dev-db.ts) if it's empty, then starts
+# the dashboard dev server. Ctrl+C stops both the dashboard and the container.
+#
+# `just run` is deliberately LOCAL-ONLY and refuses to proceed against a remote
+# MONGODB_URI, because seeding wipes `releases`. If you already have a .env
+# pointing at a shared database, use `just dev` — it starts nothing but Nuxt.
+#
+# Bash/Docker only; on Windows use `npm --prefix app run dev` directly.
+
+mongo_container := "gastos-gub-mongo"
+mongo_volume := "gastos-gub-mongo-data"
+mongo_port := "27017"
+
+# Start the dashboard against whatever .env already says. No container, no seed.
+dev:
+    npm --prefix app run dev
+
+# Stop the local Mongo container started by `just run`.
+stop:
+    -docker stop "{{mongo_container}}"
+
+# Bootstrap everything and start the dashboard on http://localhost:3600.
+run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{justfile_directory()}}"
+
+    # 1. .env (root + app — dotenv reads relative to cwd, and the Nuxt dev
+    #    server's cwd is app/, so both need one).
+    if [ ! -f .env ]; then
+      echo "→ creating .env"
+      printf 'MONGODB_URI=mongodb://localhost:27017/gastos_gub\nPORT=3600\nNODE_ENV=development\n' > .env
+    fi
+    if [ ! -f app/.env ]; then
+      echo "→ creating app/.env"
+      cp .env app/.env
+    fi
+
+    # An EXISTING .env usually points at the shared remote database, and this
+    # recipe is built entirely around a local container: it would start Mongo,
+    # find it empty, and hand the seeder a remote URI that the seeder's safety
+    # guard correctly refuses — aborting the whole bootstrap at the last step.
+    # Say so now instead, and point at the recipe that skips the local stack.
+    if ! grep -qE '^MONGODB_URI=mongodb://(localhost|127\.0\.0\.1|mongo)(:[0-9]+)?/' .env; then
+      echo "✗ .env already points at a non-local MONGODB_URI." >&2
+      echo "  'just run' bootstraps a LOCAL Mongo container and will not seed over a remote database." >&2
+      echo "  Run 'just dev' to start the dashboard against your existing .env, or point MONGODB_URI" >&2
+      echo "  at mongodb://localhost:27017/gastos_gub to use the local fixture." >&2
+      exit 1
+    fi
+
+    # 2. docker — printed, not run. Installing system packages and changing
+    #    group membership on someone's machine is not a bootstrap script's call.
+    if ! command -v docker >/dev/null 2>&1; then
+      echo "✗ docker not found. Install it, then re-run 'just run'." >&2
+      if command -v apt-get >/dev/null 2>&1; then
+        echo "  sudo apt-get update -y && sudo apt-get install -y docker.io" >&2
+        echo "  sudo systemctl enable --now docker" >&2
+        echo "  sudo usermod -aG docker \"$USER\"   # then 'newgrp docker' or log out/in" >&2
+      fi
+      exit 1
+    fi
+    if ! docker ps >/dev/null 2>&1; then
+      echo "✗ docker is installed but not usable by $USER (permission denied)." >&2
+      echo "  If docker was just installed, run 'newgrp docker' (or log out/in) and re-run 'just run'." >&2
+      exit 1
+    fi
+
+    # 3. mongo container (named volume so data survives stop/start, not just --rm)
+    if [ -z "$(docker ps -aq -f name=^{{mongo_container}}$)" ]; then
+      echo "→ creating mongo container '{{mongo_container}}'"
+      docker run -d --name "{{mongo_container}}" -p {{mongo_port}}:27017 \
+        -v "{{mongo_volume}}:/data/db" mongo:7 >/dev/null
+    elif [ -z "$(docker ps -q -f name=^{{mongo_container}}$ -f status=running)" ]; then
+      echo "→ starting mongo container '{{mongo_container}}'"
+      docker start "{{mongo_container}}" >/dev/null
+    fi
+
+    echo "→ waiting for mongo…"
+    for i in $(seq 1 30); do
+      docker exec "{{mongo_container}}" mongosh --quiet --eval 'db.runCommand({ping:1})' >/dev/null 2>&1 && break
+      sleep 1
+    done
+
+    # 4. dependencies — only reinstall when node_modules is missing or
+    #    package.json/package-lock.json changed since the last install (hashed
+    #    into a stamp file inside node_modules, so a plain re-run is a no-op).
+    ensure_deps() {
+      local dir="$1" stamp current
+      stamp="$dir/node_modules/.deps-stamp"
+      current="$(cat "$dir/package.json" "$dir/package-lock.json" 2>/dev/null | sha256sum | cut -d' ' -f1)"
+      if [ -f "$stamp" ] && [ "$(cat "$stamp" 2>/dev/null)" = "$current" ]; then
+        return
+      fi
+      echo "→ npm install ($dir)"
+      (cd "$dir" && npm install)
+      echo "$current" > "$stamp"
+    }
+    ensure_deps .
+    ensure_deps app
+
+    # 5. seed the fixture if the database is empty.
+    COUNT="$(docker exec "{{mongo_container}}" mongosh gastos_gub --quiet \
+      --eval 'db.releases.countDocuments()' 2>/dev/null || echo 0)"
+    if [ "$COUNT" = "0" ]; then
+      echo "→ database is empty, seeding dev fixture…"
+      npm run seed:dev
+    else
+      echo "→ already seeded ($COUNT releases)"
+    fi
+
+    # 6. run the dashboard; Ctrl+C stops it AND the mongo container.
+    CLEANED_UP=""
+    cleanup() {
+      [ -n "$CLEANED_UP" ] && return
+      CLEANED_UP=1
+      echo ""
+      echo "→ stopping…"
+      [ -n "${APP_PID:-}" ] && kill "$APP_PID" 2>/dev/null || true
+      docker stop "{{mongo_container}}" >/dev/null 2>&1 || true
+    }
+    trap cleanup INT TERM EXIT
+
+    echo "→ starting dashboard on http://localhost:3600"
+    npm --prefix app run dev &
+    APP_PID=$!
+    wait "$APP_PID"
