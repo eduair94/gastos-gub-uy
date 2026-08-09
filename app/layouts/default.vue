@@ -27,7 +27,10 @@ watch(() => route.query.search, (q) => {
 
 const nav = computed(() => buildNav(localePath))
 
-function isActive(to: string) {
+// `to` is optional on a NavNode: the grouping-only menus (Explorar, Contactos,
+// Ayuda) have no hub page of their own, so every caller may hand us undefined.
+function isActive(to?: string) {
+  if (!to) return false
   if (to === localePath('/')) return route.path === to
   return route.path.startsWith(to)
 }
@@ -40,9 +43,20 @@ function isActive(to: string) {
 function hasChildren(n: NavNode): boolean {
   return hasNavChildren(n)
 }
+// Does ANY menu list the current route as one of its own leaves? A hub's
+// startsWith would otherwise also claim routes that now live in a different
+// menu: /analytics/como-reportar moved to Ayuda, but Qué revisar's hub is
+// /analytics, so both lit up at once.
+const routeOwnedByALeaf = computed(() =>
+  nav.value.some(n => navLeaves(n).some(c => !c.external && isActive(c.to))),
+)
 function groupActive(n: NavNode): boolean {
-  if (n.to && isActive(n.to)) return true
-  return navLeaves(n).some(c => !c.external && isActive(c.to))
+  if (n.external) return false
+  // A leaf of THIS menu owning the route always wins.
+  if (navLeaves(n).some(c => !c.external && isActive(c.to))) return true
+  // Otherwise fall back to the hub's prefix, unless some other menu owns the
+  // route outright.
+  return !routeOwnedByALeaf.value && isActive(n.to)
 }
 // A heading over a lone section is noise: only the multi-section menus
 // (Señales, Investigaciones) show them.
@@ -114,7 +128,7 @@ watch(() => route.fullPath, () => {
 })
 
 // ---- Priority overflow nav ----
-// The bar carries nine sections plus a brand, a search box and the
+// The bar carries seven sections plus a brand, a search box and the
 // account controls; on a laptop the Spanish labels overrun the 1400px
 // container and push the whole page into horizontal scroll. Rather than
 // hide the search or fall back to the hamburger on every laptop, measure
@@ -261,8 +275,9 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             v-for="n in visibleNav"
             :key="n.key"
           >
-            <!-- Grouped section (Análisis, Investigaciones): a hover/click dropdown.
-                 The parent's own route (the hub) leads the list, then the children. -->
+            <!-- Grouped section (Explorar, Qué revisar, Investigaciones, Contactos,
+                 Ayuda): a hover/click dropdown. When the group owns a hub route it
+                 leads the list, then the sections. -->
             <v-menu
               v-if="hasChildren(n)"
               open-on-hover
@@ -348,7 +363,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                 v-bind="props"
                 type="button"
                 class="topnav__link topnav__more"
-                :class="{ 'topnav__link--active': overflowNav.some(n => !n.external && isActive(n.to)) }"
+                :class="{ 'topnav__link--active': overflowNav.some(n => groupActive(n)) }"
               >
                 {{ t('nav.more') }}
                 <v-icon size="16">

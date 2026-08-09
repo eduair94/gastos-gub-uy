@@ -14,9 +14,13 @@
  * "Directorio" and "Recursos" group pages that have no landing of their own, and
  * their activator only opens the menu.
  *
- * Labels come from `nav.<key>` and section headings from `nav.grp<Key>` in both
- * locale files. Icons must already exist in the committed MDI subset
- * (assets/scss/mdi-subset.scss) or `npm run build` fails its prebuild check.
+ * Labels come from `nav.<key>` and section headings from `nav.grp.<key>` in both
+ * locale files. Every section carries a `nav.grp.<key>` entry even when its menu
+ * has a single section and therefore renders no heading — the day a second
+ * section is added, the label is already there in both locales.
+ *
+ * Icons must already exist in the committed MDI subset
+ * (app/assets/scss/mdi-subset.scss) or `npm run build` fails its prebuild check.
  */
 
 export interface NavLeaf {
@@ -28,7 +32,7 @@ export interface NavLeaf {
 }
 
 export interface NavSection {
-  /** Heading i18n key suffix (`nav.grp<Key>`); only rendered when the menu has 2+ sections. */
+  /** Heading i18n key suffix (`nav.grp.<key>`); only rendered when the menu has 2+ sections. */
   key: string
   items: NavLeaf[]
 }
