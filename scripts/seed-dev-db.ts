@@ -21,13 +21,19 @@
  *   npm run seed:dev -- --seed=42       # different pseudo-random fixture
  */
 import { execFileSync } from 'child_process'
-import { connectToDatabase, disconnectFromDatabase } from '../shared/connection/database'
+import { connectToDatabase, disconnectFromDatabase, maskMongoUri } from '../shared/connection/database'
 import { ReleaseModel, SupplierContactModel } from '../shared/models'
 import { mongoUri } from '../shared/config'
 
 // SAFETY: this wipes `releases`. Refuse anything that isn't obviously local.
+// A credentialed or +srv URI never matches, so the refusal is the safe default.
+// The URI goes through maskMongoUri because the one it most often refuses is a
+// REMOTE one carrying the production password, and this line lands in terminal
+// scrollback and CI logs.
 if (!/^mongodb:\/\/(localhost|127\.0\.0\.1|mongo)(:\d+)?\//.test(mongoUri)) {
-  console.error(`Refusing to seed MONGODB_URI="${mongoUri}" — this only runs against a local database.`)
+  console.error(`Refusing to seed MONGODB_URI="${maskMongoUri(mongoUri)}" — this only runs against a local database.`)
+  console.error('Importing any model runs dotenv with `override: true`, so a shell variable will NOT')
+  console.error('win over a remote URI in `.env` — point `.env` at the local container to seed it.')
   process.exit(1)
 }
 
@@ -385,13 +391,24 @@ async function seedSupplierContacts() {
   console.log(`[seed-dev-db] done: ${docs.length} supplier_contacts.`)
 }
 
+// `execFileSync` does not go through a shell, so on Windows plain 'npm' is not
+// an executable it can find and every job would die with ENOENT — caught below,
+// downgraded to a warning, and the run would still report success with an empty
+// fixture. Windows is the dev box for this repo, so resolve the real binary.
+const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+
+const failedJobs: string[] = []
 function runJob(npmScript: string) {
   console.log(`\n[seed-dev-db] npm run ${npmScript}`)
   try {
-    execFileSync('npm', ['run', npmScript], { stdio: 'inherit', cwd: __dirname + '/..' })
+    execFileSync(NPM, ['run', npmScript], { stdio: 'inherit', cwd: __dirname + '/..' })
   }
   catch (err) {
-    console.warn(`[seed-dev-db] "${npmScript}" failed — continuing (dev fixture, not fatal). ${(err as Error).message}`)
+    // One job failing is survivable — the fixture is still useful without, say,
+    // product analytics. A job failing SILENTLY is not: it reads as a complete
+    // fixture and the missing collection surfaces later as an empty page.
+    failedJobs.push(npmScript)
+    console.warn(`[seed-dev-db] "${npmScript}" failed — continuing. ${(err as Error).message}`)
   }
 }
 
@@ -416,6 +433,14 @@ async function main() {
   runJob('backfill-open-calls') // projects the openNow=true releases into open_calls (/llamados)
   runJob('refresh-contacts') // organism procurement contacts (/contactos)
   runJob('populate-filters')
+
+  if (failedJobs.length) {
+    console.error(`\n[seed-dev-db] ${failedJobs.length} job(s) FAILED: ${failedJobs.join(', ')}`)
+    console.error('[seed-dev-db] `releases` and `supplier_contacts` were seeded, but the collections')
+    console.error('[seed-dev-db] those jobs build are missing or stale — pages fed by them will be empty.')
+    process.exitCode = 1
+    return
+  }
 
   console.log('\n[seed-dev-db] Fixture ready. Start the dashboard with: npm --prefix app run dev')
 }

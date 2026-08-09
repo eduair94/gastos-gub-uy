@@ -1,12 +1,26 @@
-# Local dev bootstrap. `just run` gets a working dashboard from a clean checkout:
-# creates .env if missing, installs Docker if missing, creates/starts a local
-# Mongo container (persisted in a named volume) if missing, seeds it with the
-# synthetic dev fixture (scripts/seed-dev-db.ts) if it's empty, then starts the
-# dashboard dev server. Ctrl+C stops both the dashboard and the Mongo container.
+# Local dev bootstrap, for a contributor with no database. `just run` gets a
+# working dashboard from a clean checkout: creates .env if missing, creates and
+# starts a local Mongo container (persisted in a named volume), seeds it with
+# the synthetic dev fixture (scripts/seed-dev-db.ts) if it's empty, then starts
+# the dashboard dev server. Ctrl+C stops both the dashboard and the container.
+#
+# `just run` is deliberately LOCAL-ONLY and refuses to proceed against a remote
+# MONGODB_URI, because seeding wipes `releases`. If you already have a .env
+# pointing at a shared database, use `just dev` — it starts nothing but Nuxt.
+#
+# Bash/Docker only; on Windows use `npm --prefix app run dev` directly.
 
 mongo_container := "gastos-gub-mongo"
 mongo_volume := "gastos-gub-mongo-data"
 mongo_port := "27017"
+
+# Start the dashboard against whatever .env already says. No container, no seed.
+dev:
+    npm --prefix app run dev
+
+# Stop the local Mongo container started by `just run`.
+stop:
+    -docker stop "{{mongo_container}}"
 
 # Bootstrap everything and start the dashboard on http://localhost:3600.
 run:
@@ -25,17 +39,29 @@ run:
       cp .env app/.env
     fi
 
-    # 2. docker
+    # An EXISTING .env usually points at the shared remote database, and this
+    # recipe is built entirely around a local container: it would start Mongo,
+    # find it empty, and hand the seeder a remote URI that the seeder's safety
+    # guard correctly refuses — aborting the whole bootstrap at the last step.
+    # Say so now instead, and point at the recipe that skips the local stack.
+    if ! grep -qE '^MONGODB_URI=mongodb://(localhost|127\.0\.0\.1|mongo)(:[0-9]+)?/' .env; then
+      echo "✗ .env already points at a non-local MONGODB_URI." >&2
+      echo "  'just run' bootstraps a LOCAL Mongo container and will not seed over a remote database." >&2
+      echo "  Run 'just dev' to start the dashboard against your existing .env, or point MONGODB_URI" >&2
+      echo "  at mongodb://localhost:27017/gastos_gub to use the local fixture." >&2
+      exit 1
+    fi
+
+    # 2. docker — printed, not run. Installing system packages and changing
+    #    group membership on someone's machine is not a bootstrap script's call.
     if ! command -v docker >/dev/null 2>&1; then
-      echo "→ docker not found, installing (needs sudo)…"
+      echo "✗ docker not found. Install it, then re-run 'just run'." >&2
       if command -v apt-get >/dev/null 2>&1; then
-        sudo apt-get update -y && sudo apt-get install -y docker.io
-        sudo systemctl enable --now docker
-        sudo usermod -aG docker "$USER" || true
-      else
-        echo "✗ don't know how to install docker on this system — install it manually and re-run 'just run'." >&2
-        exit 1
+        echo "  sudo apt-get update -y && sudo apt-get install -y docker.io" >&2
+        echo "  sudo systemctl enable --now docker" >&2
+        echo "  sudo usermod -aG docker \"$USER\"   # then 'newgrp docker' or log out/in" >&2
       fi
+      exit 1
     fi
     if ! docker ps >/dev/null 2>&1; then
       echo "✗ docker is installed but not usable by $USER (permission denied)." >&2

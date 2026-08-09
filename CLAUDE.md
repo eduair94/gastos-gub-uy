@@ -56,6 +56,11 @@ OCDS feed ──► src/ (ingest) ──► MongoDB `releases` ──► src/job
 npm --prefix app run dev
 npm --prefix app run build          # prebuild enforces Node 18/20/22 + asset subsets
 
+# From a clean checkout with NO database (bash + docker; needs `just`)
+just run                            # local Mongo container + synthetic fixture + dev server
+just dev                            # dashboard only, against whatever .env already says
+npm run seed:dev                    # reseed the local fixture — WIPES releases; refuses a remote URI
+
 # Batch jobs (root) — `npm run` with no args lists them all
 npm run detect-anomalies            # price screening
 npm run reconcile-amendments        # fold gov corrections into base awards
