@@ -25,17 +25,35 @@ run:
       cp .env app/.env
     fi
 
+    # An .env that predates this bootstrap (or was pointed at a shared/remote
+    # database for other work) breaks the auto-seed step further down: dotenv's
+    # `config({ override: true })` (shared/config.ts) makes .env win over ANY
+    # shell env var, so there is no env-var workaround here — a non-local .env
+    # must be caught NOW, not left to crash scripts/seed-dev-db.ts's safety
+    # guard under `set -euo pipefail` with a confusing mid-run failure.
+    if ! grep -qE '^MONGODB_URI=mongodb://(localhost|127\.0\.0\.1|mongo)(:[0-9]+)?/' .env; then
+      echo "✗ .env's MONGODB_URI isn't the local dev container — refusing to auto-seed it." >&2
+      echo "  Point MONGODB_URI at mongodb://localhost:{{mongo_port}}/gastos_gub in .env (and app/.env)," >&2
+      echo "  or run the dashboard against that database yourself: npm --prefix app run dev" >&2
+      exit 1
+    fi
+
     # 2. docker
     if ! command -v docker >/dev/null 2>&1; then
-      echo "→ docker not found, installing (needs sudo)…"
-      if command -v apt-get >/dev/null 2>&1; then
-        sudo apt-get update -y && sudo apt-get install -y docker.io
-        sudo systemctl enable --now docker
-        sudo usermod -aG docker "$USER" || true
-      else
-        echo "✗ don't know how to install docker on this system — install it manually and re-run 'just run'." >&2
+      if ! command -v apt-get >/dev/null 2>&1; then
+        echo "✗ docker isn't installed and this isn't an apt system — install it manually and re-run 'just run'." >&2
         exit 1
       fi
+      echo "Docker isn't installed. This bootstrap needs it for the local dev database."
+      printf "Install it now with 'sudo apt-get install -y docker.io'? [y/N] "
+      read -r REPLY </dev/tty
+      case "$REPLY" in
+        y|Y) ;;
+        *) echo "✗ skipping — install Docker yourself and re-run 'just run'." >&2; exit 1 ;;
+      esac
+      sudo apt-get update -y && sudo apt-get install -y docker.io
+      sudo systemctl enable --now docker
+      sudo usermod -aG docker "$USER" || true
     fi
     if ! docker ps >/dev/null 2>&1; then
       echo "✗ docker is installed but not usable by $USER (permission denied)." >&2

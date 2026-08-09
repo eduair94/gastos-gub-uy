@@ -385,13 +385,18 @@ async function seedSupplierContacts() {
   console.log(`[seed-dev-db] done: ${docs.length} supplier_contacts.`)
 }
 
+const failedJobs: string[] = []
 function runJob(npmScript: string) {
   console.log(`\n[seed-dev-db] npm run ${npmScript}`)
   try {
-    execFileSync('npm', ['run', npmScript], { stdio: 'inherit', cwd: __dirname + '/..' })
+    // `shell: true` (not a bare `execFileSync('npm', ...)`) so this also finds
+    // `npm.cmd` on Windows — execFileSync bypasses the shell by default and
+    // looks for a literal `npm`, which ENOENTs there.
+    execFileSync('npm', ['run', npmScript], { stdio: 'inherit', cwd: __dirname + '/..', shell: true })
   }
   catch (err) {
-    console.warn(`[seed-dev-db] "${npmScript}" failed — continuing (dev fixture, not fatal). ${(err as Error).message}`)
+    console.warn(`[seed-dev-db] "${npmScript}" failed: ${(err as Error).message}`)
+    failedJobs.push(npmScript)
   }
 }
 
@@ -417,6 +422,9 @@ async function main() {
   runJob('refresh-contacts') // organism procurement contacts (/contactos)
   runJob('populate-filters')
 
+  if (failedJobs.length) {
+    throw new Error(`${failedJobs.length} job(s) failed, fixture is incomplete: ${failedJobs.join(', ')}`)
+  }
   console.log('\n[seed-dev-db] Fixture ready. Start the dashboard with: npm --prefix app run dev')
 }
 

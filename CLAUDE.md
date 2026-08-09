@@ -52,7 +52,30 @@ OCDS feed ──► src/ (ingest) ──► MongoDB `releases` ──► src/job
 ## Commands
 
 ```bash
-# Dashboard (dev, http://localhost:3600)
+# Fresh checkout → working dashboard with synthetic data, one command (needs `just`:
+# https://just.systems/install.sh). Bootstraps .env, Docker, a local Mongo container,
+# seeds it if empty (scripts/seed-dev-db.ts), starts the dashboard. Ctrl+C stops both.
+#
+# LINUX: just this.
+just run
+#
+# WINDOWS: the Justfile's `run` recipe is a bash script that auto-installs
+# Docker via `apt-get` when missing — that step is Linux-only. It needs:
+#   1. A bash-capable shell: Git Bash or WSL (`just`'s recipe shebang is
+#      `#!/usr/bin/env bash`; it won't run under plain cmd.exe/PowerShell).
+#   2. Docker Desktop installed yourself (https://docs.docker.com/desktop/setup/install/windows-install/),
+#      with WSL/Git Bash integration enabled so `docker` is on PATH there —
+#      that makes the (Linux-only) auto-install step a no-op since `docker`
+#      already exists.
+#   With both in place, `just run` from that shell works exactly as on Linux —
+#   everything past the Docker check (Mongo container, seeding, `npm --prefix
+#   app run dev`) is plain cross-platform Node/Docker.
+#   3. No `just`/bash available at all? Do the same steps `run` does by hand:
+#      create `.env`/`app/.env` (see below), `docker run -d --name gastos-gub-mongo
+#      -p 27017:27017 -v gastos-gub-mongo-data:/data/db mongo:7`, `npm run seed:dev`,
+#      then `npm --prefix app run dev`.
+
+# Dashboard (dev, http://localhost:3600) — once Mongo + .env already exist
 npm --prefix app run dev
 npm --prefix app run build          # prebuild enforces Node 18/20/22 + asset subsets
 
@@ -87,6 +110,11 @@ npm run screenshots
 - **UI:** gold = money, one logarithmic magnitude scale site-wide, es/en via i18n. The full contract is
   [app/DESIGN.md](app/DESIGN.md) — binding, not advisory.
 - **File references in Markdown** use relative links so they stay clickable.
+- **Commit subject line** (first line of the commit message — becomes the PR title, since a PR here is
+  one commit) follows `type(scope): description` — `fix`/`feat`/`chore`/`refactor`/`docs`, a lowercase
+  kebab scope naming the area touched (`ui`, `a11y`, `contracts`, `anomalies`, `dev`, …), lowercase
+  imperative description, no trailing period. E.g. `fix(contracts): open document links on the official
+  page, not the raw file`, `feat(analytics): explain why yearly spending moved`.
 
 ## Traps that cost a cycle
 
