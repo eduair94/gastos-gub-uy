@@ -5,33 +5,48 @@
   },
   "nav": {
     "skip": "Skip to content",
-    "home": "Dashboard",
+    "home": "Home",
     "gastos": "Spending",
     "blog": "Weekly briefing",
-    "recopilatorios": "Compilations",
+    "recopilatorios": "Spending by event",
     "pauta": "State advertising",
     "contracts": "Contracts",
     "products": "Products",
     "suppliers": "Suppliers",
-    "contactos": "Provider contacts",
-    "contactosCompras": "Purchasing contacts",
+    "contactosProveedores": "Provider contacts",
+    "contactosCompras": "Agency contacts",
     "buyers": "Agencies",
     "anomalies": "Flags",
-    "unexplained": "Unexplained",
+    "unexplained": "Unexplained alerts",
     "providerAnomalies": "Flagged suppliers",
-    "providerLoadErrors": "Recurring errors",
+    "providerLoadErrors": "Suppliers with errors",
     "intendencias": "Intendencias",
     "partidos": "Procurement by party",
     "evolucion": "Spending over time",
-    "organismos": "Spending by body",
-    "mapa": "Spending map",
-    "anticipacion": "Anticipation",
+    "organismos": "Spending by agency",
+    "mapa": "Spending blocks",
+    "anticipacion": "Upcoming tenders",
     "estadisticas": "Statistics",
     "investigaciones": "Investigations",
     "tvciudad": "TV Ciudad",
     "llamados": "Open calls",
-    "comparativa": "Comparison",
+    "comparativa": "Alert services compared",
     "more": "More",
+    "explorar": "Explore",
+    "senales": "What to check",
+    "directorio": "Contacts",
+    "recursos": "Help",
+    "rss": "Alerts RSS",
+    "grp": {
+      "registros": "Records",
+      "anomalias": "Anomalies",
+      "radiografia": "Spending X-ray",
+      "tendencias": "Trends",
+      "casos": "Cases",
+      "series": "Series",
+      "contactos": "Contacts",
+      "ayuda": "Help and API"
+    },
     "login": "Sign in",
     "account": "My account",
     "about": "How it works",
@@ -46,10 +61,9 @@
     "sections": "Sections",
     "curros": "Cases",
     "notifications": "Notifications",
-    "analisis": "Analysis",
     "viewAll": "View all",
     "erroresCarga": "Data-load errors",
-    "comoReportar": "How to report",
+    "comoReportar": "Report an error",
     "invCasinos": "State casinos",
     "invCasinosCortesia": "Casino: comps",
     "invIm": "Montevideo City Hall",
@@ -369,7 +383,7 @@
     "sourceNote": "Source: Compras Estatales open data (OCDS). The median replaces the total (a few records with impossible quantities break any sum). Spending by type covers the AI-categorized suppliers."
   },
   "mapa": {
-    "title": "The public spending map",
+    "title": "Public spending in blocks",
     "lead": "Everything the state spends, dimensioned: each body is a rectangle, its size is what it spent. Grouped by type of body.",
     "all": "All",
     "totalLabel": "On the map:",
@@ -1403,7 +1417,7 @@
         "dek": "Subscribe to new flags or build a feed by category, buyer and preferences."
       },
       "unexplained": {
-        "title": "Unexplained",
+        "title": "Unexplained alerts",
         "dek": "The flags not even the AI review could justify. The strongest signal."
       },
       "erroresCarga": {
@@ -1415,7 +1429,7 @@
         "dek": "Which providers and buyers concentrate the unexplained flags."
       },
       "providerLoadErrors": {
-        "title": "Recurring errors",
+        "title": "Suppliers with errors",
         "dek": "Which providers and agencies repeat the same data-load errors."
       },
       "evolucion": {
@@ -1431,15 +1445,27 @@
         "dek": "How much each type of state agency spends."
       },
       "mapa": {
-        "title": "Spending map",
+        "title": "Spending blocks",
         "dek": "A treemap of all spending, each agency sized by what it spends."
       },
       "estadisticas": {
         "title": "Statistics",
         "dek": "The spending figures: how much, on what, to whom."
       },
+        "partidos": {
+          "title": "Purchases by party",
+          "dek": "Departmental spending alongside the party governing each year. This is record context, not an attribution of the spending."
+        },
+        "anticipacion": {
+          "title": "Upcoming tenders",
+          "dek": "When each agency is likely to publish its next tender, estimated from its own purchasing cadence. An estimate, never an announcement."
+        },
+        "pauta": {
+          "title": "State advertising",
+          "dek": "How much the state spends on advertising and which suppliers it is recorded through."
+        },
       "comoReportar": {
-        "title": "How to report",
+        "title": "Report an error",
         "dek": "The guide to take a load error to whoever can correct it."
       }
     }
@@ -2577,7 +2603,7 @@
     "needEvent": "Choose at least one event."
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "My dashboard",
     "welcome": "Hi",
     "myAlerts": "My alerts",
     "upcoming": "Upcoming deadlines",

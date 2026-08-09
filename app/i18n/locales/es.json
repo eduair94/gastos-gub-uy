@@ -5,33 +5,48 @@
   },
   "nav": {
     "skip": "Ir al contenido",
-    "home": "Panel",
+    "home": "Inicio",
     "gastos": "Gastos",
     "blog": "Resumen semanal",
-    "recopilatorios": "Recopilatorios",
+    "recopilatorios": "Gasto por evento",
     "pauta": "Pauta oficial",
     "contracts": "Contratos",
     "products": "Productos",
     "suppliers": "Proveedores",
-    "contactos": "Contactos de proveedores",
-    "contactosCompras": "Contactos de compras",
+    "contactosProveedores": "Contactos de proveedores",
+    "contactosCompras": "Contactos de organismos",
     "buyers": "Organismos",
     "anomalies": "Alertas",
-    "unexplained": "Sin explicación",
+    "unexplained": "Alertas sin explicar",
     "providerAnomalies": "Proveedores señalados",
-    "providerLoadErrors": "Errores recurrentes",
+    "providerLoadErrors": "Proveedores con errores",
     "intendencias": "Intendencias",
     "partidos": "Compras por partido",
     "evolucion": "Evolución del gasto",
     "organismos": "Gasto por organismo",
-    "mapa": "Mapa del gasto",
-    "anticipacion": "Anticipación",
+    "mapa": "Bloques del gasto",
+    "anticipacion": "Próximos llamados",
     "estadisticas": "Estadísticas",
     "investigaciones": "Investigaciones",
     "tvciudad": "TV Ciudad",
     "llamados": "Llamados",
-    "comparativa": "Comparativa",
+    "comparativa": "Comparativa de alertas",
     "more": "Más",
+    "explorar": "Explorar",
+    "senales": "Qué revisar",
+    "directorio": "Contactos",
+    "recursos": "Ayuda",
+    "rss": "RSS de alertas",
+    "grp": {
+      "registros": "Registros",
+      "anomalias": "Anomalías",
+      "radiografia": "Radiografía del gasto",
+      "tendencias": "Tendencias",
+      "casos": "Casos",
+      "series": "Series",
+      "contactos": "Contactos",
+      "ayuda": "Ayuda y API"
+    },
     "login": "Ingresar",
     "account": "Mi cuenta",
     "about": "Cómo funciona",
@@ -46,10 +61,9 @@
     "sections": "Secciones",
     "curros": "Curros",
     "notifications": "Notificaciones",
-    "analisis": "Análisis",
     "viewAll": "Ver todo",
     "erroresCarga": "Errores de carga",
-    "comoReportar": "Cómo reportar",
+    "comoReportar": "Reportar un error",
     "invCasinos": "Casinos del Estado",
     "invCasinosCortesia": "Casino: cortesía",
     "invIm": "Intendencia de Montevideo",
@@ -369,7 +383,7 @@
     "sourceNote": "Fuente: datos abiertos de Compras Estatales (OCDS). La mediana reemplaza al total (unos pocos registros con cantidades imposibles rompen cualquier suma). El gasto por tipo cubre los proveedores ya categorizados por IA."
   },
   "mapa": {
-    "title": "El mapa del gasto público",
+    "title": "El gasto público en bloques",
     "lead": "Todo lo que gasta el Estado, dimensionado: cada organismo es un rectángulo y su tamaño es lo que gastó. Agrupado por tipo de organismo.",
     "all": "Todos",
     "totalLabel": "En el mapa:",
@@ -1404,7 +1418,7 @@
         "dek": "Suscribite a las alertas nuevas o armá un feed por rubro, organismo y preferencias."
       },
       "unexplained": {
-        "title": "Sin explicación",
+        "title": "Alertas sin explicar",
         "dek": "Las alertas que ni la revisión con IA pudo justificar. La señal más fuerte."
       },
       "erroresCarga": {
@@ -1416,7 +1430,7 @@
         "dek": "Qué proveedores y compradores concentran las alertas sin explicación."
       },
       "providerLoadErrors": {
-        "title": "Errores recurrentes",
+        "title": "Proveedores con errores",
         "dek": "Qué proveedores y organismos repiten los mismos errores de carga."
       },
       "evolucion": {
@@ -1432,15 +1446,27 @@
         "dek": "Cuánto gasta cada tipo de organismo del Estado."
       },
       "mapa": {
-        "title": "Mapa del gasto",
+        "title": "Bloques del gasto",
         "dek": "Un treemap de todo el gasto, cada organismo dimensionado por lo que gasta."
       },
       "estadisticas": {
         "title": "Estadísticas",
         "dek": "Las cifras del gasto: cuánto, en qué, a quién."
       },
+        "partidos": {
+          "title": "Compras por partido",
+          "dek": "Gasto departamental cruzado con el partido que gobernaba cada año. Es contexto temporal del registro, no una atribución del gasto."
+        },
+        "anticipacion": {
+          "title": "Próximos llamados",
+          "dek": "Cuándo es probable que cada organismo publique su próximo llamado, estimado a partir de su propia cadencia de compra. Es una estimación, nunca un anuncio."
+        },
+        "pauta": {
+          "title": "Pauta oficial",
+          "dek": "Cuánto gasta el Estado en publicidad y a través de qué proveedores aparece registrado."
+        },
       "comoReportar": {
-        "title": "Cómo reportar",
+        "title": "Reportar un error",
         "dek": "La guía para llevar un error de carga a quien puede corregirlo."
       }
     }
@@ -2578,7 +2604,7 @@
     "needEvent": "Elegí al menos un evento."
   },
   "dashboard": {
-    "title": "Panel",
+    "title": "Mi panel",
     "welcome": "Hola",
     "myAlerts": "Mis alertas",
     "upcoming": "Cierres próximos",

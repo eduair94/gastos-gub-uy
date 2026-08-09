@@ -26,19 +26,48 @@ const counts = computed<Record<string, number | null>>(() => ({
   erroresCarga: cargaRes.value?.data?.pagination?.total ?? null,
 }))
 
-const cards = computed(() => [
-  { key: 'alertas', to: '/analytics/anomalies', icon: 'mdi-flag-outline', emoji: '🚩' },
-  { key: 'rss', to: '/analytics/rss-anomalias', icon: 'mdi-flag-outline', emoji: '📡' },
-  { key: 'unexplained', to: '/analytics/unexplained', icon: 'mdi-help-rhombus-outline', emoji: '🔎' },
-  { key: 'erroresCarga', to: '/analytics/errores-carga', icon: 'mdi-database-alert-outline', emoji: '🧾', feature: true },
-  { key: 'providerAnomalies', to: '/analytics/proveedores-anomalias', icon: 'mdi-account-alert-outline', emoji: '🏢' },
-  { key: 'providerLoadErrors', to: '/analytics/proveedores-errores-carga', icon: 'mdi-clipboard-alert-outline', emoji: '🧮' },
-  { key: 'evolucion', to: '/analytics/evolucion-gasto', icon: 'mdi-chart-timeline-variant', emoji: '📈', feature: true },
-  { key: 'intendencias', to: '/analytics/intendencias', icon: 'mdi-city-variant-outline', emoji: '🏙️' },
-  { key: 'organismos', to: '/analytics/organismos', icon: 'mdi-finance', emoji: '🏛️' },
-  { key: 'mapa', to: '/analytics/mapa', icon: 'mdi-view-grid-outline', emoji: '🗺️' },
-  { key: 'estadisticas', to: '/estadisticas', icon: 'mdi-chart-box-outline', emoji: '📊' },
-])
+// The hub and the top bar render the SAME tree (utils/nav.ts → "Señales"), in the
+// same three sections. They used to declare their own lists and drifted: the bar
+// carried partidos/anticipacion this page never showed, and this page carried
+// rss/estadisticas the bar's dropdown didn't. Adding a tool in one place now
+// adds it in both, and the reader meets one grouping wherever they enter.
+const CARD_EMOJI: Record<string, string> = {
+  anomalies: '🚩',
+  rss: '📡',
+  unexplained: '🔎',
+  erroresCarga: '🧾',
+  providerAnomalies: '🏢',
+  providerLoadErrors: '🧮',
+  organismos: '🏛️',
+  intendencias: '🏙️',
+  mapa: '🗺️',
+  partidos: '🗳️',
+  pauta: '📣',
+  evolucion: '📈',
+  estadisticas: '📊',
+  anticipacion: '🔮',
+}
+/** The two surfaces worth a double-width card. */
+const FEATURED = new Set(['erroresCarga', 'evolucion'])
+/** This page's copy predates the nav keys: `anomalies` is filed here as `alertas`. */
+const COPY_KEY: Record<string, string> = { anomalies: 'alertas' }
+
+const sections = computed(() => {
+  const senales = buildNav(localePath).find(n => n.key === 'senales')
+  return (senales?.sections ?? []).map(s => ({
+    key: s.key,
+    items: s.items.map(c => ({
+      key: c.key,
+      copyKey: COPY_KEY[c.key] ?? c.key,
+      // Already locale-prefixed by buildNav — do not localePath() it again.
+      to: c.to,
+      emoji: CARD_EMOJI[c.key] ?? '📊',
+      feature: FEATURED.has(c.key),
+    })),
+  }))
+})
+
+const cards = computed(() => sections.value.flatMap(s => s.items))
 
 const orgLd = useOrgLd()
 
@@ -60,7 +89,7 @@ useSeo(() => ({
       'itemListElement': cards.value.map((c, i) => ({
         '@type': 'ListItem',
         'position': i + 1,
-        'name': t(`analyticsHub.cards.${c.key}.title`),
+        'name': t(`analyticsHub.cards.${c.copyKey}.title`),
         'url': `${siteUrl}${c.to}`,
       })),
     },
@@ -85,30 +114,39 @@ useSeo(() => ({
 
     <section class="hub-sec">
       <div class="u-container">
-        <div class="hub-cards">
-          <NuxtLink
-            v-for="c in cards"
-            :key="c.key"
-            :to="localePath(c.to)"
-            class="hub-card"
-            :class="{ 'hub-card--feature': c.feature }"
-          >
-            <div class="hub-card__top">
-              <span class="hub-card__emoji">{{ c.emoji }}</span>
-              <span
-                v-if="counts[c.key] != null"
-                class="hub-card__count u-mono"
-              >{{ formatNumber(counts[c.key]!) }}</span>
-            </div>
-            <h3 class="hub-card__title">
-              {{ t(`analyticsHub.cards.${c.key}.title`) }}
-            </h3>
-            <p class="hub-card__dek">
-              {{ t(`analyticsHub.cards.${c.key}.dek`) }}
-            </p>
-            <span class="hub-card__cta">{{ t('common.viewDetail') }} →</span>
-          </NuxtLink>
-        </div>
+        <section
+          v-for="s in sections"
+          :key="s.key"
+          class="hub-group"
+        >
+          <h2 class="hub-group__head">
+            {{ t(`nav.grp.${s.key}`) }}
+          </h2>
+          <div class="hub-cards">
+            <NuxtLink
+              v-for="c in s.items"
+              :key="c.key"
+              :to="c.to"
+              class="hub-card"
+              :class="{ 'hub-card--feature': c.feature }"
+            >
+              <div class="hub-card__top">
+                <span class="hub-card__emoji">{{ c.emoji }}</span>
+                <span
+                  v-if="counts[c.key] != null"
+                  class="hub-card__count u-mono"
+                >{{ formatNumber(counts[c.key]!) }}</span>
+              </div>
+              <h3 class="hub-card__title">
+                {{ t(`analyticsHub.cards.${c.copyKey}.title`) }}
+              </h3>
+              <p class="hub-card__dek">
+                {{ t(`analyticsHub.cards.${c.copyKey}.dek`) }}
+              </p>
+              <span class="hub-card__cta">{{ t('common.viewDetail') }} →</span>
+            </NuxtLink>
+          </div>
+        </section>
 
         <!-- The report guide sits apart: it's a how-to, not a data surface. -->
         <NuxtLink
@@ -170,6 +208,20 @@ useSeo(() => ({
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--s-4);
+}
+
+/* The three groups mirror the "Señales" menu, so a reader who arrives from the
+   top bar meets the same grouping here rather than one flat wall of tools. */
+.hub-group + .hub-group { margin-top: var(--s-7); }
+
+.hub-group__head {
+  margin-bottom: var(--s-3);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .hub-card {
