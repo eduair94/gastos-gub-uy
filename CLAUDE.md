@@ -52,7 +52,12 @@ OCDS feed ──► src/ (ingest) ──► MongoDB `releases` ──► src/job
 ## Commands
 
 ```bash
-# Dashboard (dev, http://localhost:3600)
+# Fresh checkout → working dashboard with synthetic data, one command (needs `just`:
+# https://just.systems/install.sh). Bootstraps .env, Docker, a local Mongo container,
+# seeds it if empty (scripts/seed-dev-db.ts), starts the dashboard. Ctrl+C stops both.
+just run
+
+# Dashboard (dev, http://localhost:3600) — once Mongo + .env already exist
 npm --prefix app run dev
 npm --prefix app run build          # prebuild enforces Node 18/20/22 + asset subsets
 
@@ -87,6 +92,11 @@ npm run screenshots
 - **UI:** gold = money, one logarithmic magnitude scale site-wide, es/en via i18n. The full contract is
   [app/DESIGN.md](app/DESIGN.md) — binding, not advisory.
 - **File references in Markdown** use relative links so they stay clickable.
+- **Commit subject line** (first line of the commit message — becomes the PR title, since a PR here is
+  one commit) follows `type(scope): description` — `fix`/`feat`/`chore`/`refactor`/`docs`, a lowercase
+  kebab scope naming the area touched (`ui`, `a11y`, `contracts`, `anomalies`, `dev`, …), lowercase
+  imperative description, no trailing period. E.g. `fix(contracts): open document links on the official
+  page, not the raw file`, `feat(analytics): explain why yearly spending moved`.
 
 ## Traps that cost a cycle
 

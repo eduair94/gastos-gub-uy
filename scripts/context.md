@@ -1,12 +1,13 @@
 # scripts/ — operational and build scripts
 
-The repo's one-shot CLI drawer: index migrations, DB export/import, the production deploy driver, generated-asset builders wired into the Nuxt `prebuild`, and live-feed diagnostics. **Recurring/scheduled work does NOT live here** — it lives in `../src/jobs/` and is scheduled by `../src/cronserver.ts`. 23 files, flat, no subdirectories; 11 have an npm alias in the root `package.json`, the rest are run with `npx tsx scripts/<f>.ts`. Nothing here is typechecked by `npm run build` (root `tsconfig.json` includes only `src/**/*` and `shared/**/*`).
+The repo's one-shot CLI drawer: index migrations, DB export/import, the production deploy driver, generated-asset builders wired into the Nuxt `prebuild`, and live-feed diagnostics. **Recurring/scheduled work does NOT live here** — it lives in `../src/jobs/` and is scheduled by `../src/cronserver.ts`. 24 files, flat, no subdirectories; 12 have an npm alias in the root `package.json`, the rest are run with `npx tsx scripts/<f>.ts`. Nothing here is typechecked by `npm run build` (root `tsconfig.json` includes only `src/**/*` and `shared/**/*`).
 
 ## Map
 
 | Path | Purpose |
 | --- | --- |
 | [ensure-indexes.ts](ensure-indexes.ts) | **The single source of truth for every index in the system** (Mongoose `autoIndex` is off). `INDEX_SPECS` for `releases` at :45–152 (each with a `rationale`), side-collection `createIndex` calls at :364+. Always `{background:true}`, skips existing, NEVER drops (redundant ones only reported). Raw `mongodb` MongoClient, not mongoose. |
+| [seed-dev-db.ts](seed-dev-db.ts) | `npm run seed:dev`. Local-only dev fixture: wipes `releases` + `supplier_contacts` and regenerates a seeded-PRNG synthetic dataset (19 Intendencias + ministries + health/entes/education buyers, `shared/organism-groups.ts` ids, 8 years), then chains the real jobs (`ensure-indexes` → `refresh-analytics` → `detect-anomalies` → `refresh-dept-indicators` → `refresh-organism-groups` → `refresh-product-analytics` → `backfill-open-calls` → `refresh-contacts` → `populate-filters`) so derived collections come from production logic, not reimplemented here. Refuses to run unless `MONGODB_URI` is `localhost`/`127.0.0.1`/`mongo`. Normally invoked via `just run` (repo-root `Justfile`), which also bootstraps `.env`/Docker/the local Mongo container and only re-seeds an empty database. |
 | [deploy-dashboard.mjs](deploy-dashboard.mjs) | The production deploy. Lockfile mutex → supported Node → staged build → merge old hashed chunks/assets → smoke-boot → atomic swap → pm2 rolling reload → health check → auto-rollback. Production runs two cluster workers, so deploys do not intentionally stop the site. |
 | [check-node.mjs](check-node.mjs) | 11 lines. Hard-fails on Node `<18` or `>=23` (Nuxt 3.x unsupported; Node ≥23 was the 2026-07-18 outage trigger). Run automatically by `app` `prebuild`. |
 | [build-mdi-subset.mjs](build-mdi-subset.mjs) | Scans `app/` for `mdi-*` literals + Vuetify's internal aliases, emits `app/assets/fonts/mdi-subset.woff2` (:37) + `app/assets/scss/mdi-subset.scss` (:38). Both COMMITTED. `--check` (:43) fails when an icon used in source is absent from the committed subset. |
@@ -33,6 +34,12 @@ The repo's one-shot CLI drawer: index migrations, DB export/import, the producti
 ## Entry points / how to run
 
 ```bash
+# Local dev bootstrap (fresh checkout → working dashboard, one command)
+just run                                        # see repo-root Justfile
+npm run seed:dev                                # just the fixture + job chain, Mongo already up
+npm run seed:dev -- --releases-only             # skip the derived-data job chain
+npm run seed:dev -- --seed=42                   # different pseudo-random fixture
+
 # Indexes (run this after adding any new lead-field query anywhere)
 npx tsx scripts/ensure-indexes.ts --dry-run     # print the plan, touch nothing
 npm run ensure-indexes                          # build in background
@@ -103,6 +110,7 @@ node scripts/capture-screenshots.mjs --base http://localhost:3600 --out /tmp/sho
 - **`build-og-image.mjs` needs a real Chrome** on the box (`CHROME_PATH` or its hardcoded probe list) — it will not run in a bare container. **`capture-screenshots.mjs` needs an ad-hoc Playwright install** and defaults to the LIVE site, not localhost.
 - **Dead/legacy, do not extend**: `populate-anomalies.ts` (0 bytes), `create-supplier-id-index.ts` (redundant with `ensure-indexes.ts`), `check-specific-entry.ts` + `explain-query-logic.ts` (both hardcode the same ObjectId `6894e567fbc85dc56ba8c864`).
 - **Shared working tree**: multiple agent sessions share one checkout. Check the branch first, stage explicit paths, never `git add -A`.
+- **`seed-dev-db.ts` inherits the `.env` override trap above** — if `.env` already exists and points at a non-local database (a checkout reused for other work), the safety guard refuses to run rather than wipe it, and there is no env-var workaround (dotenv's `override: true` beats it). `just run` checks this *before* touching Docker/Mongo so the failure is a clear one-liner, not a `set -euo pipefail` abort mid-bootstrap.
 
 ## Related
 
