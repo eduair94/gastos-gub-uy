@@ -38,7 +38,11 @@ useSeo(() => ({
 </script>
 
 <template>
-  <v-container class="report-page">
+  <!-- `u-container` is what aligns the page with the header and every other
+       page (max-width --container, centred, the site's padding-inline). A bare
+       v-container left this page flush against the viewport edge with dead
+       space on the right — it was the only page in the repo missing it. -->
+  <v-container class="report-page u-container">
     <v-btn
       :to="localePath('/analytics/errores-carga')"
       class="report-back"

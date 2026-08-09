@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useTheme } from 'vuetify'
+import type { NavNode } from '~/utils/nav'
 
 // `<component :is="'NuxtLink'">` does NOT resolve a string to a globally
 // registered component — it emits a literal <nuxtlink> element with no
@@ -24,78 +25,43 @@ watch(() => route.query.search, (q) => {
   search.value = typeof q === 'string' ? q : ''
 }, { immediate: true })
 
-const nav = computed(() => [
-  { key: 'home', to: localePath('/'), icon: 'mdi-view-dashboard-outline' },
-  { key: 'gastos', to: localePath('/gastos'), icon: 'mdi-cash-multiple' },
-  { key: 'blog', to: localePath('/blog'), icon: 'mdi-file-document-outline' },
-  // The two dropdowns lead the bar (right after Panel/Gastos) so they stay visible
-  // rather than folding into "Más": this site's whole point is the anomaly detection
-  // and the investigations, and a dropdown hidden in the overflow defeats its purpose.
-  //
-  // Análisis: the whole alert/analysis family under one dropdown (parent → /analytics
-  // hub). Collapsing these six flat entries is what stops the bar overflowing.
-  // startsWith isActive highlights the parent on any child.
-  { key: 'analisis', to: localePath('/analytics'), icon: 'mdi-chart-box-outline', children: [
-    { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
-    { key: 'unexplained', to: localePath('/analytics/unexplained'), icon: 'mdi-help-rhombus-outline' },
-    { key: 'erroresCarga', to: localePath('/analytics/errores-carga'), icon: 'mdi-database-alert-outline' },
-    { key: 'providerAnomalies', to: localePath('/analytics/proveedores-anomalias'), icon: 'mdi-account-alert-outline' },
-    { key: 'providerLoadErrors', to: localePath('/analytics/proveedores-errores-carga'), icon: 'mdi-clipboard-alert-outline' },
-    { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
-    { key: 'partidos', to: localePath('/analytics/partidos'), icon: 'mdi-vote-outline' },
-    { key: 'evolucion', to: localePath('/analytics/evolucion-gasto'), icon: 'mdi-chart-timeline-variant' },
-    { key: 'organismos', to: localePath('/analytics/organismos'), icon: 'mdi-finance' },
-    { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
-    { key: 'anticipacion', to: localePath('/analytics/anticipacion'), icon: 'mdi-crystal-ball' },
-  ] },
-  // Investigaciones: every investigation reachable directly, without first visiting
-  // the hub — TV Ciudad no longer folds into the overflow. Parent → /investigaciones.
-  { key: 'investigaciones', to: localePath('/investigaciones'), icon: 'mdi-magnify-scan', children: [
-    { key: 'tvciudad', to: localePath('/investigaciones/tv-ciudad'), icon: 'mdi-television-classic' },
-    { key: 'invCasinos', to: localePath('/investigaciones/casinos'), icon: 'mdi-slot-machine-outline' },
-    { key: 'invCasinosCortesia', to: localePath('/investigaciones/casinos-cortesia'), icon: 'mdi-cards-playing-outline' },
-    { key: 'invIm', to: localePath('/investigaciones/intendencia-montevideo'), icon: 'mdi-city-variant-outline' },
-    { key: 'invEmpresas', to: localePath('/investigaciones/empresas-senaladas'), icon: 'mdi-domain-off' },
-    { key: 'invAsse', to: localePath('/investigaciones/asse-ambulancias'), icon: 'mdi-ambulance' },
-    { key: 'invSaturno', to: localePath('/investigaciones/frigorifico-saturno'), icon: 'mdi-cow' },
-  ] },
-  { key: 'contracts', to: localePath('/contracts'), icon: 'mdi-file-document-outline' },
-  { key: 'suppliers', to: localePath('/suppliers'), icon: 'mdi-domain' },
-  { key: 'contactos', to: localePath('/proveedores/contactos'), icon: 'mdi-email-outline' },
-  { key: 'contactosCompras', to: localePath('/contactos'), icon: 'mdi-card-account-details-outline' },
-  { key: 'buyers', to: localePath('/buyers'), icon: 'mdi-bank-outline' },
-  { key: 'products', to: localePath('/products'), icon: 'mdi-package-variant-closed' },
-  { key: 'recopilatorios', to: localePath('/recopilatorios'), icon: 'mdi-folder-star-outline' },
-  { key: 'pauta', to: localePath('/pauta'), icon: 'mdi-bullhorn-variant-outline' },
-  { key: 'estadisticas', to: localePath('/estadisticas'), icon: 'mdi-chart-box-outline' },
-  { key: 'curros', to: localePath('/curros'), icon: 'mdi-scale-balance' },
-  { key: 'llamados', to: localePath('/llamados'), icon: 'mdi-bullhorn-outline' },
-  { key: 'comparativa', to: localePath('/comparativa'), icon: 'mdi-compare' },
-  // Developer platform front door (a real Nuxt page): quickstart + how to integrate,
-  // which then links onward to /docs. Kept next to `docs` so the overflow menu folds
-  // the API family together.
-  { key: 'developers', to: localePath('/developers'), icon: 'mdi-code-tags' },
-  // The API reference is a Nitro server route (server/routes/docs.get.ts), not a Nuxt page, so it
-  // must be a real anchor: vue-router resolves /docs to zero matched routes and throws its own 404
-  // without ever issuing a request. It would still work when pasted into the address bar, which
-  // makes the broken in-app case easy to miss. Not localePath'd — the page is served in one form.
-  { key: 'docs', to: '/docs', icon: 'mdi-api', external: true },
-])
+const nav = computed(() => buildNav(localePath))
 
-function isActive(to: string) {
+// `to` is optional on a NavNode: the grouping-only menus (Explorar, Contactos,
+// Ayuda) have no hub page of their own, so every caller may hand us undefined.
+function isActive(to?: string) {
+  if (!to) return false
   if (to === localePath('/')) return route.path === to
   return route.path.startsWith(to)
 }
 
-// A dropdown parent (Análisis, Investigaciones). Its children live under the parent
-// route (/analytics/*, /investigaciones/*), so startsWith isActive already reports
-// the group as active on any child — no need to scan the children.
-interface NavItem { key: string, to: string, icon: string, external?: boolean, children?: NavItem[] }
-function hasChildren(n: NavItem): boolean {
-  return Array.isArray(n.children) && n.children.length > 0
+// A dropdown parent. Unlike the old Análisis/Investigaciones pair, a group's
+// leaves no longer all live under its own route — "Señales" carries /pauta and
+// /estadisticas, and "Explorar"/"Directorio"/"Recursos" have no hub route at
+// all — so the active state scans the leaves instead of trusting a startsWith
+// over the parent path.
+function hasChildren(n: NavNode): boolean {
+  return hasNavChildren(n)
 }
-function groupActive(n: NavItem): boolean {
-  return isActive(n.to) || (n.children?.some(c => isActive(c.to)) ?? false)
+// Does ANY menu list the current route as one of its own leaves? A hub's
+// startsWith would otherwise also claim routes that now live in a different
+// menu: /analytics/como-reportar moved to Ayuda, but Qué revisar's hub is
+// /analytics, so both lit up at once.
+const routeOwnedByALeaf = computed(() =>
+  nav.value.some(n => navLeaves(n).some(c => !c.external && isActive(c.to))),
+)
+function groupActive(n: NavNode): boolean {
+  if (n.external) return false
+  // A leaf of THIS menu owning the route always wins.
+  if (navLeaves(n).some(c => !c.external && isActive(c.to))) return true
+  // Otherwise fall back to the hub's prefix, unless some other menu owns the
+  // route outright.
+  return !routeOwnedByALeaf.value && isActive(n.to)
+}
+// A heading over a lone section is noise: only the multi-section menus
+// (Señales, Investigaciones) show them.
+function showSectionHeads(n: NavNode): boolean {
+  return (n.sections?.length ?? 0) > 1
 }
 
 // Theme is a preference, so it survives reloads. First visit follows the
@@ -162,7 +128,7 @@ watch(() => route.fullPath, () => {
 })
 
 // ---- Priority overflow nav ----
-// The bar carries nine sections plus a brand, a search box and the
+// The bar carries seven sections plus a brand, a search box and the
 // account controls; on a laptop the Spanish labels overrun the 1400px
 // container and push the whole page into horizontal scroll. Rather than
 // hide the search or fall back to the hamburger on every laptop, measure
@@ -309,8 +275,9 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             v-for="n in visibleNav"
             :key="n.key"
           >
-            <!-- Grouped section (Análisis, Investigaciones): a hover/click dropdown.
-                 The parent's own route (the hub) leads the list, then the children. -->
+            <!-- Grouped section (Explorar, Qué revisar, Investigaciones, Contactos,
+                 Ayuda): a hover/click dropdown. When the group owns a hub route it
+                 leads the list, then the sections. -->
             <v-menu
               v-if="hasChildren(n)"
               open-on-hover
@@ -331,23 +298,39 @@ watch([locale, user], () => nextTick(scheduleRecompute))
               <v-list
                 class="navmenu"
                 density="compact"
-                min-width="230"
+                min-width="248"
               >
-                <v-list-item
-                  :to="n.to"
-                  :prepend-icon="n.icon"
-                  :title="t('nav.viewAll')"
-                  :active="isActive(n.to)"
-                />
-                <v-divider />
-                <v-list-item
-                  v-for="c in n.children"
-                  :key="c.key"
-                  :to="c.to"
-                  :prepend-icon="c.icon"
-                  :title="t(`nav.${c.key}`)"
-                  :active="isActive(c.to)"
-                />
+                <!-- Only the groups that own a hub page offer "Ver todo";
+                     Explorar/Directorio/Recursos exist purely to group. -->
+                <template v-if="n.to">
+                  <v-list-item
+                    :to="n.to"
+                    :prepend-icon="n.icon"
+                    :title="t('nav.viewAll')"
+                    :active="isActive(n.to)"
+                  />
+                  <v-divider />
+                </template>
+                <template
+                  v-for="(s, si) in n.sections"
+                  :key="s.key"
+                >
+                  <v-divider v-if="showSectionHeads(n) && si > 0" />
+                  <v-list-subheader v-if="showSectionHeads(n)">
+                    {{ t(`nav.grp.${s.key}`) }}
+                  </v-list-subheader>
+                  <v-list-item
+                    v-for="c in s.items"
+                    :key="c.key"
+                    :to="c.external ? undefined : c.to"
+                    :href="c.external ? c.to : undefined"
+                    :target="c.external ? '_blank' : undefined"
+                    :rel="c.external ? 'noopener' : undefined"
+                    :prepend-icon="c.icon"
+                    :title="t(`nav.${c.key}`)"
+                    :active="!c.external && isActive(c.to)"
+                  />
+                </template>
               </v-list>
             </v-menu>
 
@@ -380,7 +363,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                 v-bind="props"
                 type="button"
                 class="topnav__link topnav__more"
-                :class="{ 'topnav__link--active': overflowNav.some(n => !n.external && isActive(n.to)) }"
+                :class="{ 'topnav__link--active': overflowNav.some(n => groupActive(n)) }"
               >
                 {{ t('nav.more') }}
                 <v-icon size="16">
@@ -410,18 +393,22 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                     />
                   </template>
                   <v-list-item
+                    v-if="n.to"
                     :to="n.to"
                     :title="t('nav.viewAll')"
                     :active="isActive(n.to)"
                     @click="overflowMenuOpen = false"
                   />
                   <v-list-item
-                    v-for="c in n.children"
+                    v-for="c in navLeaves(n)"
                     :key="c.key"
-                    :to="c.to"
+                    :to="c.external ? undefined : c.to"
+                    :href="c.external ? c.to : undefined"
+                    :target="c.external ? '_blank' : undefined"
+                    :rel="c.external ? 'noopener' : undefined"
                     :prepend-icon="c.icon"
                     :title="t(`nav.${c.key}`)"
-                    :active="isActive(c.to)"
+                    :active="!c.external && isActive(c.to)"
                     @click="overflowMenuOpen = false"
                   />
                 </v-list-group>
@@ -702,6 +689,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
             </summary>
             <div class="drawer__children">
               <NuxtLink
+                v-if="n.to"
                 :to="n.to"
                 class="drawer__link drawer__child"
                 :class="{ 'drawer__link--active': isActive(n.to) }"
@@ -712,19 +700,34 @@ watch([locale, user], () => nextTick(scheduleRecompute))
                 </v-icon>
                 <span>{{ t('nav.viewAll') }}</span>
               </NuxtLink>
-              <NuxtLink
-                v-for="c in n.children"
-                :key="c.key"
-                :to="c.to"
-                class="drawer__link drawer__child"
-                :class="{ 'drawer__link--active': isActive(c.to) }"
-                @click="drawer = false"
+              <template
+                v-for="s in n.sections"
+                :key="s.key"
               >
-                <v-icon size="18">
-                  {{ c.icon }}
-                </v-icon>
-                <span>{{ t(`nav.${c.key}`) }}</span>
-              </NuxtLink>
+                <p
+                  v-if="showSectionHeads(n)"
+                  class="drawer__grouphead"
+                >
+                  {{ t(`nav.grp.${s.key}`) }}
+                </p>
+                <component
+                  :is="c.external ? 'a' : NuxtLinkC"
+                  v-for="c in s.items"
+                  :key="c.key"
+                  :to="c.external ? undefined : c.to"
+                  :href="c.external ? c.to : undefined"
+                  :target="c.external ? '_blank' : undefined"
+                  :rel="c.external ? 'noopener' : undefined"
+                  class="drawer__link drawer__child"
+                  :class="{ 'drawer__link--active': !c.external && isActive(c.to) }"
+                  @click="drawer = false"
+                >
+                  <v-icon size="18">
+                    {{ c.icon }}
+                  </v-icon>
+                  <span>{{ t(`nav.${c.key}`) }}</span>
+                </component>
+              </template>
             </div>
           </details>
 
@@ -1297,6 +1300,19 @@ watch([locale, user], () => nextTick(scheduleRecompute))
 
 .drawer__child { font-size: var(--t-sm); }
 
+/* Section heading inside a multi-section drawer group (Señales, Investigaciones).
+   Mono + tracking marks it as a label rather than another tappable row. */
+.drawer__grouphead {
+  margin: var(--s-3) 0 var(--s-1);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.drawer__grouphead:first-child { margin-top: var(--s-1); }
+
 .drawer__foot {
   margin-top: auto;
   padding: var(--s-4);
@@ -1492,5 +1508,22 @@ watch([locale, user], () => nextTick(scheduleRecompute))
    Keep the framework's prepend slot, but size its spacer to our rhythm. */
 .navmenu .v-list-item__prepend > .v-list-item__spacer {
   width: var(--s-3);
+}
+
+/* Section headings in the grouped menus (Qué revisar, Investigaciones).
+   Vuetify's own subheader inset is wiped by the global `* { padding: 0 }`
+   reset, which left these labels flush against the menu edge while every item
+   below them sits at --s-4. Match that inset, and mirror the drawer's heading
+   treatment so the two surfaces read as one system. */
+.navmenu .v-list-subheader {
+  min-height: 0;
+  padding: var(--s-3) var(--s-4) var(--s-1);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 1;
 }
 </style>
