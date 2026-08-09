@@ -3,7 +3,7 @@
 // field is surfaced (email + ALL emails, website, phone, locality, ADDRESS,
 // rubro), including Google Maps values with explicit provenance.
 import assert from "node:assert";
-import { sanitizeContact, toCsv, toJsonExport, toVcard, contactMethods, type PublicContact } from "../../app/server/utils/contacts";
+import { sanitizeContact, contactToCsv, contactToJsonExport, contactToVcard, contactMethods, type PublicContact } from "../../app/server/utils/contacts";
 
 // --- contactMethods: which enrichment methods touched a record (from RAW sources) ---
 assert.deepEqual(contactMethods({} as never), []);
@@ -126,7 +126,7 @@ assert.equal(gmapsDoc.hours, "lunes: 09:00-18:00");
 assert.deepEqual(gmapsDoc.methods, ["crawl4ai", "googleMaps"]);
 
 // --- CSV: address column present; all emails joined ---
-const csv = toCsv([webDoc]);
+const csv = contactToCsv([webDoc]);
 const [header, row] = csv.split("\r\n");
 assert.ok(header.includes("Dirección"), "CSV must carry a Dirección column");
 assert.ok(header.includes("Origen sitio"), "CSV must carry the website-origin column");
@@ -142,12 +142,12 @@ assert.ok(row.includes("https://acme.uy/contacto"), "CSV keeps phone/social evid
 
 // JSON exposes the full decorated PublicContact shape (the route attaches the
 // supplier-pattern signal before it reaches this serializer).
-const [jsonContact] = JSON.parse(toJsonExport([webDoc]));
+const [jsonContact] = JSON.parse(contactToJsonExport([webDoc]));
 assert.equal(jsonContact.onlyDirectAward, true);
 assert.equal(jsonContact.directAwardCount, 4);
 
 // --- vCard: address, all emails, website, phone ---
-const vcf = toVcard([webDoc]);
+const vcf = contactToVcard([webDoc]);
 assert.ok(/ADR;TYPE=WORK:.*Av\. Siempreviva 742/.test(vcf), "vCard ADR carries address");
 assert.equal((vcf.match(/EMAIL/g) || []).length, 2, "vCard lists all emails");
 assert.ok(/URL:https:\/\/acme\.uy/.test(vcf), "vCard URL carries website");
@@ -178,7 +178,7 @@ const awardedWithLiveRupe = sanitizeContact({
 assert.equal(awardedWithLiveRupe.rupeEstado, "ACTIVO", "live RUPE state overrides a missing denormalized contact value");
 
 // --- CSV: "Adjudicó" column reflects neverAwarded (Sí = won an award, No = registry-only) ---
-const csv2 = toCsv([webDoc, registryDoc]);
+const csv2 = contactToCsv([webDoc, registryDoc]);
 const [header2, row1, row2] = csv2.split("\r\n");
 assert.ok(header2.includes("Adjudicó"), "CSV must carry the Adjudicó column");
 assert.ok(header2.includes("Estado RUPE"), "CSV must carry the literal registry state");

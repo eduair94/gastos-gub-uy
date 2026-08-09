@@ -117,12 +117,12 @@ function vcardEscape(v: string): string {
   return v.replace(/\\/g, '\\\\').replace(/\r\n|\r|\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
 }
 
-export function toCsv(rows: PublicProcurementContact[]): string {
+export function procurementToCsv(rows: PublicProcurementContact[]): string {
   const body = procurementCsvRows(rows)
   return `\uFEFF${procurementCsvHeader()}\r\n${body}${body ? '\r\n' : ''}`
 }
 
-export function toJsonExport(rows: PublicProcurementContact[]): string {
+export function procurementToJsonExport(rows: PublicProcurementContact[]): string {
   return JSON.stringify(rows, null, 2)
 }
 
@@ -154,11 +154,11 @@ export function procurementVcardRows(rows: PublicProcurementContact[]): string {
   return cards.join('\r\n')
 }
 
-export function toVcard(rows: PublicProcurementContact[]): string {
+export function procurementToVcard(rows: PublicProcurementContact[]): string {
   return `${procurementVcardRows(rows)}\r\n`
 }
 
-export async function toXlsx(rows: PublicProcurementContact[]): Promise<Buffer> {
+export async function procurementToXlsx(rows: PublicProcurementContact[]): Promise<Buffer> {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Con la tuya, contribuyente'

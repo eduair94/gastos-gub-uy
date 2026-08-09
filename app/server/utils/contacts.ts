@@ -491,14 +491,14 @@ function neutralizeFormula(v: string): string {
   return /^[=+\-@\t\r]/.test(v) ? `'${v}` : v
 }
 
-export function toCsv(contacts: PublicContact[]): string {
+export function contactToCsv(contacts: PublicContact[]): string {
   const head = contactCsvHeader()
   const rows = contactCsvRows(contacts)
   // BOM so Excel reads UTF-8 (accents) correctly; CRLF per RFC-4180.
   return `\uFEFF${head}\r\n${rows}${rows ? '\r\n' : ''}`
 }
 
-export function toJsonExport(contacts: PublicContact[]): string {
+export function contactToJsonExport(contacts: PublicContact[]): string {
   return JSON.stringify(contacts, null, 2)
 }
 
@@ -545,12 +545,12 @@ export function contactVcardRows(contacts: PublicContact[]): string {
   return cards.join('\r\n')
 }
 
-export function toVcard(contacts: PublicContact[]): string {
+export function contactToVcard(contacts: PublicContact[]): string {
   return `${contactVcardRows(contacts)}\r\n`
 }
 
 /** Build an .xlsx buffer. exceljs is imported lazily so it never touches non-export paths. */
-export async function toXlsx(contacts: PublicContact[]): Promise<Buffer> {
+export async function contactToXlsx(contacts: PublicContact[]): Promise<Buffer> {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Con la tuya, contribuyente'

@@ -5,8 +5,8 @@ import {
   serializeProcurementContact,
   buildProcurementFilter,
   procurementSort,
-  toCsv,
-  toVcard,
+  procurementToCsv,
+  procurementToVcard,
 } from "../../app/server/utils/procurement-contacts";
 import { groupOrganismClause, organismGroupLabel } from "../../shared/organism-groups";
 
@@ -58,13 +58,13 @@ assert.deepEqual(procurementSort({}), { llamadosCount: -1 });
 assert.deepEqual(procurementSort({ sortBy: "organism" }), { organismName: 1 });
 
 // --- CSV/vCard ---
-const csv = toCsv([c]);
+const csv = procurementToCsv([c]);
 const header = csv.split("\r\n")[0];
 for (const col of ["Organismo", "Grupo", "Emails", "Teléfono", "Fax", "Llamados"]) {
   assert.ok(header.includes(col), `CSV header has ${col}`);
 }
 assert.ok(csv.includes("compras@imm.gub.uy; licitaciones@imm.gub.uy"), "CSV joins all emails");
-const vcf = toVcard([c]);
+const vcf = procurementToVcard([c]);
 assert.ok(/ORG:Intendencia de Montevideo/.test(vcf));
 assert.ok(/TEL;TYPE=WORK,FAX:/.test(vcf), "vCard carries fax");
 assert.equal((vcf.match(/EMAIL/g) || []).length, 2);
