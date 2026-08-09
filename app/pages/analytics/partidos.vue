@@ -154,8 +154,7 @@ const partiesPresent = computed(() => {
 
 // ---- Hover / selection --------------------------------------------------
 // Hover wins while the mouse is over a department; once it leaves (hoverId
-// becomes null) the panel falls back to the last-clicked department, if any,
-// instead of disappearing and taking the "ver contratos" link with it.
+// becomes null) the panel falls back to the last-clicked department, if any
 const hoverId = ref<string | null>(null)
 const clickedId = ref<string | null>(null)
 const focusId = computed(() => hoverId.value ?? clickedId.value)
