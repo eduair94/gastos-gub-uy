@@ -36,6 +36,47 @@ const examples = [
   { label: 'Equipamiento hospitalario', amount: 92_000_000 },
   { label: 'Infraestructura mayor', amount: 2_400_000_000 },
 ]
+
+// The index and the sections below are driven by the same list: the `id`
+// here is the id rendered on each <section>, so a renamed heading can
+// never leave the index pointing at nothing.
+const sections = [
+  { id: 'fuente', key: 'about.sourceTitle' },
+  { id: 'escala', key: 'about.scaleTitle' },
+  { id: 'total', key: 'about.totalTitle' },
+  { id: 'limites', key: 'about.limitsTitle' },
+  { id: 'verificar', key: 'about.linkTitle' },
+  { id: 'autor', key: 'about.authorTitle' },
+] as const
+
+// Which section the reader is in. Purely an affordance for the index —
+// the page reads identically if the observer never runs (SSR, no IO).
+const activeId = ref<string>(sections[0].id)
+let observer: IntersectionObserver | null = null
+
+onMounted(() => {
+  if (typeof IntersectionObserver === 'undefined') return
+  // The band is the strip just under the sticky header: a heading becomes
+  // "current" when it reaches it, and stays current until the next one does.
+  observer = new IntersectionObserver(
+    (entries) => {
+      const hit = entries
+        .filter(e => e.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+      if (hit?.target.id) activeId.value = hit.target.id
+    },
+    { rootMargin: '-72px 0px -70% 0px', threshold: 0 },
+  )
+  for (const s of sections) {
+    const el = document.getElementById(s.id)
+    if (el) observer.observe(el)
+  }
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  observer = null
+})
 </script>
 
 <template>
@@ -50,14 +91,48 @@ const examples = [
       </p>
     </header>
 
+    <!-- The section index. On the wide grid it owns the right rail and
+         sticks; below it, it collapses to a wrapping row of links under
+         the lead. It is never hidden — a six-section document earns a map
+         on every screen. -->
+    <nav
+      class="toc"
+      :aria-label="t('about.toc')"
+    >
+      <p class="toc__h u-eyebrow">
+        {{ t('about.toc') }}
+      </p>
+      <ul class="toc__list">
+        <li
+          v-for="s in sections"
+          :key="s.id"
+        >
+          <a
+            :href="`#${s.id}`"
+            class="toc__link"
+            :class="{ 'is-current': activeId === s.id }"
+            :aria-current="activeId === s.id ? 'true' : undefined"
+          >
+            {{ t(s.key) }}
+          </a>
+        </li>
+      </ul>
+    </nav>
+
     <div class="prose">
-      <section class="sec">
+      <section
+        id="fuente"
+        class="sec"
+      >
         <h2>{{ t('about.sourceTitle') }}</h2>
         <p>{{ t('about.sourceBody') }}</p>
       </section>
 
       <!-- The signature, explained. Showing the scale beats describing it. -->
-      <section class="sec">
+      <section
+        id="escala"
+        class="sec"
+      >
         <h2>{{ t('about.scaleTitle') }}</h2>
         <p>{{ t('about.scaleBody') }}</p>
         <ul class="scale">
@@ -77,7 +152,10 @@ const examples = [
 
       <!-- The site's most important admission about its own data. It
            belongs above the general caveats, not buried under them. -->
-      <section class="sec">
+      <section
+        id="total"
+        class="sec"
+      >
         <h2>{{ t('about.totalTitle') }}</h2>
         <p>{{ t('about.totalBody') }}</p>
         <p class="sec__p">
@@ -97,12 +175,18 @@ const examples = [
         </NuxtLink>
       </section>
 
-      <section class="sec">
+      <section
+        id="limites"
+        class="sec"
+      >
         <h2>{{ t('about.limitsTitle') }}</h2>
         <p>{{ t('about.limitsBody') }}</p>
       </section>
 
-      <section class="sec">
+      <section
+        id="verificar"
+        class="sec"
+      >
         <h2>{{ t('about.linkTitle') }}</h2>
         <p>{{ t('about.linkBody') }}</p>
         <p class="links">
@@ -128,7 +212,10 @@ const examples = [
 
       <!-- Who is behind this. An independent project earns more trust when it
            says who built it than when it hides — and it's an E-E-A-T signal. -->
-      <section class="sec">
+      <section
+        id="autor"
+        class="sec"
+      >
         <h2>{{ t('about.authorTitle') }}</h2>
         <p>{{ t('about.authorBody') }}</p>
         <p class="links">
@@ -169,7 +256,47 @@ const examples = [
 </template>
 
 <style scoped>
-.page { padding-block: var(--s-7) var(--s-8); }
+/* Layout. The page is a two-track grid: a bounded article rail and, from
+   the wide breakpoint up, a sticky index flush with the header's right
+   edge. Only the TEXT LINES carry a `ch` cap (see `.sec p`, `.sec h2`);
+   the rail itself is bounded in px. Capping the wrapping block in `ch` is what
+   previously squeezed the table, the link rows and the CTA into a 550px
+   column pinned to the left of a 1400px container. */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "head"
+    "toc"
+    "body";
+  padding-block: var(--s-7) var(--s-8);
+}
+
+.head { grid-area: head; }
+.toc { grid-area: toc; }
+.prose { grid-area: body; }
+
+/* 1280px is where 780 + s-8 gutter + 240 rail still clears the container
+   padding. Below it the index rides above the article as a link row. */
+@media (min-width: 1280px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr) 240px;
+    grid-template-areas:
+      "head toc"
+      "body toc";
+    column-gap: var(--s-8);
+    align-items: start;
+  }
+
+  .prose { max-width: 780px; }
+}
+
+/* This is a page to be read, not scanned: the article sets one step up
+   from the site's control-sized body, so 68ch of measure is physically
+   wide enough to sit comfortably inside the rail's rules. */
+.prose {
+  font-size: var(--t-md);
+}
 
 .head {
   max-width: 62ch;
@@ -178,7 +305,82 @@ const examples = [
 
 .head h1 { margin: var(--s-2) 0 var(--s-3); }
 
-.prose { max-width: 68ch; }
+/* Index ------------------------------------------------------------- */
+
+/* Below the wide breakpoint the index is a band between the lead and the
+   article, ruled top and bottom so a row of links cannot be mistaken for
+   the first paragraph. */
+.toc {
+  margin-bottom: var(--s-6);
+  padding-block: var(--s-4);
+  border-block: 1px solid var(--rule);
+}
+
+.toc__h {
+  margin: 0 0 var(--s-3);
+}
+
+.toc__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc__link {
+  display: block;
+  padding-block: var(--s-1);
+  color: var(--text-muted);
+  font-size: var(--t-sm);
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color var(--dur) var(--ease);
+}
+
+.toc__link:hover { color: var(--celeste-deep); }
+
+/* In the band layout the links are the only touch targets on the page
+   that sit next to each other, so they get a real target height. */
+@media (pointer: coarse) and (max-width: 1279px) {
+  .toc__link {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding-block: 0;
+  }
+}
+
+.toc__link.is-current {
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (min-width: 1280px) {
+  .toc {
+    position: sticky;
+    top: calc(var(--header-h) + var(--s-6));
+    margin-bottom: 0;
+    padding-block: 0;
+    border-block: 0;
+  }
+
+  .toc__list {
+    display: block;
+    border-left: 1px solid var(--rule);
+  }
+
+  .toc__link {
+    padding: var(--s-2) 0 var(--s-2) var(--s-4);
+    margin-left: -1px;
+    border-left: 1px solid transparent;
+  }
+
+  .toc__link.is-current { border-left-color: var(--celeste-deep); }
+}
+
+/* Article ----------------------------------------------------------- */
 
 .sec + .sec {
   margin-top: var(--s-6);
@@ -186,9 +388,17 @@ const examples = [
   border-top: 1px solid var(--rule);
 }
 
-.sec h2 { margin: 0 0 var(--s-3); }
+.sec {
+  scroll-margin-top: calc(var(--header-h) + var(--s-5));
+}
+
+.sec h2 {
+  max-width: 34ch;
+  margin: 0 0 var(--s-3);
+}
 
 .sec p {
+  max-width: 68ch;
   margin: 0;
   color: var(--text-muted);
   line-height: 1.65;

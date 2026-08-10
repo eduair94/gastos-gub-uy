@@ -2042,6 +2042,7 @@
   "about": {
     "title": "Cómo funciona",
     "lead": "De dónde salen estos datos y qué podés hacer con ellos.",
+    "toc": "En esta página",
     "sourceTitle": "La fuente",
     "sourceBody": "Todo lo que ves acá viene de los datos abiertos que publica el Estado uruguayo en formato OCDS (Open Contracting Data Standard), a través de catalogodatos.gub.uy y del sitio de Compras Estatales. No agregamos ni editamos registros: los importamos, los normalizamos y los hacemos buscables.",
     "scaleTitle": "La barra dorada",

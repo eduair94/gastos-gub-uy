@@ -271,6 +271,30 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
   padding-inline: clamp(var(--s-4), 3vw, var(--s-6));
 }
 
+// MEASURE vs CONTAINER — the rule that keeps a page from collapsing into
+// a narrow rail. A `ch` cap is a READING MEASURE: it belongs on the
+// element that renders the line of text (p, li, blockquote, a lead), and
+// nowhere else. A wrapping block — the article body, a section, a grid
+// cell, anything that also contains tables, link rows, cards or buttons —
+// is bounded in px, or by its grid track, or not at all.
+//
+// Put the `ch` cap on the wrapper and every non-text child inherits the
+// measure of a paragraph: /about shipped `.prose { max-width: 68ch }`, so
+// its amount table, its link rows and its CTA were squeezed into a 550px
+// column pinned to the left of a 1400px container, with 850px of dead
+// space beside them. `.hero__in` (further down this file) is the same bug
+// caught earlier on the analytics heroes.
+//
+//   <div class="u-measure-host">      <- px / grid track, full structure
+//     <p class="u-measure">…</p>      <- 65..75ch, the line only
+//     <table>…</table>                <- free to use the whole block
+//   </div>
+//
+// Use `.u-measure` when a page has no reason to define its own; a page
+// that sets the cap in its own scoped CSS must still target the text
+// elements (`.sec > p`), never the wrapper.
+.u-measure { max-width: 68ch; }
+
 // Split row — a growing identity block on the left, a fixed block of
 // figures or metadata on the right. The two ALWAYS align to the top:
 // a right column that centres itself drifts halfway down a tall row
