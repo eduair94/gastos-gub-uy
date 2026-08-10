@@ -137,6 +137,16 @@ disclosure for secondary evidence.
 `.u-splitrow` is the canonical record row: a growing identity block and a fixed,
 top-aligned figures block. Do not reproduce it with centered flex alignment.
 
+**A `ch` cap is a measure, not a container.** Reading measure (65–75ch) belongs
+on the elements that render a line of text — `p`, `li`, a lead, a heading. A
+wrapping block that also holds tables, link rows, cards or buttons is bounded in
+px or by its grid track. Capping the wrapper hands every non-text child the width
+of a paragraph and pins the page to a narrow rail beside dead space; use
+`.u-measure`, or target the text elements in page CSS (`.sec > p`), never the
+wrapper. `.hero__in` and the `/about` article rail both exist because this rule
+was broken. On viewports wide enough to leave a rail beside the article, give the
+rail something — a sticky section index, related evidence — rather than air.
+
 Map surfaces are workbenches, not decorative hero imagery. Search, locate,
 radius and result count remain legible over or adjacent to the map. Supplier
 markers must remain recognizable against light and dark cartography.

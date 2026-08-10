@@ -2041,6 +2041,7 @@
   "about": {
     "title": "How it works",
     "lead": "Where this data comes from and what you can do with it.",
+    "toc": "On this page",
     "sourceTitle": "The source",
     "sourceBody": "Everything you see here comes from the open data the Uruguayan state publishes in OCDS format (Open Contracting Data Standard), through catalogodatos.gub.uy and the Compras Estatales site. We don't add or edit records: we import them, normalize them, and make them searchable.",
     "scaleTitle": "The gold bar",
