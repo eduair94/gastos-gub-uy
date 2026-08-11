@@ -101,6 +101,9 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             // from an individual flag, so it is where a reader with no particular contract in mind
             // should land.
             { key: 'senalesGestion', to: localePath('/analytics/senales'), icon: 'mdi-gauge-low' },
+            // The integrity record from the other side: not how a body buys, but who inside it
+            // never declared their assets.
+            { key: 'omisos', to: localePath('/analytics/omisos'), icon: 'mdi-file-document-alert-outline' },
             { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
             { key: 'unexplained', to: localePath('/analytics/unexplained'), icon: 'mdi-help-rhombus-outline' },
             { key: 'erroresCarga', to: localePath('/analytics/errores-carga'), icon: 'mdi-database-alert-outline' },

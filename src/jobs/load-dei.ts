@@ -28,6 +28,7 @@
 
 import axios from "axios";
 import * as fs from "fs";
+import { parseCsv } from "../../shared/utils/csv";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
 import { DeiCompanyModel } from "../../shared/models/dei_company";
 
@@ -40,34 +41,6 @@ function arg(name: string): string | undefined {
 }
 function flag(name: string): boolean {
   return process.argv.includes(`--${name}`);
-}
-
-/** RFC4180-ish parser: handles quoted fields with embedded commas, newlines and "" escapes. */
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  // Strip a UTF-8 BOM if present.
-  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else inQuotes = false;
-      }
-      else field += c;
-    }
-    else if (c === '"') inQuotes = true;
-    else if (c === ",") { row.push(field); field = ""; }
-    else if (c === "\r") { /* ignore, handled by \n */ }
-    else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
-    else field += c;
-  }
-  // Trailing field/row without a final newline.
-  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
-  return rows;
 }
 
 const digits = (s: string): string => (s || "").replace(/\D/g, "");

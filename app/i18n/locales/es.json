@@ -18,6 +18,7 @@
     "buyers": "Organismos",
     "anomalies": "Alertas",
     "unexplained": "Alertas sin explicar",
+    "omisos": "Declaraciones omitidas",
     "senalesGestion": "Señales de gestión",
     "providerAnomalies": "Proveedores señalados",
     "providerLoadErrors": "Proveedores con errores",
@@ -1489,6 +1490,30 @@
     "guideLink": "Guía: cómo reportar",
     "close": "Cerrar"
   },
+  "omisos": {
+    "title": "Funcionarios declarados omisos",
+    "lead": "La nómina que publica la JUTEP de funcionarios públicos declarados omisos en su obligación de presentar la declaración jurada de bienes e ingresos.",
+    "legal": "La ley 17.060 hace reservado el CONTENIDO de una declaración jurada (art. 18), pero manda publicar la omisión en el Diario Oficial (art. 13), y la JUTEP publica esta nómina como dato abierto. Acá no hay contenido de ninguna declaración, ni bienes, ni ingresos: solo el hecho, público por ley, de no haber presentado. La cédula se muestra enmascarada.",
+    "kpi": {
+      "total": "personas en la nómina",
+      "peak": "año con más declaraciones de omisión ({n})",
+      "organisms": "organismos representados"
+    },
+    "byOrganismTitle": "Organismos con más omisos",
+    "unknownOrganism": "Sin organismo declarado",
+    "searchLabel": "Buscar por apellido, cargo u organismo",
+    "searchHint": "Mínimo 3 caracteres",
+    "col": {
+      "name": "Persona",
+      "cargo": "Cargo",
+      "organismo": "Organismo",
+      "fecha": "Fecha de omisión"
+    },
+    "source": "Fuente: JUTEP, datos abiertos en",
+    "organismPanelTitle": "Declaraciones juradas omitidas",
+    "organismPanelBody": "La JUTEP declaró omisos a {n} funcionarios de este inciso por no presentar su declaración jurada de bienes e ingresos.",
+    "organismPanelLink": "Ver la nómina"
+  },
   "senales": {
     "title": "Señales de gestión",
     "lead": "Cinco medidas sobre cómo compra cada organismo del Estado: en quién concentra la plata, si adjudica en tandas, cuánto adjudica en forma directa, cuánto tiempo deja para competir y cuántos sobreprecios quedaron sin explicación.",
@@ -1957,6 +1982,10 @@
     }
   },
   "seo": {
+    "omisos": {
+      "title": "Funcionarios declarados omisos por la JUTEP",
+      "description": "Nómina pública de funcionarios del Estado uruguayo declarados omisos en su obligación de presentar la declaración jurada de bienes e ingresos, por organismo y por año."
+    },
     "senales": {
       "title": "Señales de gestión en las compras del Estado uruguayo",
       "description": "Concentración en un proveedor, adjudicaciones en tanda, compra directa, plazos exprés y sobreprecios sin explicación, medidos organismo por organismo sobre los datos abiertos de Compras Estatales."

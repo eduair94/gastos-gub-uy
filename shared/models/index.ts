@@ -41,3 +41,6 @@ export * from './procurement_contacts';
 
 // Señales de gestión — per-organism procurement risk indicators (integrity_signals)
 export * from './integrity_signals';
+
+// JUTEP roster of officials declared omisos (jutep_omisos)
+export * from './jutep_omiso';

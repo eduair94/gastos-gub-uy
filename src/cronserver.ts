@@ -983,6 +983,24 @@ class CronServer {
     );
     this.logger.info(`Integrity-signals refresh scheduled with expression: ${integritySignalsExpression} (Uruguay timezone)`);
 
+    // JUTEP omisos roster, weekly on Monday at 06:15. JUTEP republishes a handful of times a year,
+    // so this is a cheap 5s upsert of ~2.4k rows that keeps the roster current without polling.
+    const jutepExpression = "15 6 * * 1";
+    cron.schedule(
+      jutepExpression,
+      async () => {
+        try {
+          this.logger.info("Starting JUTEP omisos load...");
+          await this.runJobProcess("jobs/load-jutep-omisos");
+          this.logger.info("JUTEP omisos load completed successfully");
+        } catch (error) {
+          this.logger.error("JUTEP omisos load failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`JUTEP omisos load scheduled with expression: ${jutepExpression} (Uruguay timezone)`);
+
     // Year-over-year spending decomposition, monthly at 05:00 on the 1st — after the two
     // rollups above so the three heavy full-collection scans never overlap. Rebuilds
     // spending_trend, which /analytics/evolucion-gasto reads. `--ai` is deliberately NOT

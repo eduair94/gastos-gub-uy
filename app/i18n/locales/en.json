@@ -18,6 +18,7 @@
     "buyers": "Agencies",
     "anomalies": "Flags",
     "unexplained": "Unexplained alerts",
+    "omisos": "Undeclared assets",
     "senalesGestion": "Management signals",
     "providerAnomalies": "Flagged suppliers",
     "providerLoadErrors": "Suppliers with errors",
@@ -1488,6 +1489,30 @@
     "guideLink": "Guide: how to report",
     "close": "Close"
   },
+  "omisos": {
+    "title": "Officials declared delinquent",
+    "lead": "JUTEP’s published roster of public officials formally declared delinquent in their duty to file the sworn declaration of assets and income.",
+    "legal": "Law 17.060 makes the CONTENT of a sworn declaration confidential (art. 18) but requires the omission itself to be published in the Diario Oficial (art. 13), and JUTEP publishes this roster as open data. Nothing here is declaration content, assets or income: only the fact, public by law, of not having filed. The national ID is masked.",
+    "kpi": {
+      "total": "people on the roster",
+      "peak": "year with the most omissions declared ({n})",
+      "organisms": "bodies represented"
+    },
+    "byOrganismTitle": "Bodies with the most omissions",
+    "unknownOrganism": "No body stated",
+    "searchLabel": "Search by surname, position or body",
+    "searchHint": "At least 3 characters",
+    "col": {
+      "name": "Person",
+      "cargo": "Position",
+      "organismo": "Body",
+      "fecha": "Date declared"
+    },
+    "source": "Source: JUTEP open data at",
+    "organismPanelTitle": "Sworn declarations not filed",
+    "organismPanelBody": "JUTEP has declared {n} officials of this inciso delinquent for not filing their sworn declaration of assets and income.",
+    "organismPanelLink": "See the roster"
+  },
   "senales": {
     "title": "Management signals",
     "lead": "Five measurements of how each state body buys: who the money concentrates on, whether awards come in bursts, how much is awarded directly, how long anyone had to compete, and how many price flags were left unexplained.",
@@ -1956,6 +1981,10 @@
     }
   },
   "seo": {
+    "omisos": {
+      "title": "Officials declared delinquent by JUTEP",
+      "description": "Public roster of Uruguayan state officials declared delinquent in their duty to file the sworn declaration of assets and income, by body and by year."
+    },
     "senales": {
       "title": "Management signals in Uruguayan state procurement",
       "description": "Supplier concentration, award bursts, direct purchasing, express bidding windows and unexplained overprices, measured body by body over the open Compras Estatales data."
