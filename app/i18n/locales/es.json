@@ -492,6 +492,12 @@
     "tagHelp": "Cada etapa del proceso es un registro. Solo la adjudicación informa proveedor y monto."
   },
   "contract": {
+    "biddersHelp": "Los datos abiertos de compras nunca dicen quién más ofertó: solo publican al ganador. Esto sale del acta de adjudicación, que a veces lo enumera. Cuando este panel no aparece, es que el acta no lo dijo — no que no haya habido competencia.",
+    "biddersCount": "Se presentaron {n} ofertas",
+    "biddersSole": "El acta consigna una única oferta",
+    "biddersWinner": "adjudicado",
+    "biddersSource": "Ver la frase del acta",
+    "biddersActa": "Abrir el acta de adjudicación (PDF)",
     "eyebrow": "Contrato",
     "notFound": {
       "title": "No encontramos ese contrato",
@@ -509,6 +515,7 @@
     "verifiedTotalSource": "Ver ficha oficial",
     "ocid": "Identificador OCDS",
     "sections": {
+      "bidders": "Quiénes se presentaron",
       "summary": "Resumen",
       "items": "Qué se compró",
       "parties": "Quiénes participan",

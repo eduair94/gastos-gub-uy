@@ -432,6 +432,14 @@ async function main(): Promise<void> {
       await omisos.createIndex({ organismo: 1 }, { background: true })
       console.log('✅ jutep_omisos indexes ensured (omisoKey unique, incisoCode, fechaOmision, organismo)')
 
+      // acta_bidders: who else bid, recovered from the acta de adjudicación by
+      // src/jobs/extract-acta-bidders.ts.  unique is BOTH the upsert key and the contract-page
+      // lookup; found+probedAt backs the resumable scan and the "already looked at" skip.
+      const actaBidders = client.db(DB_NAME).collection('acta_bidders')
+      await actaBidders.createIndex({ ocid: 1 }, { unique: true, background: true })
+      await actaBidders.createIndex({ found: 1, probedAt: -1 }, { background: true })
+      console.log('✅ acta_bidders indexes ensured (ocid unique, found+probedAt)')
+
       // provider_load_error_stats: the load-errors-by-provider cross-reference, rebuilt
       // (compute-then-swap) by src/jobs/cross-provider-load-errors.ts. Same shape as
       // provider_anomaly_stats but scoped to the load-error bucket; `supplierName` unique is the
@@ -680,6 +688,7 @@ async function main(): Promise<void> {
       console.log('   plan: provider_load_error_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
       console.log('   plan: integrity_signals.{buyerId unique, weight+totalUyu, dataVersion}')
       console.log('   plan: jutep_omisos.{omisoKey unique, incisoCode, fechaOmision, organismo}')
+      console.log('   plan: acta_bidders.{ocid unique, found+probedAt}')
       console.log('   plan: organism_group_stats.{groupKey unique, dataVersion}')
       console.log('   plan: spending_trend.{year unique, dataVersion}')
       console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')

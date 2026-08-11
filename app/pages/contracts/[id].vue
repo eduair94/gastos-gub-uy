@@ -118,6 +118,29 @@ const awardLink = computed(() =>
     : null,
 )
 
+/**
+ * Who else bid, recovered from the acta de adjudicación (shared/acta-bidders.ts).
+ *
+ * Null for most contracts and that is correct: the OCDS feed never carries the bidders
+ * (`tender.tenderers` is 0% populated corpus-wide) and only ~6% of actas enumerate them. The panel
+ * renders only when present, so a silent acta never reads as "there was no competition".
+ */
+const bidders = computed<{ count: number, bidders: string[], excerpt?: string, actaUrl?: string } | null>(
+  () => (contract.value as any)?.bidders ?? null,
+)
+
+/** Loose match against the awarded supplier, so the reader sees who won among the field. */
+function isWinningBidder(name: string): boolean {
+  const winners = (contract.value?.awards ?? [])
+    .flatMap((a: any) => a.suppliers ?? [])
+    .map((s: any) => String(s?.name ?? '').toUpperCase())
+    .filter(Boolean)
+  const candidate = name.toUpperCase()
+  // Names come from two different sources and rarely match to the character, so compare on a
+  // generous prefix rather than demanding equality.
+  return winners.some(w => w.slice(0, 12) && (candidate.includes(w.slice(0, 12)) || w.includes(candidate.slice(0, 12))))
+}
+
 // The raw OCDS document we actually parsed — keyed on the release `id`,
 // unlike the human page above which keys on the ocid.
 const ocdsUrl = computed(() =>
@@ -429,7 +452,10 @@ const taxBreakdown = computed<{ total: number, subtotalNet: number | null, impue
   let mixed = false
   for (const v of taxByNro.value.values()) {
     if (v.gross && v.gross.currency !== total.currency) mixed = true
-    if (v.quantity !== null && v.netUnit !== null) { subtotal += v.quantity * v.netUnit; sawAny = true }
+    if (v.quantity !== null && v.netUnit !== null) {
+      subtotal += v.quantity * v.netUnit
+      sawAny = true
+    }
   }
   const subtotalNet = sawAny && !mixed ? subtotal : null
   const impuestos = subtotalNet !== null ? total.amount - subtotalNet : null
@@ -1462,6 +1488,65 @@ useSeo(() => ({
                   </dd>
                 </div>
               </dl>
+            </div>
+          </section>
+
+          <!-- ===== Who else bid =====
+               Renders ONLY when the acta de adjudicación actually enumerated the offers. The OCDS
+               feed never carries this (tender.tenderers is 0% populated corpus-wide) and only ~6%
+               of actas state it, so absence is the normal case and means "the acta did not say" —
+               never "there was no competition". That is why there is no empty state here. -->
+          <section
+            v-if="bidders"
+            class="panel block"
+          >
+            <div class="panel__head">
+              <h2>{{ t('contract.sections.bidders') }}</h2>
+              <p class="panel__help">
+                {{ t('contract.biddersHelp') }}
+              </p>
+            </div>
+            <div class="panel__body">
+              <p class="bidders__count">
+                {{ bidders.count === 1 && !bidders.bidders.length
+                  ? t('contract.biddersSole')
+                  : t('contract.biddersCount', { n: bidders.count }) }}
+              </p>
+              <ul
+                v-if="bidders.bidders.length"
+                class="bidders"
+              >
+                <li
+                  v-for="(b, i) in bidders.bidders"
+                  :key="`${b}-${i}`"
+                  class="bidders__item"
+                  :class="{ 'bidders__item--winner': isWinningBidder(b) }"
+                >
+                  {{ b }}
+                  <span
+                    v-if="isWinningBidder(b)"
+                    class="bidders__tag"
+                  >{{ t('contract.biddersWinner') }}</span>
+                </li>
+              </ul>
+              <!-- The source sentence, verbatim. The generator hard-wraps mid-word, so a name can
+                   carry a stray space; showing the original is what makes the claim checkable. -->
+              <details
+                v-if="bidders.excerpt"
+                class="bidders__src"
+              >
+                <summary>{{ t('contract.biddersSource') }}</summary>
+                <blockquote class="bidders__quote">
+                  {{ bidders.excerpt }}
+                </blockquote>
+                <a
+                  v-if="bidders.actaUrl"
+                  :href="bidders.actaUrl"
+                  target="_blank"
+                  rel="noopener"
+                  class="bidders__link"
+                >{{ t('contract.biddersActa') }}</a>
+              </details>
             </div>
           </section>
 
@@ -3221,4 +3306,45 @@ a.itable__code:hover { text-decoration: underline; }
   background: var(--surface-sunken);
   border-color: var(--rule-strong);
 }
+/* ---- Quiénes se presentaron ---- */
+.bidders__count { margin: 0 0 var(--s-3); font-weight: 600; }
+
+.bidders {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-2);
+}
+
+.bidders__item {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--t-sm);
+}
+
+/* The winner is marked by a WORD as well as the tint — the tag carries the meaning. */
+.bidders__item--winner { border-color: var(--celeste); background: var(--celeste-wash); }
+
+.bidders__tag {
+  margin-left: var(--s-2);
+  font-size: var(--t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--celeste-deep);
+}
+
+.bidders__src { margin-top: var(--s-3); font-size: var(--t-sm); }
+.bidders__src summary { cursor: pointer; color: var(--text-muted); }
+
+.bidders__quote {
+  margin: var(--s-2) 0 0;
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--rule);
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+}
+
+.bidders__link { display: inline-block; margin-top: var(--s-2); font-size: var(--t-xs); }
 </style>
