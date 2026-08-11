@@ -159,6 +159,7 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'invEmpresas', to: localePath('/investigaciones/empresas-senaladas'), icon: 'mdi-domain-off' },
             { key: 'invAsse', to: localePath('/investigaciones/asse-ambulancias'), icon: 'mdi-ambulance' },
             { key: 'invSaturno', to: localePath('/investigaciones/frigorifico-saturno'), icon: 'mdi-cow' },
+            { key: 'invMejorPeor', to: localePath('/investigaciones/mejor-o-peor'), icon: 'mdi-chart-timeline-variant' },
           ],
         },
         {

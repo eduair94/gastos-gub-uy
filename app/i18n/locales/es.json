@@ -72,7 +72,8 @@
     "invIm": "Intendencia de Montevideo",
     "invEmpresas": "Empresas señaladas",
     "invAsse": "ASSE: ambulancias",
-    "invSaturno": "Frigorífico Saturno"
+    "invSaturno": "Frigorífico Saturno",
+    "invMejorPeor": "¿Cada vez estamos peor?"
   },
   "money": {
     "unavailable": "Sin monto",

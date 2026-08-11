@@ -98,12 +98,13 @@ export const INV_CONTENT = {
       "unit": "unidad"
     },
     "hub": {
+      "readMore": "Seguir leyendo",
       "kicker": "Con la tuya, contribuyente · Investigaciones",
       "title": "Adónde fue tu plata",
       "dek": "Investigaciones de datos abiertos sobre el gasto del Estado uruguayo. Cada una arranca en un número del sistema de Compras Estatales, se verifica en la fuente oficial y termina con lo que cualquiera puede volver a chequear. Sin sesgo, con enlaces.",
       "stats": [
         {
-          "n": "7",
+          "n": "8",
           "l": "INVESTIGACIONES"
         },
         {
@@ -194,6 +195,18 @@ export const INV_CONTENT = {
           "$1.140 M facturados",
           "faltante 57 toneladas",
           "causa penal"
+        ]
+      },
+      "seriePaisTitle": "El país en números",
+      "seriePaisIntro": "La única serie que no arranca en un contrato. Arranca en una discusión de sobremesa —«cada vez estamos peor»— y la contesta con series oficiales en vez de con una opinión, incluidas las que le dan la razón al pesimismo.",
+      "cardMejorPeor": {
+        "eyebrow": "52 series oficiales · 2004–2026",
+        "title": "¿Cada vez estamos peor?",
+        "dek": "Contra 2004 mejoraron 21 indicadores y empeoraron 2. Contra 2014 se frenaron 10 y empeoraron 4 — y los que empeoraron son justo los que se ven. Mientras tanto, 87% está conforme con su vida y sólo 41% cree que el país progresa.",
+        "tags": [
+          "dos años de referencia",
+          "homicidios ×1,7",
+          "brecha yo/país: 46 pts"
         ]
       },
       "methodTag": "Método",
@@ -437,12 +450,13 @@ export const INV_CONTENT = {
       "unit": "unit"
     },
     "hub": {
+      "readMore": "Keep reading",
       "kicker": "Con la tuya, contribuyente · Investigations",
       "title": "Where your money went",
       "dek": "Open-data investigations into Uruguayan state spending. Each starts from a number in the state procurement system, is verified against the official source, and ends with something anyone can re-check. No bias, with links.",
       "stats": [
         {
-          "n": "7",
+          "n": "8",
           "l": "INVESTIGATIONS"
         },
         {
@@ -533,6 +547,18 @@ export const INV_CONTENT = {
           "$1,140 M billed",
           "57-tonne shortfall",
           "criminal case"
+        ]
+      },
+      "seriePaisTitle": "The country in numbers",
+      "seriePaisIntro": "The one series that does not start at a contract. It starts at a dinner-table argument — \"we keep getting worse\" — and answers it with official series instead of an opinion, including the ones that prove the pessimism right.",
+      "cardMejorPeor": {
+        "eyebrow": "52 official series · 2004-2026",
+        "title": "Are we getting worse?",
+        "dek": "Against 2004, 21 indicators improved and 2 worsened. Against 2014, 10 stalled and 4 worsened — and the ones that worsened are precisely the visible ones. Meanwhile 87% are satisfied with their own life and only 41% think the country is progressing.",
+        "tags": [
+          "two reference years",
+          "homicides x1.7",
+          "me/country gap: 46 pts"
         ]
       },
       "methodTag": "Method",
