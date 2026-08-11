@@ -27,6 +27,7 @@ Every offline computation in gastos-gub. Jobs turn the raw OCDS `releases` colle
 | [weekly-newsletter.ts](weekly-newsletter.ts) | Monday publisher for the previous completed Uruguay week: computes top plausible awards + objective anomaly totals, asks Gemini for a schema-constrained editorial reading, upserts the public issue, then drains an idempotent Resend/Web Push outbox. `--dry-run` performs no writes or sends. |
 | [pliego-summary.ts](pliego-summary.ts) | Gemini pliego summaries cached on `open_calls.aiSummary`. Not on cron (sync-open-calls does a bounded eager pass). |
 | [import-sice-catalog.ts](import-sice-catalog.ts) | Downloads ACCE `imp_catalogo.tgz`, parses Latin-1 SQL INSERTs → `sice_catalog` + `sice_rubro`. Self-skips on unchanged ETag/Last-Modified via `sice_import_state`. |
+| [load-jutep-omisos.ts](load-jutep-omisos.ts) | JUTEP roster of officials declared omisos on their sworn asset declaration (Ley 17.060) → `jutep_omisos`. **Upsert by (documento, fecha), never a swap** — JUTEP republishes cumulatively and a vanished row is their correction, not our deletion. Resolves the free-text inciso label to a `buyer.id` prefix via [shared/jutep-incisos.ts](../../shared/jutep-incisos.ts) (99.7% of rows; only COLEGIO MEDICO is unresolved, correctly). |
 | [load-dei.ts](load-dei.ts) | Loads the MIEM DEI industrial-registry CSV → `dei_companies`, upsert-by-RUT. The RUT join happens at read time in `app/server/utils/dei.ts`. |
 | [refresh-exchange-rates.ts](refresh-exchange-rates.ts) | Upserts monthly BCU USD/EUR/UI averages into `exchange_rates` from api.cambio-uruguay.com. Never deletes months. No npm script. |
 | [seed-historical-rates.ts](seed-historical-rates.ts) | One-time `exchange_rates` backfill 2000-01…2022-11 via the BCU SOAP service. No npm script. |
@@ -98,6 +99,7 @@ npm run webhooks
 npm run pliego-summary -- --eager
 npm run import-sice-catalog -- --force
 npm run load-dei -- --dry-run
+npm run load-jutep-omisos -- --dry-run
 
 # jobs WITHOUT an npm script (npx tsx only)
 npx tsx src/jobs/correct-lumpsum-artifacts.ts --limit=50          # dry by default; add --commit
@@ -131,6 +133,7 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 | `0 5 * * *` / `0 6 * * *` / `0 8 * * *` | `jobs/deadline-reminders` / `jobs/cross-provider-anomalies` / `jobs/alert-digest` |
 | `15 9 * * 1` | `jobs/weekly-newsletter` for the previous completed Uruguay week |
 | `0 2 * * 0` / `0 7 * * 0` | weekly reconcileNonFinalReleases → full `jobs/reconcile-award-amendments` / `jobs/refresh-product-variants` |
+| `15 6 * * 1` | `jobs/load-jutep-omisos` — weekly; JUTEP republishes a few times a year, the load is a 5s upsert |
 | `30 5 * * *` | `jobs/refresh-integrity-signals` — after the 04:15 detector, because it reads the anomalies its AI lane triages |
 | `0 3 * * 1` / `0 3 1 * *` / `0 4 1 * *` / `0 5 1 * *` | `jobs/import-sice-catalog` / `jobs/refresh-organism-groups` / `jobs/refresh-dept-indicators` / `jobs/refresh-spending-trend` |
 

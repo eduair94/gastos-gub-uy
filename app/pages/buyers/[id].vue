@@ -76,11 +76,15 @@ const buyerId = computed(() => decodeURIComponent(String(route.params.id ?? ''))
  */
 const statsQuery = computed(() => (buyerId.value ? { buyerIds: buyerId.value } : {}))
 
+/** `buyer.id` is `<inciso>-<unidad ejecutora>`; the JUTEP roster is published per inciso. */
+const incisoCode = computed(() => buyerId.value.split('-')[0] ?? '')
+
 const [
   { data: buyer, error },
   { data: statsRes },
   { data: contractsRes },
   { data: signalsRes },
+  { data: omisosRes },
 ] = await Promise.all([
   useFetch<BuyerDetail>(() => `/api/buyers/${encodeURIComponent(buyerId.value)}`),
 
@@ -108,6 +112,13 @@ const [
     query: computed(() => ({ buyerId: buyerId.value, limit: 1 })),
     immediate: Boolean(buyerId.value),
   }),
+
+  // JUTEP omisos for this organism's INCISO — the roster is published per inciso, not per
+  // execution unit, so the count belongs to the whole ministry/department, and the panel says so.
+  useFetch<any>('/api/analytics/omisos', {
+    query: computed(() => ({ incisoCode: incisoCode.value, limit: 1 })),
+    immediate: Boolean(incisoCode.value),
+  }),
 ])
 
 const notFound = computed(() => !buyer.value || (error.value as any)?.statusCode === 404)
@@ -117,6 +128,9 @@ const raisedSignals = computed<any[]>(() => {
   const row = signalsRes.value?.data?.organisms?.[0]
   return (row?.signals ?? []).filter((s: any) => s.level === 'watch' || s.level === 'high')
 })
+
+/** Officials of this INCISO on JUTEP's omisos roster. 0 renders nothing. */
+const omisosCount = computed<number>(() => omisosRes.value?.data?.meta?.total ?? 0)
 
 /** Counts read as counts, shares as percentages. Mirrors /analytics/senales. */
 function signalValue(key: string, value: number | null): string {
@@ -435,6 +449,27 @@ useSeo(() => ({
             >{{ t('senales.percentile', { pct: Math.round(s.populationPercentile * 100) }) }}</span>
           </li>
         </ul>
+      </section>
+
+      <!-- ===== Declaraciones juradas omitidas (JUTEP) =====
+           Published per INCISO, so this counts the whole ministry or department rather than this
+           execution unit alone — the copy says so rather than implying a narrower attribution. -->
+      <section
+        v-if="omisosCount > 0"
+        class="block"
+      >
+        <div class="block__head">
+          <h2>{{ t('omisos.organismPanelTitle') }}</h2>
+          <NuxtLink
+            :to="localePath('/analytics/omisos')"
+            class="block__all"
+          >
+            {{ t('omisos.organismPanelLink') }}
+          </NuxtLink>
+        </div>
+        <p class="block__help block__help--wide">
+          {{ t('omisos.organismPanelBody', { n: omisosCount }) }}
+        </p>
       </section>
 
       <!-- ===== Spending by year ===== -->

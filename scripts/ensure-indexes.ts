@@ -422,6 +422,16 @@ async function main(): Promise<void> {
       await integrity.createIndex({ dataVersion: 1 }, { background: true })
       console.log('✅ integrity_signals indexes ensured (buyerId unique, weight+totalUyu, dataVersion)')
 
+      // jutep_omisos: JUTEP's public roster of officials declared delinquent on their sworn asset
+      // declaration, loaded by src/jobs/load-jutep-omisos.ts. `omisoKey` unique is the upsert key;
+      // incisoCode backs the organism panel, fechaOmision the newest-first list, organismo the filter.
+      const omisos = client.db(DB_NAME).collection('jutep_omisos')
+      await omisos.createIndex({ omisoKey: 1 }, { unique: true, background: true })
+      await omisos.createIndex({ incisoCode: 1 }, { background: true })
+      await omisos.createIndex({ fechaOmision: -1 }, { background: true })
+      await omisos.createIndex({ organismo: 1 }, { background: true })
+      console.log('✅ jutep_omisos indexes ensured (omisoKey unique, incisoCode, fechaOmision, organismo)')
+
       // provider_load_error_stats: the load-errors-by-provider cross-reference, rebuilt
       // (compute-then-swap) by src/jobs/cross-provider-load-errors.ts. Same shape as
       // provider_anomaly_stats but scoped to the load-error bucket; `supplierName` unique is the
@@ -669,6 +679,7 @@ async function main(): Promise<void> {
       console.log('   plan: provider_anomaly_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
       console.log('   plan: provider_load_error_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
       console.log('   plan: integrity_signals.{buyerId unique, weight+totalUyu, dataVersion}')
+      console.log('   plan: jutep_omisos.{omisoKey unique, incisoCode, fechaOmision, organismo}')
       console.log('   plan: organism_group_stats.{groupKey unique, dataVersion}')
       console.log('   plan: spending_trend.{year unique, dataVersion}')
       console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')
