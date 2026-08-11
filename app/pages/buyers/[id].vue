@@ -80,6 +80,7 @@ const [
   { data: buyer, error },
   { data: statsRes },
   { data: contractsRes },
+  { data: signalsRes },
 ] = await Promise.all([
   useFetch<BuyerDetail>(() => `/api/buyers/${encodeURIComponent(buyerId.value)}`),
 
@@ -100,9 +101,29 @@ const [
     })),
     immediate: Boolean(buyerId.value),
   }),
+
+  // Señales de gestión for this organism, precomputed nightly. A miss is normal and silent: the
+  // collection only holds bodies with at least 20 priced awards in the window.
+  useFetch<any>('/api/analytics/integrity-signals', {
+    query: computed(() => ({ buyerId: buyerId.value, limit: 1 })),
+    immediate: Boolean(buyerId.value),
+  }),
 ])
 
 const notFound = computed(() => !buyer.value || (error.value as any)?.statusCode === 404)
+
+/** Only the indicators actually raised — see the panel comment for why none means silence. */
+const raisedSignals = computed<any[]>(() => {
+  const row = signalsRes.value?.data?.organisms?.[0]
+  return (row?.signals ?? []).filter((s: any) => s.level === 'watch' || s.level === 'high')
+})
+
+/** Counts read as counts, shares as percentages. Mirrors /analytics/senales. */
+function signalValue(key: string, value: number | null): string {
+  if (value === null || value === undefined) return t('senales.notMeasurable')
+  if (key === 'bursts' || key === 'unexplainedPrices') return String(value)
+  return `${(value * 100).toFixed(1)}%`
+}
 
 // A missing agency is a 404 for a crawler too, not a 200 with an apology.
 if (notFound.value) {
@@ -377,6 +398,44 @@ useSeo(() => ({
         :first-year="firstYear"
         :last-year="lastYear"
       />
+
+      <!-- ===== Señales de gestión =====
+           Only the signals actually raised are shown here; the full five-indicator card lives on
+           /analytics/senales. Silent when the organism raises none, or when it is too small to be
+           measured at all — an empty panel would read as a clean bill of health this data cannot
+           give. -->
+      <section
+        v-if="raisedSignals.length"
+        class="block"
+      >
+        <div class="block__head">
+          <h2>{{ t('senales.title') }}</h2>
+          <NuxtLink
+            :to="localePath('/analytics/senales')"
+            class="block__all"
+          >
+            {{ t('common.viewAll') }}
+          </NuxtLink>
+        </div>
+        <p class="block__help block__help--wide">
+          {{ t('senales.caveat') }}
+        </p>
+        <ul class="bsig">
+          <li
+            v-for="s in raisedSignals"
+            :key="s.key"
+            class="bsig__item"
+            :class="`bsig__item--${s.level}`"
+          >
+            <span class="bsig__label">{{ t(`senales.signal.${s.key}.label`) }}</span>
+            <span class="bsig__value u-mono">{{ signalValue(s.key, s.value) }}</span>
+            <span
+              v-if="typeof s.populationPercentile === 'number'"
+              class="bsig__pct"
+            >{{ t('senales.percentile', { pct: Math.round(s.populationPercentile * 100) }) }}</span>
+          </li>
+        </ul>
+      </section>
 
       <!-- ===== Spending by year ===== -->
       <section
@@ -997,4 +1056,29 @@ useSeo(() => ({
 @media (max-width: 380px) {
   .stats { grid-template-columns: 1fr; }
 }
+
+/* ---- Señales de gestión ---- */
+.bsig {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: var(--s-2);
+}
+
+.bsig__item {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  min-width: 0;
+}
+
+/* Level is carried by tone AND by the printed percentile, never by colour alone. */
+.bsig__item--watch { border-color: var(--alerta); background: var(--alerta-wash); }
+.bsig__item--high { border-color: var(--alerta); background: var(--alerta-wash); border-width: 2px; }
+
+.bsig__label { display: block; font-size: var(--t-xs); color: var(--text-muted); }
+.bsig__value { display: block; font-weight: 600; }
+.bsig__pct { display: block; font-size: var(--t-xs); color: var(--text-muted); }
 </style>

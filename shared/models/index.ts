@@ -38,3 +38,6 @@ export * from './sice_rubro';
 
 // Contracting-unit purchasing contacts directory (procurement_contacts)
 export * from './procurement_contacts';
+
+// Señales de gestión — per-organism procurement risk indicators (integrity_signals)
+export * from './integrity_signals';
