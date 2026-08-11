@@ -125,6 +125,9 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'intendencias', to: localePath('/analytics/intendencias'), icon: 'mdi-city-variant-outline' },
             { key: 'mapa', to: localePath('/analytics/mapa'), icon: 'mdi-view-grid-outline' },
             { key: 'partidos', to: localePath('/analytics/partidos'), icon: 'mdi-vote-outline' },
+            // Spending recovered by SUBJECT rather than by body — the feed has no
+            // policy-area field, so this is the first of a family of reconstructed topics.
+            { key: 'genero', to: localePath('/analytics/genero'), icon: 'mdi-gender-male-female' },
             // Demoted from the top level: state-advertising spend is an analysis,
             // not a trunk section of the site.
             { key: 'pauta', to: localePath('/pauta'), icon: 'mdi-bullhorn-variant-outline' },
@@ -160,6 +163,7 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'invAsse', to: localePath('/investigaciones/asse-ambulancias'), icon: 'mdi-ambulance' },
             { key: 'invSaturno', to: localePath('/investigaciones/frigorifico-saturno'), icon: 'mdi-cow' },
             { key: 'invMejorPeor', to: localePath('/investigaciones/mejor-o-peor'), icon: 'mdi-chart-timeline-variant' },
+            { key: 'invGenero', to: localePath('/investigaciones/gasto-en-genero'), icon: 'mdi-human-male-female' },
           ],
         },
         {

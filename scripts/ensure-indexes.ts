@@ -440,6 +440,27 @@ async function main(): Promise<void> {
       await actaBidders.createIndex({ found: 1, probedAt: -1 }, { background: true })
       console.log('✅ acta_bidders indexes ensured (ocid unique, found+probedAt)')
 
+      // topic_contracts: per-contract classification behind a spending topic
+      // (shared/spending-topics.ts), written by src/jobs/refresh-topic-spending.ts.
+      // topicKey+ocid unique is the upsert key; the inTopic-prefixed compounds serve
+      // the listing endpoint's sorts/filters, which only ever look at kept contracts.
+      const topicContracts = client.db(DB_NAME).collection('topic_contracts')
+      await topicContracts.createIndex({ topicKey: 1, ocid: 1 }, { unique: true, background: true })
+      await topicContracts.createIndex({ topicKey: 1, inTopic: 1, amount: -1 }, { background: true })
+      await topicContracts.createIndex({ topicKey: 1, inTopic: 1, firstSeenAt: -1 }, { background: true })
+      await topicContracts.createIndex({ topicKey: 1, inTopic: 1, sourceYear: -1 }, { background: true })
+      await topicContracts.createIndex({ topicKey: 1, inTopic: 1, category: 1 }, { background: true })
+      await topicContracts.createIndex({ topicKey: 1, inTopic: 1, buyerId: 1 }, { background: true })
+      await topicContracts.createIndex({ topicKey: 1, rulesVersion: 1 }, { background: true })
+      console.log('✅ topic_contracts indexes ensured (topicKey+ocid unique, +amount/firstSeenAt/sourceYear/category/buyerId, rulesVersion)')
+
+      // topic_spending: the per-topic rollup the read endpoints findOne(). Not unique on
+      // topicKey — compute-then-swap briefly holds two generations.
+      const topicSpending = client.db(DB_NAME).collection('topic_spending')
+      await topicSpending.createIndex({ topicKey: 1, dataVersion: 1 }, { background: true })
+      await topicSpending.createIndex({ slug: 1 }, { background: true })
+      console.log('✅ topic_spending indexes ensured (topicKey+dataVersion, slug)')
+
       // provider_load_error_stats: the load-errors-by-provider cross-reference, rebuilt
       // (compute-then-swap) by src/jobs/cross-provider-load-errors.ts. Same shape as
       // provider_anomaly_stats but scoped to the load-error bucket; `supplierName` unique is the
@@ -689,6 +710,8 @@ async function main(): Promise<void> {
       console.log('   plan: integrity_signals.{buyerId unique, weight+totalUyu, dataVersion}')
       console.log('   plan: jutep_omisos.{omisoKey unique, incisoCode, fechaOmision, organismo}')
       console.log('   plan: acta_bidders.{ocid unique, found+probedAt}')
+      console.log('   plan: topic_contracts.{topicKey+ocid unique, +amount/firstSeenAt/sourceYear/category/buyerId, rulesVersion}')
+      console.log('   plan: topic_spending.{topicKey+dataVersion, slug}')
       console.log('   plan: organism_group_stats.{groupKey unique, dataVersion}')
       console.log('   plan: spending_trend.{year unique, dataVersion}')
       console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')

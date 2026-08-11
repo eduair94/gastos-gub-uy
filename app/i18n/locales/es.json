@@ -73,7 +73,9 @@
     "invEmpresas": "Empresas señaladas",
     "invAsse": "ASSE: ambulancias",
     "invSaturno": "Frigorífico Saturno",
-    "invMejorPeor": "¿Cada vez estamos peor?"
+    "invMejorPeor": "¿Cada vez estamos peor?",
+    "genero": "Gasto en género",
+    "invGenero": "Gasto en género"
   },
   "money": {
     "unavailable": "Sin monto",
@@ -1992,6 +1994,10 @@
     }
   },
   "seo": {
+    "genero": {
+        "title": "Gasto público en políticas de género y diversidad en Uruguay",
+        "description": "Cuánto gasta el Estado uruguayo en políticas de género y diversidad: por organismo, proveedor, año y administración, con cada contrato enlazado a su ficha y al expediente oficial, y el método de detección publicado."
+    },
     "omisos": {
       "title": "Funcionarios declarados omisos por la JUTEP",
       "description": "Nómina pública de funcionarios del Estado uruguayo declarados omisos en su obligación de presentar la declaración jurada de bienes e ingresos, por organismo y por año."
@@ -2560,6 +2566,10 @@
     "newsletterPushHint": "Si activás las notificaciones push en este dispositivo, también te avisaremos cuando se publique una nueva edición."
   },
   "newsletter": {
+    "topicsEyebrow": "Temas de gasto",
+    "topicsTitle": "Qué se movió en los temas seguidos",
+    "topicsNote": "Contratos que el seguimiento temático vio por primera vez esta semana. La compra puede ser anterior: lo nuevo es que ahora es visible.",
+    "topicsCount": "{n} contratos nuevos esta semana",
     "eyebrow": "Expediente semanal",
     "indexTitle": "Lo más grande que compró el Estado, semana a semana",
     "indexLead": "Un registro verificable de las adjudicaciones más grandes publicadas y de las señales estadísticas nuevas. Los hechos salen de los datos; Gemini ayuda a leerlos.",
@@ -2838,7 +2848,7 @@
     "relatedTitle": "Otros casos",
     "card": {
       "count": "{n} contratos",
-      "sources": "{n} fuentes",
+    "sources": "{n} fuentes",
       "crossRef": "Cruce con la base"
     },
     "methodTitle": "Cómo se arma un caso",
@@ -2876,5 +2886,80 @@
     "loadMore": "Cargar más",
     "matched": "Coincide con",
     "openCall": "Ver llamado"
+  },
+  "genero": {
+    "alertCta": "Avisarme de nuevos llamados del tema",
+    "alertHelp": "Crea una alerta con los términos fuertes de este tema. Llega por push, Telegram, correo o la bandeja del sitio.",
+    "alertName": "Género y diversidad",
+      "title": "Gasto público en políticas de género y diversidad",
+      "lead": "Cuánto gasta el Estado uruguayo en políticas de género y diversidad, qué organismo lo compra, a qué proveedor va y bajo qué administración. El feed de compras no tiene una etiqueta de tema: se reconstruye desde el texto de cada contrato, con el método publicado abajo.",
+      "coverageWarning": "El feed sólo trae monto en {withAmount} de los {contracts} contratos detectados ({pct}%). El total de abajo es un piso, no una cifra final: la carga incompleta es del registro oficial, no una estimación de este sitio.",
+      "kpi": {
+        "total": "Total medible",
+        "contracts": "Contratos detectados",
+        "coverage": "Con monto cargado",
+        "buyers": "Organismos compradores",
+        "suppliers": "Proveedores",
+        "discarded": "Descartados por el clasificador"
+      },
+      "updated": "Recalculado el {date} sobre {n} candidatos.",
+      "readInvestigation": "Leer la investigación",
+      "openCallsTitle": "Llamados abiertos ahora",
+      "closes": "Cierra {date}",
+      "recentTitle": "Novedades de la semana",
+      "recentNote": "{n} contratos que el trabajo semanal vio por primera vez en los últimos 7 días.",
+      "byYearTitle": "Gasto medible por año",
+      "byYearHelp": "Sólo suma los contratos que traen monto. Antes de 2017 casi no se cargaban montos, así que la serie no es comparable hacia atrás.",
+      "byCategoryTitle": "Composición por categoría",
+      "byCategoryHelp": "Categoría asignada contrato por contrato en la segunda etapa de clasificación.",
+      "bars": {
+        "yearSub": "{n} contratos · {m} sin monto",
+        "catSub": "{n} contratos"
+      },
+      "byBuyerTitle": "Organismos compradores",
+      "byBuyerHelp": "La columna de participación es cuánto del gasto propio de ese organismo fue al tema, en pesos por cada 10.000. El partido es el del año más reciente en que el organismo aparece en el tema; el chip de cada contrato usa el año de ese contrato.",
+      "bySupplierTitle": "Proveedores",
+      "bySupplierHelp": "Cuando un contrato tiene más de un adjudicatario el monto se imputa entero a cada uno: la fila es un techo, no una liquidación.",
+      "byPartyTitle": "Comparación por partido",
+      "byPartyCaveat": "Sólo normalizada, y a propósito. Un solo comprador explica la mayor parte del gasto medible y su departamento fue gobernado por el mismo partido en todo el período, así que un ranking de pesos por partido mediría quién gobierna ese departamento, no quién gasta en el tema. Lo que se compara es cuánto del gasto propio de esos organismos fue al tema. Es contexto electoral, nunca atribución.",
+      "byPartyMedian": "Cada contrato se asigna al partido que gobernaba su organismo el año en que se registró, no al que gobierna hoy.",
+      "partyMeta": "{orgs} organismos · {contracts} contratos",
+      "contractsTitle": "Todos los contratos",
+      "discardedTitle": "Candidatos descartados",
+      "col": {
+        "organism": "Organismo",
+        "party": "Gobierno",
+        "contracts": "Contratos",
+        "share": "Por 10.000",
+        "total": "Monto",
+        "supplier": "Proveedor",
+        "buyers": "Organismos",
+        "contract": "Contrato",
+        "category": "Categoría",
+        "year": "Año",
+        "amount": "Monto"
+      },
+      "allYears": "Todos los años",
+      "allCategories": "Todas las categorías",
+      "sortLabel": "Ordenar por",
+      "sort": {
+        "amount": "Monto",
+        "recent": "Detección más reciente",
+        "year": "Año"
+      },
+      "showDiscarded": "Ver los descartados",
+      "clearFilters": "Limpiar filtros",
+      "resultCount": "{n} contratos",
+      "methodTitle": "Método",
+      "methodLead": "Este tema no existe como campo en los datos abiertos: se reconstruye desde el texto libre de cada contrato. Por eso la lista de términos se publica entera, junto con los que se dejaron afuera y la evidencia de por qué. Así se puede impugnar un término sin discutir el total.",
+      "termsIncluded": "Términos incluidos ({n})",
+      "termsRejected": "Términos descartados y por qué ({n})",
+      "catalogTitle": "Artículos del catálogo SICE ({n})",
+      "strength": {
+        "strong": "fuerte",
+        "weak": "débil"
+      },
+      "bpValue": "{n}",
+      "sources": "Fuentes:"
   }
 }

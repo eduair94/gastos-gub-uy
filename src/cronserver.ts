@@ -83,6 +83,11 @@ class CronServer {
   // "¿varía el producto?" panel for the unexplained-anomaly codes.
   private productVariantsStatus: CronJobStatus;
   private isProductVariantsRunning: boolean = false;
+
+  // Spending-topic rollups (topic_spending/topic_contracts). Weekly; writes only its
+  // own collections, so it has an independent guard and never consults busyWith().
+  private topicSpendingStatus: CronJobStatus;
+  private isTopicSpendingRunning: boolean = false;
   // Webhook delivery — independent (reads open_calls/anomalies/releases + webhook_*,
   // writes its own webhook_deliveries), so it never consults busyWith(). Runs every
   // few minutes: enqueue deliveries for newly-seen events, then drain the outbox.
@@ -118,6 +123,7 @@ class CronServer {
     this.loadErrorProviderStatus = freshStatus();
     this.organismGroupStatus = freshStatus();
     this.productVariantsStatus = freshStatus();
+    this.topicSpendingStatus = freshStatus();
     this.webhooksStatus = freshStatus();
     this.tenderForecastStatus = freshStatus();
 
@@ -493,6 +499,22 @@ class CronServer {
     };
     this.app.post("/cron/product-variants", triggerProductVariants);
     this.app.get("/cron/product-variants", triggerProductVariants);
+
+    // Spending topics: status + manual trigger. Independent guard (own collections).
+    this.app.get("/cron/topic-spending/status", (_req, res) => {
+      res.json({ ...this.topicSpendingStatus, isRunning: this.isTopicSpendingRunning });
+    });
+    const triggerTopicSpending = (_req: express.Request, res: express.Response): void => {
+      if (this.isTopicSpendingRunning) {
+        res.status(409).json({ error: "Topic-spending refresh already running", status: this.topicSpendingStatus });
+        return;
+      }
+      this.logger.info("Manual topic-spending refresh trigger initiated");
+      this.runTopicSpendingJob().catch((error) => this.logger.error("Manual topic-spending trigger failed:", error));
+      res.json({ message: "Topic-spending refresh triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/topic-spending", triggerTopicSpending);
+    this.app.get("/cron/topic-spending", triggerTopicSpending);
 
     // Webhook delivery: status + manual trigger. Independent guard (writes its own
     // webhook_deliveries), so it never consults busyWith().
@@ -1076,6 +1098,20 @@ class CronServer {
     );
     this.logger.info(`Product-variant refresh scheduled with expression: ${productVariantsExpression} (Uruguay timezone)`);
 
+    // Spending topics, weekly on Monday at 06:30 — after the :05 ingest and well before
+    // the 09:15 newsletter, so the digest's "novedades" block reads a fresh rollup.
+    // Cheap: a few hundred candidates, and a contract whose rules hash is unchanged is
+    // never re-sent to the model.
+    const topicSpendingExpression = "30 6 * * 1";
+    cron.schedule(
+      topicSpendingExpression,
+      async () => {
+        await this.runTopicSpendingJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Topic-spending refresh scheduled with expression: ${topicSpendingExpression} (Uruguay timezone)`);
+
     // Webhook delivery every 2 minutes: enqueue deliveries for events seen since the
     // last run and drain the outbox. Cheap and idempotent (dedupeKey), independent of
     // busyWith. A short cadence keeps push latency low for integrations.
@@ -1544,6 +1580,38 @@ class CronServer {
       this.logger.error("Product-variant refresh failed:", errorMessage);
     } finally {
       this.isProductVariantsRunning = false;
+    }
+  }
+
+  /**
+   * Rebuild every spending-topic rollup (shared/spending-topics.ts). Read-only over
+   * `releases`/`open_calls`; writes only `topic_contracts` + `topic_spending`, so it
+   * runs on its own guard rather than busyWith().
+   */
+  private async runTopicSpendingJob(): Promise<void> {
+    if (this.isTopicSpendingRunning) {
+      this.logger.warn("Topic-spending refresh skipped - already running");
+      return;
+    }
+    this.isTopicSpendingRunning = true;
+    this.topicSpendingStatus.status = "running";
+    this.topicSpendingStatus.lastRun = new Date();
+    this.topicSpendingStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting topic-spending refresh...");
+      await this.runJobProcess("jobs/refresh-topic-spending");
+      this.topicSpendingStatus.status = "idle";
+      this.topicSpendingStatus.successfulRuns++;
+      this.logger.info("Topic-spending refresh completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.topicSpendingStatus.status = "error";
+      this.topicSpendingStatus.lastError = errorMessage;
+      this.topicSpendingStatus.failedRuns++;
+      this.logger.error("Topic-spending refresh failed:", errorMessage);
+    } finally {
+      this.isTopicSpendingRunning = false;
     }
   }
 

@@ -17,10 +17,12 @@ import { NewsletterDeliveryModel } from "../../shared/models/newsletter_delivery
 import { NewsletterIssueModel } from "../../shared/models/newsletter_issue";
 import { PushSubscriptionModel } from "../../shared/models/push_subscription";
 import { ReleaseModel } from "../../shared/models/release";
+import { TopicContractModel } from "../../shared/models/topic_contract";
 import { UserModel } from "../../shared/models/user";
 import { callGeminiStructured } from "../../shared/ai/gemini-client";
 import type { GeminiSchema } from "../../shared/ai/gemini-client";
 import { resolveChannels } from "../../shared/alerts/channels";
+import { SPENDING_TOPICS } from "../../shared/spending-topics";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
 import {
   newsletterListUnsubscribeHeaders,
@@ -34,6 +36,7 @@ import type {
   INewsletterAnomalySummary,
   INewsletterExpense,
   INewsletterIssue,
+  INewsletterTopicHighlight,
 } from "../../shared/types/newsletter";
 import { createMailer } from "../services/mailer";
 import { createPusher, isPushConfigured } from "../services/webpush";
@@ -186,6 +189,42 @@ async function loadExpenses(start: Date, end: Date): Promise<{
     eligibleExpenseCount: summary?.count ?? 0,
     totalAmountUyu: summary?.totalAmountUyu ?? 0,
   };
+}
+
+/**
+ * What each spending topic picked up inside the week.
+ *
+ * `firstSeenAt` — when the weekly topic job first classified the contract — is the
+ * only "new this week" the data supports: a contract's own date can be years old and
+ * still be the first time the topic saw it. So the block is about what BECAME VISIBLE
+ * this week, and says so, rather than implying the purchase happened this week.
+ */
+async function loadTopicHighlights(start: Date, end: Date): Promise<INewsletterTopicHighlight[]> {
+  const out: INewsletterTopicHighlight[] = [];
+  for (const topic of SPENDING_TOPICS) {
+    const rows = await TopicContractModel.find(
+      { topicKey: topic.key, inTopic: true, firstSeenAt: { $gte: start, $lt: end } },
+      { ocid: 1, releaseId: 1, title: 1, description: 1, buyerName: 1, amount: 1, hasAmount: 1 },
+    ).sort({ amount: -1 }).limit(200).lean();
+    if (!rows.length) continue;
+
+    out.push({
+      topicKey: topic.key,
+      slug: topic.slug,
+      label: topic.labelEs,
+      newContracts: rows.length,
+      newTotalUyu: rows.reduce((sum, r) => sum + (r.amount ?? 0), 0),
+      items: rows.slice(0, 5).map(r => ({
+        ocid: r.ocid,
+        ...(r.releaseId ? { releaseId: r.releaseId } : {}),
+        title: clean(r.title ?? r.description, r.ocid).slice(0, 160),
+        ...(r.buyerName ? { buyerName: r.buyerName } : {}),
+        amountUyu: r.amount ?? 0,
+        hasAmount: Boolean(r.hasAmount),
+      })),
+    });
+  }
+  return out;
 }
 
 function emptyAnomalySummary(): INewsletterAnomalySummary {
@@ -569,9 +608,10 @@ async function main(): Promise<void> {
 
   let issue = await NewsletterIssueModel.findOne({ weekKey: week.key }).lean();
   if (!issue || issue.status !== "published" || args.force) {
-    const [{ topExpenses, eligibleExpenseCount, totalAmountUyu }, { anomalySummary, anomalyFindings }] = await Promise.all([
+    const [{ topExpenses, eligibleExpenseCount, totalAmountUyu }, { anomalySummary, anomalyFindings }, topicHighlights] = await Promise.all([
       loadExpenses(week.start, week.end),
       loadAnomalies(week.start, week.end),
+      loadTopicHighlights(week.start, week.end),
     ]);
     if (!topExpenses.length) throw new Error(`No eligible award releases found for week ${week.key}`);
     const generated = await generateAnalysis({
@@ -599,6 +639,7 @@ async function main(): Promise<void> {
       topExpenses,
       anomalySummary,
       anomalyFindings,
+      topicHighlights,
       analysis: generated.analysis,
       ai: {
         provider: "gemini" as const,

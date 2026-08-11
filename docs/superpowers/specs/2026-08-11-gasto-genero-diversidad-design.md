@@ -1,7 +1,7 @@
 # Gasto público en políticas de género y diversidad — diseño
 
 **Fecha:** 2026-08-11
-**Estado:** aprobado, en implementación
+**Estado:** implementado y verificado contra la DB en vivo
 **Rama:** `feat/gasto-genero`
 
 ## Qué es
@@ -151,6 +151,37 @@ Repo sin framework de tests. Plan:
 5. Corrida real del job contra la DB en vivo.
 6. `curl` a los endpoints en el dev server (`:3600`) y revisión visual de ambas páginas.
 7. `npm --prefix app run build` antes del deploy.
+
+## Resultado medido (corrida real, 2026-08-11)
+
+| | |
+|---|---|
+| Candidatos tras el pre-filtro | 584 releases → 555 tras las guardas → **533 compras distintas** |
+| Clasificados dentro del tema | **527** |
+| Descartados por el modelo | 6 |
+| Total medible | **120,8M UYU** |
+| Cobertura | **20,3%** (107 de 527 con monto) |
+| Comprador principal | Intendencia de Montevideo, 77,5% del total |
+| Concentración | 5 proveedores = 98,3% · VBG + ComunaMujer = 96,2% |
+| Peso relativo | **1,40 de cada 10.000 pesos** que esos 28 organismos gastaron en todo |
+| Costo del modelo | USD 0,0497 la primera corrida; 0 en las siguientes (veredictos cacheados) |
+
+Descartes que confirman que la segunda etapa hace falta: una compra de lombrices
+«(GENERO EISENIA FOETIDA)», un aire acondicionado para un sector llamado «Género» dentro
+de una dirección de RRHH, y bolsas de tela.
+
+## Dos defectos encontrados al verificar (y corregidos)
+
+1. **Doble conteo por `ocid`.** Varios releases comparten compra (el ajuste y la
+   aclaración además de la adjudicación) y cada versión trae su propio
+   `primaryAmount`. El upsert quedaba a «último gana», así que el total publicado
+   dependía del orden del cursor. Ahora se deduplica por `ocid` quedándose con el
+   monto mayor —el reconciliado—, de forma determinística.
+2. **El upsert pisaba el veredicto del modelo.** `inTopic`/`category` se volvían a
+   escribir con la respuesta de las reglas en cada corrida, descartando el veredicto
+   cacheado: el total se movía un 22% sólo por volver a correr el job. Ahora las
+   reglas sólo siembran en el insert y un paso de reconciliación decide el veredicto
+   final en un único lugar. Verificado: dos corridas seguidas dan 120.822.417 exacto.
 
 ## Fuera de alcance
 
