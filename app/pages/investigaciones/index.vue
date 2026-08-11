@@ -38,6 +38,7 @@ useSeo(() => ({
         { name: c.value.cardAsse.title, url: `${siteUrl}/investigaciones/asse-ambulancias` },
         { name: c.value.cardSaturno.title, url: `${siteUrl}/investigaciones/frigorifico-saturno` },
         { name: c.value.cardMejorPeor.title, url: `${siteUrl}/investigaciones/mejor-o-peor` },
+        { name: c.value.cardGenero.title, url: `${siteUrl}/investigaciones/gasto-en-genero` },
       ].map((it, i) => ({
         '@type': 'ListItem',
         'position': i + 1,
@@ -356,6 +357,40 @@ useSeo(() => ({
               <div class="inv-icard__tags">
                 <span
                   v-for="tg in c.cardSaturno.tags"
+                  :key="tg"
+                  class="inv-tagpill"
+                >{{ tg }}</span>
+              </div>
+            </div>
+            <div class="inv-icard__cta">
+              {{ c.readMore ?? t('common.viewDetail') }} →
+            </div>
+          </NuxtLink>
+
+          <NuxtLink
+            :to="localePath('/investigaciones/gasto-en-genero')"
+            class="inv-icard"
+          >
+            <div class="inv-icard__top">
+              <div>
+                <p class="inv-icard__eyebrow">
+                  {{ c.cardGenero.eyebrow }}
+                </p>
+                <h3 class="inv-icard__title">
+                  {{ c.cardGenero.title }}
+                </h3>
+              </div>
+              <div class="inv-icard__emoji">
+                ⚖️
+              </div>
+            </div>
+            <div class="inv-icard__body">
+              <p class="inv-icard__dek">
+                {{ c.cardGenero.dek }}
+              </p>
+              <div class="inv-icard__tags">
+                <span
+                  v-for="tg in c.cardGenero.tags"
                   :key="tg"
                   class="inv-tagpill"
                 >{{ tg }}</span>

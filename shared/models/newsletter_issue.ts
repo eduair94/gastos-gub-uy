@@ -39,6 +39,32 @@ const AnomalyFindingSchema = new Schema(
   { _id: false },
 );
 
+/** Per-spending-topic movement inside the week (see shared/spending-topics.ts). */
+const TopicHighlightSchema = new Schema(
+  {
+    topicKey: { type: String, required: true },
+    slug: { type: String, required: true },
+    label: { type: String, default: "" },
+    newContracts: { type: Number, default: 0 },
+    newTotalUyu: { type: Number, default: 0 },
+    items: {
+      type: [new Schema(
+        {
+          ocid: { type: String, required: true },
+          releaseId: { type: String },
+          title: { type: String, default: "" },
+          buyerName: { type: String },
+          amountUyu: { type: Number, default: 0 },
+          hasAmount: { type: Boolean, default: false },
+        },
+        { _id: false },
+      )],
+      default: [],
+    },
+  },
+  { _id: false },
+);
+
 const NewsletterIssueSchema = new Schema<INewsletterIssue>(
   {
     weekKey: { type: String, required: true },
@@ -67,6 +93,7 @@ const NewsletterIssueSchema = new Schema<INewsletterIssue>(
       },
     },
     anomalyFindings: { type: [AnomalyFindingSchema], default: [] },
+    topicHighlights: { type: [TopicHighlightSchema], default: [] },
     analysis: {
       headline: { type: String, required: true },
       overview: { type: [String], default: [] },

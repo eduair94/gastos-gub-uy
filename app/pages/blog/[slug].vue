@@ -31,6 +31,23 @@ interface Finding {
   aiCategory?: string
 }
 
+/** A spending topic's movement inside the week (shared/spending-topics.ts). */
+interface TopicHighlight {
+  topicKey: string
+  slug: string
+  label: string
+  newContracts: number
+  newTotalUyu: number
+  items: {
+    ocid: string
+    releaseId?: string
+    title: string
+    buyerName?: string
+    amountUyu: number
+    hasAmount: boolean
+  }[]
+}
+
 interface Issue {
   weekKey: string
   slug: string
@@ -51,6 +68,7 @@ interface Issue {
     bySeverity: { low: number, medium: number, high: number, critical: number }
   }
   anomalyFindings: Finding[]
+  topicHighlights?: TopicHighlight[]
   analysis: { headline: string, overview: string[], spendingPatterns: string[], cautions: string[] }
   ai: { provider: 'gemini', model: string, generatedAt: string }
   methodology: { expenseScope: string, anomalyDisclaimer: string }
@@ -288,6 +306,59 @@ useSeo(() => ({
             </div>
           </li>
         </ul>
+      </section>
+
+      <!-- Spending topics. Rendered only when the week moved one: a permanent
+           "0 new contracts" block teaches the reader to skip the section. -->
+      <section
+        v-if="issue.topicHighlights?.length"
+        class="section"
+      >
+        <div class="section__head">
+          <p class="u-eyebrow">
+            {{ t('newsletter.topicsEyebrow') }}
+          </p>
+          <h2>{{ t('newsletter.topicsTitle') }}</h2>
+          <p class="section__note">
+            {{ t('newsletter.topicsNote') }}
+          </p>
+        </div>
+        <div
+          v-for="topic in issue.topicHighlights"
+          :key="topic.topicKey"
+          class="topic"
+        >
+          <h3>
+            <NuxtLink :to="localePath(`/analytics/${topic.slug}`)">
+              {{ topic.label }}
+            </NuxtLink>
+          </h3>
+          <p>{{ t('newsletter.topicsCount', { n: topic.newContracts }) }}</p>
+          <ul class="findings">
+            <li
+              v-for="item in topic.items"
+              :key="item.ocid"
+            >
+              <NuxtLink
+                v-if="item.releaseId"
+                :to="localePath(`/contracts/${item.releaseId}`)"
+                class="finding__title"
+              >
+                {{ item.title }}
+              </NuxtLink>
+              <span
+                v-else
+                class="finding__title"
+              >{{ item.title }}</span>
+              <p>{{ item.buyerName || t('newsletter.notReported') }}</p>
+              <MoneyAmount
+                :amount="item.hasAmount ? item.amountUyu : null"
+                compact
+                size="sm"
+              />
+            </li>
+          </ul>
+        </div>
       </section>
 
       <section class="section methodology">

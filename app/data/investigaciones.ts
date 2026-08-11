@@ -209,6 +209,16 @@ export const INV_CONTENT = {
           "brecha yo/país: 46 pts"
         ]
       },
+      "cardGenero": {
+        "eyebrow": "Series · Se actualiza cada lunes",
+        "title": "Gasto en políticas de género y diversidad",
+        "dek": "El feed no etiqueta el tema: se reconstruye desde el texto de cada contrato. Aparecen tres cosas: el gasto medible es chico, casi todo es atención a víctimas de violencia, y 8 de cada 10 contratos no tienen monto cargado.",
+        "tags": [
+          "datos en vivo",
+          "método publicado",
+          "cinco proveedores concentran"
+        ]
+      },
       "methodTag": "Método",
       "methodTitle": "Cómo se hace cada una",
       "how": [
@@ -559,6 +569,16 @@ export const INV_CONTENT = {
           "two reference years",
           "homicides x1.7",
           "me/country gap: 46 pts"
+        ]
+      },
+      "cardGenero": {
+        "eyebrow": "Series · Refreshed every Monday",
+        "title": "Spending on gender and diversity policy",
+        "dek": "The feed does not label the subject: it is rebuilt from each contract text. Three things surface: the measurable spend is small, almost all of it is victim support, and 8 in 10 contracts carry no amount.",
+        "tags": [
+          "live data",
+          "method published",
+          "five suppliers concentrate it"
         ]
       },
       "methodTag": "Method",

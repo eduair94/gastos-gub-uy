@@ -47,3 +47,8 @@ export * from './jutep_omiso';
 
 // Bidders recovered from the acta de adjudicación (acta_bidders)
 export * from "./acta_bidders";
+
+// Spending topics — subject-of-spending rollups (topic_spending) and the
+// per-contract classification behind them (topic_contracts)
+export * from "./topic_spending";
+export * from "./topic_contract";

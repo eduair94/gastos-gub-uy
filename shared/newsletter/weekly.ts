@@ -100,7 +100,7 @@ export function newsletterListUnsubscribeHeaders(
 export function renderNewsletterMail(
   issue: Pick<INewsletterIssue,
     "title" | "excerpt" | "slug" | "periodStart" | "periodEnd" | "topExpenses"
-    | "anomalySummary" | "analysis">,
+    | "anomalySummary" | "analysis"> & Partial<Pick<INewsletterIssue, "topicHighlights">>,
   options: { appBaseUrl: string; unsubscribeToken: string },
 ): NewsletterMail {
   const base = options.appBaseUrl.replace(/\/+$/, "");
@@ -115,6 +115,18 @@ export function renderNewsletterMail(
     </li>`).join("");
   const overviewHtml = issue.analysis.overview.map(p => `<p style="line-height:1.6">${escapeHtml(p)}</p>`).join("");
 
+  // Spending topics: only rendered when the week actually moved one. An empty block
+  // that says "0 new contracts" every week trains the reader to skip the section.
+  const topicsHtml = (issue.topicHighlights ?? []).length
+    ? `<h2 style="font-size:18px;margin:28px 0 10px">Temas de gasto</h2>`
+      + (issue.topicHighlights ?? []).map(topic => `
+      <p style="line-height:1.6;margin:0 0 6px"><strong>${escapeHtml(topic.label)}</strong>: ${topic.newContracts} contrato(s) visibles por primera vez esta semana${topic.newTotalUyu > 0 ? `, ${escapeHtml(formatUyu(topic.newTotalUyu))} con monto cargado` : ""}.</p>
+      <ul style="padding-left:22px;margin:0 0 16px">${topic.items.map(item => `
+        <li style="margin:0 0 8px"><span style="color:#0f2233">${escapeHtml(item.title)}</span><br>
+        <span style="color:#596b76">${escapeHtml(item.buyerName ?? "Organismo no informado")}${item.hasAmount ? ` · ${escapeHtml(formatUyu(item.amountUyu))}` : " · sin monto en el feed"}</span></li>`).join("")}</ul>
+      <p style="margin:0 0 8px"><a href="${base}/analytics/${encodeURIComponent(topic.slug)}" style="color:#3c6d9c">Ver el tema completo</a></p>`).join("")
+    : "";
+
   const html = `<!doctype html>
 <html lang="es"><body style="margin:0;background:#eef1f2;color:#0f2233;font-family:Arial,sans-serif">
   <div style="max-width:680px;margin:0 auto;padding:28px 18px">
@@ -127,6 +139,7 @@ export function renderNewsletterMail(
       ${overviewHtml}
       <h2 style="font-size:18px;margin:28px 0 14px">Las adjudicaciones más grandes</h2>
       <ol style="padding-left:22px">${expensesHtml}</ol>
+      ${topicsHtml}
       <h2 style="font-size:18px;margin:28px 0 10px">Alertas detectadas</h2>
       <p style="line-height:1.6"><strong>${issue.anomalySummary.total}</strong> señales nuevas; <strong>${issue.anomalySummary.highCritical}</strong> de severidad alta o crítica y <strong>${issue.anomalySummary.unexplained}</strong> sin explicación suficiente tras la revisión automática.</p>
       <p style="font-size:13px;line-height:1.5;color:#596b76">Una alerta estadística no prueba irregularidad. El reporte distingue señales sin explicación, posibles errores de carga y revisiones pendientes.</p>
@@ -139,7 +152,12 @@ export function renderNewsletterMail(
   const expensesText = issue.topExpenses.slice(0, 5)
     .map(e => `${e.rank}. ${e.title} — ${formatUyu(e.amountUyu)}`)
     .join("\n");
-  const text = `${issue.title}\n${period}\n\n${issue.excerpt}\n\n${issue.analysis.overview.join("\n\n")}\n\nLAS ADJUDICACIONES MÁS GRANDES\n${expensesText}\n\nALERTAS DETECTADAS\n${issue.anomalySummary.total} señales nuevas; ${issue.anomalySummary.highCritical} altas o críticas; ${issue.anomalySummary.unexplained} sin explicación suficiente.\n\nUna alerta estadística no prueba irregularidad.\n\nLeer: ${issueUrl}\nCancelar suscripción: ${unsubscribeUrl}`;
+  const topicLines = (issue.topicHighlights ?? []).map(topic =>
+    `${topic.label}: ${topic.newContracts} contrato(s) visibles por primera vez esta semana`
+    + `${topic.newTotalUyu > 0 ? `, ${formatUyu(topic.newTotalUyu)} con monto` : ""}.`,
+  );
+  const topicsText = topicLines.length ? `\n\nTEMAS DE GASTO\n${topicLines.join("\n")}` : "";
+  const text = `${issue.title}\n${period}\n\n${issue.excerpt}\n\n${issue.analysis.overview.join("\n\n")}\n\nLAS ADJUDICACIONES MÁS GRANDES\n${expensesText}\n\nALERTAS DETECTADAS\n${issue.anomalySummary.total} señales nuevas; ${issue.anomalySummary.highCritical} altas o críticas; ${issue.anomalySummary.unexplained} sin explicación suficiente.${topicsText}\n\nUna alerta estadística no prueba irregularidad.\n\nLeer: ${issueUrl}\nCancelar suscripción: ${unsubscribeUrl}`;
 
   return { subject: issue.title, html, text };
 }

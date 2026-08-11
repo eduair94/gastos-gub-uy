@@ -28,6 +28,7 @@
     "load-jutep-omisos": "tsx src/jobs/load-jutep-omisos.ts",
     "extract-acta-bidders": "tsx src/jobs/extract-acta-bidders.ts",
     "refresh-spending-trend": "tsx src/jobs/refresh-spending-trend.ts",
+    "refresh-topic-spending": "tsx src/jobs/refresh-topic-spending.ts",
     "refresh-macro-table": "node scripts/refresh-macro-table.mjs",
     "build-uruguay-geo": "node scripts/build-uruguay-geo.mjs",
     "build:mdi-subset": "node scripts/build-mdi-subset.mjs",

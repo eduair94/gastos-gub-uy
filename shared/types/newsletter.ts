@@ -34,6 +34,28 @@ export interface INewsletterAnomalyFinding {
   aiCategory?: string | undefined;
 }
 
+/**
+ * A spending topic's movement inside the week (shared/spending-topics.ts). Optional:
+ * an issue from before the topics existed, or a quiet week, simply has none, and the
+ * renderers skip the block rather than print a zero.
+ */
+export interface INewsletterTopicHighlight {
+  topicKey: string;
+  slug: string;
+  label: string;
+  /** Contracts whose `firstSeenAt` falls inside the issue's week. */
+  newContracts: number;
+  newTotalUyu: number;
+  items: Array<{
+    ocid: string;
+    releaseId?: string | undefined;
+    title: string;
+    buyerName?: string | undefined;
+    amountUyu: number;
+    hasAmount: boolean;
+  }>;
+}
+
 export interface INewsletterAnomalySummary {
   total: number;
   highCritical: number;
@@ -70,6 +92,7 @@ export interface INewsletterIssue extends Document {
   topExpenses: INewsletterExpense[];
   anomalySummary: INewsletterAnomalySummary;
   anomalyFindings: INewsletterAnomalyFinding[];
+  topicHighlights?: INewsletterTopicHighlight[] | undefined;
   analysis: INewsletterAiAnalysis;
   ai: {
     provider: "gemini";
