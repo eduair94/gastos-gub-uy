@@ -1001,6 +1001,27 @@ class CronServer {
     );
     this.logger.info(`JUTEP omisos load scheduled with expression: ${jutepExpression} (Uruguay timezone)`);
 
+    // Acta bidder extraction, nightly at 03:20 with a BOUNDED batch. Deliberately small and slow:
+    // it pulls PDFs from comprasestatales one at a time with a delay, and every probed call is
+    // recorded (including the silent ones) so a re-run never re-reads. A backlog drains over
+    // nights rather than in one grind that throttles the source — a previous session already did
+    // that to this host with the reiteración probe.
+    const actaBiddersExpression = "20 3 * * *";
+    cron.schedule(
+      actaBiddersExpression,
+      async () => {
+        try {
+          this.logger.info("Starting acta bidder extraction...");
+          await this.runJobProcess("jobs/extract-acta-bidders", ["--limit=400"]);
+          this.logger.info("Acta bidder extraction completed successfully");
+        } catch (error) {
+          this.logger.error("Acta bidder extraction failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Acta bidder extraction scheduled with expression: ${actaBiddersExpression} (Uruguay timezone)`);
+
     // Year-over-year spending decomposition, monthly at 05:00 on the 1st — after the two
     // rollups above so the three heavy full-collection scans never overlap. Rebuilds
     // spending_trend, which /analytics/evolucion-gasto reads. `--ai` is deliberately NOT

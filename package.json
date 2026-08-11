@@ -26,6 +26,7 @@
     "refresh-dept-indicators": "tsx src/jobs/refresh-dept-indicators.ts",
     "refresh-integrity-signals": "tsx src/jobs/refresh-integrity-signals.ts",
     "load-jutep-omisos": "tsx src/jobs/load-jutep-omisos.ts",
+    "extract-acta-bidders": "tsx src/jobs/extract-acta-bidders.ts",
     "refresh-spending-trend": "tsx src/jobs/refresh-spending-trend.ts",
     "refresh-macro-table": "node scripts/refresh-macro-table.mjs",
     "build-uruguay-geo": "node scripts/build-uruguay-geo.mjs",

@@ -44,3 +44,6 @@ export * from './integrity_signals';
 
 // JUTEP roster of officials declared omisos (jutep_omisos)
 export * from './jutep_omiso';
+
+// Bidders recovered from the acta de adjudicación (acta_bidders)
+export * from "./acta_bidders";

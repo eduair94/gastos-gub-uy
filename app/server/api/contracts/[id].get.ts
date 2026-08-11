@@ -2,7 +2,7 @@ import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { isValidObjectId } from 'mongoose'
 import type { IRelease } from '../../../types'
 import { connectToDatabase } from '../../utils/database'
-import { ContractItemFeaturesModel, ItemPriceBaselineModel, ReleaseModel } from '../../utils/models'
+import { ActaBiddersModel, ContractItemFeaturesModel, ItemPriceBaselineModel, ReleaseModel } from '../../utils/models'
 import { awardUrl, compraIdFromOcid, ocdsJsonUrl, sourceUrl } from '../../utils/query'
 import { loadRateTable } from '../../utils/rates'
 import { toTodayUyu } from '../../../../shared/utils/real-value'
@@ -201,6 +201,16 @@ export default defineEventHandler(async (event) => {
       ? toTodayUyu(nativeAmount, nativeCurrency, (contract as unknown as { date?: string | Date }).date, rateTable)
       : null
 
+    // Bidders recovered from the acta de adjudicación, keyed on the CALL (ocid) because that is
+    // what they bid on. Absent for most contracts — only ~6% of actas enumerate the offers — and a
+    // miss must stay null rather than becoming a zero.
+    const actaBidders = contract.ocid
+      ? await ActaBiddersModel.findOne(
+        { ocid: contract.ocid, found: true },
+        { _id: 0, count: 1, bidders: 1, marker: 1, excerpt: 1, actaUrl: 1, probedAt: 1 },
+      ).lean()
+      : null
+
     // Calculate additional fields for the detailed view
     const enhancedContract = {
       ...contract,
@@ -240,6 +250,11 @@ export default defineEventHandler(async (event) => {
       // Keyed `classificationId|currency|unitName` — the page looks each
       // item up by the same key.
       itemBaselines: baselines,
+      // Who else bid, when the acta de adjudicación enumerated them. The OCDS feed never says:
+      // tender.tenderers is 0% populated corpus-wide, so this is the only route to it. Roughly 6%
+      // of actas enumerate, so null here is the NORMAL case and the page must read it as "the acta
+      // did not say" — never as "no competition". See shared/acta-bidders.ts.
+      bidders: actaBidders,
       // The amount restated in today's pesos (see above). `realNativeCurrency`
       // lets the page note when a conversion from USD/EUR also happened.
       realTodayAmount,

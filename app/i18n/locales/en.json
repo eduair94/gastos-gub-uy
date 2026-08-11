@@ -492,6 +492,12 @@
     "tagHelp": "Each stage of the process is its own record. Only the award reports a supplier and an amount."
   },
   "contract": {
+    "biddersHelp": "The open procurement data never says who else bid: it publishes only the winner. This comes from the award resolution, which sometimes lists them. When this panel is absent, the resolution did not say — not that there was no competition.",
+    "biddersCount": "{n} offers were received",
+    "biddersSole": "The resolution records a single offer",
+    "biddersWinner": "awarded",
+    "biddersSource": "See the sentence from the resolution",
+    "biddersActa": "Open the award resolution (PDF)",
     "eyebrow": "Contract",
     "notFound": {
       "title": "No contract with that identifier",
@@ -509,6 +515,7 @@
     "verifiedTotalSource": "View official record",
     "ocid": "OCDS identifier",
     "sections": {
+      "bidders": "Who else bid",
       "summary": "Summary",
       "items": "What was bought",
       "parties": "Who is involved",
