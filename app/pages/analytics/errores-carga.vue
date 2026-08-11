@@ -831,10 +831,10 @@ useSeo(() => ({
   gap: 6px;
   height: 34px;
   padding: 0 var(--s-4);
-  border: 1px solid var(--celeste);
+  border: 1px solid var(--cta-fill);
   border-radius: var(--r-md);
-  background: var(--celeste);
-  color: #fff;
+  background: var(--cta-fill);
+  color: var(--cta-fg);
   font-size: var(--t-sm);
   font-weight: 600;
   font-family: var(--font-body);

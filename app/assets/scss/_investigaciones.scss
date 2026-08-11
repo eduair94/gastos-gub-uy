@@ -135,7 +135,7 @@
 .inv-badge--exc { background: var(--alerta-wash); color: var(--alerta); border: 1px solid var(--alerta); }
 .inv-badge--co { background: var(--celeste-wash); color: var(--celeste-deep); border: 1px solid var(--celeste); }
 .inv-badge--nd { background: var(--surface-sunken); color: var(--text-muted); border: 1px solid var(--rule); }
-.inv-warnpill { display: inline-block; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600; color: #fff; background: var(--alerta); border-radius: 3px; padding: 1px 5px; margin-left: 6px; }
+.inv-warnpill { display: inline-block; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600; color: var(--alerta-fg); background: var(--alerta); border-radius: 3px; padding: 1px 5px; margin-left: 6px; }
 .inv-flagword { color: var(--alerta); font-weight: 600; }
 
 /* ---- Ledger table (uses shared .u-scroll / DataTable elsewhere) ---- */

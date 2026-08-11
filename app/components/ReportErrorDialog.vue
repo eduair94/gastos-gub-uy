@@ -369,9 +369,9 @@ onBeforeUnmount(() => {
 .rd__act:hover { border-color: var(--rule-strong); }
 
 .rd__act--primary {
-  background: var(--celeste);
-  border-color: var(--celeste);
-  color: #fff;
+  background: var(--cta-fill);
+  border-color: var(--cta-fill);
+  color: var(--cta-fg);
 }
 
 .rd__act--primary:hover { filter: brightness(1.06); }
