@@ -11,7 +11,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseActaBidders } from "../../shared/acta-bidders";
+import { isPlausibleBidderName, parseActaBidders } from "../../shared/acta-bidders";
 
 let passed = 0;
 let failed = 0;
@@ -167,6 +167,57 @@ console.log("\n📊 mojibake is rejected rather than published");
   const r2 = parseActaBidders(oneGood);
   check("a garbled entry is dropped, clean ones survive", r2?.count === 2, JSON.stringify(r2?.bidders));
   check("…and the garbled one is not among them", !(r2?.bidders ?? []).some((n) => n.includes("]")), JSON.stringify(r2?.bidders));
+}
+
+// --- price-table headings ----------------------------------------------------
+// Both strings below were PUBLISHED as bidders before these guards existed — found by auditing the
+// live collection, not by imagining failure modes.
+console.log("\n📊 price-table headings and currency noise are rejected");
+{
+  // acta i331940
+  const header = "OFERTAS PRESENTADAS: <H>OFERENTE P TOTAL COMP $ VAR %</> MAYATLI, % SERVICE";
+  const r = parseActaBidders(header);
+  check("a table heading is never a bidder", !(r?.bidders ?? []).some(n => /OFERENTE P TOTAL/i.test(n)), JSON.stringify(r?.bidders));
+  check("…and neither is a bare '% SERVICE'", !(r?.bidders ?? []).some(n => n.includes("%")), JSON.stringify(r?.bidders));
+
+  // acta 896469
+  const garbled = "se presentaron las firmas: L '277$$0%526, ('8$5'2\\LL52%/(6 =";
+  check("pure mojibake with currency signs -> null", parseActaBidders(garbled) === null, JSON.stringify(parseActaBidders(garbled)));
+
+  // The heading rule must NOT eat a real firm that happens to share one word.
+  const realFirm = "se presentaron las firmas: TOTAL URUGUAY S.A., ANCAP DISTRIBUCION S.A., y PRECIO JUSTO LTDA.";
+  const r2 = parseActaBidders(realFirm);
+  check("TOTAL URUGUAY S.A. survives the heading rule", has(r2?.bidders ?? [], "TOTAL URUGUAY"), JSON.stringify(r2?.bidders));
+  check("…and so does PRECIO JUSTO LTDA.", has(r2?.bidders ?? [], "PRECIO JUSTO"), JSON.stringify(r2?.bidders));
+  check("all three kept", r2?.count === 3, String(r2?.count));
+}
+
+// --- isPlausibleBidderName ---------------------------------------------------
+// The hygiene sweep validates STORED names one by one with this, because re-parsing the stored
+// excerpt gives false positives: the excerpt is a truncated window, so a re-parse yields fewer
+// names than the full text did. That version flagged three good rows and would have deleted them.
+console.log("\n📊 isPlausibleBidderName (what the stored-row sweep uses)");
+{
+  const good = [
+    "BARRACA OLIMPIA S.R.L",
+    "CANTERA MELILLA S.A",
+    "GONZALEZ ELENA RICHARD HUMBERTO",
+    "Salomon Najson e Hijo Ltda",
+    "ABACUS S.A - RUT 211958430010",
+    "TOTAL URUGUAY S.A.",
+  ];
+  for (const n of good) check(`accepts "${n}"`, isPlausibleBidderName(n));
+
+  const bad = [
+    "<H>OFERENTE P TOTAL COMP $ VAR %</>",
+    "% SERVICE",
+    "L '277$$0%526",
+    "COOPERATIVA DE TEJEDORAS DE DOLORES. I\\",
+    "quedan descalificadas las ofertas de las firmas Confir SA",
+    "OFERENTE PRECIO TOTAL",
+    "ab",
+  ];
+  for (const n of bad) check(`rejects "${n.slice(0, 40)}"`, !isPlausibleBidderName(n));
 }
 
 // --- hygiene -----------------------------------------------------------------
