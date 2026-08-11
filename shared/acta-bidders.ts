@@ -172,6 +172,46 @@ const TAIL_CLAUSES = [
  */
 const LEGAL_FORMS = /\b(s\.?a\.?s?\.?|ltda\.?|s\.?r\.?l\.?|sociedad anonima|cooperativa|unipersonal)\b/i;
 
+/**
+ * Column headings from the price-comparison table many actas embed.
+ *
+ * Found in production: acta i331940 published "<H>OFERENTE P TOTAL COMP $ VAR %</> MAYATLI" as a
+ * bidder. It is FULL CAPS, carries no prose word and no forbidden character beyond the angle
+ * brackets, so every earlier guard let it through.
+ *
+ * Matching a single word is not enough to reject — TOTAL is a real firm (TOTAL URUGUAY S.A.) and
+ * ITEM, VAR and COMP appear inside legitimate names. A candidate is a heading only when MOST of it
+ * is heading vocabulary, which is what HEADING_RATIO decides.
+ */
+const HEADING_WORDS = new Set([
+  "oferente",
+  "oferentes",
+  "precio",
+  "precios",
+  "total",
+  "totales",
+  "comp",
+  "comparativo",
+  "var",
+  "moneda",
+  "item",
+  "items",
+  "cantidad",
+  "unitario",
+  "importe",
+  "subtotal",
+  "iva",
+  "monto",
+  "descripcion",
+  "articulo",
+  "linea",
+  "orden",
+  "p",
+  "n",
+]);
+const HEADING_RATIO = 0.6;
+const HEADING_MIN_TOKENS = 3;
+
 /** Trailing/leading noise around a captured name. */
 function cleanName(raw: string): string | null {
   let name = raw.replace(/\s+/g, " ").trim();
@@ -218,6 +258,19 @@ function cleanName(raw: string): string | null {
   // publishing a mangled name next to a real contract is worse than publishing nothing.
   if (/[\\\][|{}<>^~`_]/.test(name)) return null;
 
+  // Currency and percent signs belong to a price table, never to a firm's name. Cheap, unambiguous,
+  // and it alone would have caught acta 896469's "L '277$$0%526".
+  if (/[$%]/.test(name)) return null;
+
+  // A price-comparison table's column headings, which survive every other guard because they are
+  // FULL CAPS and carry no prose. Reject only when MOST of the candidate is heading vocabulary, so
+  // a real firm named TOTAL URUGUAY S.A. is untouched.
+  const tokens = fold(name).split(/\s+/).filter(Boolean);
+  if (tokens.length >= HEADING_MIN_TOKENS) {
+    const headingHits = tokens.filter((tk) => HEADING_WORDS.has(tk)).length;
+    if (headingHits / tokens.length >= HEADING_RATIO) return null;
+  }
+
   // THE discriminator. In every acta observed, bidder names are written in FULL CAPS while the
   // surrounding resolution is ordinary prose. Without this, a list split on commas happily turns
   // "rechazar la totalidad de las ofertas presentadas dejando sin efecto el presente llamado,
@@ -232,6 +285,19 @@ function cleanName(raw: string): string | null {
   if (lowercaseWords > MAX_LOWERCASE_WORDS) return null;
 
   return name;
+}
+
+/**
+ * Would the current parser accept this string as a bidder name?
+ *
+ * Exported so the hygiene sweep can validate STORED names one by one. Re-parsing the stored excerpt
+ * instead does not work: the excerpt is a truncated window, so a re-parse legitimately yields fewer
+ * names than the original full text did, and every missing name reads as corruption. That check
+ * flagged three perfectly good rows — including one already verified rendering correctly in
+ * production — and with `--fix` would have deleted them.
+ */
+export function isPlausibleBidderName(name: string): boolean {
+  return cleanName(name) !== null;
 }
 
 /**
