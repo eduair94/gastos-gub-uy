@@ -1530,6 +1530,8 @@
     "percentile": "above {pct}% of bodies",
     "contracts": "{n} contracts",
     "count": "{n} bodies",
+    "drillCalls": "See the calls",
+    "drill": "See the contracts",
     "notMeasurable": "not enough data",
     "notComputed": "Signals have not been computed yet.",
     "level": {

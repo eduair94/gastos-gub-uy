@@ -123,6 +123,13 @@ const [
 
 const notFound = computed(() => !buyer.value || (error.value as any)?.statusCode === 404)
 
+/**
+ * NuxtLink RESOLVED, not named by string. A string  does not resolve the component and Vue
+ * emits a literal <NuxtLink> element: the card looks right and nothing is clickable. Documented
+ * repo gotcha, reproduced here before this line existed.
+ */
+const NuxtLinkComponent = resolveComponent('NuxtLink')
+
 /** Only the indicators actually raised — see the panel comment for why none means silence. */
 const raisedSignals = computed<any[]>(() => {
   const row = signalsRes.value?.data?.organisms?.[0]
@@ -131,6 +138,38 @@ const raisedSignals = computed<any[]>(() => {
 
 /** Officials of this INCISO on JUTEP's omisos roster. 0 renders nothing. */
 const omisosCount = computed<number>(() => omisosRes.value?.data?.meta?.total ?? 0)
+
+/**
+ * Where a raised signal takes the reader — the records behind it, not our arithmetic.
+ * Mirrors /analytics/senales; null where the corpus cannot support a drill-down.
+ */
+function signalDrill(key: string): string | null {
+  const row = signalsRes.value?.data?.organisms?.[0]
+  if (!row) return null
+  if (key === 'concentration' && row.topSupplierName) {
+    return localePath(`/contracts?buyerIds=${encodeURIComponent(row.buyerId)}&suppliers=${encodeURIComponent(row.topSupplierName)}`)
+  }
+  if (key === 'bursts' && row.burstWorstSupplier) {
+    const year = String(row.burstWorstMonth ?? '').slice(0, 4)
+    const range = /^\d{4}$/.test(year) ? `&yearFrom=${year}&yearTo=${year}` : ''
+    return localePath(`/contracts?buyerIds=${encodeURIComponent(row.buyerId)}&suppliers=${encodeURIComponent(row.burstWorstSupplier)}${range}`)
+  }
+  if (key === 'directAward') {
+    return localePath(
+      `/contracts?buyerIds=${encodeURIComponent(row.buyerId)}`
+      + `&procurementMethodDetails=${encodeURIComponent('Compra Directa')}`
+      + `&procurementMethodDetails=${encodeURIComponent('Compra por Excepción')}`
+      // tag=tender is LOAD-BEARING: the method only exists on the tender-phase release, and the
+      // explorer defaults to awards only — without it this link renders an empty list (measured:
+      // 0 rows vs 25).
+      + '&tag=tender',
+    )
+  }
+  if (key === 'unexplainedPrices' && row.buyerName) {
+    return localePath(`/analytics/anomalies?ai=unexplained&buyer=${encodeURIComponent(row.buyerName)}`)
+  }
+  return null
+}
 
 /** Counts read as counts, shares as percentages. Mirrors /analytics/senales. */
 function signalValue(key: string, value: number | null): string {
@@ -441,12 +480,22 @@ useSeo(() => ({
             class="bsig__item"
             :class="`bsig__item--${s.level}`"
           >
-            <span class="bsig__label">{{ t(`senales.signal.${s.key}.label`) }}</span>
-            <span class="bsig__value u-mono">{{ signalValue(s.key, s.value) }}</span>
-            <span
-              v-if="typeof s.populationPercentile === 'number'"
-              class="bsig__pct"
-            >{{ t('senales.percentile', { pct: Math.round(s.populationPercentile * 100) }) }}</span>
+            <component
+              :is="signalDrill(s.key) ? NuxtLinkComponent : 'div'"
+              :to="signalDrill(s.key) ?? undefined"
+              class="bsig__body"
+            >
+              <span class="bsig__label">{{ t(`senales.signal.${s.key}.label`) }}</span>
+              <span class="bsig__value u-mono">{{ signalValue(s.key, s.value) }}</span>
+              <span
+                v-if="typeof s.populationPercentile === 'number'"
+                class="bsig__pct"
+              >{{ t('senales.percentile', { pct: Math.round(s.populationPercentile * 100) }) }}</span>
+              <span
+                v-if="signalDrill(s.key)"
+                class="bsig__go"
+              >{{ t(s.key === 'directAward' ? 'senales.drillCalls' : 'senales.drill') }}</span>
+            </component>
           </li>
         </ul>
       </section>
@@ -1113,7 +1162,13 @@ useSeo(() => ({
 .bsig__item--watch { border-color: var(--alerta); background: var(--alerta-wash); }
 .bsig__item--high { border-color: var(--alerta); background: var(--alerta-wash); border-width: 2px; }
 
+.bsig__body { display: block; color: inherit; text-decoration: none; }
+a.bsig__body:hover .bsig__go { text-decoration: underline; }
+
 .bsig__label { display: block; font-size: var(--t-xs); color: var(--text-muted); }
 .bsig__value { display: block; font-weight: 600; }
 .bsig__pct { display: block; font-size: var(--t-xs); color: var(--text-muted); }
+
+/* Named in words, not by colour alone. */
+.bsig__go { display: block; margin-top: var(--s-1); font-size: var(--t-xs); color: var(--celeste-deep); }
 </style>
