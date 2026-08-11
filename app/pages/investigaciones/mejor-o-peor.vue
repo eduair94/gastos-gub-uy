@@ -544,6 +544,7 @@ useSeo(() => ({
         <ChartBlock
           :title="label(byKey['homicidios-tasa']!)"
           :help="unit(byKey['homicidios-tasa']!)"
+          :scroll="false"
           class="mop-chart"
         >
           <TrendLines
@@ -593,6 +594,7 @@ useSeo(() => ({
         <ChartBlock
           :title="label(byKey['rapinas-tasa']!)"
           :help="unit(byKey['rapinas-tasa']!)"
+          :scroll="false"
           class="mop-chart"
         >
           <TrendLines
@@ -954,9 +956,10 @@ useSeo(() => ({
   display: grid;
   gap: var(--s-4);
 
+  /* No coloured 3px rail: the red delta and the note already say "this got
+     worse", and a decorative stripe on seven stacked cards just adds noise. */
   li {
     border: 1px solid var(--rule);
-    border-left: 3px solid var(--alerta);
     border-radius: var(--r-md);
     background: var(--surface);
     padding: var(--s-4) var(--s-5);
@@ -1164,10 +1167,12 @@ useSeo(() => ({
 
   &:hover { border-color: var(--celeste-deep); color: var(--text); }
 
+  /* `--cta-fill` + `--cta-fg`, never `--celeste-deep` + white: the fill inverts
+     to light blue in dark mode and a hardcoded white label washes out. */
   &.is-on {
-    background: var(--celeste-deep);
-    border-color: var(--celeste-deep);
-    color: #fff;
+    background: var(--cta-fill);
+    border-color: var(--cta-fill);
+    color: var(--cta-fg);
   }
 }
 
@@ -1204,11 +1209,15 @@ useSeo(() => ({
    row of its own on every width. */
 .mop-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) auto minmax(0, 1.1fr) minmax(0, 0.9fr);
+  /* All the slack goes to the identity column so the evidence cluster —
+     sparkline, three values, two verdicts — stays contiguous and column-aligned
+     across rows. Sharing the slack between them (1.6fr / 1.1fr / 0.9fr) opened a
+     dead gap the width of a paragraph at 1920px and broke the vertical rhythm. */
+  grid-template-columns: minmax(0, 1fr) 116px 208px 236px;
   grid-template-areas: 'id spark vals verdicts' 'note note note note';
-  align-items: center;
+  align-items: start;
   gap: var(--s-2) var(--s-4);
-  padding: var(--s-3) 0;
+  padding: var(--s-4) 0;
   border-bottom: 1px solid var(--rule);
 }
 
@@ -1224,12 +1233,17 @@ useSeo(() => ({
 
 .mop-row__spark { grid-area: spark; }
 
+/* Three equal, right-aligned numeric columns: with tabular figures the anchor
+   years line up down the whole table, so a reader can scan one column instead
+   of re-finding it on every row. */
 .mop-row__vals {
   grid-area: vals;
-  display: flex;
-  gap: var(--s-4);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
   margin: 0;
   min-width: 0;
+  text-align: right;
 
   div { min-width: 0; }
 
@@ -1281,7 +1295,7 @@ useSeo(() => ({
   margin: 0;
   font-size: 0.86rem;
   color: var(--text-muted);
-  max-width: 90ch;
+  max-width: 76ch;
 }
 
 .mop-ceiling {

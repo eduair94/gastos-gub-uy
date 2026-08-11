@@ -911,7 +911,7 @@ useSeo(() => ({
   cursor: pointer;
 }
 
-.supbar__x:hover { color: #fff; background: var(--alerta); }
+.supbar__x:hover { color: var(--alerta-fg); background: var(--alerta); }
 
 /* ---- Method ---- */
 .method {

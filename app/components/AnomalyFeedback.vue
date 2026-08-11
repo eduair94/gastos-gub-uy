@@ -398,14 +398,14 @@ onMounted(() => {
    anomaly (institutional blue), down = a false positive (alert red). */
 .fb__up.is-active,
 .fb__up.is-active:hover {
-  color: #fff;
-  background: var(--celeste-deep, var(--celeste));
-  border-color: var(--celeste-deep, var(--celeste));
+  color: var(--cta-fg);
+  background: var(--cta-fill);
+  border-color: var(--cta-fill);
 }
 
 .fb__down.is-active,
 .fb__down.is-active:hover {
-  color: #fff;
+  color: var(--alerta-fg);
   background: var(--alerta);
   border-color: var(--alerta);
 }

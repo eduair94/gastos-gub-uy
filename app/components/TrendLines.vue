@@ -57,19 +57,28 @@ const props = withDefaults(defineProps<{
 
 const { t, locale } = useI18n()
 
+/**
+ * Bare value, no unit. The unit belongs to the axis as a whole, not to every
+ * tick: repeating it turned each y label into "0,0 cada 100.000 hab." and the
+ * axis ate the plot. It is appended once, in the tooltip and the table caption.
+ */
 function fmt(v?: number | null): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return '—'
   if (props.format === 'plain') {
-    const n = new Intl.NumberFormat(locale.value === 'en' ? 'en-US' : 'es-UY', {
+    return new Intl.NumberFormat(locale.value === 'en' ? 'en-US' : 'es-UY', {
       minimumFractionDigits: props.decimals,
       maximumFractionDigits: props.decimals,
     }).format(v)
-    return props.unit ? `${n} ${props.unit}` : n
   }
   if (props.format === 'pct') return `${(v * 100).toFixed(2).replace('.', ',')}%`
   if (props.format === 'count') return formatCount(v)
   if (props.format === 'usd') return formatMoney(v, 'USD', { compact: true })
   return formatMoney(v, 'UYU', { compact: true })
+}
+
+/** Says the unit once, where there is room for it. */
+function withUnit(s: string): string {
+  return props.unit ? `${s} ${props.unit}` : s
 }
 
 // Read live token values so the chart follows the theme toggle instead of
@@ -179,7 +188,7 @@ const chartOptions = computed(() => ({
           const label = items[0]?.label ?? ''
           return items[0]?.dataIndex === props.partialIndex ? `${label} · ${t('evolucion.partialShort')}` : label
         },
-        label: (ctx: any) => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`,
+        label: (ctx: any) => `${ctx.dataset.label}: ${withUnit(fmt(ctx.parsed.y))}`,
       },
     },
   },
@@ -242,39 +251,49 @@ const chartOptions = computed(() => ({
       so the same numbers ship as a real table, visually hidden. It is rendered
       server-side, which also makes the figures crawlable.
     -->
-    <table class="u-visually-hidden">
-      <caption>{{ label }}</caption>
-      <thead>
-        <tr>
-          <th scope="col">
-            {{ t('evolucion.a11y.period') }}
-          </th>
-          <th
-            v-for="s in series"
-            :key="s.label"
-            scope="col"
+    <!--
+      The utility goes on a WRAPPER, never on the <table> itself. Table layout
+      treats `width`/`height` as minimums and grows to its content regardless,
+      so a `.u-visually-hidden` table is still ~450x1300px of real layout. That
+      is invisible until the chart sits inside <ChartBlock>'s scroller, where it
+      became a phantom vertical scrollbar and a mostly empty chart frame. A div
+      honours the 1px box and clips the table inside it.
+    -->
+    <div class="u-visually-hidden">
+      <table>
+        <caption>{{ withUnit(label) }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">
+              {{ t('evolucion.a11y.period') }}
+            </th>
+            <th
+              v-for="s in series"
+              :key="s.label"
+              scope="col"
+            >
+              {{ s.label }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(l, i) in labels"
+            :key="l"
           >
-            {{ s.label }}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="(l, i) in labels"
-          :key="l"
-        >
-          <th scope="row">
-            {{ i === partialIndex ? `${l} (${t('evolucion.partialShort')})` : l }}
-          </th>
-          <td
-            v-for="s in series"
-            :key="s.label"
-          >
-            {{ fmt(s.values[i]) }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            <th scope="row">
+              {{ i === partialIndex ? `${l} (${t('evolucion.partialShort')})` : l }}
+            </th>
+            <td
+              v-for="s in series"
+              :key="s.label"
+            >
+              {{ fmt(s.values[i]) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
