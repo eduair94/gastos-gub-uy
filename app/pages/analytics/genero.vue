@@ -483,7 +483,7 @@ useSeo(() => ({
               <span class="parties__meta u-mono">
                 {{ t('genero.partyMeta', { orgs: p.organisms, contracts: p.contracts }) }}
               </span>
-              <span class="parties__share u-mono">{{ bp(p.weightedShareBp) }}</span>
+              <span class="parties__share u-mono">{{ bp(p.weightedShareBp) }}<small>{{ t('genero.per10k') }}</small></span>
             </button>
           </li>
         </ul>
@@ -803,6 +803,7 @@ useSeo(() => ({
 .parties__name { flex: 1 1 12rem; font-weight: 600; }
 .parties__meta { font-size: var(--t-xs); color: var(--text-muted); }
 .parties__share { font-weight: 700; }
+.parties__share small { font-weight: 400; color: var(--text-muted); margin-left: var(--s-1); }
 
 .filters {
   display: grid;

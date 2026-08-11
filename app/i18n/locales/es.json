@@ -2888,6 +2888,7 @@
     "openCall": "Ver llamado"
   },
   "genero": {
+    "per10k": " de cada 10.000",
     "alertCta": "Avisarme de nuevos llamados del tema",
     "alertHelp": "Crea una alerta con los términos fuertes de este tema. Llega por push, Telegram, correo o la bandeja del sitio.",
     "alertName": "Género y diversidad",

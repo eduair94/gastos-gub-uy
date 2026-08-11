@@ -2887,6 +2887,7 @@
     "openCall": "View tender"
   },
   "genero": {
+    "per10k": " of every 10,000",
     "alertCta": "Alert me about new calls on this topic",
     "alertHelp": "Creates an alert with this topic strong terms. It arrives by push, Telegram, email or the site inbox.",
     "alertName": "Gender and diversity",
