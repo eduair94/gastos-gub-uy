@@ -883,6 +883,9 @@ watch([locale, user], () => nextTick(scheduleRecompute))
           <NuxtLink :to="localePath('/about')">
             {{ t('nav.about') }}
           </NuxtLink>
+          <NuxtLink :to="localePath('/colaboradores')">
+            {{ t('nav.colaboradores') }}
+          </NuxtLink>
           <NuxtLink :to="localePath('/developers')">
             {{ t('footer.developers') }}
           </NuxtLink>

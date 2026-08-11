@@ -63,6 +63,7 @@
     "notifications": "Notifications",
     "viewAll": "View all",
     "erroresCarga": "Data-load errors",
+    "colaboradores": "Contributors",
     "comoReportar": "Report an error",
     "invCasinos": "State casinos",
     "invCasinosCortesia": "Casino: comps",
@@ -2037,6 +2038,26 @@
     "currosDetail": {
       "title": "{title} — the case, cross-referenced with the data"
     }
+  },
+  "colaboradores": {
+    "eyebrow": "Credits",
+    "title": "Who makes this site",
+    "lead": "The code is open and the data belongs to the state. Here is who put in each part: the people who wrote the code, the public registries every figure comes from, and the free software it all runs on.",
+    "peopleTitle": "People",
+    "role": {
+      "maintainer": "Maintainer",
+      "contributor": "Contributor"
+    },
+    "since": "since {date}",
+    "aiNote": "Development is done with AI assistance: most commits in the repository say so in their history. Review, decisions and responsibility for what gets published are human.",
+    "dataTitle": "Data sources",
+    "dataDek": "This site produces no data — it organises it. Every figure here traces back to one of these public registries.",
+    "softwareTitle": "Free software",
+    "softwareDek": "Built on other people's work, published under licences that allow it.",
+    "joinTitle": "Contributing",
+    "joinBody": "Bug reports, data corrections and pull requests are welcome. If you find a wrongly-loaded expense, the most useful route is to report it to the agency that loaded it; if you find a bug on the site, it goes to the repository.",
+    "joinRepo": "View the repository",
+    "joinIssues": "Report an issue"
   },
   "about": {
     "title": "How it works",

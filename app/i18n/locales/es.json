@@ -63,6 +63,7 @@
     "notifications": "Notificaciones",
     "viewAll": "Ver todo",
     "erroresCarga": "Errores de carga",
+    "colaboradores": "Colaboradores",
     "comoReportar": "Reportar un error",
     "invCasinos": "Casinos del Estado",
     "invCasinosCortesia": "Casino: cortesía",
@@ -2038,6 +2039,26 @@
     "currosDetail": {
       "title": "{title} — el caso, cruzado con los datos"
     }
+  },
+  "colaboradores": {
+    "eyebrow": "Créditos",
+    "title": "Quiénes hacen este sitio",
+    "lead": "El código es abierto y los datos son del Estado. Acá está quién puso cada parte: las personas que escribieron el código, los registros públicos de los que sale cada cifra y el software libre sobre el que corre todo.",
+    "peopleTitle": "Personas",
+    "role": {
+      "maintainer": "Mantenimiento",
+      "contributor": "Colaboración"
+    },
+    "since": "desde {date}",
+    "aiNote": "El desarrollo se hace con asistencia de IA: la mayoría de los commits del repositorio lo declaran en su historial. La revisión, las decisiones y la responsabilidad por lo que se publica son humanas.",
+    "dataTitle": "Fuentes de datos",
+    "dataDek": "Este sitio no produce datos: los ordena. Cada cifra que ves acá se puede rastrear hasta uno de estos registros públicos.",
+    "softwareTitle": "Software libre",
+    "softwareDek": "Construido sobre trabajo de otra gente, publicado con licencias que lo permiten.",
+    "joinTitle": "Colaborar",
+    "joinBody": "Se aceptan reportes de errores, correcciones de datos y pull requests. Si encontrás un gasto mal cargado, la vía más útil es reportarlo al organismo que lo cargó; si encontrás un error del sitio, va al repositorio.",
+    "joinRepo": "Ver el repositorio",
+    "joinIssues": "Reportar un problema"
   },
   "about": {
     "title": "Cómo funciona",
