@@ -18,6 +18,7 @@
     "buyers": "Agencies",
     "anomalies": "Flags",
     "unexplained": "Unexplained alerts",
+    "senalesGestion": "Management signals",
     "providerAnomalies": "Flagged suppliers",
     "providerLoadErrors": "Suppliers with errors",
     "intendencias": "Intendencias",
@@ -1487,6 +1488,61 @@
     "guideLink": "Guide: how to report",
     "close": "Close"
   },
+  "senales": {
+    "title": "Management signals",
+    "lead": "Five measurements of how each state body buys: who the money concentrates on, whether awards come in bursts, how much is awarded directly, how long anyone had to compete, and how many price flags were left unexplained.",
+    "caveat": "None of these measurements proves an irregularity. All of them have legitimate explanations: a hospital buying oxygen from the single licensed supplier concentrates 100% and is perfectly in order. A signal says only that the body sits among the highest on that dimension. It is a starting point for a question, never a conclusion.",
+    "window": "Measured over awards from {from} to {to} · {organisms} bodies with at least 20 contracts",
+    "legendTitle": "What each signal measures",
+    "cutoff": "Marked from {watch} (top 10%) and high from {high} (top 3%).",
+    "percentile": "above {pct}% of bodies",
+    "contracts": "{n} contracts",
+    "count": "{n} bodies",
+    "notMeasurable": "not enough data",
+    "notComputed": "Signals have not been computed yet.",
+    "level": {
+      "watch": "Marked",
+      "high": "High"
+    },
+    "filter": {
+      "signal": "Signal",
+      "level": "Level",
+      "allSignals": "All signals",
+      "allLevels": "All levels"
+    },
+    "signal": {
+      "concentration": {
+        "label": "Concentration in one supplier",
+        "short": "Concentration",
+        "help": "Share of awarded money that went to a single supplier. An upper bound: the contract amount is not apportioned per supplier, so a shared award counts fully for each."
+      },
+      "bursts": {
+        "label": "Awards in bursts",
+        "short": "Bursts",
+        "help": "How many times the body made 8 or more separate awards to the same supplier within one month. Counted once per supplier per month, so a body can accumulate several in the same month. It is the shape of contract splitting, and also the shape of a hospital pharmacy ordering often from one distributor."
+      },
+      "directAward": {
+        "label": "Direct awarding",
+        "short": "Direct",
+        "help": "Share of direct or exception purchases among the awards whose procedure could be resolved. Only 27% of awards carry a procedure, and nationally direct purchase is already 66%, so what matters is the position relative to the rest, not the number alone."
+      },
+      "expressWindow": {
+        "label": "Express bidding window",
+        "short": "Express window",
+        "help": "Calls whose bidding window fell in the shortest 5% for their own procedure. The threshold is per procedure because they are not comparable: an Abbreviated Tender never runs under 3.5 days, while a Direct Purchase runs a third of its calls in under 3."
+      },
+      "unexplainedPrices": {
+        "label": "Unexplained overprices",
+        "short": "Unexplained",
+        "help": "Price flags that survived both the statistical detector and the automated review. There are about 70 in the whole corpus, so any concentration in one body stands out."
+      }
+    },
+    "detail": {
+      "concentration": "The largest supplier takes most of the amount, out of {suppliers} awarded suppliers: {supplier}.",
+      "bursts": "Worst month: {awards} separate awards to {supplier} in {month}.",
+      "unexplained": "See this body’s {n} unexplained flags"
+    }
+  },
   "provAnom": {
     "title": "Providers behind the unexplained flags",
     "lead": "We cross-reference the overprice flags the AI could not justify against the providers that receive them, to see whether one provider or one buyer concentrates many anomalies. Not an accusation — a place to start looking.",
@@ -1900,6 +1956,10 @@
     }
   },
   "seo": {
+    "senales": {
+      "title": "Management signals in Uruguayan state procurement",
+      "description": "Supplier concentration, award bursts, direct purchasing, express bidding windows and unexplained overprices, measured body by body over the open Compras Estatales data."
+    },
     "erroresCarga": {
       "title": "Data-load errors in Uruguay's public procurement",
       "description": "Prices and quantities that look like mistakes when loading the official Compras Estatales data, detected with AI and listed to report and fix at the source."

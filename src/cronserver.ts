@@ -963,6 +963,26 @@ class CronServer {
     );
     this.logger.info(`Dept-indicators refresh scheduled with expression: ${deptIndicatorsExpression} (Uruguay timezone)`);
 
+    // Señales de gestión — per-organism procurement indicators, daily at 05:30. It reads the
+    // anomalies collection for its unexplained-flags signal, so it runs AFTER the 04:15 detector and
+    // its AI triage lane rather than alongside them. ~110s of COLLSCANs over `releases`; writes only
+    // its own integrity_signals collection, so it is independent of busyWith.
+    const integritySignalsExpression = "30 5 * * *";
+    cron.schedule(
+      integritySignalsExpression,
+      async () => {
+        try {
+          this.logger.info("Starting integrity-signals refresh...");
+          await this.runJobProcess("jobs/refresh-integrity-signals");
+          this.logger.info("Integrity-signals refresh completed successfully");
+        } catch (error) {
+          this.logger.error("Integrity-signals refresh failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Integrity-signals refresh scheduled with expression: ${integritySignalsExpression} (Uruguay timezone)`);
+
     // Year-over-year spending decomposition, monthly at 05:00 on the 1st — after the two
     // rollups above so the three heavy full-collection scans never overlap. Rebuilds
     // spending_trend, which /analytics/evolucion-gasto reads. `--ai` is deliberately NOT

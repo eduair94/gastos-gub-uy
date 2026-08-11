@@ -18,6 +18,7 @@
     "buyers": "Organismos",
     "anomalies": "Alertas",
     "unexplained": "Alertas sin explicar",
+    "senalesGestion": "Señales de gestión",
     "providerAnomalies": "Proveedores señalados",
     "providerLoadErrors": "Proveedores con errores",
     "intendencias": "Intendencias",
@@ -1488,6 +1489,61 @@
     "guideLink": "Guía: cómo reportar",
     "close": "Cerrar"
   },
+  "senales": {
+    "title": "Señales de gestión",
+    "lead": "Cinco medidas sobre cómo compra cada organismo del Estado: en quién concentra la plata, si adjudica en tandas, cuánto adjudica en forma directa, cuánto tiempo deja para competir y cuántos sobreprecios quedaron sin explicación.",
+    "caveat": "Ninguna de estas medidas prueba una irregularidad. Todas tienen explicaciones legítimas: un hospital que compra el oxígeno al único proveedor habilitado concentra el 100% y está perfectamente en regla. Una señal indica solamente que el organismo está entre los que más alto miden en esa dimensión, y es un punto de partida para preguntar, nunca una conclusión.",
+    "window": "Medido sobre adjudicaciones del {from} al {to} · {organisms} organismos con al menos 20 contratos",
+    "legendTitle": "Qué mide cada señal",
+    "cutoff": "Se marca desde {watch} (10% más alto) y como alta desde {high} (3% más alto).",
+    "percentile": "supera al {pct}% de los organismos",
+    "contracts": "{n} contratos",
+    "count": "{n} organismos",
+    "notMeasurable": "sin datos suficientes",
+    "notComputed": "Las señales todavía no fueron calculadas.",
+    "level": {
+      "watch": "Marcada",
+      "high": "Alta"
+    },
+    "filter": {
+      "signal": "Señal",
+      "level": "Nivel",
+      "allSignals": "Todas las señales",
+      "allLevels": "Todos los niveles"
+    },
+    "signal": {
+      "concentration": {
+        "label": "Concentración en un proveedor",
+        "short": "Concentración",
+        "help": "Porcentaje del dinero adjudicado que se llevó un solo proveedor. Es una cota máxima: el monto del contrato no se reparte entre proveedores, así que una adjudicación compartida cuenta entera para cada uno."
+      },
+      "bursts": {
+        "label": "Adjudicaciones en tanda",
+        "short": "Tandas",
+        "help": "Cantidad de veces que, en un mismo mes, el organismo hizo 8 o más adjudicaciones separadas al mismo proveedor. Se cuenta una vez por proveedor y por mes, así que un organismo puede acumular varias en el mismo mes. Es la forma que tiene el fraccionamiento, pero también la de una farmacia hospitalaria que le pide seguido al mismo distribuidor."
+      },
+      "directAward": {
+        "label": "Adjudicación directa",
+        "short": "Directa",
+        "help": "Porcentaje de compras directas o por excepción, sobre las adjudicaciones cuyo procedimiento se pudo determinar. Solo el 27% de las adjudicaciones trae procedimiento, y a nivel país la compra directa ya es el 66%: por eso lo que importa es la posición respecto del resto, no el número solo."
+      },
+      "expressWindow": {
+        "label": "Plazo exprés para ofertar",
+        "short": "Plazo exprés",
+        "help": "Llamados cuyo plazo para presentar ofertas quedó entre el 5% más corto de su propio procedimiento. El umbral es por procedimiento porque no son comparables: una Licitación Abreviada nunca baja de 3,5 días y una Compra Directa corre un tercio de sus llamados en menos de 3."
+      },
+      "unexplainedPrices": {
+        "label": "Sobreprecios sin explicación",
+        "short": "Sin explicación",
+        "help": "Alertas de precio que sobrevivieron al detector estadístico y además a la revisión automática. En todo el corpus hay unas 70, así que cualquier concentración en un organismo se nota."
+      }
+    },
+    "detail": {
+      "concentration": "El mayor proveedor concentra la mayor parte del monto, sobre {suppliers} proveedores adjudicados: {supplier}.",
+      "bursts": "Peor mes: {awards} adjudicaciones separadas a {supplier} en {month}.",
+      "unexplained": "Ver las {n} alertas sin explicación de este organismo"
+    }
+  },
   "provAnom": {
     "title": "Proveedores detrás de las alertas sin explicación",
     "lead": "Cruzamos las alertas de sobreprecio que la IA no pudo justificar contra los proveedores que las reciben, para ver si un proveedor o un comprador concentra muchas anomalías. No es una acusación: es por dónde empezar a mirar.",
@@ -1901,6 +1957,10 @@
     }
   },
   "seo": {
+    "senales": {
+      "title": "Señales de gestión en las compras del Estado uruguayo",
+      "description": "Concentración en un proveedor, adjudicaciones en tanda, compra directa, plazos exprés y sobreprecios sin explicación, medidos organismo por organismo sobre los datos abiertos de Compras Estatales."
+    },
     "erroresCarga": {
       "title": "Errores de carga en las compras públicas del Uruguay",
       "description": "Precios y cantidades que parecen errores al cargar los datos oficiales de Compras Estatales, detectados con IA y listados para reportar y corregir en la fuente."

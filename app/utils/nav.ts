@@ -97,6 +97,10 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
         {
           key: 'anomalias',
           items: [
+            // First in the section: it is the only view that starts from the ORGANISM rather than
+            // from an individual flag, so it is where a reader with no particular contract in mind
+            // should land.
+            { key: 'senalesGestion', to: localePath('/analytics/senales'), icon: 'mdi-gauge-low' },
             { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
             { key: 'unexplained', to: localePath('/analytics/unexplained'), icon: 'mdi-help-rhombus-outline' },
             { key: 'erroresCarga', to: localePath('/analytics/errores-carga'), icon: 'mdi-database-alert-outline' },

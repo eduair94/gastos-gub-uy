@@ -412,6 +412,16 @@ async function main(): Promise<void> {
         .createIndex({ calculatedAt: -1 }, { background: true })
       console.log('✅ provider_anomaly_stats indexes ensured (supplierName unique, flagCount, primaryOverprice, worstZ) + summary.calculatedAt')
 
+      // integrity_signals: señales de gestión, one doc per buying organism, rebuilt
+      // (compute-then-swap) by src/jobs/refresh-integrity-signals.ts. `buyerId` unique is the
+      // upsert key AND the lookup for the buyer-profile panel; weight+totalUyu is the page's
+      // default ordering; dataVersion backs the `$lt` stale sweep.
+      const integrity = client.db(DB_NAME).collection('integrity_signals')
+      await integrity.createIndex({ buyerId: 1 }, { unique: true, background: true })
+      await integrity.createIndex({ weight: -1, totalUyu: -1 }, { background: true })
+      await integrity.createIndex({ dataVersion: 1 }, { background: true })
+      console.log('✅ integrity_signals indexes ensured (buyerId unique, weight+totalUyu, dataVersion)')
+
       // provider_load_error_stats: the load-errors-by-provider cross-reference, rebuilt
       // (compute-then-swap) by src/jobs/cross-provider-load-errors.ts. Same shape as
       // provider_anomaly_stats but scoped to the load-error bucket; `supplierName` unique is the
@@ -658,6 +668,7 @@ async function main(): Promise<void> {
       console.log('   plan: anomalies.aiVerdict.explainable_1_severityRank_-1')
       console.log('   plan: provider_anomaly_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
       console.log('   plan: provider_load_error_stats.{supplierName unique, flagCount, primaryOverprice, worstZ} + summary.calculatedAt')
+      console.log('   plan: integrity_signals.{buyerId unique, weight+totalUyu, dataVersion}')
       console.log('   plan: organism_group_stats.{groupKey unique, dataVersion}')
       console.log('   plan: spending_trend.{year unique, dataVersion}')
       console.log('   plan: users.{uid,email,unsubscribeToken} (unique)')

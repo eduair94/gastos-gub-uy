@@ -15,6 +15,7 @@ Every offline computation in gastos-gub. Jobs turn the raw OCDS `releases` colle
 | [refresh-product-variants.ts](refresh-product-variants.ts) | For codes carrying an unexplained anomaly: sample awards, ensure características cached, roll up Marca/Presentación/… → `product_variants`. |
 | [refresh-organism-groups.ts](refresh-organism-groups.ts) | Monthly capped spend per `buyer.id` folded into the `ORGANISM_GROUPS` taxonomy → `organism_group_stats`. |
 | [refresh-spending-trend.ts](refresh-spending-trend.ts) | Monthly year-over-year spending decomposition → `spending_trend`. Rebuilds every amount from `amount.totalAmounts` at its OWN month's FX (NOT `primaryAmount`), deflates by the month's UI, excludes releases whose REAL value clears 5e10 as artefacts, and writes the exact base+inflation+entrants+exits+panel bridge. `--ai` lets Gemini reword the sentences (rejected unless the digits are identical). |
+| [refresh-integrity-signals.ts](refresh-integrity-signals.ts) | **Señales de gestión.** One doc per `buyer.id` over a trailing 36-month window → `integrity_signals`, classifying five measured indicators (supplier concentration, award bursts, direct-award share, express bidding windows, unexplained price flags). Levels are a POPULATION PERCENTILE (p90/p97) plus an absolute floor, not fixed bars. Compute-then-swap with a `$lt` sweep and a write-count check. |
 | [refresh-dept-indicators.ts](refresh-dept-indicators.ts) | Monthly per-(buyer.id, year) indicators for the 19 Intendencias (80-1…98-1) → `dept_indicators`. COLLSCANs over `releases` + `anomalies`. |
 | [cross-provider-anomalies.ts](cross-provider-anomalies.ts) | Groups AI-unexplained flags (`aiVerdict.explainable === 'no'`) by supplier/buyer → `provider_anomaly_stats` + `provider_anomaly_summary`. |
 | [reconcile-award-amendments.ts](reconcile-award-amendments.ts) | Merges `ajuste_adjudicacion` (tag `awardUpdate`) item deltas into the base `adjudicacion-*` release, recomputes `amount`, re-scores via `rescoreReleaseIds`. Prints `RECONCILE_SUMMARY corrected=<n>` (reconcile-award-amendments.ts:470). |
@@ -84,6 +85,7 @@ npm run refresh-product-analytics
 npm run refresh-product-variants
 npm run refresh-organism-groups
 npm run refresh-dept-indicators
+npm run refresh-integrity-signals -- --dry-run    # or --months=60
 npm run refresh-spending-trend
 npm run cross-provider-anomalies
 npm run reconcile-amendments -- --dry-run --since-days=10
@@ -129,6 +131,7 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 | `0 5 * * *` / `0 6 * * *` / `0 8 * * *` | `jobs/deadline-reminders` / `jobs/cross-provider-anomalies` / `jobs/alert-digest` |
 | `15 9 * * 1` | `jobs/weekly-newsletter` for the previous completed Uruguay week |
 | `0 2 * * 0` / `0 7 * * 0` | weekly reconcileNonFinalReleases → full `jobs/reconcile-award-amendments` / `jobs/refresh-product-variants` |
+| `30 5 * * *` | `jobs/refresh-integrity-signals` — after the 04:15 detector, because it reads the anomalies its AI lane triages |
 | `0 3 * * 1` / `0 3 1 * *` / `0 4 1 * *` / `0 5 1 * *` | `jobs/import-sice-catalog` / `jobs/refresh-organism-groups` / `jobs/refresh-dept-indicators` / `jobs/refresh-spending-trend` |
 
 ## Conventions
