@@ -40,19 +40,32 @@ export interface TrendSeries {
 const props = withDefaults(defineProps<{
   labels: string[]
   series: TrendSeries[]
-  /** How to format the axis and tooltip values. */
-  format?: 'money' | 'usd' | 'pct' | 'count'
+  /** How to format the axis and tooltip values. `plain` is a bare number with
+   *  `decimals` places — for rates and indices, which are neither money nor a
+   *  share and must not be compacted ("10,3 cada 100.000", not "10"). */
+  format?: 'money' | 'usd' | 'pct' | 'count' | 'plain'
+  /** Decimal places for `format: 'plain'`. */
+  decimals?: number
+  /** Appended to the tooltip value, e.g. "cada 100.000 hab.". */
+  unit?: string
   height?: number
   /** Index of a year to mark as incomplete (drawn hollow). */
   partialIndex?: number | null
   /** What the chart shows. Becomes its accessible name and the table caption. */
   label: string
-}>(), { format: 'money', height: 300, partialIndex: null })
+}>(), { format: 'money', height: 300, partialIndex: null, decimals: 1, unit: '' })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 function fmt(v?: number | null): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return '—'
+  if (props.format === 'plain') {
+    const n = new Intl.NumberFormat(locale.value === 'en' ? 'en-US' : 'es-UY', {
+      minimumFractionDigits: props.decimals,
+      maximumFractionDigits: props.decimals,
+    }).format(v)
+    return props.unit ? `${n} ${props.unit}` : n
+  }
   if (props.format === 'pct') return `${(v * 100).toFixed(2).replace('.', ',')}%`
   if (props.format === 'count') return formatCount(v)
   if (props.format === 'usd') return formatMoney(v, 'USD', { compact: true })

@@ -72,7 +72,8 @@
     "invIm": "Montevideo City Hall",
     "invEmpresas": "Flagged companies",
     "invAsse": "ASSE: ambulances",
-    "invSaturno": "Saturno meatpacker"
+    "invSaturno": "Saturno meatpacker",
+    "invMejorPeor": "Are we getting worse?"
   },
   "money": {
     "unavailable": "No amount",
