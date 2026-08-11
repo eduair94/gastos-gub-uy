@@ -159,7 +159,7 @@
     "topSuppliersTitle": "Quién cobra más",
     "topBuyersTitle": "Quién gasta más",
     "anomaliesTitle": "Qué mirar de cerca",
-    "anomaliesHelp": "Contratos que se apartan del patrón habitual. Una alerta no es una acusación: es un punto de partida para revisar.",
+    "anomaliesHelp": "Precios que se apartan del patrón de su categoría y que la revisión automática no logró explicar, del más reciente al más viejo. Una alerta no es una acusación: es un punto de partida para revisar.",
     "exploreCta": "Abrir el explorador",
     "sourceNote": "Fuente: datos abiertos de Compras Estatales (OCDS), catalogodatos.gub.uy."
   },

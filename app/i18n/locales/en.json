@@ -159,7 +159,7 @@
     "topSuppliersTitle": "Who gets paid most",
     "topBuyersTitle": "Who spends most",
     "anomaliesTitle": "What to look at closely",
-    "anomaliesHelp": "Contracts that depart from the usual pattern. A flag is not an accusation: it's a starting point for review.",
+    "anomaliesHelp": "Prices that depart from their category's pattern and that the automated review could not explain, newest purchase first. A flag is not an accusation: it's a starting point for review.",
     "exploreCta": "Open the explorer",
     "sourceNote": "Source: Compras Estatales open data (OCDS), catalogodatos.gub.uy."
   },

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ANOMALY_RECENT_SORT_FIELD, formatAnomalySourceDate } from '~/utils/anomaly-list'
+
 const { t } = useI18n()
 const localePath = useLocalePath()
 const router = useRouter()
@@ -29,8 +31,21 @@ const { data: trendsRes } = await useFetch<any>('/api/dashboard/spending-trends'
 })
 const { data: suppliersRes } = await useFetch<any>('/api/analytics/top-suppliers', { query: { limit: 6 } })
 const { data: buyersRes } = await useFetch<any>('/api/analytics/top-buyers', { query: { limit: 6 } })
+// "Qué mirar de cerca" — the flags the AI review could NOT explain, newest purchase first.
+//
+// This panel used to ask for `severity=critical, sortBy=confidence`, and it froze. `confidence` is
+// clamp(0.5 + 0.05*(|z| - 3.5)) * n/(n + 20): both factors SATURATE, so every flag on a big baseline
+// with a large z scores ~0.99 and the ranking never moves. All four slots sat on TIMBRE PROFESIONAL
+// (baseline n = 8036) for months, the newest of them from June.
+//
+// Sorting the same critical set by date is not the fix either: of 131 criticals with a source date
+// in the last two months, 129 were triaged `explainable: yes` (error-carga / producto-distinto).
+// That is data-entry noise, and it already has its own page at /analytics/errores-carga.
+// `ai=unexplained` is the site's own definition of the real signal (see /analytics/unexplained), it
+// holds ~69 flags and gains a few every week, so ordering it by source date keeps the panel both
+// honest and live. Re-measure with tests/unit/home-anomalies.verify.ts.
 const { data: anomaliesRes } = await useFetch<any>('/api/analytics/anomalies', {
-  query: { limit: 4, severity: 'critical', sortBy: 'confidence', sortOrder: 'desc' },
+  query: { limit: 4, ai: 'unexplained', sortBy: ANOMALY_RECENT_SORT_FIELD, sortOrder: 'desc' },
 })
 const { data: statsRes } = await useFetch<any>('/api/contracts/stats')
 
@@ -44,6 +59,11 @@ const contractCount = computed(() => stats.value?.count ?? metrics.value?.totalC
 const topSuppliers = computed(() => suppliersRes.value?.data ?? [])
 const topBuyers = computed(() => buyersRes.value?.data ?? [])
 const anomalies = computed(() => anomaliesRes.value?.data?.anomalies ?? anomaliesRes.value?.data ?? [])
+
+/** Purchase date of a flag, falling back to its year on the older rows that carry no source date. */
+function flagDate(a: any): string {
+  return formatAnomalySourceDate(a?.sourceDate) ?? String(a?.sourceYear ?? a?.metadata?.year ?? '')
+}
 
 // Years the data actually covers, from filter_data via stats.byYear.
 const knownYears = computed<Set<number>>(() =>
@@ -334,7 +354,7 @@ useSeo(() => ({
       <div class="block__head">
         <h2>{{ t('home.anomaliesTitle') }}</h2>
         <NuxtLink
-          :to="localePath('/analytics/anomalies')"
+          :to="localePath('/analytics/unexplained')"
           class="block__all"
         >
           {{ t('common.viewAll') }}
@@ -359,6 +379,14 @@ useSeo(() => ({
                 ? a.metadata.itemDescription
                 : a.metadata?.buyerName }}
             </span>
+            <!-- The purchase date, not the detection date. Without it a frozen panel looks
+                 identical to a live one — which is exactly how this block sat on the same four
+                 flags for months without anyone noticing. -->
+            <time
+              v-if="flagDate(a)"
+              class="flags__when u-mono"
+              :datetime="a.sourceDate ?? String(a.sourceYear ?? a.metadata?.year)"
+            >{{ flagDate(a) }}</time>
             <MoneyAmount
               :amount="a.detectedValue"
               :currency="a.metadata?.currency"
@@ -684,7 +712,8 @@ a.stat:hover {
 
 .flags__link {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  /* tag | what | date | amount */
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--s-4);
   padding: var(--s-3) var(--s-4);
@@ -698,6 +727,26 @@ a.stat:hover {
 .flags__what {
   font-size: var(--t-sm);
   font-weight: 500;
+}
+
+.flags__when {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Narrow screens: the row is tag + what + amount, and the date moves under the label rather than
+   competing with the money for the same line. */
+@media (max-width: 32rem) {
+  .flags__link {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    row-gap: var(--s-1);
+  }
+
+  .flags__when {
+    grid-column: 2 / 3;
+    grid-row: 2;
+  }
 }
 
 /* ---- Source ---- */
