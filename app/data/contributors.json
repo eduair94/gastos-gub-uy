@@ -1,0 +1,86 @@
+{
+  "people": [
+    {
+      "name": "Eduardo Airaudo",
+      "github": "eduair94",
+      "role": "maintainer",
+      "since": "2025-08",
+      "blurb": {
+        "es": "Creó el sitio y lo mantiene: la ingesta de los datos abiertos de Compras Estatales, la detección de anomalías, las investigaciones y la API pública.",
+        "en": "Built the site and maintains it: the Compras Estatales open-data ingest, the anomaly detection, the investigations and the public API."
+      }
+    },
+    {
+      "name": "Nahuel Lopez",
+      "github": "NasvekL",
+      "role": "contributor",
+      "since": "2026-08",
+      "blurb": {
+        "es": "Reagrupó la navegación del sitio en secciones por intención y armó el bootstrap de desarrollo local, que levanta el tablero desde cero sin base de datos.",
+        "en": "Regrouped the site's navigation into intent-based sections and built the local development bootstrap, which brings the dashboard up from scratch with no database."
+      }
+    }
+  ],
+  "dataSources": [
+    {
+      "name": "Compras Estatales (ACCE)",
+      "url": "https://www.comprasestatales.gub.uy",
+      "note": {
+        "es": "La fuente primaria. Todo el gasto que se ve acá sale de su publicación de datos abiertos en formato OCDS.",
+        "en": "The primary source. Every figure on this site comes from its OCDS open-data publication."
+      }
+    },
+    {
+      "name": "Banco Central del Uruguay",
+      "url": "https://www.bcu.gub.uy",
+      "note": {
+        "es": "Cotizaciones históricas y la Unidad Indexada. Convierten cada monto a pesos del mes en que ocurrió y lo reexpresan en pesos de hoy, que es lo que permite comparar entre monedas y entre años.",
+        "en": "Historical exchange rates and the Unidad Indexada. They convert every amount to pesos of the month it happened and re-express it in today's pesos, which is what makes cross-currency and cross-year comparison possible."
+      }
+    },
+    {
+      "name": "World Bank Open Data",
+      "url": "https://data.worldbank.org",
+      "note": {
+        "es": "PIB, población y gasto del gobierno central, para poner las cifras en contexto. A su vez republica cuentas nacionales del BCU, población del INE y estadísticas del FMI.",
+        "en": "GDP, population and central-government expenditure, used to put the figures in context. It in turn republishes BCU national accounts, INE population and IMF statistics."
+      }
+    },
+    {
+      "name": "Registro Industrial (DEI) — MIEM",
+      "url": "https://www.gub.uy/ministerio-industria-energia-mineria",
+      "note": {
+        "es": "Registro industrial, cruzado por RUT con los proveedores del Estado.",
+        "en": "Industrial registry, cross-referenced by RUT against state suppliers."
+      }
+    },
+    {
+      "name": "RUPE",
+      "url": "https://www.gub.uy/agencia-reguladora-compras-estatales",
+      "note": {
+        "es": "Registro Único de Proveedores del Estado, publicado como datos abiertos.",
+        "en": "The state supplier registry, published as open data."
+      }
+    },
+    {
+      "name": "geoBoundaries",
+      "url": "https://www.geoboundaries.org",
+      "license": "CC BY 4.0",
+      "note": {
+        "es": "Límites departamentales del Uruguay, la geometría detrás del mapa por departamento.",
+        "en": "Uruguay's departmental boundaries, the geometry behind the department map."
+      }
+    }
+  ],
+  "software": [
+    { "name": "Nuxt", "url": "https://nuxt.com", "license": "MIT" },
+    { "name": "Vue", "url": "https://vuejs.org", "license": "MIT" },
+    { "name": "Vuetify", "url": "https://vuetifyjs.com", "license": "MIT" },
+    { "name": "MongoDB", "url": "https://www.mongodb.com", "license": "SSPL" },
+    { "name": "Mongoose", "url": "https://mongoosejs.com", "license": "MIT" },
+    { "name": "Material Design Icons", "url": "https://pictogrammers.com/library/mdi/", "license": "Apache 2.0" },
+    { "name": "Leaflet", "url": "https://leafletjs.com", "license": "BSD-2-Clause" },
+    { "name": "driver.js", "url": "https://driverjs.com", "license": "MIT" },
+    { "name": "Archivo · Public Sans · IBM Plex Mono", "url": "https://fonts.google.com", "license": "OFL 1.1" }
+  ]
+}

@@ -193,6 +193,7 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
           key: 'ayuda',
           items: [
             { key: 'about', to: localePath('/about'), icon: 'mdi-information-outline' },
+            { key: 'colaboradores', to: localePath('/colaboradores'), icon: 'mdi-account-group-outline' },
             { key: 'comoReportar', to: localePath('/analytics/como-reportar'), icon: 'mdi-help-circle-outline' },
             { key: 'comparativa', to: localePath('/comparativa'), icon: 'mdi-compare' },
             { key: 'developers', to: localePath('/developers'), icon: 'mdi-code-tags' },
