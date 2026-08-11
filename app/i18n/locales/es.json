@@ -1531,6 +1531,8 @@
     "percentile": "supera al {pct}% de los organismos",
     "contracts": "{n} contratos",
     "count": "{n} organismos",
+    "drillCalls": "Ver los llamados",
+    "drill": "Ver los contratos",
     "notMeasurable": "sin datos suficientes",
     "notComputed": "Las señales todavía no fueron calculadas.",
     "level": {

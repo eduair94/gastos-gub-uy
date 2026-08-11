@@ -62,8 +62,57 @@ const LEVEL_ITEMS = computed(() => [
   { value: 'high', title: t('senales.level.high') },
 ])
 
+/**
+ * NuxtLink RESOLVED, not named by string. A string  does not resolve the component and Vue
+ * emits a literal <NuxtLink> element: the card looks right and nothing is clickable. Documented
+ * repo gotcha, reproduced here before this line existed.
+ */
+const NuxtLinkComponent = resolveComponent('NuxtLink')
+
 function signalOf(row: any, key: SignalKey): any | null {
   return (row?.signals ?? []).find((s: any) => s.key === key) ?? null
+}
+
+/**
+ * Where a raised signal takes the reader — the contracts that produced it.
+ *
+ * Without this the page is a scoreboard: it says "177 tandas" and you cannot open a single one of
+ * them. Every link below lands on filters the explorer already understands, so the reader ends up
+ * looking at the actual records rather than at our arithmetic.
+ *
+ * Returns null where the corpus genuinely cannot support a drill-down, and the card then stays
+ * plain rather than linking somewhere approximate. `expressWindow` is the honest null: the bidding
+ * window lives on the tender-phase sibling, and the explorer filters awards.
+ */
+function drillTo(org: any, key: SignalKey): string | null {
+  const buyerId = org?.buyerId
+  if (!buyerId) return null
+
+  if (key === 'concentration' && org.topSupplierName) {
+    return localePath(`/contracts?buyerIds=${encodeURIComponent(buyerId)}&suppliers=${encodeURIComponent(org.topSupplierName)}`)
+  }
+  if (key === 'bursts' && org.burstWorstSupplier) {
+    // Narrow to the year of the worst burst; the month is not a filter the explorer has.
+    const year = String(org.burstWorstMonth ?? '').slice(0, 4)
+    const range = /^\d{4}$/.test(year) ? `&yearFrom=${year}&yearTo=${year}` : ''
+    return localePath(`/contracts?buyerIds=${encodeURIComponent(buyerId)}&suppliers=${encodeURIComponent(org.burstWorstSupplier)}${range}`)
+  }
+  if (key === 'directAward') {
+    // The two non-competitive procedures, as the explorer names them.
+    return localePath(
+      `/contracts?buyerIds=${encodeURIComponent(buyerId)}`
+      + `&procurementMethodDetails=${encodeURIComponent('Compra Directa')}`
+      + `&procurementMethodDetails=${encodeURIComponent('Compra por Excepción')}`
+      // tag=tender is LOAD-BEARING: the method only exists on the tender-phase release, and the
+      // explorer defaults to awards only — without it this link renders an empty list (measured:
+      // 0 rows vs 25).
+      + '&tag=tender',
+    )
+  }
+  if (key === 'unexplainedPrices' && org.buyerName) {
+    return localePath(`/analytics/anomalies?ai=unexplained&buyer=${encodeURIComponent(org.buyerName)}`)
+  }
+  return null
 }
 
 /** The measured value, formatted the way its own indicator is read. */
@@ -240,12 +289,24 @@ useSeo(() => ({
               class="sig__item"
               :class="`sig__item--${signalOf(org, key)?.level ?? 'none'}`"
             >
-              <span class="sig__label">{{ t(`senales.signal.${key}.short`) }}</span>
-              <span class="sig__value u-mono">{{ signalValue(key, signalOf(org, key)?.value ?? null) }}</span>
-              <span
-                v-if="percentileLabel(signalOf(org, key)?.populationPercentile)"
-                class="sig__pct"
-              >{{ percentileLabel(signalOf(org, key)?.populationPercentile) }}</span>
+              <!-- A raised signal links to the records behind it; an unraised one stays plain,
+                   because sending a reader to an unfiltered list would waste the click. -->
+              <component
+                :is="signalOf(org, key)?.level !== 'none' && drillTo(org, key) ? NuxtLinkComponent : 'div'"
+                :to="signalOf(org, key)?.level !== 'none' ? drillTo(org, key) : undefined"
+                class="sig__body"
+              >
+                <span class="sig__label">{{ t(`senales.signal.${key}.short`) }}</span>
+                <span class="sig__value u-mono">{{ signalValue(key, signalOf(org, key)?.value ?? null) }}</span>
+                <span
+                  v-if="percentileLabel(signalOf(org, key)?.populationPercentile)"
+                  class="sig__pct"
+                >{{ percentileLabel(signalOf(org, key)?.populationPercentile) }}</span>
+                <span
+                  v-if="signalOf(org, key)?.level !== 'none' && drillTo(org, key)"
+                  class="sig__go"
+                >{{ t(key === 'directAward' ? 'senales.drillCalls' : 'senales.drill') }}</span>
+              </component>
             </li>
           </ul>
 
@@ -355,9 +416,20 @@ useSeo(() => ({
 .sig__item--watch { border-color: var(--alerta); background: var(--alerta-wash); }
 .sig__item--high { border-color: var(--alerta); background: var(--alerta-wash); border-width: 2px; }
 
+.sig__body { display: block; color: inherit; text-decoration: none; }
+a.sig__body:hover .sig__go { text-decoration: underline; }
+
 .sig__label { display: block; font-size: var(--t-xs); color: var(--text-muted); }
 .sig__value { display: block; font-weight: 600; }
 .sig__pct { display: block; font-size: var(--t-xs); color: var(--text-muted); }
+
+/* Named in words, not by colour alone — the card is already tinted for the level. */
+.sig__go {
+  display: block;
+  margin-top: var(--s-1);
+  font-size: var(--t-xs);
+  color: var(--celeste-deep);
+}
 
 .pager { margin-top: var(--s-6); }
 
