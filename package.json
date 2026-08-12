@@ -37,6 +37,7 @@
     "check:mdi-subset": "node scripts/build-mdi-subset.mjs --check",
     "build:vuetify-utilities": "node scripts/build-vuetify-utilities-subset.mjs",
     "check:vuetify-utilities": "node scripts/build-vuetify-utilities-subset.mjs --check",
+    "check:layout": "node scripts/check-layout-guards.mjs",
     "refresh-tender-forecast": "tsx src/jobs/refresh-tender-forecast.ts",
     "import-sice-catalog": "tsx src/jobs/import-sice-catalog.ts",
     "load-dei": "tsx src/jobs/load-dei.ts",

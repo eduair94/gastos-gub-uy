@@ -90,7 +90,8 @@ npm run screenshots
   `autoIndex` is off. A `Schema.index()` alone does nothing.
 - **Optional TS props** are written `?: T | undefined` (root tsconfig sets `exactOptionalPropertyTypes`).
 - **UI:** gold = money, one logarithmic magnitude scale site-wide, es/en via i18n. The full contract is
-  [app/DESIGN.md](app/DESIGN.md) — binding, not advisory.
+  [app/DESIGN.md](app/DESIGN.md) — binding, not advisory. Mobile layout is part of that contract, and
+  `npm run check:layout` enforces the four rules that have actually shipped broken (see below).
 - **File references in Markdown** use relative links so they stay clickable.
 
 ## Traps that cost a cycle
@@ -107,6 +108,16 @@ npm run screenshots
   not `detectedAt` (which is restamped every run).
 - **Never restore an inflated lump-sum total:** any job writing `release.amount` must check
   `hasVerifiedOverride()` and skip. See [line-total artifact](docs/superpowers/specs/).
+- **Mobile layout breaks silently — nothing in the build sees it.** Four defects have shipped to
+  production this way, all invisible above ~640px: (1) a `padding` shorthand on an element that also
+  carries `.u-container` outranks the container's `padding-inline`, so a `0` in the inline slot flushes
+  the entire page against the phone's edge; (2) `var(--s-10)`+ is off a scale that stops at `--s-9`, so
+  the whole declaration is invalid and gets dropped; (3) two sibling tags have no whitespace between
+  them (Vue condenses the newline), so a chip after a name renders welded to it — wrap them in
+  `.chip-row`; (4) `<v-pagination>` needs 432px and pushes the document sideways — use `<DataPager>`.
+  `npm run check:layout` ([scripts/check-layout-guards.mjs](scripts/check-layout-guards.mjs)) fails on
+  all four and runs in `app`'s `prebuild`, so a regression fails the deploy build. It is a text scan:
+  for anything subtler, load the route at 360px and assert `scrollWidth <= innerWidth`.
 - **No `npm test` framework.** Tests are standalone `tsx` scripts; discover them by listing `tests/`.
 - The Express API under `src/api/**` and the `precalculate-dashboard`/`populate-analytics` scripts are
   **legacy/dead** — the live API is `app/server/api/**` and the live rollups are `src/jobs/refresh-*`.
@@ -127,3 +138,5 @@ atomically, rolling-reloads two pm2 workers, and auto-rolls-back on failure. Ful
 - Lint the non-Nuxt half: `npx eslint src shared scripts tests` (config at `eslint.config.mjs`).
 - Behaviour: add/run a `tsx` assertion script under `tests/unit/`.
 - Live checks: `curl` the dev server on `:3600` (typecheck/build env can be broken while the server runs).
+- UI: `npm run check:layout`, then load the changed route in a browser at **360px**; a page is only
+  verified once `document.documentElement.scrollWidth <= innerWidth` and no content box sits at `x = 0`.

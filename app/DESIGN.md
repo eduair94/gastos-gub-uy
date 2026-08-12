@@ -134,6 +134,27 @@ Use `--s-1..--s-9` for spacing. Prefer dense but calm information: compact
 controls, visible group boundaries, predictable field labels and progressive
 disclosure for secondary evidence.
 
+**The scale stops at `--s-9`.** Naming `var(--s-10)` or higher makes the whole
+declaration invalid, so the browser drops it and the element silently loses that
+padding, margin or gap. Nothing errors; the page just opens welded to the bottom
+of its hero. `/analytics/senales` and `/analytics/omisos` both shipped that way.
+
+**The page gutter belongs to `.u-container` and nothing else overrides it.** An
+element carrying `.u-container` gets `padding-inline: clamp(--s-4, 3vw, --s-6)`.
+A page's own scoped rule for that same element is *more* specific, so a `padding`
+shorthand there wins — and `padding: var(--s-7) 0 var(--s-9)` sets the gutter to
+zero, flushing every card, heading and paragraph against the phone's edge. Write
+vertical rhythm as `padding-block`. `/analytics/genero` shipped edge-to-edge on
+mobile for exactly this reason.
+
+**A pager is prev / "page X of Y" / next.** Never `<v-pagination>`: it renders
+one 48px button per visible page, so a seven-page pager needs 432px and pushes
+the document sideways on any phone. Use `<DataPager>`, which also returns the
+reader to the top of the list.
+
+`node scripts/check-layout-guards.mjs` enforces all four of these, and runs in
+`app`'s `prebuild` — so a regression fails the deploy build instead of shipping.
+
 `.u-splitrow` is the canonical record row: a growing identity block and a fixed,
 top-aligned figures block. Do not reproduce it with centered flex alignment.
 
@@ -242,7 +263,9 @@ selection never feels lost.
 - Make markers opaque, high-contrast and keyboard-reachable where supported.
 - Use one click to open the complete supplier record.
 - Respect focus visibility and `prefers-reduced-motion`.
-- Verify public pages at 360px and desktop widths.
+- Verify public pages at 360px and desktop widths, and confirm
+  `document.documentElement.scrollWidth` never exceeds the viewport.
+- Wrap a value and its trailing chip in `.chip-row chip-row--baseline`.
 - Call `useSeo` on every page and use SSR for public data.
 
 ### Don't
@@ -256,3 +279,7 @@ selection never feels lost.
 - Remove outlines, hide missing data or imply a map point is exact when its
   source does not support that certainty.
 - Use a bare `1fr` around charts or dense records.
+- Write a `padding` shorthand on an element that also carries `.u-container`.
+- Name a spacing token above `--s-9`, or reach for `<v-pagination>`.
+- Emit two sibling elements with no gap-bearing wrapper and expect a space
+  between them — Vue compiles the newline away and they render welded.

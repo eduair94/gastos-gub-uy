@@ -173,6 +173,7 @@ useSeo(() => ({
 
       <div
         v-else
+        id="omisos-rows"
         class="tablewrap"
       >
         <table class="rows">
@@ -215,11 +216,14 @@ useSeo(() => ({
         </table>
       </div>
 
-      <v-pagination
+      <!-- `<DataPager>`, not `<v-pagination>`: seven 48px number buttons plus
+           prev/next need 432px, so the raw pager pushed the whole page 37px
+           sideways on a 390px phone. -->
+      <DataPager
         v-if="totalPages > 1"
-        v-model="page"
-        :length="totalPages"
-        :total-visible="7"
+        v-model:page="page"
+        :total-pages="totalPages"
+        scroll-target-id="omisos-rows"
         class="pager"
       />
 
@@ -242,7 +246,9 @@ useSeo(() => ({
 .hero {
   background: var(--ink);
   color: var(--paper);
-  padding: var(--s-10) 0;
+  /* The scale stops at `--s-9`. This named `--s-10`, so the declaration was
+     invalid and the hero shipped with no padding at all. */
+  padding-block: var(--s-7) var(--s-6);
 }
 
 .hero__in { max-width: 46rem; }
@@ -250,7 +256,11 @@ useSeo(() => ({
 .hero__title { font-family: var(--font-display); margin: var(--s-2) 0 var(--s-3); }
 .hero__dek { opacity: 0.85; }
 
-.page { padding: var(--s-8) 0 var(--s-12); }
+/* `padding-block`, never the `padding` shorthand — see `.u-container` in
+   main.scss: a shorthand here wipes the site gutter on mobile. The scale
+   stops at `--s-9`; the `--s-12` this used to name does not exist, so the
+   whole declaration was invalid and the page opened welded to the hero. */
+.page { padding-block: var(--s-8) var(--s-9); }
 .caveat { margin-bottom: var(--s-5); }
 
 .kpis {
