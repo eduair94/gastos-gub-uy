@@ -28,6 +28,8 @@ Every offline computation in gastos-gub. Jobs turn the raw OCDS `releases` colle
 | [pliego-summary.ts](pliego-summary.ts) | Gemini pliego summaries cached on `open_calls.aiSummary`. Not on cron (sync-open-calls does a bounded eager pass). |
 | [import-sice-catalog.ts](import-sice-catalog.ts) | Downloads ACCE `imp_catalogo.tgz`, parses Latin-1 SQL INSERTs → `sice_catalog` + `sice_rubro`. Self-skips on unchanged ETag/Last-Modified via `sice_import_state`. |
 | [extract-acta-bidders.ts](extract-acta-bidders.ts) | **Who else bid.** Fetches `/Resoluciones/acta_<compraId>.pdf` for awarded COMPETITIVE calls, extracts its text and parses the offers it enumerates → `acta_bidders`. Serial, delayed, resumable: every probed call is stored (silent ones too) so a re-run never re-fetches. ~4% of actas enumerate — a per-CONTRACT fact, never an organism-level rate. |
+| [load-udeco-sanctions.ts](load-udeco-sanctions.ts) | UDECO consumer-protection sanctions (1,482 rows, 1,103 firms, 2017-2024) → `udeco_sanctions`. Source quirks that are load-bearing: SEMICOLON-delimited and **LATIN-1** despite the UTF-8 headers. Upsert, never sweep. |
+| [refresh-udeco-crossref.ts](refresh-udeco-crossref.ts) | Sanctioned firms × state suppliers → `udeco_supplier_stats`. The RUT join needs a 12-digit normalisation (`R/…`, `R/… `, `R…`, bare) that no index can serve — an exact `$in` misses 28% — so it lives here, not on a request path. |
 | [load-jutep-omisos.ts](load-jutep-omisos.ts) | JUTEP roster of officials declared omisos on their sworn asset declaration (Ley 17.060) → `jutep_omisos`. **Upsert by (documento, fecha), never a swap** — JUTEP republishes cumulatively and a vanished row is their correction, not our deletion. Resolves the free-text inciso label to a `buyer.id` prefix via [shared/jutep-incisos.ts](../../shared/jutep-incisos.ts) (99.7% of rows; only COLEGIO MEDICO is unresolved, correctly). |
 | [load-dei.ts](load-dei.ts) | Loads the MIEM DEI industrial-registry CSV → `dei_companies`, upsert-by-RUT. The RUT join happens at read time in `app/server/utils/dei.ts`. |
 | [refresh-exchange-rates.ts](refresh-exchange-rates.ts) | Upserts monthly BCU USD/EUR/UI averages into `exchange_rates` from api.cambio-uruguay.com. Never deletes months. No npm script. |
@@ -101,6 +103,8 @@ npm run pliego-summary -- --eager
 npm run import-sice-catalog -- --force
 npm run load-dei -- --dry-run
 npm run load-jutep-omisos -- --dry-run
+npm run load-udeco-sanctions -- --dry-run
+npm run refresh-udeco-crossref -- --dry-run
 npm run load-jutep-omisos -- --dry-run
 npm run extract-acta-bidders -- --limit=200 --dry-run   # or --ocid=ocds-yfs5dr-1311173 --force
 
@@ -136,6 +140,7 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 | `0 5 * * *` / `0 6 * * *` / `0 8 * * *` | `jobs/deadline-reminders` / `jobs/cross-provider-anomalies` / `jobs/alert-digest` |
 | `15 9 * * 1` | `jobs/weekly-newsletter` for the previous completed Uruguay week |
 | `0 2 * * 0` / `0 7 * * 0` | weekly reconcileNonFinalReleases → full `jobs/reconcile-award-amendments` / `jobs/refresh-product-variants` |
+| `40 6 * * 1` | `jobs/load-udeco-sanctions` → `jobs/refresh-udeco-crossref` — weekly, small, and the cross-ref reads what the loader just wrote |
 | `15 6 * * 1` |
 | `20 3 * * *` | `jobs/extract-acta-bidders --limit=400` — bounded on purpose; the backlog drains over nights instead of grinding the gov site |
 | `15 6 * * 1` | `jobs/load-jutep-omisos` — weekly; JUTEP republishes a few times a year, the load is a 5s upsert |

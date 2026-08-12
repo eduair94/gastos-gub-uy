@@ -133,6 +133,38 @@ const { data: firstRes } = await useFetch<any>('/api/contracts', {
 })
 
 // Breakdowns. See the header note on why these are guarded.
+/**
+ * Consumer-protection sanctions against this firm, from the precomputed UDECO cross-reference.
+ *
+ * The join is the 12-digit RUT inside supplierId: the corpus stores it as "R/214803890012",
+ * "R/214803890012 " (trailing space), "R211003420017" (no slash) and bare, so only a digit
+ * normalisation reaches all four. Absent for most suppliers, and absence means nothing.
+ */
+const RUT_DIGITS = 12
+
+const supplierRut = computed(() => {
+  const digits = supplierId.value.replace(/\D/g, '')
+  return digits.length === RUT_DIGITS ? digits : ''
+})
+
+const { data: sancionesRes } = await useFetch<any>('/api/analytics/sanciones', {
+  query: computed(() => ({ rut: supplierRut.value, limit: 1 })),
+  immediate: Boolean(supplierRut.value),
+})
+
+/**
+ * The firm's UDECO record, or null when it has none.
+ *
+ * The returned rut is checked against this supplier's. Without that check an empty `rut` param
+ * would fall through to the unfiltered list and the panel would show a DIFFERENT company's
+ * sanctions on this profile — the worst failure this page could have.
+ */
+const sanciones = computed<any | null>(() => {
+  const firm = sancionesRes.value?.data?.firms?.[0]
+  if (!firm || !supplierRut.value) return null
+  return firm.rut === supplierRut.value ? firm : null
+})
+
 const { data: statsRes } = await useFetch<any>('/api/contracts/stats', {
   query: computed(() => ({ supplierIds: supplierId.value })),
   immediate: exists,
@@ -355,6 +387,51 @@ useSeo(() => ({
 
       <!-- ===== Revenue by year =====
            Guarded: the bars are gold, so they may only ever carry money. -->
+      <!-- ===== Sanciones de Defensa del Consumidor =====
+           Renders only when UDECO actually sanctioned this firm. A sanction concerns how the firm
+           treated CONSUMERS; it says nothing about whether any of its public contracts were
+           irregular, and the copy states that rather than leaving it implied. -->
+      <section
+        v-if="sanciones"
+        class="block"
+      >
+        <div class="block__head">
+          <h2>{{ t('sanciones.panelTitle') }}</h2>
+          <NuxtLink
+            :to="localePath('/analytics/sanciones')"
+            class="block__all"
+          >
+            {{ t('sanciones.panelLink') }}
+          </NuxtLink>
+        </div>
+        <p class="block__help block__help--wide">
+          {{ t('sanciones.caveat') }}
+        </p>
+        <p class="udeco__line">
+          <!-- Spanish needs the singular: "1 sanciones" reads as broken copy. -->
+          {{ sanciones.sanctions === 1
+            ? t('sanciones.panelBodyOne', {
+              to: new Date(sanciones.lastSanctionAt).getUTCFullYear(),
+              ur: Math.round(sanciones.totalUr),
+            })
+            : t('sanciones.panelBody', {
+              n: sanciones.sanctions,
+              from: new Date(sanciones.firstSanctionAt).getUTCFullYear(),
+              to: new Date(sanciones.lastSanctionAt).getUTCFullYear(),
+              ur: Math.round(sanciones.totalUr),
+            }) }}
+        </p>
+        <ul class="udeco">
+          <li
+            v-for="m in sanciones.motivos.slice(0, 8)"
+            :key="m"
+            class="udeco__item"
+          >
+            {{ m }}
+          </li>
+        </ul>
+      </section>
+
       <section
         v-if="byYear.length > 1"
         class="block"
@@ -950,5 +1027,17 @@ a.rank__link:hover { background: var(--surface-sunken); }
 
   .rank__meta { grid-column: 1; grid-row: 2; }
   .rank__link :deep(.money) { grid-column: 2; grid-row: 1 / span 2; }
+}
+
+/* ---- Sanciones de Defensa del Consumidor ---- */
+.udeco__line { margin: 0 0 var(--s-3); font-size: var(--t-sm); }
+.udeco { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+.udeco__item {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  padding: 2px var(--s-2);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
 }
 </style>

@@ -1023,6 +1023,26 @@ class CronServer {
     );
     this.logger.info(`JUTEP omisos load scheduled with expression: ${jutepExpression} (Uruguay timezone)`);
 
+    // UDECO consumer-protection sanctions, weekly on Monday at 06:40 — right after the JUTEP load,
+    // and both are small: UDECO republishes a few times a year and the file is ~1.5k rows. The
+    // cross-reference runs straight after, because it reads what the loader just wrote.
+    const udecoExpression = "40 6 * * 1";
+    cron.schedule(
+      udecoExpression,
+      async () => {
+        try {
+          this.logger.info("Starting UDECO sanctions load...");
+          await this.runJobProcess("jobs/load-udeco-sanctions");
+          await this.runJobProcess("jobs/refresh-udeco-crossref");
+          this.logger.info("UDECO sanctions load + cross-reference completed successfully");
+        } catch (error) {
+          this.logger.error("UDECO sanctions load failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`UDECO sanctions load scheduled with expression: ${udecoExpression} (Uruguay timezone)`);
+
     // Acta bidder extraction, nightly at 03:20 with a BOUNDED batch. Deliberately small and slow:
     // it pulls PDFs from comprasestatales one at a time with a delay, and every probed call is
     // recorded (including the silent ones) so a re-run never re-reads. A backlog drains over

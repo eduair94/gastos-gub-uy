@@ -19,6 +19,7 @@
     "anomalies": "Alertas",
     "unexplained": "Alertas sin explicar",
     "omisos": "Declaraciones omitidas",
+    "sanciones": "Sancionadas",
     "senalesGestion": "Señales de gestión",
     "providerAnomalies": "Proveedores señalados",
     "providerLoadErrors": "Proveedores con errores",
@@ -1524,6 +1525,37 @@
     "organismPanelBody": "La JUTEP declaró omisos a {n} funcionarios de este inciso por no presentar su declaración jurada de bienes e ingresos.",
     "organismPanelLink": "Ver la nómina"
   },
+  "sanciones": {
+    "title": "Proveedores del Estado sancionados por Defensa del Consumidor",
+    "lead": "Empresas multadas o apercibidas por la Unidad de Defensa del Consumidor que además le venden al Estado, cruzadas por RUT contra las compras públicas.",
+    "caveat": "Una sanción de Defensa del Consumidor es sobre cómo la empresa trató a sus CONSUMIDORES. No dice nada sobre si algún contrato público fue irregular, y esta página no debe leerse así. Lo que muestra es más acotado y es un hecho: el propio organismo de defensa del consumidor del Estado sancionó a esta empresa, y el Estado le sigue comprando.",
+    "kpi": {
+      "firms": "empresas sancionadas que le venden al Estado, de {total} sancionadas en total",
+      "spend": "adjudicado a esas empresas",
+      "sanctions": "sanciones aplicadas",
+      "fines": "en multas (Unidades Reajustables)"
+    },
+    "sortLabel": "Ordenar por",
+    "sort": {
+      "spend": "Monto adjudicado",
+      "sanctions": "Cantidad de sanciones",
+      "fines": "Multas en UR",
+      "recent": "Sanción más reciente"
+    },
+    "searchLabel": "Buscar empresa",
+    "onlyFines": "Solo con multa",
+    "notComputed": "El cruce todavía no fue calculado.",
+    "row": {
+      "contracts": "{n} contratos con {buyers} organismos",
+      "sanctions": "{n} sanciones ({ur} UR)",
+      "last": "última: {date}"
+    },
+    "source": "Fuente: Unidad de Defensa del Consumidor (MEF), datos abiertos en",
+    "panelTitle": "Sanciones de Defensa del Consumidor",
+    "panelBodyOne": "La Unidad de Defensa del Consumidor aplicó 1 sanción a esta empresa en {to}, por un total de {ur} UR en multas.",
+    "panelBody": "La Unidad de Defensa del Consumidor aplicó {n} sanciones a esta empresa entre {from} y {to}, por un total de {ur} UR en multas.",
+    "panelLink": "Ver el cruce completo"
+  },
   "senales": {
     "title": "Señales de gestión",
     "lead": "Cinco medidas sobre cómo compra cada organismo del Estado: en quién concentra la plata, si adjudica en tandas, cuánto adjudica en forma directa, cuánto tiempo deja para competir y cuántos sobreprecios quedaron sin explicación.",
@@ -1994,6 +2026,10 @@
     }
   },
   "seo": {
+    "sanciones": {
+      "title": "Proveedores del Estado sancionados por Defensa del Consumidor",
+      "description": "Empresas sancionadas por la Unidad de Defensa del Consumidor que además venden al Estado uruguayo, cruzadas por RUT contra las compras públicas."
+    },
     "genero": {
         "title": "Gasto público en políticas de género y diversidad en Uruguay",
         "description": "Cuánto gasta el Estado uruguayo en políticas de género y diversidad: por organismo, proveedor, año y administración, con cada contrato enlazado a su ficha y al expediente oficial, y el método de detección publicado."

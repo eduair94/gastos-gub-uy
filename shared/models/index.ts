@@ -52,3 +52,9 @@ export * from "./acta_bidders";
 // per-contract classification behind them (topic_contracts)
 export * from "./topic_spending";
 export * from "./topic_contract";
+
+// UDECO consumer-protection sanctions (udeco_sanctions)
+export * from "./udeco_sanction";
+
+// UDECO × state-supplier cross-reference (udeco_supplier_stats)
+export * from "./udeco_supplier_stats";

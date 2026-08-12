@@ -19,6 +19,7 @@
     "anomalies": "Flags",
     "unexplained": "Unexplained alerts",
     "omisos": "Undeclared assets",
+    "sanciones": "Sanctioned firms",
     "senalesGestion": "Management signals",
     "providerAnomalies": "Flagged suppliers",
     "providerLoadErrors": "Suppliers with errors",
@@ -1523,6 +1524,37 @@
     "organismPanelBody": "JUTEP has declared {n} officials of this inciso delinquent for not filing their sworn declaration of assets and income.",
     "organismPanelLink": "See the roster"
   },
+  "sanciones": {
+    "title": "State suppliers sanctioned by consumer protection",
+    "lead": "Companies fined or cautioned by the Consumer Protection Unit that also sell to the State, cross-referenced by tax ID against public procurement.",
+    "caveat": "A consumer-protection sanction is about how the company treated its CONSUMERS. It says nothing about whether any public contract was irregular, and this page must not be read that way. What it shows is narrower, and factual: the State’s own consumer agency sanctioned this company, and the State keeps buying from it.",
+    "kpi": {
+      "firms": "sanctioned companies that sell to the State, out of {total} sanctioned in total",
+      "spend": "awarded to those companies",
+      "sanctions": "sanctions applied",
+      "fines": "in fines (Unidades Reajustables)"
+    },
+    "sortLabel": "Sort by",
+    "sort": {
+      "spend": "Amount awarded",
+      "sanctions": "Number of sanctions",
+      "fines": "Fines in UR",
+      "recent": "Most recent sanction"
+    },
+    "searchLabel": "Search company",
+    "onlyFines": "Fined only",
+    "notComputed": "The cross-reference has not been computed yet.",
+    "row": {
+      "contracts": "{n} contracts with {buyers} bodies",
+      "sanctions": "{n} sanctions ({ur} UR)",
+      "last": "latest: {date}"
+    },
+    "source": "Source: Consumer Protection Unit (MEF), open data at",
+    "panelTitle": "Consumer-protection sanctions",
+    "panelBodyOne": "The Consumer Protection Unit applied 1 sanction to this company in {to}, totalling {ur} UR in fines.",
+    "panelBody": "The Consumer Protection Unit applied {n} sanctions to this company between {from} and {to}, totalling {ur} UR in fines.",
+    "panelLink": "See the full cross-reference"
+  },
   "senales": {
     "title": "Management signals",
     "lead": "Five measurements of how each state body buys: who the money concentrates on, whether awards come in bursts, how much is awarded directly, how long anyone had to compete, and how many price flags were left unexplained.",
@@ -1993,6 +2025,10 @@
     }
   },
   "seo": {
+    "sanciones": {
+      "title": "State suppliers sanctioned by consumer protection",
+      "description": "Companies sanctioned by Uruguay’s Consumer Protection Unit that also sell to the State, cross-referenced by tax ID against public procurement."
+    },
     "genero": {
         "title": "Public spending on gender and diversity policy in Uruguay",
         "description": "How much the Uruguayan state spends on gender and diversity policy: by body, supplier, year and administration, with every contract linked to its record and official source, and the detection method published."

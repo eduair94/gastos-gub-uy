@@ -104,6 +104,8 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             // The integrity record from the other side: not how a body buys, but who inside it
             // never declared their assets.
             { key: 'omisos', to: localePath('/analytics/omisos'), icon: 'mdi-file-document-alert-outline' },
+            // The State's own consumer agency vs the State's own purchase orders.
+            { key: 'sanciones', to: localePath('/analytics/sanciones'), icon: 'mdi-gavel' },
             { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
             { key: 'unexplained', to: localePath('/analytics/unexplained'), icon: 'mdi-help-rhombus-outline' },
             { key: 'erroresCarga', to: localePath('/analytics/errores-carga'), icon: 'mdi-database-alert-outline' },
