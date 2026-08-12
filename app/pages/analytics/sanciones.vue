@@ -176,6 +176,7 @@ useSeo(() => ({
 
       <ul
         v-else
+        id="sanciones-firms"
         class="firms"
       >
         <li
@@ -222,11 +223,13 @@ useSeo(() => ({
         </li>
       </ul>
 
-      <v-pagination
+      <!-- `<DataPager>`, not `<v-pagination>`: seven 48px number buttons plus
+           prev/next need 432px and push the page sideways on a phone. -->
+      <DataPager
         v-if="totalPages > 1"
-        v-model="page"
-        :length="totalPages"
-        :total-visible="7"
+        v-model:page="page"
+        :total-pages="totalPages"
+        scroll-target-id="sanciones-firms"
         class="pager"
       />
 
@@ -246,13 +249,17 @@ useSeo(() => ({
 </template>
 
 <style scoped lang="scss">
-.hero { background: var(--ink); color: var(--paper); padding: var(--s-10) 0; }
+/* The spacing scale stops at `--s-9`; `--s-10` made the whole declaration
+   invalid, so the hero shipped with no padding at all. */
+.hero { background: var(--ink); color: var(--paper); padding-block: var(--s-7) var(--s-6); }
 .hero__in { max-width: 46rem; }
 .hero__eyebrow { font-size: var(--t-xs); opacity: 0.7; letter-spacing: 0.08em; text-transform: uppercase; }
 .hero__title { font-family: var(--font-display); margin: var(--s-2) 0 var(--s-3); }
 .hero__dek { opacity: 0.85; }
 
-.page { padding: var(--s-8) 0 var(--s-12); }
+/* `padding-block`, never the `padding` shorthand — this element also carries
+   `.u-container`, and a shorthand here wipes the site gutter on mobile. */
+.page { padding-block: var(--s-8) var(--s-9); }
 .caveat { margin-bottom: var(--s-5); }
 
 .kpis {
