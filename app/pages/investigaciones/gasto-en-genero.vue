@@ -259,23 +259,45 @@ useSeo(() => ({
               :rule="false"
               compact
             />
-            <b>{{ c.tTotal }}</b>
-            <span>{{ c.tTotalSub }}</span>
+            <div class="inv-tile__l">
+              {{ c.tTotal }}
+            </div>
+            <div class="inv-tile__s">
+              {{ c.tTotalSub }}
+            </div>
           </div>
           <div class="inv-tile">
-            <strong class="inv-tile__n">{{ shareBp }}</strong>
-            <b>{{ c.tShare }}</b>
-            <span>{{ c.tShareSub }}</span>
+            <div class="inv-tile__n">
+              {{ shareBp }}
+            </div>
+            <div class="inv-tile__l">
+              {{ c.tShare }}
+            </div>
+            <div class="inv-tile__s">
+              {{ c.tShareSub }}
+            </div>
           </div>
           <div class="inv-tile">
-            <strong class="inv-tile__n">{{ noAmountPct }}%</strong>
-            <b>{{ c.tCoverage }}</b>
-            <span>{{ c.tCoverageSub }}</span>
+            <div class="inv-tile__n inv-tile__n--alerta">
+              {{ noAmountPct }}%
+            </div>
+            <div class="inv-tile__l">
+              {{ c.tCoverage }}
+            </div>
+            <div class="inv-tile__s">
+              {{ c.tCoverageSub }}
+            </div>
           </div>
           <div class="inv-tile">
-            <strong class="inv-tile__n">{{ s.contracts }}</strong>
-            <b>{{ c.tContracts }}</b>
-            <span>{{ c.tContractsSub }}</span>
+            <div class="inv-tile__n">
+              {{ s.contracts }}
+            </div>
+            <div class="inv-tile__l">
+              {{ c.tContracts }}
+            </div>
+            <div class="inv-tile__s">
+              {{ c.tContractsSub }}
+            </div>
           </div>
         </div>
       </div>
@@ -283,13 +305,17 @@ useSeo(() => ({
 
     <!-- Context -->
     <section class="inv-sec">
-      <div class="u-container inv-article">
-        <p class="inv-tag">
-          {{ c.ctxTag }}
-        </p>
-        <h2>{{ c.ctxTitle }}</h2>
-        <p>{{ c.ctx1 }}</p>
-        <p>{{ c.ctx2 }}</p>
+      <div class="u-container">
+        <div class="inv-head">
+          <p class="u-eyebrow">
+            {{ c.ctxTag }}
+          </p>
+          <h2>{{ c.ctxTitle }}</h2>
+        </div>
+        <div class="inv-prose">
+          <p>{{ c.ctx1 }}</p>
+          <p>{{ c.ctx2 }}</p>
+        </div>
       </div>
     </section>
 
@@ -299,26 +325,30 @@ useSeo(() => ({
       class="inv-sec inv-sec--alt"
     >
       <div class="u-container">
-        <div class="inv-article">
-          <p class="inv-tag">
+        <div class="inv-head">
+          <p class="u-eyebrow">
             {{ c.findTag }}
           </p>
           <h2>{{ c.findTitle }}</h2>
+        </div>
+        <div class="inv-prose">
           <p>{{ c.find1 }}</p>
           <p>
             {{ c.find1b }}
             <template v-if="topBuyer">
-              <b>{{ topBuyer.buyerName }}: {{ topBuyerPct }}%</b>.
+              <strong>{{ topBuyer.buyerName }}: {{ topBuyerPct }}%</strong>.
             </template>
-            <b>{{ categoryLabel('vbg-atencion') }} + {{ categoryLabel('comuna-mujer') }}: {{ carePct }}%</b>.
+            <strong>{{ categoryLabel('vbg-atencion') }} + {{ categoryLabel('comuna-mujer') }}: {{ carePct }}%</strong>.
           </p>
         </div>
-        <ChartBlock
-          :title="c.chartCategories"
-          :scroll="false"
-        >
-          <SpendBars :items="categoryBars" />
-        </ChartBlock>
+        <div class="gen-evidence">
+          <ChartBlock
+            :title="c.chartCategories"
+            :scroll="false"
+          >
+            <SpendBars :items="categoryBars" />
+          </ChartBlock>
+        </div>
       </div>
     </section>
 
@@ -328,44 +358,57 @@ useSeo(() => ({
       class="inv-sec"
     >
       <div class="u-container">
-        <div class="inv-article">
-          <p class="inv-tag">
+        <div class="inv-head">
+          <p class="u-eyebrow">
             {{ c.supTag }}
           </p>
           <h2>{{ c.supTitle }}</h2>
+        </div>
+        <div class="inv-prose">
           <p>
             {{ c.sup1 }}
-            <b>{{ top5Pct }}%</b>.
+            <strong>{{ top5Pct }}%</strong>.
           </p>
           <p>{{ c.sup2 }}</p>
         </div>
-        <ChartBlock
-          :title="c.chartSuppliers"
-          :help="c.supCaveat"
-          :scroll="false"
-        >
-          <SpendBars :items="supplierBars" />
-        </ChartBlock>
+        <div class="gen-evidence">
+          <ChartBlock
+            :title="c.chartSuppliers"
+            :help="c.supCaveat"
+            :scroll="false"
+          >
+            <SpendBars :items="supplierBars" />
+          </ChartBlock>
+        </div>
       </div>
     </section>
 
-    <!-- Finding 3 — the coverage hole -->
+    <!-- Finding 3 — the coverage hole. The ink panel is the house device for
+         "this is the decisive finding", and this one is decisive: it is why the
+         total is a floor. -->
     <section
       v-if="s"
       class="inv-sec inv-sec--alt"
     >
-      <div class="u-container inv-article">
-        <p class="inv-tag">
-          {{ c.gapTag }}
-        </p>
-        <h2>{{ c.gapTitle }}</h2>
-        <p>
-          {{ c.gap1 }}
-        </p>
-        <p class="inv-pull">
-          {{ s.contractsWithoutAmount }} / {{ s.contracts }} ({{ noAmountPct }}%) {{ c.gapPull }}.
-        </p>
-        <p>{{ c.gap2 }}</p>
+      <div class="u-container">
+        <div class="inv-head">
+          <p class="u-eyebrow">
+            {{ c.gapTag }}
+          </p>
+          <h2>{{ c.gapTitle }}</h2>
+        </div>
+        <div class="inv-prose">
+          <p>{{ c.gap1 }}</p>
+        </div>
+        <div class="inv-finding gen-finding">
+          <p class="gen-finding__n">
+            {{ s.contractsWithoutAmount }} <span>/ {{ s.contracts }}</span>
+          </p>
+          <p class="gen-finding__l">
+            {{ c.gapPull }}
+          </p>
+          <p>{{ c.gap2 }}</p>
+        </div>
       </div>
     </section>
 
@@ -374,21 +417,32 @@ useSeo(() => ({
       v-if="s?.byParty?.length"
       class="inv-sec"
     >
-      <div class="u-container inv-article">
-        <p class="inv-tag">
-          {{ c.partyTag }}
-        </p>
-        <h2>{{ c.partyTitle }}</h2>
-        <p>{{ c.party1 }}</p>
-        <p>{{ c.party2 }}</p>
-        <ul class="parties">
+      <div class="u-container">
+        <div class="inv-head">
+          <p class="u-eyebrow">
+            {{ c.partyTag }}
+          </p>
+          <h2>{{ c.partyTitle }}</h2>
+        </div>
+        <div class="inv-prose">
+          <p>{{ c.party1 }}</p>
+          <p>{{ c.party2 }}</p>
+        </div>
+        <ul class="gen-rows gen-rows--party">
           <li
             v-for="p in s.byParty"
             :key="p.party"
           >
-            <span class="parties__n">{{ p.partyLabel }}</span>
-            <span class="parties__m u-mono">{{ p.organisms }} {{ c.partyUnits }} · {{ p.contracts }} {{ c.partyContracts }}</span>
-            <span class="parties__s u-mono">{{ p.weightedShareBp.toFixed(1) }} {{ c.per10k }}</span>
+            <div class="gen-rows__id">
+              <span class="gen-rows__name">{{ p.partyLabel }}</span>
+              <span class="gen-rows__meta u-mono">
+                {{ p.organisms }} {{ c.partyUnits }} · {{ p.contracts }} {{ c.partyContracts }}
+              </span>
+            </div>
+            <p class="gen-rows__fig">
+              <b class="u-mono">{{ p.weightedShareBp.toFixed(1) }}</b>
+              <span>{{ c.per10k }}</span>
+            </p>
           </li>
         </ul>
       </div>
@@ -396,27 +450,39 @@ useSeo(() => ({
 
     <!-- Open calls -->
     <section class="inv-sec inv-sec--alt">
-      <div class="u-container inv-article">
-        <p class="inv-tag">
-          {{ c.openTag }}
-        </p>
-        <h2>{{ c.openTitle }}</h2>
-        <p v-if="!s?.openCalls?.length">
+      <div class="u-container">
+        <div class="inv-head">
+          <p class="u-eyebrow">
+            {{ c.openTag }}
+          </p>
+          <h2>{{ c.openTitle }}</h2>
+        </div>
+        <p
+          v-if="!s?.openCalls?.length"
+          class="inv-note"
+        >
           {{ c.openEmpty }}
         </p>
         <ul
           v-else
-          class="calls"
+          class="gen-rows"
         >
           <li
             v-for="call in s.openCalls"
             :key="call.compraId"
           >
-            <NuxtLink :to="localePath(`/llamados/${call.compraId}`)">
-              {{ call.title || `#${call.compraId}` }}
-            </NuxtLink>
-            <span class="calls__b">{{ call.buyerName }}</span>
-            <span class="calls__d u-mono">{{ c.closes }} {{ fmtDate(call.endDate) }}</span>
+            <div class="gen-rows__id">
+              <NuxtLink
+                class="gen-rows__name"
+                :to="localePath(`/llamados/${call.compraId}`)"
+              >
+                {{ call.title || `#${call.compraId}` }}
+              </NuxtLink>
+              <span class="gen-rows__meta">{{ call.buyerName }}</span>
+            </div>
+            <p class="gen-rows__fig gen-rows__fig--date u-mono">
+              {{ c.closes }} {{ fmtDate(call.endDate) }}
+            </p>
           </li>
         </ul>
       </div>
@@ -424,30 +490,45 @@ useSeo(() => ({
 
     <!-- Method -->
     <section class="inv-sec">
-      <div class="u-container inv-article">
-        <p class="inv-tag">
-          {{ c.methodTag }}
-        </p>
-        <h2>{{ c.methodTitle }}</h2>
-        <p>{{ c.method1 }}</p>
-        <p>{{ c.method2 }}</p>
-        <p class="inv-actions">
-          <NuxtLink
-            class="inv-cta"
+      <div class="u-container">
+        <div class="inv-head">
+          <p class="u-eyebrow">
+            {{ c.methodTag }}
+          </p>
+          <h2>{{ c.methodTitle }}</h2>
+        </div>
+        <div class="inv-prose">
+          <p>{{ c.method1 }}</p>
+          <p>{{ c.method2 }}</p>
+        </div>
+        <div class="gen-actions">
+          <v-btn
             :to="localePath('/analytics/genero')"
-          >{{ c.explore }}</NuxtLink>
-          <NuxtLink
+            color="primary"
+            variant="flat"
+            prepend-icon="mdi-magnify"
+            class="text-none"
+          >
+            {{ c.explore }}
+          </v-btn>
+          <v-btn
             :to="localePath('/analytics/genero?rejected=1')"
-          >{{ c.methodTerms }}</NuxtLink>
-        </p>
+            variant="outlined"
+            class="text-none"
+          >
+            {{ c.methodTerms }}
+          </v-btn>
+        </div>
       </div>
     </section>
 
     <!-- How to read -->
     <section class="inv-sec inv-sec--alt">
-      <div class="u-container inv-article">
-        <h2>{{ c.discTitle }}</h2>
-        <ul class="disc">
+      <div class="u-container">
+        <div class="inv-head">
+          <h2>{{ c.discTitle }}</h2>
+        </div>
+        <ul class="gen-disc">
           <li
             v-for="(d, i) in c.disc"
             :key="i"
@@ -456,8 +537,10 @@ useSeo(() => ({
           </li>
         </ul>
         <template v-if="topic?.sources?.length">
-          <h3>{{ c.srcTitle }}</h3>
-          <ul class="disc">
+          <h3 class="gen-srch">
+            {{ c.srcTitle }}
+          </h3>
+          <ul class="gen-disc gen-disc--src">
             <li
               v-for="src in topic.sources"
               :key="src.url"
@@ -475,39 +558,176 @@ useSeo(() => ({
   </div>
 </template>
 
-<style scoped>
-.inv-tile__n {
-  font-family: var(--font-display);
-  font-size: var(--t-2xl);
-  display: block;
+<style scoped lang="scss">
+/* Everything here is spacing INSIDE the house grammar (.inv-sec / .inv-head /
+   .inv-prose / .inv-tile), never a replacement for it. The page reads as:
+   generous air between sections, one interval between a head and its body, a
+   tighter one between paragraphs, and the tightest inside a record row. */
+
+/* Evidence follows its prose after a full section-scale beat, so the chart is
+   read as the argument's proof rather than as another paragraph. */
+.gen-evidence { margin-top: var(--s-7); }
+
+/* The decisive finding, on the house ink panel. In the dark theme the panel and
+   the section behind it are both near-ink (1.1:1), so the panel's edge dissolves
+   and only its shadow remains. A hairline in the ink surface's own rule token
+   restores the boundary in both themes. */
+.gen-finding {
+  margin-top: var(--s-7);
+  border: 1px solid var(--ink-rule);
 }
 
-.inv-pull {
-  border-left: 3px solid var(--celeste-deep);
-  padding-left: var(--s-4);
-  font-size: var(--t-lg);
+.gen-finding__n {
   font-family: var(--font-display);
+  font-size: clamp(2.6rem, 8vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink-fg);
+  margin: 0;
+
+  span {
+    font-size: 0.45em;
+    color: var(--ink-fg-dim);
+    letter-spacing: -0.01em;
+  }
 }
 
-.parties, .calls, .disc { list-style: none; margin: var(--s-4) 0 0; padding: 0; display: grid; gap: var(--s-2); }
-.disc { list-style: disc; padding-left: var(--s-5); }
+.gen-finding__l {
+  font-size: 1.05rem;
+  color: var(--ink-fg-dim);
+  margin: var(--s-3) 0 var(--s-5);
+  max-width: 40ch;
+}
 
-.parties li, .calls li {
+/* Record rows: identity grows, the figure stays put — the .u-splitrow idea. */
+.gen-rows {
+  list-style: none;
+  margin: var(--s-6) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-3);
+}
+
+.gen-rows li {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--s-2) var(--s-3);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-5);
   background: var(--surface);
-  padding: var(--s-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  padding: var(--s-4) var(--s-5);
 }
 
-.parties__n { flex: 1 1 12rem; font-weight: 600; }
-.parties__m, .calls__b { font-size: var(--t-xs); color: var(--text-muted); }
-.parties__s { font-weight: 700; }
-.calls li > a { flex: 1 1 20rem; min-width: 0; font-weight: 600; }
-.calls__d { font-size: var(--t-xs); }
+.inv-sec--alt .gen-rows li { background: var(--bg); }
 
-.inv-actions { display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: center; margin-top: var(--s-5); }
+.gen-rows__id {
+  flex: 1 1 18rem;
+  min-width: 0;
+  display: grid;
+  gap: var(--s-1);
+}
+
+.gen-rows__name {
+  font-weight: 600;
+  font-size: 1.02rem;
+  overflow-wrap: anywhere;
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
+
+/* A plain <span> row (the party rows) is not a link and must not read as one. */
+span.gen-rows__name { color: var(--text); }
+a.gen-rows__name:hover { text-decoration: underline; }
+
+.gen-rows__meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.gen-rows__fig {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin: 0;
+  white-space: nowrap;
+
+  b {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  span {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+}
+
+.gen-rows__fig--date {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: normal;
+}
+
+.gen-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+
+  /* A Vuetify button keeps its label on one line and simply overflows the
+     viewport; the second label here is a full sentence. Let it wrap and grow. */
+  :deep(.v-btn) {
+    height: auto;
+    min-height: 40px;
+    max-width: 100%;
+    padding-block: var(--s-2);
+  }
+
+  :deep(.v-btn__content) {
+    white-space: normal;
+    text-align: left;
+  }
+}
+
+.gen-disc {
+  margin: 0;
+  padding-left: var(--s-5);
+  max-width: 72ch;
+  display: grid;
+  gap: var(--s-3);
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.gen-disc--src { margin-top: var(--s-4); }
+.gen-disc--src a { color: var(--celeste-deep); }
+
+.gen-srch {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: var(--s-6) 0 0;
+}
+
+@media (max-width: 640px) {
+  .gen-rows li {
+    padding: var(--s-3) var(--s-4);
+    /* Stacked: the figure is the row's answer, so it sits under the identity
+       instead of being squeezed to a second line beside it. */
+    align-items: flex-start;
+  }
+
+  .gen-rows__fig { margin-top: var(--s-1); }
+  .gen-finding { padding: var(--s-5); }
+
+  /* One column of full-width actions reads better than two ragged blocks. */
+  .gen-actions {
+    display: grid;
+    gap: var(--s-2);
+  }
+}
 </style>

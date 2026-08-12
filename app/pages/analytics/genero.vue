@@ -96,13 +96,28 @@ const yearBars = computed(() =>
     })),
 )
 
+// A money chart cannot render a category the feed never priced: a zero bar reads
+// as "nothing was spent here", which is the one thing the data does NOT say. Those
+// categories are counted out loud under the chart instead.
+const pricedCategories = computed<any[]>(() => (stats.value?.byCategory ?? []).filter((c: any) => c.total > 0))
+const unpricedCategories = computed<any[]>(() => (stats.value?.byCategory ?? []).filter((c: any) => !c.total))
+
 const categoryBars = computed(() =>
-  (stats.value?.byCategory ?? []).map((c: any) => ({
+  pricedCategories.value.map((c: any) => ({
     label: categoryLabel(c.category),
     value: c.total,
     sub: t('genero.bars.catSub', { n: c.contracts }),
   })),
 )
+
+const categoryHelp = computed(() => {
+  const base = t('genero.byCategoryHelp')
+  if (!unpricedCategories.value.length) return base
+  return `${base} ${t('genero.byCategoryUnpriced', {
+    n: unpricedCategories.value.length,
+    list: unpricedCategories.value.map((c: any) => categoryLabel(c.category)).join(', '),
+  })}`
+})
 
 const years = computed<string[]>(() =>
   [...(stats.value?.byYear ?? [])].map((y: any) => String(y.year)).reverse(),
@@ -112,6 +127,11 @@ const years = computed<string[]>(() =>
 function bp(value?: number | null): string {
   if (!value || !Number.isFinite(value)) return '—'
   return t('genero.bpValue', { n: value.toFixed(1) })
+}
+
+/** Never surface a raw ocid as a record's name: it is an internal handle. */
+function recordName(row: any): string {
+  return row?.title || row?.description || t('genero.untitled', { id: row?.compraId ?? row?.ocid ?? '' })
 }
 
 function fmtDate(value?: string | Date | null): string {
@@ -124,8 +144,8 @@ function fmtDate(value?: string | Date | null): string {
 const buyerCols = computed<DataColumn[]>(() => [
   { key: 'buyerName', label: t('genero.col.organism'), primary: true },
   { key: 'party', label: t('genero.col.party') },
-  { key: 'contracts', label: t('genero.col.contracts'), align: 'end', mono: true },
-  { key: 'share', label: t('genero.col.share'), align: 'end', mono: true },
+  { key: 'contracts', label: t('genero.col.contracts'), align: 'end', mono: true, width: '7rem', cellClass: 'gen-nowrap' },
+  { key: 'share', label: t('genero.col.share'), align: 'end', mono: true, width: '7rem', cellClass: 'gen-nowrap' },
   { key: 'total', label: t('genero.col.total'), align: 'end' },
 ])
 
@@ -140,7 +160,7 @@ const contractCols = computed<DataColumn[]>(() => [
   { key: 'title', label: t('genero.col.contract'), primary: true },
   { key: 'buyerName', label: t('genero.col.organism') },
   { key: 'category', label: t('genero.col.category') },
-  { key: 'year', label: t('genero.col.year'), align: 'end', mono: true },
+  { key: 'year', label: t('genero.col.year'), align: 'end', mono: true, width: '5rem', cellClass: 'gen-nowrap' },
   { key: 'amount', label: t('genero.col.amount'), align: 'end' },
 ])
 
@@ -332,12 +352,12 @@ useSeo(() => ({
               class="recent__t"
               :to="localePath(`/contracts/${c.releaseId}`)"
             >
-              {{ c.title || c.description || c.ocid }}
+              {{ recordName(c) }}
             </NuxtLink>
             <span
               v-else
               class="recent__t"
-            >{{ c.title || c.description || c.ocid }}</span>
+            >{{ recordName(c) }}</span>
             <span class="recent__b">{{ c.buyerName }} · {{ c.sourceYear }}</span>
             <MoneyAmount
               :amount="c.hasAmount ? c.amount : null"
@@ -358,7 +378,7 @@ useSeo(() => ({
 
         <ChartBlock
           :title="t('genero.byCategoryTitle')"
-          :help="t('genero.byCategoryHelp')"
+          :help="categoryHelp"
           :scroll="false"
         >
           <SpendBars :items="categoryBars" />
@@ -459,14 +479,9 @@ useSeo(() => ({
         <h2 class="block__h">
           {{ t('genero.byPartyTitle') }}
         </h2>
-        <v-alert
-          type="info"
-          variant="tonal"
-          density="compact"
-          class="block__note"
-        >
+        <p class="block__note">
           {{ t('genero.byPartyCaveat') }}
-        </v-alert>
+        </p>
         <ul class="parties">
           <li
             v-for="p in stats.byParty"
@@ -493,7 +508,10 @@ useSeo(() => ({
       </section>
 
       <!-- The record itself -->
-      <section class="block">
+      <section
+        id="gen-records"
+        class="block block--records"
+      >
         <h2 class="block__h">
           {{ rejected ? t('genero.discardedTitle') : t('genero.contractsTitle') }}
         </h2>
@@ -589,9 +607,9 @@ useSeo(() => ({
               v-if="row.releaseId"
               :to="localePath(`/contracts/${row.releaseId}`)"
             >
-              {{ row.title || row.description || row.ocid }}
+              {{ recordName(row) }}
             </NuxtLink>
-            <span v-else>{{ row.title || row.description || row.ocid }}</span>
+            <span v-else>{{ recordName(row) }}</span>
             <span
               v-if="row.description && row.title"
               class="rowsub"
@@ -628,11 +646,11 @@ useSeo(() => ({
           </template>
         </DataTable>
 
-        <v-pagination
+        <DataPager
           v-if="totalPages > 1"
-          v-model="page"
-          :length="totalPages"
-          :total-visible="7"
+          v-model:page="page"
+          :total-pages="totalPages"
+          scroll-target-id="gen-records"
           class="pager"
         />
       </section>
@@ -709,111 +727,250 @@ useSeo(() => ({
 </template>
 
 <style scoped lang="scss">
+/* Spacing rhythm, tightest to most generous:
+     --s-1/2  inside a row (a figure and its unit)
+     --s-3    between sibling rows
+     --s-4    between a heading's note and the thing it describes
+     --s-6    between a block's head and its body
+     --s-8    between blocks
+   The scale stops at --s-9 (see assets/scss/_tokens.scss). `--s-10` and
+   `--s-12` do not exist: used here they resolved to nothing and silently
+   collapsed the hero and the page's bottom padding to zero. */
+
 .hero {
   background: var(--ink);
-  color: var(--paper);
-  padding: var(--s-10) 0;
+  color: var(--ink-fg);
+  padding-block: var(--s-7) var(--s-6);
 }
 
-.hero__in { max-width: 46rem; }
-.hero__eyebrow { font-size: var(--t-xs); opacity: 0.7; letter-spacing: 0.08em; text-transform: uppercase; }
-.hero__title { font-family: var(--font-display); margin: var(--s-2) 0 var(--s-3); }
-.hero__dek { opacity: 0.85; }
+.hero__in { max-width: 52rem; }
 
-.page { padding: var(--s-8) 0 var(--s-12); }
-.caveat { margin-bottom: var(--s-5); }
+.hero__eyebrow {
+  font-size: var(--t-xs);
+  color: var(--ink-fg-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
+/* The colour is NOT inherited: a global `h1` rule sets --ink, which on this
+   permanent ink surface rendered the title at 1:1 contrast — invisible. Content
+   on --ink states its own foreground (DESIGN.md). */
+.hero__title {
+  font-family: var(--font-display);
+  color: var(--ink-fg);
+  font-size: clamp(1.75rem, 4vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  margin: var(--s-3) 0 var(--s-4);
+}
+
+.hero__dek {
+  color: var(--ink-fg-dim);
+  max-width: 62ch;
+  line-height: 1.6;
+}
+
+.page { padding: var(--s-7) 0 var(--s-9); }
+.caveat { margin-bottom: var(--s-6); }
+
+/* Six counts: three across on a laptop keeps every label on one line, which a
+   six-across row at this container width does not. */
 .kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
   gap: var(--s-3);
-  margin-bottom: var(--s-3);
+  margin-bottom: var(--s-4);
 }
 
 .kpi {
   border: 1px solid var(--rule);
   border-radius: var(--r-lg);
   background: var(--surface);
-  padding: var(--s-4);
+  padding: var(--s-5);
   min-width: 0;
 }
 
-.kpi__n { display: block; font-size: var(--t-xl); font-weight: 700; }
-.kpi__l { display: block; font-size: var(--t-xs); color: var(--text-muted); margin-top: var(--s-1); }
+/* Matches the figure size <MoneyAmount size="lg"> renders, so the money tile
+   and the count tiles read as one row rather than two sizes. */
+.kpi__n {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
 
-.updated { font-size: var(--t-xs); color: var(--text-muted); margin-bottom: var(--s-4); }
-.alertcta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin-bottom: var(--s-6); }
-.alertcta__n { font-size: var(--t-xs); color: var(--text-muted); }
+.kpi__l {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: var(--s-3);
+}
+
+.updated {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--s-4);
+}
+
 .updated a { margin-left: var(--s-2); }
 
-.block { margin-bottom: var(--s-7); }
-.block__h { font-family: var(--font-display); font-size: var(--t-lg); margin-bottom: var(--s-3); }
-.block__note { font-size: var(--t-sm); color: var(--text-muted); margin-bottom: var(--s-3); max-width: 70ch; }
+.alertcta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-8);
+}
+
+.alertcta__n {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  max-width: 46ch;
+}
+
+.block { margin-bottom: var(--s-8); }
+
+.block__h {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--s-3);
+}
+
+.block__note {
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-bottom: var(--s-4);
+  max-width: 72ch;
+}
 
 .charts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-  gap: var(--s-4);
-  margin-bottom: var(--s-7);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: var(--s-5);
+  margin-bottom: var(--s-8);
 }
 
+.charts > * { min-width: 0; }
+
+/* ---- Record rows (open calls, this week's new contracts) ---- */
 .calls, .recent, .parties {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--s-2);
+  gap: var(--s-3);
 }
 
 .calls__row, .recent__row {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--s-2) var(--s-3);
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-5);
   border: 1px solid var(--rule);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   background: var(--surface);
-  padding: var(--s-3);
+  padding: var(--s-4);
 }
 
-.calls__link { flex: 1 1 20rem; min-width: 0; }
-.calls__t { display: block; font-weight: 600; font-size: var(--t-sm); }
-.calls__b, .recent__b { display: block; font-size: var(--t-xs); color: var(--text-muted); }
-.calls__d { font-size: var(--t-xs); }
-.recent__t { flex: 1 1 22rem; min-width: 0; font-size: var(--t-sm); font-weight: 600; }
+/* Record-row links carry the site's link colour, not the browser default blue
+   these were rendering in, and reveal the underline on interaction. */
+.calls__link, .recent__t {
+  flex: 1 1 20rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
 
+.calls__link:hover, .recent__t:hover { text-decoration: underline; }
+
+.calls__t, .recent__t {
+  display: block;
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+
+.calls__b, .recent__b {
+  display: block;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  margin-top: var(--s-1);
+}
+
+.calls__d {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---- Party comparison ---- */
 .parties__btn {
   width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--s-3);
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-5);
   border: 1px solid var(--rule);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   background: var(--surface);
-  padding: var(--s-3);
+  padding: var(--s-4);
   text-align: left;
   cursor: pointer;
   color: inherit;
   font: inherit;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
 .parties__btn:hover { background: var(--surface-sunken); }
 .parties__btn--on { border-color: var(--celeste-deep); }
-.parties__name { flex: 1 1 12rem; font-weight: 600; }
-.parties__meta { font-size: var(--t-xs); color: var(--text-muted); }
-.parties__share { font-weight: 700; }
-.parties__share small { font-weight: 400; color: var(--text-muted); margin-left: var(--s-1); }
 
+.parties__name {
+  flex: 1 1 14rem;
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+
+.parties__meta {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.parties__share {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.parties__share small {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: var(--s-1);
+}
+
+/* ---- Filters ---- */
 .filters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
-  gap: var(--s-3);
-  margin-bottom: var(--s-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-4);
   align-items: center;
 }
 
-.chips { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-3); align-items: center; }
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+  align-items: center;
+}
 
 .linkish {
   background: none;
@@ -825,17 +982,66 @@ useSeo(() => ({
   text-align: left;
 }
 
-.rowsub { display: block; font-size: var(--t-xs); color: var(--text-muted); }
+.linkish:hover { text-decoration: underline; }
+
+.rowsub {
+  display: block;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  margin-top: var(--s-1);
+}
+
 .rowsub--why { font-style: italic; }
 .rowsub--terms { color: var(--celeste-deep); }
 
-.terms { margin: 0; padding-left: var(--s-4); font-size: var(--t-sm); }
-.terms li { margin-bottom: var(--s-2); }
-.terms code { font-family: var(--font-mono); background: var(--surface-sunken); padding: 0 var(--s-1); border-radius: var(--r-sm); }
-.terms__s { font-size: var(--t-xs); color: var(--text-muted); margin-left: var(--s-2); text-transform: uppercase; letter-spacing: 0.04em; }
-.terms__n { display: block; color: var(--text-muted); }
+/* ---- Method ---- */
+.terms {
+  margin: 0;
+  padding-left: var(--s-4);
+  font-size: var(--t-sm);
+  display: grid;
+  gap: var(--s-3);
+}
 
-.pager { margin-top: var(--s-5); }
-.source { margin-top: var(--s-5); font-size: var(--t-xs); color: var(--text-muted); }
-.source a { margin-left: var(--s-3); }
+.terms code {
+  font-family: var(--font-mono);
+  background: var(--surface-sunken);
+  padding: 0 var(--s-1);
+  border-radius: var(--r-sm);
+}
+
+.terms__s {
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  margin-left: var(--s-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.terms__n {
+  display: block;
+  color: var(--text-muted);
+  margin-top: var(--s-1);
+}
+
+:deep(.gen-nowrap) { white-space: nowrap; }
+
+.pager { margin-top: var(--s-6); }
+
+.source {
+  margin-top: var(--s-6);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+}
+
+.source a { margin: 0; color: var(--celeste-deep); }
+
+@media (max-width: 640px) {
+  .kpi { padding: var(--s-4); }
+  .calls__row, .recent__row, .parties__btn { padding: var(--s-3) var(--s-4); }
+  .parties__share { font-size: 1.15rem; }
+}
 </style>

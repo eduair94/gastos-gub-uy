@@ -2887,6 +2887,8 @@
     "openCall": "View tender"
   },
   "genero": {
+    "untitled": "Purchase {id} (no subject declared)",
+    "byCategoryUnpriced": "{n} categories with no priced contract are left out of the chart: {list}.",
     "per10k": " of every 10,000",
     "alertCta": "Alert me about new calls on this topic",
     "alertHelp": "Creates an alert with this topic strong terms. It arrives by push, Telegram, email or the site inbox.",
