@@ -165,6 +165,14 @@ const sanciones = computed<any | null>(() => {
   return firm.rut === supplierRut.value ? firm : null
 })
 
+/** UTC-read, like every other date on the site: midnight must not roll back a day in Uruguay. */
+function formatUdecoDate(value?: string | Date | null): string {
+  if (!value) return '—'
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
+}
+
 const { data: statsRes } = await useFetch<any>('/api/contracts/stats', {
   query: computed(() => ({ supplierIds: supplierId.value })),
   immediate: exists,
@@ -421,7 +429,51 @@ useSeo(() => ({
               ur: Math.round(sanciones.totalUr),
             }) }}
         </p>
-        <ul class="udeco">
+        <!-- The acts themselves, not just their motives: when, what kind, for what, how much.
+             The summary line above says how many; a reader checking it needs these. -->
+        <div
+          v-if="sanciones.detail?.length"
+          class="tablewrap"
+        >
+          <table class="udeco__table">
+            <thead>
+              <tr>
+                <th>{{ t('sanciones.col.fecha') }}</th>
+                <th>{{ t('sanciones.col.tipo') }}</th>
+                <th>{{ t('sanciones.col.motivo') }}</th>
+                <th class="udeco__num">
+                  {{ t('sanciones.col.monto') }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(s, i) in sanciones.detail"
+                :key="i"
+              >
+                <td class="u-mono">
+                  {{ formatUdecoDate(s.fecha) }}
+                </td>
+                <td>
+                  <span
+                    class="udeco__tipo"
+                    :class="{ 'udeco__tipo--multa': s.tipo === 'Multa' }"
+                  >{{ s.tipo ?? '—' }}</span>
+                </td>
+                <td>{{ s.motivo ?? '—' }}</td>
+                <td class="udeco__num u-mono">
+                  {{ s.montoUr > 0 ? `${Math.round(s.montoUr)} UR` : '—' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Fallback when the individual acts did not load: the motives are still real. -->
+        <ul
+          v-else
+          class="udeco"
+        >
           <li
             v-for="m in sanciones.motivos.slice(0, 8)"
             :key="m"
@@ -1040,4 +1092,17 @@ a.rank__link:hover { background: var(--surface-sunken); }
   font-size: var(--t-xs);
   color: var(--text-muted);
 }
+
+/* Wide content owns its own scroll container; the body never scrolls sideways (DESIGN.md). */
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--r-md); }
+
+.udeco__table { width: 100%; border-collapse: collapse; font-size: var(--t-xs); }
+.udeco__table th, .udeco__table td { padding: var(--s-2) var(--s-3); text-align: left; vertical-align: top; }
+.udeco__table thead th { background: var(--surface-sunken); text-transform: uppercase; letter-spacing: 0.04em; }
+.udeco__table tbody tr + tr td { border-top: 1px solid var(--rule); }
+.udeco__num { text-align: right; white-space: nowrap; }
+
+/* A fine is marked by the WORD plus weight — never by colour alone. */
+.udeco__tipo { color: var(--text-muted); }
+.udeco__tipo--multa { color: var(--alerta); font-weight: 600; }
 </style>

@@ -1535,6 +1535,14 @@
       "sanctions": "sanctions applied",
       "fines": "in fines (Unidades Reajustables)"
     },
+    "detailToggleOne": "See the sanction",
+    "detailToggle": "See the {n} sanctions",
+    "col": {
+      "fecha": "Date",
+      "tipo": "Type",
+      "motivo": "Reason",
+      "monto": "Fine"
+    },
     "sortLabel": "Sort by",
     "sort": {
       "spend": "Amount awarded",

@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { connectToDatabase } from '../../utils/database'
-import { UdecoSupplierStatsModel } from '../../utils/models'
+import { UdecoSanctionModel, UdecoSupplierStatsModel } from '../../utils/models'
 import { escapeRegex } from '../../utils/query'
 
 /**
@@ -48,7 +48,9 @@ export default defineEventHandler(async (event) => {
     const limitNum = Math.min(100, Math.max(1, Number(limit) || 25))
 
     const [firms, total, sample] = await Promise.all([
-      UdecoSupplierStatsModel.find(filter, { _id: 0, dataVersion: 0 })
+      // `__v` is a mongoose bookkeeping field, not part of the record; it has no business in a
+      // public response.
+      UdecoSupplierStatsModel.find(filter, { _id: 0, __v: 0, dataVersion: 0 })
         .sort({ ...sort, rut: 1 })
         .skip((pageNum - 1) * limitNum)
         .limit(limitNum)
@@ -62,6 +64,30 @@ export default defineEventHandler(async (event) => {
         statusCode: 404,
         statusMessage: 'Sanctions cross-reference not computed yet. Run the refresh-udeco-crossref job.',
       })
+    }
+
+    // THE SANCTIONS THEMSELVES, for the firms on this page.
+    //
+    // The rollup answers "how many and how much"; a reader who wants to check the claim needs the
+    // individual acts — when, what kind, for what, how much. One `$in` over `udeco_sanctions`
+    // covers the whole page: the collection is 1,482 rows and the worst firm carries 18, so a page
+    // of 25 pulls a few hundred at most. Cheaper and simpler than a lazy per-row fetch.
+    const pageRuts = firms.map((f: any) => f.rut)
+    const detail = pageRuts.length
+      ? await UdecoSanctionModel.find(
+        { rut: { $in: pageRuts } },
+        { _id: 0, rut: 1, fechaResolucion: 1, tipo: 1, motivo: 1, montoUr: 1, departamento: 1 },
+      ).sort({ fechaResolucion: -1 }).lean()
+      : []
+
+    const byRut = new Map<string, any[]>()
+    for (const s of detail as any[]) {
+      const list = byRut.get(s.rut) ?? []
+      list.push({ fecha: s.fechaResolucion, tipo: s.tipo, motivo: s.motivo, montoUr: s.montoUr, departamento: s.departamento })
+      byRut.set(s.rut, list)
+    }
+    for (const f of firms as any[]) {
+      f.detail = byRut.get(f.rut) ?? []
     }
 
     // Headline figures over the WHOLE cross-reference, not the filtered page.

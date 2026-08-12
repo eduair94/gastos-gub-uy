@@ -211,7 +211,62 @@ useSeo(() => ({
             · {{ t('sanciones.row.last', { date: formatDate(f.lastSanctionAt) }) }}
           </p>
 
-          <ul class="motivos">
+          <!-- The sanctions themselves. The counts above say how many; this says which — when,
+               what kind, for what and how much. A reader checking the claim needs the acts, not
+               the aggregate. Collapsed by default so a firm with 18 does not bury the next row. -->
+          <details
+            v-if="f.detail?.length"
+            class="acts"
+          >
+            <summary class="acts__toggle">
+              <!-- Spanish needs the singular: "las 1 sanciones" reads as broken copy. -->
+              {{ f.detail.length === 1
+                ? t('sanciones.detailToggleOne')
+                : t('sanciones.detailToggle', { n: f.detail.length }) }}
+            </summary>
+            <div class="tablewrap">
+              <table class="acts__table">
+                <thead>
+                  <tr>
+                    <th>{{ t('sanciones.col.fecha') }}</th>
+                    <th>{{ t('sanciones.col.tipo') }}</th>
+                    <th>{{ t('sanciones.col.motivo') }}</th>
+                    <th class="acts__num">
+                      {{ t('sanciones.col.monto') }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(s, i) in f.detail"
+                    :key="`${f.rut}-${i}`"
+                  >
+                    <td class="u-mono">
+                      {{ formatDate(s.fecha) }}
+                    </td>
+                    <td>
+                      <!-- A fine and a caution are different acts; naming the type is the whole
+                           point of listing them separately. -->
+                      <span
+                        class="acts__tipo"
+                        :class="{ 'acts__tipo--multa': s.tipo === 'Multa' }"
+                      >{{ s.tipo ?? '—' }}</span>
+                    </td>
+                    <td>{{ s.motivo ?? '—' }}</td>
+                    <td class="acts__num u-mono">
+                      {{ s.montoUr > 0 ? `${Math.round(s.montoUr)} UR` : '—' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
+
+          <!-- Fallback for a firm whose individual acts did not load: the motives are still real. -->
+          <ul
+            v-else-if="f.motivos?.length"
+            class="motivos"
+          >
             <li
               v-for="m in f.motivos.slice(0, 6)"
               :key="m"
@@ -294,6 +349,28 @@ a.firms__name:hover { text-decoration: underline; }
 .firms__meta { margin: var(--s-2) 0 0; font-size: var(--t-xs); color: var(--text-muted); }
 
 .motivos { list-style: none; margin: var(--s-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+/* ---- The individual sanctions ---- */
+.acts { margin-top: var(--s-3); }
+
+.acts__toggle {
+  cursor: pointer;
+  font-size: var(--t-sm);
+  color: var(--celeste-deep);
+}
+
+/* Wide content owns its own scroll container; the body never scrolls sideways (DESIGN.md). */
+.tablewrap { overflow-x: auto; margin-top: var(--s-2); border: 1px solid var(--rule); border-radius: var(--r-md); }
+
+.acts__table { width: 100%; border-collapse: collapse; font-size: var(--t-xs); }
+.acts__table th, .acts__table td { padding: var(--s-2) var(--s-3); text-align: left; vertical-align: top; }
+.acts__table thead th { background: var(--surface-sunken); text-transform: uppercase; letter-spacing: 0.04em; }
+.acts__table tbody tr + tr td { border-top: 1px solid var(--rule); }
+.acts__num { text-align: right; white-space: nowrap; }
+
+/* A fine is marked by the WORD plus weight — never by colour alone. */
+.acts__tipo { color: var(--text-muted); }
+.acts__tipo--multa { color: var(--alerta); font-weight: 600; }
 
 .motivos__item {
   border: 1px solid var(--rule);
