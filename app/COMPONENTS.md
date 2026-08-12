@@ -62,6 +62,20 @@ Use this trio for directory results. `DataTable` preserves table semantics on
 desktop and reflows records on narrow screens. `PaginatedList` owns both pagers
 and scroll restoration.
 
+`DataPager` is the only pager. `<v-pagination>` renders one 48px button per
+visible page — seven pages plus prev/next need 432px and push the document
+sideways on any phone — and it does not move the viewport on a page change, so
+the reader lands at the bottom of a page they never saw the top of. Pass
+`scroll-target-id` so paging returns to the top of the list.
+
+A `#cell:` slot that renders more than one element must wrap them: two sibling
+tags have **no** whitespace between them, because Vue compiles the newline away
+(`whitespace: 'condense'`). `<span>{{ name }}</span><MandateChip/>` renders as
+`Intendencia de MontevideoFA 2020–2025`, and there is no text node left to space
+afterwards. Wrap a value plus its trailing chip in
+`<span class="chip-row chip-row--baseline">`; use plain `.chip-row` for a row of
+peer chips.
+
 ### ChartBlock
 
 Required wrapper for every chart. It contains overflow locally and preserves
@@ -129,6 +143,9 @@ selection needs the complete record, not a second drill-in.
 - Same behavior with keyboard, pointer and touch.
 - Dialog focus is trapped and close is named.
 - Page has no horizontal scroll at 360px.
+- `node scripts/check-layout-guards.mjs` passes (gutter, spacing scale, welded
+  chip siblings, numbered pager). It also runs in `app`'s `prebuild`.
+- Content is inside the gutter at 360px: nothing renders at `x = 0`.
 - Text and markers meet contrast in both themes.
 - Loading, empty, error and partial-data states are visible.
 - All new copy exists in Spanish and English at matching positions.

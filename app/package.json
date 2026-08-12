@@ -5,7 +5,7 @@
   "author": "Government Transparency Initiative",
   "private": true,
   "scripts": {
-    "prebuild": "node ../scripts/check-node.mjs && node ../scripts/build-mdi-subset.mjs --check && node ../scripts/build-vuetify-utilities-subset.mjs --check",
+    "prebuild": "node ../scripts/check-node.mjs && node ../scripts/build-mdi-subset.mjs --check && node ../scripts/build-vuetify-utilities-subset.mjs --check && node ../scripts/check-layout-guards.mjs",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",

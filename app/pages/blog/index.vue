@@ -161,12 +161,15 @@ useSeo(() => ({
         <p>{{ t('newsletter.emptyBody') }}</p>
       </section>
 
-      <v-pagination
+      <!-- `<DataPager>`, not `<v-pagination>`: a numbered pager needs 48px per
+           page button and pushes the whole page sideways on a phone once the
+           archive grows past a handful of issues. -->
+      <DataPager
         v-if="pages > 1"
-        :model-value="page"
-        :length="pages"
+        :page="page"
+        :total-pages="pages"
         class="blog__pager"
-        @update:model-value="changePage"
+        @update:page="changePage"
       />
     </div>
   </main>

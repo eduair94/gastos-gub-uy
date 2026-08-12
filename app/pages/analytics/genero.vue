@@ -623,14 +623,20 @@ useSeo(() => ({
               class="rowsub rowsub--why"
             >{{ row.ai.reason }}</span>
           </template>
+          <!-- Organism + governing administration. `.chip-row` is mandatory:
+               two sibling elements in a cell have NO space between them (Vue
+               condenses the newline), so the chip renders welded to the last
+               letter of the name. -->
           <template #cell:buyerName="{ row }">
-            <span>{{ row.buyerName }}</span>
-            <MandateChip
-              :buyer-id="row.buyerId"
-              :year="row.sourceYear"
-              :show-holder="false"
-              size="x-small"
-            />
+            <span class="chip-row chip-row--baseline">
+              <span>{{ row.buyerName }}</span>
+              <MandateChip
+                :buyer-id="row.buyerId"
+                :year="row.sourceYear"
+                :show-holder="false"
+                size="x-small"
+              />
+            </span>
           </template>
           <template #cell:category="{ row }">
             {{ categoryLabel(row.category) }}
@@ -770,7 +776,11 @@ useSeo(() => ({
   line-height: 1.6;
 }
 
-.page { padding: var(--s-7) 0 var(--s-9); }
+/* `padding-block`, never the `padding` shorthand: this element is also a
+   `.u-container`, and a shorthand here outranks `.u-container`'s
+   `padding-inline` (scoped selectors are more specific), which flushed the
+   whole page against the viewport edge on mobile. */
+.page { padding-block: var(--s-7) var(--s-9); }
 .caveat { margin-bottom: var(--s-6); }
 
 /* Six counts: three across on a laptop keeps every label on one line, which a
@@ -1040,7 +1050,20 @@ useSeo(() => ({
 .source a { margin: 0; color: var(--celeste-deep); }
 
 @media (max-width: 640px) {
+  /* A 13rem floor collapses six counts into six full-width rows — 640px of
+     scrolling before the first record. Two across fits a 360px phone; the
+     money tile keeps the full width so the headline figure stays the
+     headline. */
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s-2);
+  }
+
+  .kpi--money { grid-column: 1 / -1; }
   .kpi { padding: var(--s-4); }
+  .kpi__n { font-size: 1.65rem; }
+  .kpi__l { margin-top: var(--s-2); font-size: 0.78rem; }
+
   .calls__row, .recent__row, .parties__btn { padding: var(--s-3) var(--s-4); }
   .parties__share { font-size: 1.15rem; }
 }

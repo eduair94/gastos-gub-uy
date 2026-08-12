@@ -362,6 +362,29 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
   gap: var(--s-2) var(--s-3);
 }
 
+// TWO SIBLING ELEMENTS HAVE NO SPACE BETWEEN THEM. Vue compiles the newline
+// between two tags away (`whitespace: 'condense'`), so
+//
+//   <span>{{ row.buyerName }}</span>
+//   <MandateChip … />
+//
+// renders as `Intendencia de MontevideoFA 2020–2025` — welded, with no gap to
+// add later, because there is no whitespace text node to grow. This bit the
+// gender records table. Any value followed by a chip, tag or badge — in a
+// table cell, a record row, a card header — wraps both in `.chip-row`. Never
+// rely on source whitespace, `&nbsp;`, or a margin hand-rolled on the chip.
+//
+//   <span class="chip-row chip-row--baseline">
+//     <span>{{ name }}</span>            <- grows, may wrap
+//     <SomeChip />                       <- keeps its intrinsic width
+//   </span>
+//
+// `--baseline` is the variant for a text value plus a trailing chip: the chip
+// sits on the text's baseline instead of centring against a name that wrapped
+// to three lines. Use plain `.chip-row` for a row of peer chips.
+.chip-row--baseline { align-items: baseline; }
+.chip-row--baseline > :first-child { min-width: 0; overflow-wrap: anywhere; }
+
 .chip {
   display: inline-flex;
   align-items: center;
