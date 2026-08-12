@@ -29,6 +29,8 @@
     "load-udeco-sanctions": "tsx src/jobs/load-udeco-sanctions.ts",
     "refresh-udeco-crossref": "tsx src/jobs/refresh-udeco-crossref.ts",
     "extract-acta-bidders": "tsx src/jobs/extract-acta-bidders.ts",
+    "scrape-call-bidders": "tsx src/jobs/scrape-call-bidders.ts",
+    "refresh-bidder-competition": "tsx src/jobs/refresh-bidder-competition.ts",
     "refresh-spending-trend": "tsx src/jobs/refresh-spending-trend.ts",
     "refresh-topic-spending": "tsx src/jobs/refresh-topic-spending.ts",
     "refresh-macro-table": "node scripts/refresh-macro-table.mjs",

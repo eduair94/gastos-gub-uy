@@ -34,6 +34,7 @@
     "tvciudad": "TV Ciudad",
     "llamados": "Llamados",
     "comparativa": "Comparativa de alertas",
+    "competencia": "Competencia",
     "plataformas": "Otras plataformas",
     "more": "Más",
     "explorar": "Explorar",
@@ -502,6 +503,8 @@
   },
   "contract": {
     "biddersHelp": "Los datos abiertos de compras nunca dicen quién más ofertó: solo publican al ganador. Esto sale del acta de adjudicación, que a veces lo enumera. Cuando este panel no aparece, es que el acta no lo dijo — no que no haya habido competencia.",
+    "biddersSoleHtml": "Se presentó una sola empresa",
+    "biddersOfficial": "Ver la ficha oficial de la compra",
     "biddersCount": "Se presentaron {n} ofertas",
     "biddersSole": "El acta consigna una única oferta",
     "biddersWinner": "adjudicado",
@@ -2090,6 +2093,10 @@
       "title": "Quién más vigila al Estado uruguayo: comparativa de plataformas de transparencia",
       "description": "Comparativa con fuentes de las plataformas que publican datos sobre el Estado uruguayo: Control Ciudadano, datospublicos.uy, DATA Uruguay, ARCE, OPP, JUTEP y este sitio. Qué cubre cada una, qué cuesta y para qué sirve."
     },
+    "competencia": {
+      "title": "¿Cuánta competencia hay en las compras del Estado uruguayo?",
+      "description": "Con qué frecuencia se presenta una sola empresa a las compras de cada organismo público uruguayo, medido sobre los oferentes que publica cada ficha oficial."
+    },
     "comparativa": {
       "title": "Comparativa de servicios de alertas de licitaciones en Uruguay",
       "description": "Comparación objetiva y con fuentes de los servicios de alertas de licitaciones para proveedores del Estado uruguayo (Gubly, ProveedorUY, ClearBid, Tenderis y más): precios, funciones y qué elegir."
@@ -2419,6 +2426,43 @@
     "worldHelp": "No entran en la tabla —no compiten por el mismo dato— pero marcan el techo de lo que se puede hacer con datos públicos.",
     "methodologyTitle": "Cómo se armó esto",
     "backToAlertas": "Ver también: comparativa de servicios de alertas de licitaciones"
+  },
+  "competencia": {
+    "eyebrow": "Análisis",
+    "title": "¿Cuánta competencia hay?",
+    "lead": "Cuántas empresas se presentan realmente a las compras de cada organismo, y con qué frecuencia se presenta una sola. Es la señal más citada de una compra pública capturada, y hasta ahora en Uruguay no se podía medir.",
+    "kpi": {
+      "probed": "compras miradas",
+      "withBidders": "publicaron sus oferentes",
+      "soleRate": "se presentó una sola empresa",
+      "avg": "oferentes por compra, en promedio"
+    },
+    "coverageTitle": "Leé esto antes que la tabla",
+    "coverageBody": "El corpus tiene más de un millón de compras y la ficha de cada una se lee de a una, despacio, para no castigar al sitio del Estado. Así que lo mirado todavía es parcial y desigual entre organismos: por eso cada fila muestra cuántas compras se miraron sobre cuántas tiene, y por eso los organismos con muestra chica no aparecen con un porcentaje. Un porcentaje sin ese denominador dejaría más limpio al organismo menos mirado, que es justo al revés.",
+    "sortLabel": "Ordenar por",
+    "sort": {
+      "sole": "Más oferente único",
+      "competition": "Más competencia",
+      "coverage": "Más cobertura",
+      "probed": "Más compras miradas",
+      "avg": "Más oferentes por compra"
+    },
+    "searchLabel": "Buscar organismo",
+    "includeSmall": "Incluir muestras chicas",
+    "colBuyer": "Organismo",
+    "colSole": "Oferente único",
+    "colAvg": "Promedio",
+    "colSample": "Únicas / con oferentes",
+    "colCoverage": "Cobertura",
+    "notConclusive": "muestra insuficiente",
+    "empty": "Todavía no hay organismos con muestra suficiente. El sondeo avanza cada noche.",
+    "prev": "Anterior",
+    "next": "Siguiente",
+    "methodTitle": "Cómo se mide",
+    "method1": "Los datos abiertos de compras (OCDS) no publican quién ofertó: sólo al ganador. Pero la ficha de cada compra adjudicada sí publica el bloque «Proveedores participantes», con documento y nombre de cada oferente. De ahí sale todo esto.",
+    "method2": "Se cuentan sólo procedimientos competitivos (licitaciones y concursos de precios). En una compra directa no hay a qué competir, así que incluirlas inflaría el número de oferente único sin decir nada.",
+    "method3": "Una compra que todavía no publicó sus oferentes no cuenta como compra sin competencia. Ausencia de dato y ausencia de competencia son cosas distintas y acá nunca se suman.",
+    "method4": "Un porcentaje alto no prueba nada por sí solo: hay rubros con un único proveedor posible en el país. Es un punto de partida para mirar, no un veredicto."
   },
   "comparativa": {
     "eyebrow": "Comparativa · para proveedores",
