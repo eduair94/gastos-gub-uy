@@ -18,6 +18,15 @@ import { escapeRegex } from '../../utils/query'
  * keeps buying from it.
  */
 
+/**
+ * `fines` is the default, not `spend`.
+ *
+ * Ranking by state spending leads the page with ANTEL: a state enterprise carrying ONE caution and
+ * a 0 UR fine for "información no clara". That is the weakest row on the page, and it was topping
+ * it. Ranking by the penalty UDECO actually imposed leads with TA-TA S.A. — 2,250 UR across 16
+ * sanctions AND 343M UYU in public contracts — which is both the stronger fact and the more honest
+ * reading of a page about sanctions. Every other order stays one click away.
+ */
 const SORT_FIELDS: Record<string, Record<string, 1 | -1>> = {
   spend: { totalUyu: -1 },
   sanctions: { sanctions: -1, totalUyu: -1 },
@@ -30,7 +39,7 @@ export default defineEventHandler(async (event) => {
     await connectToDatabase()
 
     const query = getQuery(event)
-    const { page = 1, limit = 25, sortBy = 'spend', rut, tipo, search, onlyFines } = query
+    const { page = 1, limit = 25, sortBy = 'fines', rut, tipo, search, onlyFines } = query
 
     const filter: Record<string, unknown> = {}
 
@@ -43,7 +52,7 @@ export default defineEventHandler(async (event) => {
       filter.$or = [{ razonSocial: rx }, { nombreComercial: rx }, { supplierName: rx }]
     }
 
-    const sort = SORT_FIELDS[sortBy as string] ?? SORT_FIELDS.spend!
+    const sort = SORT_FIELDS[sortBy as string] ?? SORT_FIELDS.fines!
     const pageNum = Math.max(1, Number(page) || 1)
     const limitNum = Math.min(100, Math.max(1, Number(limit) || 25))
 
