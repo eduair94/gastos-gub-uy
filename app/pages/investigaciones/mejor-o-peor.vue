@@ -77,6 +77,7 @@ const ES = {
   scoreTitle: 'Los 52 indicadores, uno por uno',
   scoreIntro: 'Cada fila trae la serie completa, el valor en los años ancla, los dos veredictos y el enlace a la fuente oficial. Ordenados por tema. La línea punteada de cada minigráfico marca 2014.',
   filters: { todos: 'Todos', mejor: 'Mejoraron', peor: 'Empeoraron', igual: 'Se frenaron' },
+  showing: 'Mostrando {n} de {total} indicadores.',
   colStart: 'inicio', col14: '2014', colLast: 'último', colSpark: 'serie',
   srcLink: 'fuente',
   emptyFilter: 'Ningún indicador de este grupo cae en ese filtro.',
@@ -169,6 +170,7 @@ const EN: typeof ES = {
   scoreTitle: 'All 52 indicators, one by one',
   scoreIntro: 'Each row carries the full series, the values at the anchor years, both verdicts and a link to the official source. Grouped by theme. The dashed line in each sparkline marks 2014.',
   filters: { todos: 'All', mejor: 'Improved', peor: 'Worsened', igual: 'Stalled' },
+  showing: 'Showing {n} of {total} indicators.',
   colStart: 'start', col14: '2014', colLast: 'latest', colSpark: 'series',
   srcLink: 'source',
   emptyFilter: 'No indicator in this group matches that filter.',
@@ -253,6 +255,11 @@ const grouped = computed(() => GROUP_ORDER.map(g => ({
 })).filter(s => s.total > 0))
 
 const shown = computed(() => grouped.value.reduce((n, s) => n + s.rows.length, 0))
+
+/** Changing the filter redraws a table silently. The live region has to say a
+ *  sentence — a bare "31" announces as a number with no subject. */
+const shownAnnounce = computed(() =>
+  c.value.showing.replace('{n}', String(shown.value)).replace('{total}', String(MOP_INDICATORS.length)))
 
 /**
  * A neutral indicator has no good direction, so it gets ONE chip saying so
@@ -728,7 +735,7 @@ useSeo(() => ({
           class="u-visually-hidden"
           role="status"
         >
-          {{ shown }}
+          {{ shownAnnounce }}
         </p>
 
         <div
@@ -1335,6 +1342,15 @@ useSeo(() => ({
   }
 
   .mop-row__verdicts { justify-content: flex-start; }
+
+  /* Stacked, the three values get a whole row to themselves, and equal columns
+     stretch them ~200px apart — each number drifts away from its own year
+     label. Content-width columns keep the trio reading as one figure block. */
+  .mop-row__vals {
+    grid-template-columns: repeat(3, auto);
+    justify-content: start;
+    text-align: left;
+  }
 }
 
 @media (max-width: 560px) {
