@@ -34,6 +34,7 @@
     "tvciudad": "TV Ciudad",
     "llamados": "Llamados",
     "comparativa": "Comparativa de alertas",
+    "plataformas": "Otras plataformas",
     "more": "Más",
     "explorar": "Explorar",
     "senales": "Qué revisar",
@@ -2085,6 +2086,10 @@
       "title": "Pauta oficial — la publicidad del Estado uruguayo y quién la cobra",
       "description": "Cuánto gasta el Estado uruguayo en publicidad y propaganda, qué organismos la pagan y qué medios y agencias la reciben. Datos abiertos oficiales de Compras Estatales."
     },
+    "plataformas": {
+      "title": "Quién más vigila al Estado uruguayo: comparativa de plataformas de transparencia",
+      "description": "Comparativa con fuentes de las plataformas que publican datos sobre el Estado uruguayo: Control Ciudadano, datospublicos.uy, DATA Uruguay, ARCE, OPP, JUTEP y este sitio. Qué cubre cada una, qué cuesta y para qué sirve."
+    },
     "comparativa": {
       "title": "Comparativa de servicios de alertas de licitaciones en Uruguay",
       "description": "Comparación objetiva y con fuentes de los servicios de alertas de licitaciones para proveedores del Estado uruguayo (Gubly, ProveedorUY, ClearBid, Tenderis y más): precios, funciones y qué elegir."
@@ -2367,6 +2372,53 @@
       "action": "Limpiar filtros"
     },
     "note": "Datos de contacto oficiales publicados por los organismos en comprasestatales.gub.uy."
+  },
+  "plataformas": {
+    "eyebrow": "Comparativa",
+    "title": "Quién más vigila al Estado uruguayo",
+    "lead": "Nueve plataformas que publican datos sobre el Estado uruguayo, comparadas con la fuente y la fecha de cada dato. La nuestra incluida — y por eso arranca con un aviso.",
+    "verifiedLabel": "Verificado el {date}",
+    "disclosureTitle": "Somos parte interesada",
+    "guideTitle": "¿Qué necesitás?",
+    "guideHelp": "El atajo. Para varias de estas preguntas la respuesta correcta no es este sitio, y el enlace va directo adonde sí está.",
+    "matrixTitle": "La tabla",
+    "matrixHelp": "Compara sólo lo comparable: nosotros y las plataformas ciudadanas. Los sitios del Estado son la fuente de la que todos tomamos el dato, no competencia — van abajo, en fichas.",
+    "matrixNote": "El círculo a medias significa que la respuesta es «en parte», y la ficha de cada plataforma explica por qué.",
+    "dimensionLabel": "Qué se compara",
+    "tri": {
+      "yes": "Sí",
+      "no": "No",
+      "partial": "En parte",
+      "unknown": "No pudimos verificarlo"
+    },
+    "access": {
+      "libre": "Libre",
+      "registro": "Con registro",
+      "freemium": "Gratis con límites",
+      "oficial": "Oficial"
+    },
+    "group": {
+      "us": "Nosotros",
+      "civic": "Plataformas ciudadanas",
+      "official": "El Estado"
+    },
+    "groupHelp": {
+      "us": "Esto es lo que hace este sitio y lo que no hace.",
+      "civic": "Proyectos independientes del Estado. Son con quienes de verdad nos comparamos.",
+      "official": "La fuente. Todo lo que muestran las plataformas de arriba, la nuestra incluida, sale de acá."
+    },
+    "usFlag": "Nuestra propia ficha. Leela con eso en mente.",
+    "operator": "Quién la hace",
+    "scope": "Qué cubre",
+    "price": "Cuánto cuesta",
+    "currencyUnlabeled": "El sitio no dice en qué moneda.",
+    "bestFor": "Para qué es la mejor",
+    "limits": "Lo que no hace",
+    "sourcesLabel": "Fuentes:",
+    "worldTitle": "Cómo se hace en otros lados",
+    "worldHelp": "No entran en la tabla —no compiten por el mismo dato— pero marcan el techo de lo que se puede hacer con datos públicos.",
+    "methodologyTitle": "Cómo se armó esto",
+    "backToAlertas": "Ver también: comparativa de servicios de alertas de licitaciones"
   },
   "comparativa": {
     "eyebrow": "Comparativa · para proveedores",

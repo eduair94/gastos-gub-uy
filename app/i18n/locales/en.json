@@ -34,6 +34,7 @@
     "tvciudad": "TV Ciudad",
     "llamados": "Open calls",
     "comparativa": "Alert services compared",
+    "plataformas": "Other platforms",
     "more": "More",
     "explorar": "Explore",
     "senales": "What to check",
@@ -2084,6 +2085,10 @@
       "title": "State advertising — Uruguay's public advertising and who collects it",
       "description": "How much the Uruguayan state spends on advertising and propaganda, which bodies pay for it, and which media and agencies receive it. Official open data from Compras Estatales."
     },
+    "plataformas": {
+      "title": "Who else watches the Uruguayan State: transparency platforms compared",
+      "description": "A sourced comparison of the platforms publishing data about the Uruguayan State: Control Ciudadano, datospublicos.uy, DATA Uruguay, ARCE, OPP, JUTEP and this site. What each covers, what it costs and what it is for."
+    },
     "comparativa": {
       "title": "Comparison of tender-alert services in Uruguay",
       "description": "An objective, sourced comparison of tender-alert services for Uruguayan state suppliers (Gubly, ProveedorUY, ClearBid, Tenderis and more): prices, features and what to choose."
@@ -2366,6 +2371,53 @@
       "action": "Clear filters"
     },
     "note": "Official contact data published by the agencies on comprasestatales.gub.uy."
+  },
+  "plataformas": {
+    "eyebrow": "Comparison",
+    "title": "Who else is watching the Uruguayan State",
+    "lead": "Nine platforms publishing data about the Uruguayan State, compared with the source and date behind every figure. Ours included — which is why it opens with a disclosure.",
+    "verifiedLabel": "Verified on {date}",
+    "disclosureTitle": "We are an interested party",
+    "guideTitle": "What do you need?",
+    "guideHelp": "The shortcut. For several of these questions the right answer is not this site, and the link goes straight to where it is.",
+    "matrixTitle": "The table",
+    "matrixHelp": "It compares only what is comparable: us and the citizen platforms. Government sites are the source everyone draws from, not competitors — they are below, as entries.",
+    "matrixNote": "A half-filled circle means the answer is “partly”, and each platform’s entry explains why.",
+    "dimensionLabel": "What is compared",
+    "tri": {
+      "yes": "Yes",
+      "no": "No",
+      "partial": "Partly",
+      "unknown": "We could not verify it"
+    },
+    "access": {
+      "libre": "Open",
+      "registro": "Signup required",
+      "freemium": "Free with limits",
+      "oficial": "Official"
+    },
+    "group": {
+      "us": "Us",
+      "civic": "Citizen platforms",
+      "official": "The State"
+    },
+    "groupHelp": {
+      "us": "This is what this site does, and what it does not.",
+      "civic": "Projects independent from the State. These are who we actually compare against.",
+      "official": "The source. Everything the platforms above show, ours included, comes from here."
+    },
+    "usFlag": "Our own entry. Read it with that in mind.",
+    "operator": "Who runs it",
+    "scope": "What it covers",
+    "price": "What it costs",
+    "currencyUnlabeled": "The site does not say in which currency.",
+    "bestFor": "What it is best at",
+    "limits": "What it does not do",
+    "sourcesLabel": "Sources:",
+    "worldTitle": "How it is done elsewhere",
+    "worldHelp": "They are not in the table — they do not compete for the same data — but they set the ceiling for what public data can do.",
+    "methodologyTitle": "How this was put together",
+    "backToAlertas": "See also: tender-alert services compared"
   },
   "comparativa": {
     "eyebrow": "Comparison · for suppliers",

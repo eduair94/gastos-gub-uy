@@ -583,6 +583,13 @@ useSeo(() => ({
             {{ t('comparativa.backToLlamados') }}
           </NuxtLink>
         </p>
+        <!-- La comparativa hermana. Ahí esta plataforma SÍ está en la tabla, y por eso
+             vive aparte: mezclarlas rompería la neutralidad de ésta. -->
+        <p class="cmp__back">
+          <NuxtLink :to="localePath('/comparativa-transparencia')">
+            {{ t('plataformas.title') }}
+          </NuxtLink>
+        </p>
       </section>
     </v-container>
   </div>
