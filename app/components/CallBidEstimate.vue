@@ -20,6 +20,7 @@ interface EstItem {
   currency?: string
   unitP25?: number
   unitP50?: number
+  unitP75?: number
   n?: number
   lineLow?: number
   lineTypical?: number
@@ -31,8 +32,9 @@ interface Estimate {
   coverage: { estimated: number, total: number, noBaseline: number, noQuantity: number }
 }
 
-const props = defineProps<{ estimate: Estimate | null }>()
+const props = defineProps<{ estimate: Estimate | null, compraId?: string }>()
 const { t } = useI18n()
+const localePath = useLocalePath()
 
 const hasEstimate = computed(() => (props.estimate?.totals?.length ?? 0) > 0)
 const totals = computed(() => props.estimate?.totals ?? [])
@@ -41,6 +43,55 @@ const matchedItems = computed(() => props.estimate?.items.filter(i => i.matched)
 const uncovered = computed(() => props.estimate?.coverage?.noBaseline ?? 0)
 
 const qtyLabel = (it: EstItem) => [it.quantity != null ? formatNumber(it.quantity) : null, it.unitName].filter(Boolean).join(' ')
+
+// A rubro priced off a single historical award is common, and "1 compras" reads
+// like a bug to a Spanish speaker — which is what it looked like in review.
+const samplesLabel = (n: number) =>
+  n === 1 ? t('llamados.estimateSamplesOne', { n: 1 }) : t('llamados.estimateSamples', { n: formatNumber(n) })
+
+// Free CSV of exactly what the table shows. Built in the browser from data the
+// page already holds — no endpoint, no job, no download gate. A paying tier for
+// this is the thing this site exists not to be.
+function downloadCsv() {
+  const head = [
+    t('llamados.estimateColItem'),
+    'classificationId',
+    t('llamados.estimateColQty'),
+    t('llamados.estimateColUnit'),
+    t('llamados.estimateColTypical'),
+    t('llamados.estimateColRangeLow'),
+    t('llamados.estimateColRangeHigh'),
+    t('llamados.estimateColLine'),
+    t('llamados.estimateColCurrency'),
+    t('llamados.estimateColSamples'),
+  ]
+  const rows = matchedItems.value.map(it => [
+    it.description ?? '',
+    it.classificationId ?? '',
+    it.quantity ?? '',
+    it.unitName ?? '',
+    it.unitP50 ?? '',
+    it.unitP25 ?? '',
+    it.unitP75 ?? '',
+    it.lineTypical ?? '',
+    it.currency ?? '',
+    it.n ?? '',
+  ])
+  // Quote every cell: article descriptions carry commas, and a bare comma would
+  // shift every following column.
+  const csv = [head, ...rows]
+    .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+    .join('\r\n')
+  // BOM so Excel opens the accents right — the whole corpus is in Spanish. Written
+  // as an escape, not a literal: a raw U+FEFF in source is an invisible lint error.
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `estimacion-${props.compraId ?? 'llamado'}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <template>
@@ -99,10 +150,24 @@ const qtyLabel = (it: EstItem) => [it.quantity != null ? formatNumber(it.quantit
     </p>
 
     <!-- Per-line breakdown (transparency) -->
-    <details class="est__details">
+    <details
+      class="est__details"
+      open
+    >
       <summary class="est__summary">
         {{ t('llamados.estimateBreakdown') }}
       </summary>
+      <div class="est__exportbar">
+        <v-btn
+          size="small"
+          variant="text"
+          prepend-icon="mdi-file-delimited-outline"
+          @click="downloadCsv"
+        >
+          {{ t('llamados.estimateExportCsv') }}
+        </v-btn>
+        <span class="est__exportnote u-muted">{{ t('llamados.estimateExportFree') }}</span>
+      </div>
       <div class="est__tablewrap">
         <table class="est__table">
           <thead>
@@ -114,10 +179,16 @@ const qtyLabel = (it: EstItem) => [it.quantity != null ? formatNumber(it.quantit
                 {{ t('llamados.estimateColQty') }}
               </th>
               <th class="est__th est__th--num">
-                {{ t('llamados.estimateColUnitPrice') }}
+                {{ t('llamados.estimateColTypical') }}
+              </th>
+              <th class="est__th est__th--num">
+                {{ t('llamados.estimateColRange') }}
               </th>
               <th class="est__th est__th--num">
                 {{ t('llamados.estimateColLine') }}
+              </th>
+              <th class="est__th est__th--num">
+                {{ t('llamados.estimateColHistory') }}
               </th>
             </tr>
           </thead>
@@ -137,7 +208,18 @@ const qtyLabel = (it: EstItem) => [it.quantity != null ? formatNumber(it.quantit
               </td>
               <td
                 class="est__td est__td--num"
-                :data-label="t('llamados.estimateColUnitPrice')"
+                :data-label="t('llamados.estimateColTypical')"
+              >
+                <MoneyAmount
+                  :amount="it.unitP50"
+                  :currency="it.currency"
+                  :rule="false"
+                  size="sm"
+                />
+              </td>
+              <td
+                class="est__td est__td--num"
+                :data-label="t('llamados.estimateColRange')"
               >
                 <span class="est__unitrange">
                   <MoneyAmount
@@ -148,7 +230,7 @@ const qtyLabel = (it: EstItem) => [it.quantity != null ? formatNumber(it.quantit
                   />
                   <span class="est__dash">–</span>
                   <MoneyAmount
-                    :amount="it.unitP50"
+                    :amount="it.unitP75"
                     :currency="it.currency"
                     :rule="false"
                     size="sm"
@@ -165,6 +247,16 @@ const qtyLabel = (it: EstItem) => [it.quantity != null ? formatNumber(it.quantit
                   :rule="false"
                   size="sm"
                 />
+              </td>
+              <td
+                class="est__td est__td--num"
+                :data-label="t('llamados.estimateColHistory')"
+              >
+                <NuxtLink
+                  v-if="it.classificationId"
+                  :to="localePath(`/products/${it.classificationId}`)"
+                >{{ samplesLabel(it.n ?? 0) }}</NuxtLink>
+                <span v-else>—</span>
               </td>
             </tr>
           </tbody>
@@ -216,6 +308,8 @@ const qtyLabel = (it: EstItem) => [it.quantity != null ? formatNumber(it.quantit
   user-select: none;
 }
 .est__summary:hover { text-decoration: underline; }
+.est__exportbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin: var(--s-2) 0; }
+.est__exportnote { font-size: var(--t-xs); }
 .est__tablewrap { overflow-x: auto; margin-top: var(--s-3); }
 .est__table { width: 100%; border-collapse: collapse; min-width: 480px; }
 .est__th {

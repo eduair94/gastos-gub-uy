@@ -40,10 +40,10 @@ export default defineEventHandler(async (event) => {
   // for a given unit is the one we price against. Drop sub-1 medians (data
   // artifacts that would price a line at ~0 — see benchmarks.get.ts).
   const baselines = await ItemPriceBaselineModel.find({ classificationId: { $in: codes } })
-    .select('classificationId currency unitName n p25 p50')
+    .select('classificationId currency unitName n p25 p50 p75')
     .sort({ n: -1 })
     .lean()
-  const idx = new Map<string, { currency: string, unitName: string, n: number, p25: number, p50: number }>()
+  const idx = new Map<string, { currency: string, unitName: string, n: number, p25: number, p50: number, p75: number }>()
   for (const b of baselines) {
     if (!(b.p50 >= 1)) continue
     const key = `${b.classificationId}|${b.currency}|${b.unitName}`
@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
     if (!(typeof qty === 'number' && qty > 0)) {
       noQuantity++
       // A priced rubro but no quantity to multiply — still surface the unit price.
-      return { ...base, matched: false as const, reason: 'no-quantity' as const, currency: b.currency, unitP25: b.p25, unitP50: b.p50, n: b.n }
+      return { ...base, matched: false as const, reason: 'no-quantity' as const, currency: b.currency, unitP25: b.p25, unitP50: b.p50, unitP75: b.p75, n: b.n }
     }
     estimated++
     const lineLow = qty * b.p25
@@ -89,7 +89,10 @@ export default defineEventHandler(async (event) => {
     t.typical += lineTypical
     t.lines++
     totalsByCur.set(b.currency, t)
-    return { ...base, matched: true as const, currency: b.currency, unitP25: b.p25, unitP50: b.p50, n: b.n, lineLow, lineTypical }
+    // p75 rides along as the upper end of the "rango habitual" the breakdown shows.
+    // It deliberately does NOT enter the totals: the headline is a bid target
+    // (competitive → typical), and summing p75 would turn it into a ceiling.
+    return { ...base, matched: true as const, currency: b.currency, unitP25: b.p25, unitP50: b.p50, unitP75: b.p75, n: b.n, lineLow, lineTypical }
   })
 
   const totals = [...totalsByCur.values()].sort((a, b) => b.typical - a.typical)

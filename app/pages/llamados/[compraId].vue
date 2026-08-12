@@ -53,6 +53,14 @@ const { data: estimateData } = await useFetch<{ data: Record<string, unknown> }>
 )
 const estimate = computed(() => estimateData.value?.data ?? null)
 
+// "¿Quién ganó esto la última vez?" — named precedents per article. Lazy on
+// purpose: it is one index walk per rubro and it sits below the fold, so it must
+// not hold up the first paint of the call itself.
+const { data: recentData } = await useLazyFetch<{ data: Record<string, unknown> }>(
+  () => `/api/open-calls/${compraId.value}/recent-awards`,
+)
+const recentAwards = computed(() => recentData.value?.data ?? null)
+
 const config = useRuntimeConfig()
 const orgLd = useOrgLd()
 
@@ -281,7 +289,12 @@ function docHref(d: { url?: string }): string {
           </ul>
         </section>
 
-        <CallBidEstimate :estimate="(estimate as any)" />
+        <CallBidEstimate
+          :estimate="(estimate as any)"
+          :compra-id="compraId"
+        />
+
+        <CallRecentAwards :recent="(recentAwards as any)" />
 
         <ClientOnly>
           <PliegoSummary
