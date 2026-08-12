@@ -461,6 +461,26 @@ async function main(): Promise<void> {
       await topicSpending.createIndex({ slug: 1 }, { background: true })
       console.log('✅ topic_spending indexes ensured (topicKey+dataVersion, slug)')
 
+      // udeco_sanctions: consumer-protection sanctions, loaded by src/jobs/load-udeco-sanctions.ts.
+      // sanctionKey unique is the upsert key; rut backs the supplier-profile join and the
+      // /analytics/sanciones cross-reference; fechaResolucion the newest-first list.
+      const udeco = client.db(DB_NAME).collection('udeco_sanctions')
+      await udeco.createIndex({ sanctionKey: 1 }, { unique: true, background: true })
+      await udeco.createIndex({ rut: 1 }, { background: true })
+      await udeco.createIndex({ fechaResolucion: -1 }, { background: true })
+      await udeco.createIndex({ tipo: 1 }, { background: true })
+      console.log('✅ udeco_sanctions indexes ensured (sanctionKey unique, rut, fechaResolucion, tipo)')
+
+      // udeco_supplier_stats: the sanctioned-state-supplier cross-reference, rebuilt
+      // (compute-then-swap) by src/jobs/refresh-udeco-crossref.ts. rut unique is the upsert key;
+      // totalUyu/sanctions back the page sorts; dataVersion backs the $lt stale sweep.
+      const udecoXref = client.db(DB_NAME).collection('udeco_supplier_stats')
+      await udecoXref.createIndex({ rut: 1 }, { unique: true, background: true })
+      await udecoXref.createIndex({ totalUyu: -1 }, { background: true })
+      await udecoXref.createIndex({ sanctions: -1 }, { background: true })
+      await udecoXref.createIndex({ dataVersion: 1 }, { background: true })
+      console.log('✅ udeco_supplier_stats indexes ensured (rut unique, totalUyu, sanctions, dataVersion)')
+
       // provider_load_error_stats: the load-errors-by-provider cross-reference, rebuilt
       // (compute-then-swap) by src/jobs/cross-provider-load-errors.ts. Same shape as
       // provider_anomaly_stats but scoped to the load-error bucket; `supplierName` unique is the
@@ -710,6 +730,7 @@ async function main(): Promise<void> {
       console.log('   plan: integrity_signals.{buyerId unique, weight+totalUyu, dataVersion}')
       console.log('   plan: jutep_omisos.{omisoKey unique, incisoCode, fechaOmision, organismo}')
       console.log('   plan: acta_bidders.{ocid unique, found+probedAt}')
+      console.log('   plan: udeco_sanctions.{sanctionKey unique, rut, fechaResolucion, tipo}')
       console.log('   plan: topic_contracts.{topicKey+ocid unique, +amount/firstSeenAt/sourceYear/category/buyerId, rulesVersion}')
       console.log('   plan: topic_spending.{topicKey+dataVersion, slug}')
       console.log('   plan: organism_group_stats.{groupKey unique, dataVersion}')

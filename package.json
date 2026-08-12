@@ -26,6 +26,8 @@
     "refresh-dept-indicators": "tsx src/jobs/refresh-dept-indicators.ts",
     "refresh-integrity-signals": "tsx src/jobs/refresh-integrity-signals.ts",
     "load-jutep-omisos": "tsx src/jobs/load-jutep-omisos.ts",
+    "load-udeco-sanctions": "tsx src/jobs/load-udeco-sanctions.ts",
+    "refresh-udeco-crossref": "tsx src/jobs/refresh-udeco-crossref.ts",
     "extract-acta-bidders": "tsx src/jobs/extract-acta-bidders.ts",
     "refresh-spending-trend": "tsx src/jobs/refresh-spending-trend.ts",
     "refresh-topic-spending": "tsx src/jobs/refresh-topic-spending.ts",

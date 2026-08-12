@@ -9,10 +9,14 @@
  * both publish plain CSV on catalogodatos.gub.uy, and the JUTEP file genuinely needs the quote
  * handling — "MINISTERIO DE GANADERÍA, AGRICULTURA Y PESCA" splits into two fields without it.
  *
+ * The delimiter is a parameter because the sources disagree: catalogodatos serves the DEI and JUTEP
+ * files comma-separated and the UDECO sanctions file SEMICOLON-separated. Encoding disagrees too —
+ * JUTEP is UTF-8, UDECO and SICE are Latin-1 — but that is the caller's decode, not this parser's.
+ *
  * Deliberately NOT a dependency: the whole thing is 25 lines and the repo already avoids pulling a
  * package for what a loop does.
  */
-export function parseCsv(text: string): string[][] {
+export function parseCsv(text: string, delimiter = ","): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -29,7 +33,7 @@ export function parseCsv(text: string): string[][] {
         } else inQuotes = false;
       } else field += c;
     } else if (c === '"') inQuotes = true;
-    else if (c === ",") {
+    else if (c === delimiter) {
       row.push(field);
       field = "";
     } else if (c === "\r") {
@@ -56,8 +60,8 @@ export function parseCsv(text: string): string[][] {
  * republished with columns added and reordered, and a positional read fails silently when that
  * happens — the worst possible failure mode for a loader.
  */
-export function parseCsvRecords(text: string): Array<Record<string, string>> {
-  const rows = parseCsv(text);
+export function parseCsvRecords(text: string, delimiter = ","): Array<Record<string, string>> {
+  const rows = parseCsv(text, delimiter);
   if (rows.length < 2) return [];
   const header = rows[0]!.map((h) => h.trim());
   const out: Array<Record<string, string>> = [];
