@@ -1280,6 +1280,13 @@ useSeo(() => ({
             </div>
           </section>
 
+          <!-- ===== Who else bid ===== -->
+          <ContractBidders
+            :call-bidders="(contract as any)?.callBidders ?? null"
+            :acta="(contract as any)?.bidders ?? null"
+            :winners="suppliers.map(s => s.name).filter(Boolean)"
+          />
+
           <!-- ===== Who ===== -->
           <section class="panel block">
             <div class="panel__head">

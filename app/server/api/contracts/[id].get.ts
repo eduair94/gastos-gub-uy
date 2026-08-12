@@ -2,7 +2,7 @@ import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { isValidObjectId } from 'mongoose'
 import type { IRelease } from '../../../types'
 import { connectToDatabase } from '../../utils/database'
-import { ActaBiddersModel, ContractItemFeaturesModel, ItemPriceBaselineModel, ReleaseModel } from '../../utils/models'
+import { ActaBiddersModel, CallBiddersModel, ContractItemFeaturesModel, ItemPriceBaselineModel, ReleaseModel } from '../../utils/models'
 import { awardUrl, compraIdFromOcid, ocdsJsonUrl, sourceUrl } from '../../utils/query'
 import { loadRateTable } from '../../utils/rates'
 import { toTodayUyu } from '../../../../shared/utils/real-value'
@@ -211,6 +211,18 @@ export default defineEventHandler(async (event) => {
       ).lean()
       : null
 
+    // The same question, from the far better source: the gov HTML detail page publishes a
+    // "Proveedores participantes" block on ~100% of awarded purchases, with document and RUT
+    // per bidder. The acta above only enumerates in ~6-8% of cases, so this is what the page
+    // leads with; the acta stays as the prose fallback. A miss is still null, never zero —
+    // an open purchase has not published its bidders yet, which is not "nobody competed".
+    const callBidders = contract.ocid
+      ? await CallBiddersModel.findOne(
+        { ocid: contract.ocid, found: true },
+        { _id: 0, count: 1, bidders: 1, sourceUrl: 1, probedAt: 1 },
+      ).lean()
+      : null
+
     // Calculate additional fields for the detailed view
     const enhancedContract = {
       ...contract,
@@ -255,6 +267,7 @@ export default defineEventHandler(async (event) => {
       // of actas enumerate, so null here is the NORMAL case and the page must read it as "the acta
       // did not say" — never as "no competition". See shared/acta-bidders.ts.
       bidders: actaBidders,
+      callBidders,
       // The amount restated in today's pesos (see above). `realNativeCurrency`
       // lets the page note when a conversion from USD/EUR also happened.
       realTodayAmount,

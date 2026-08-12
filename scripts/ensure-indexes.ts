@@ -440,6 +440,27 @@ async function main(): Promise<void> {
       await actaBidders.createIndex({ found: 1, probedAt: -1 }, { background: true })
       console.log('✅ acta_bidders indexes ensured (ocid unique, found+probedAt)')
 
+      // call_bidders: who else bid, read from the gov HTML detail page by
+      // src/jobs/scrape-call-bidders.ts. Same ocid-unique upsert key as acta_bidders, but this
+      // one also backs aggregates: buyerId+sourceYear+count is the single-bidder indicator per
+      // body, and bidders.rut is the reverse question ("which calls did this firm show up to,
+      // and which did it lose?").
+      const callBidders = client.db(DB_NAME).collection('call_bidders')
+      await callBidders.createIndex({ ocid: 1 }, { unique: true, background: true })
+      await callBidders.createIndex({ found: 1, probedAt: -1 }, { background: true })
+      await callBidders.createIndex({ buyerId: 1, sourceYear: -1, count: 1 }, { background: true })
+      await callBidders.createIndex({ 'bidders.rut': 1 }, { background: true })
+      console.log('✅ call_bidders indexes ensured (ocid unique, found+probedAt, buyer+year+count, bidders.rut)')
+
+      // bidder_competition: per-organism single-bidder rollup over call_bidders, written by
+      // src/jobs/refresh-bidder-competition.ts. buyerId unique is the upsert key;
+      // conclusive+soleRate is the page's default sort; dataVersion backs the $lt sweep.
+      const bidderCompetition = client.db(DB_NAME).collection('bidder_competition')
+      await bidderCompetition.createIndex({ buyerId: 1 }, { unique: true, background: true })
+      await bidderCompetition.createIndex({ conclusive: 1, soleRate: -1 }, { background: true })
+      await bidderCompetition.createIndex({ dataVersion: 1 }, { background: true })
+      console.log('✅ bidder_competition indexes ensured (buyerId unique, conclusive+soleRate, dataVersion)')
+
       // topic_contracts: per-contract classification behind a spending topic
       // (shared/spending-topics.ts), written by src/jobs/refresh-topic-spending.ts.
       // topicKey+ocid unique is the upsert key; the inTopic-prefixed compounds serve

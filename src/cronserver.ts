@@ -1064,6 +1064,30 @@ class CronServer {
     );
     this.logger.info(`Acta bidder extraction scheduled with expression: ${actaBiddersExpression} (Uruguay timezone)`);
 
+    // HTML bidder scrape, nightly at 03:50 — half an hour AFTER the acta pass so the two never
+    // hit comprasestatales at once. Same bounded, resumable shape and the same reason. This one
+    // matters more: the acta enumerates offers in ~8% of cases, the HTML block in ~100%, so this
+    // is what the single-bidder indicator is built on. 600/night; the backlog is large and
+    // draining it politely is the whole design.
+    const callBiddersExpression = "50 3 * * *";
+    cron.schedule(
+      callBiddersExpression,
+      async () => {
+        try {
+          this.logger.info("Starting HTML bidder scrape...");
+          await this.runJobProcess("jobs/scrape-call-bidders", ["--limit=600"]);
+          // The indicator reads what the scrape just wrote; running it here keeps the page
+          // at most one night behind the data instead of a whole day.
+          await this.runJobProcess("jobs/refresh-bidder-competition");
+          this.logger.info("HTML bidder scrape + competition rollup completed successfully");
+        } catch (error) {
+          this.logger.error("HTML bidder scrape failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`HTML bidder scrape scheduled with expression: ${callBiddersExpression} (Uruguay timezone)`);
+
     // Year-over-year spending decomposition, monthly at 05:00 on the 1st — after the two
     // rollups above so the three heavy full-collection scans never overlap. Rebuilds
     // spending_trend, which /analytics/evolucion-gasto reads. `--ai` is deliberately NOT

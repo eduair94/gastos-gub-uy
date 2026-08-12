@@ -48,6 +48,13 @@ export * from './jutep_omiso';
 // Bidders recovered from the acta de adjudicación (acta_bidders)
 export * from "./acta_bidders";
 
+// Bidders read from the gov HTML detail page (call_bidders) — near-full coverage,
+// which is what acta_bidders lacks. See shared/call-bidders.ts.
+export * from "./call_bidders";
+
+// Per-organism competition rollup over call_bidders (bidder_competition).
+export * from "./bidder_competition";
+
 // Spending topics — subject-of-spending rollups (topic_spending) and the
 // per-contract classification behind them (topic_contracts)
 export * from "./topic_spending";

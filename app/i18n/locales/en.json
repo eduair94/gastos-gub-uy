@@ -34,6 +34,7 @@
     "tvciudad": "TV Ciudad",
     "llamados": "Open calls",
     "comparativa": "Alert services compared",
+    "competencia": "Competition",
     "plataformas": "Other platforms",
     "more": "More",
     "explorar": "Explore",
@@ -502,6 +503,8 @@
   },
   "contract": {
     "biddersHelp": "The open procurement data never says who else bid: it publishes only the winner. This comes from the award resolution, which sometimes lists them. When this panel is absent, the resolution did not say — not that there was no competition.",
+    "biddersSoleHtml": "Only one company bid",
+    "biddersOfficial": "See the official purchase record",
     "biddersCount": "{n} offers were received",
     "biddersSole": "The resolution records a single offer",
     "biddersWinner": "awarded",
@@ -2089,6 +2092,10 @@
       "title": "Who else watches the Uruguayan State: transparency platforms compared",
       "description": "A sourced comparison of the platforms publishing data about the Uruguayan State: Control Ciudadano, datospublicos.uy, DATA Uruguay, ARCE, OPP, JUTEP and this site. What each covers, what it costs and what it is for."
     },
+    "competencia": {
+      "title": "How much competition is there in Uruguayan public procurement?",
+      "description": "How often a single company bids for each Uruguayan public body’s purchases, measured from the bidders published on each official record."
+    },
     "comparativa": {
       "title": "Comparison of tender-alert services in Uruguay",
       "description": "An objective, sourced comparison of tender-alert services for Uruguayan state suppliers (Gubly, ProveedorUY, ClearBid, Tenderis and more): prices, features and what to choose."
@@ -2418,6 +2425,43 @@
     "worldHelp": "They are not in the table — they do not compete for the same data — but they set the ceiling for what public data can do.",
     "methodologyTitle": "How this was put together",
     "backToAlertas": "See also: tender-alert services compared"
+  },
+  "competencia": {
+    "eyebrow": "Analysis",
+    "title": "How much competition is there?",
+    "lead": "How many companies actually bid for each public body’s purchases, and how often only one shows up. It is the most cited sign of a captured procurement market, and until now it could not be measured in Uruguay.",
+    "kpi": {
+      "probed": "purchases checked",
+      "withBidders": "published their bidders",
+      "soleRate": "had a single bidder",
+      "avg": "bidders per purchase, on average"
+    },
+    "coverageTitle": "Read this before the table",
+    "coverageBody": "The corpus holds over a million purchases and each record is read one at a time, slowly, so as not to hammer a government site. What has been checked is therefore partial and uneven across bodies: that is why every row shows how many of its purchases were checked, and why bodies with a small sample carry no percentage at all. A percentage without that denominator would make the least-checked body look cleanest, which is exactly backwards.",
+    "sortLabel": "Sort by",
+    "sort": {
+      "sole": "Most single-bidder",
+      "competition": "Most competition",
+      "coverage": "Most coverage",
+      "probed": "Most purchases checked",
+      "avg": "Most bidders per purchase"
+    },
+    "searchLabel": "Search body",
+    "includeSmall": "Include small samples",
+    "colBuyer": "Public body",
+    "colSole": "Single bidder",
+    "colAvg": "Average",
+    "colSample": "Single / with bidders",
+    "colCoverage": "Coverage",
+    "notConclusive": "sample too small",
+    "empty": "No body has a large enough sample yet. The scan advances every night.",
+    "prev": "Previous",
+    "next": "Next",
+    "methodTitle": "How this is measured",
+    "method1": "Open procurement data (OCDS) never publishes who bid — only the winner. But the record of each awarded purchase does publish a “Proveedores participantes” block, with each bidder’s document and name. That is where all of this comes from.",
+    "method2": "Only competitive procedures are counted (tenders and price competitions). In a direct purchase there is nothing to compete for, so including them would inflate the single-bidder figure while saying nothing.",
+    "method3": "A purchase that has not yet published its bidders does not count as a purchase without competition. Missing data and missing competition are different things and are never added together here.",
+    "method4": "A high percentage proves nothing on its own: some categories have a single possible supplier in the country. It is a place to start looking, not a verdict."
   },
   "comparativa": {
     "eyebrow": "Comparison · for suppliers",
