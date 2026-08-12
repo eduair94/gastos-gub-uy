@@ -1536,6 +1536,14 @@
       "sanctions": "sanciones aplicadas",
       "fines": "en multas (Unidades Reajustables)"
     },
+    "detailToggleOne": "Ver la sanción",
+    "detailToggle": "Ver las {n} sanciones",
+    "col": {
+      "fecha": "Fecha",
+      "tipo": "Tipo",
+      "motivo": "Motivo",
+      "monto": "Multa"
+    },
     "sortLabel": "Ordenar por",
     "sort": {
       "spend": "Monto adjudicado",
