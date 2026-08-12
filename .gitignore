@@ -25,6 +25,12 @@ firebase.json
 .playwright-mcp/
 # Local scratch: throwaway QA screenshots, ad-hoc logs. Never committed.
 .scratch/
+# Stray QA captures dropped at the repo root — the keepers live in docs/screenshots/.
+/*.png
+
+# Agent-tool local state (Serena project index/memories, Codex remote attachments)
+.serena/
+.codex-remote-attachments/
 
 # RUPE open-data CSVs — 74MB, re-downloaded by src/jobs/load-rupe.ts from catalogodatos
 rupe/
