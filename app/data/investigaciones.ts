@@ -219,6 +219,16 @@ export const INV_CONTENT = {
           "cinco proveedores concentran"
         ]
       },
+      "cardMensajes": {
+        "eyebrow": "Series · Catálogo SICE",
+        "title": "Qué compra el Estado cuando compra palabras",
+        "dek": "En 84.011 artículos del catálogo no existe un código para un currículo ni un texto escolar: el Estado no tiene forma de comprar una idea. Sí compra el vehículo —publicidad, imprenta, cursos, libros— por 11.000 millones.",
+        "tags": [
+          "publicidad: la capa mayor",
+          "0 códigos de contenido",
+          "3 artefactos excluidos"
+        ]
+      },
       "methodTag": "Método",
       "methodTitle": "Cómo se hace cada una",
       "how": [
@@ -579,6 +589,16 @@ export const INV_CONTENT = {
           "live data",
           "method published",
           "five suppliers concentrate it"
+        ]
+      },
+      "cardMensajes": {
+        "eyebrow": "Series · SICE catalogue",
+        "title": "What the State buys when it buys words",
+        "dek": "Across 84,011 catalogue articles there is no code for a curriculum or a school textbook: the State cannot buy an idea. It does buy the vehicle — advertising, printing, courses, books — for 11,000 million.",
+        "tags": [
+          "advertising leads",
+          "0 content codes",
+          "3 artifacts excluded"
         ]
       },
       "methodTag": "Method",
