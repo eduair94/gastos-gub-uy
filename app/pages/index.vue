@@ -49,6 +49,13 @@ const { data: anomaliesRes } = await useFetch<any>('/api/analytics/anomalies', {
 })
 const { data: statsRes } = await useFetch<any>('/api/contracts/stats')
 
+// Firms the State's own consumer agency sanctioned, that the State keeps buying from. Ordered by
+// the penalty UDECO imposed rather than by contract size, so the teaser leads with the firms that
+// were actually punished the most and not with the biggest supplier carrying one caution.
+const { data: sancionesRes } = await useFetch<any>('/api/analytics/sanciones', {
+  query: { limit: 3, sortBy: 'fines' },
+})
+
 const metrics = computed(() => metricsRes.value?.data ?? null)
 const stats = computed(() => statsRes.value?.data ?? null)
 const latest = computed<ContractLike[]>(() => latestRes.value?.data?.contracts ?? [])
@@ -59,6 +66,9 @@ const contractCount = computed(() => stats.value?.count ?? metrics.value?.totalC
 const topSuppliers = computed(() => suppliersRes.value?.data ?? [])
 const topBuyers = computed(() => buyersRes.value?.data ?? [])
 const anomalies = computed(() => anomaliesRes.value?.data?.anomalies ?? anomaliesRes.value?.data ?? [])
+
+const sancionadas = computed<any[]>(() => sancionesRes.value?.data?.firms ?? [])
+const sancionesMeta = computed<any>(() => sancionesRes.value?.data?.meta ?? null)
 
 /** Purchase date of a flag, falling back to its year on the older rows that carry no source date. */
 function flagDate(a: any): string {
@@ -390,6 +400,56 @@ useSeo(() => ({
             <MoneyAmount
               :amount="a.detectedValue"
               :currency="a.metadata?.currency"
+              compact
+              size="sm"
+            />
+          </NuxtLink>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ============ Sancionadas por Defensa del Consumidor ============
+         The State's own consumer agency fined these firms, and the State keeps buying from them.
+         Silent when the cross-reference has not been computed. The caveat is not decoration: a
+         sanction concerns the firm's conduct toward CONSUMERS and says nothing about whether any
+         public contract was irregular. -->
+    <section
+      v-if="sancionadas.length && sancionesMeta"
+      class="u-container block"
+    >
+      <div class="block__head">
+        <h2>{{ t('home.sancionesTitle') }}</h2>
+        <NuxtLink
+          :to="localePath('/analytics/sanciones')"
+          class="block__all"
+        >
+          {{ t('common.viewAll') }}
+        </NuxtLink>
+      </div>
+      <p class="block__help block__help--wide">
+        {{ t('home.sancionesHelp', {
+          firms: sancionesMeta.sellingToState,
+          total: sancionesMeta.sanctionedFirmsTotal,
+        }) }}
+      </p>
+      <ul class="flags">
+        <li
+          v-for="f in sancionadas"
+          :key="f.rut"
+          class="flags__row"
+        >
+          <NuxtLink
+            :to="localePath('/analytics/sanciones')"
+            class="flags__link"
+          >
+            <span class="tag tag--alerta">{{ t('home.sancionesTag', { n: f.sanctions }) }}</span>
+            <span class="flags__what u-truncate">
+              {{ f.supplierName ?? f.razonSocial }}
+            </span>
+            <span class="flags__when u-mono">{{ Math.round(f.totalUr) }} UR</span>
+            <MoneyAmount
+              :amount="f.totalUyu"
+              currency="UYU"
               compact
               size="sm"
             />

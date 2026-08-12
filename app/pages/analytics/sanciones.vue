@@ -17,7 +17,7 @@ const router = useRouter()
 
 const NuxtLinkComponent = resolveComponent('NuxtLink')
 
-const sort = ref((route.query.sort as string) ?? 'spend')
+const sort = ref((route.query.sort as string) ?? 'fines')
 const search = ref((route.query.search as string) ?? '')
 const onlyFines = ref(route.query.onlyFines === 'true')
 const page = ref(Number(route.query.page ?? 1))
@@ -28,7 +28,7 @@ watch([sort, search, onlyFines], () => {
 })
 watch([sort, search, onlyFines, page], () => {
   const q: Record<string, string> = {}
-  if (sort.value !== 'spend') q.sort = sort.value
+  if (sort.value !== 'fines') q.sort = sort.value
   if (search.value) q.search = search.value
   if (onlyFines.value) q.onlyFines = 'true'
   if (page.value > 1) q.page = String(page.value)
