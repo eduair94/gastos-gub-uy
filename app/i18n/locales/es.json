@@ -2888,6 +2888,8 @@
     "openCall": "Ver llamado"
   },
   "genero": {
+    "untitled": "Compra {id} (sin objeto declarado)",
+    "byCategoryUnpriced": "Quedan fuera del gráfico {n} categorías sin ningún contrato con monto cargado: {list}.",
     "per10k": " de cada 10.000",
     "alertCta": "Avisarme de nuevos llamados del tema",
     "alertHelp": "Crea una alerta con los términos fuertes de este tema. Llega por push, Telegram, correo o la bandeja del sitio.",
