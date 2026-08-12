@@ -4,6 +4,7 @@
  * Everything here is reachable by anonymous callers, so treat every
  * input as hostile.
  */
+import { parseQueryList, rawQueryListValues } from '../../../shared/utils/query-list'
 
 /**
  * Escapes a user string for safe use inside a RegExp.
@@ -42,14 +43,37 @@ export function toNumberOrNull(v: unknown): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-/** Normalises a query param that may arrive as a scalar or a repeated key. */
+/**
+ * Normalises a query param that may arrive as a scalar or a repeated key.
+ *
+ * Values are comma-separated, and a value may itself contain a comma, so the
+ * separator is escaped inside each value — see shared/utils/query-list.ts.
+ */
 export function toArray(v: unknown): string[] {
-  if (v === undefined || v === null || v === '') return []
-  const arr = Array.isArray(v) ? v : [v]
-  return arr
-    .flatMap(x => (typeof x === 'string' ? x.split(',') : [x]))
-    .map(x => String(x).trim())
-    .filter(Boolean)
+  return parseQueryList(v, true)
+}
+
+/**
+ * Exact-match candidates for a filter on a NAME (buyer, supplier, article
+ * description) — the fields whose real values contain commas.
+ *
+ * Alongside the split values it offers the unsplit param as one more candidate,
+ * so links shared before the separator was escaped
+ * (`?buyers=Administración Nacional de Combustible, Alcohol y Portland`) still
+ * match the buyer they name instead of two fragments that exist nowhere. The
+ * extra candidate rides in the same indexed `$in`, and matches nothing when the
+ * comma really was a separator.
+ */
+export function toNameCandidates(v: unknown): string[] {
+  const values = toArray(v)
+  const seen = new Set(values)
+  for (const raw of rawQueryListValues(v)) {
+    if (!seen.has(raw)) {
+      seen.add(raw)
+      values.push(raw)
+    }
+  }
+  return values
 }
 
 /**

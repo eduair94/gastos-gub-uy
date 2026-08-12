@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { collapseSplitValues, encodeQueryList, parseQueryList } from '#shared/utils/query-list'
 import type { FilterState } from '~/components/FilterRail.vue'
 
 const { t } = useI18n()
@@ -11,10 +12,12 @@ const { track } = useAnalytics()
 // A filtered view is the thing people share with a journalist or paste
 // into a message. Keeping state in the query string makes every view
 // linkable, reloadable and back-button-able for free.
-function parseList(v: unknown): string[] {
-  if (!v) return []
-  return (Array.isArray(v) ? v : [v]).flatMap(x => String(x).split(',')).filter(Boolean)
-}
+//
+// Values are comma-separated and may themselves contain a comma — organism and
+// article names routinely do ("Administración Nacional de Combustible, Alcohol
+// y Portland"). The separator is escaped inside each value, here and
+// wherever a link writes one of these params; see shared/utils/query-list.ts.
+const parseList = (v: unknown): string[] => parseQueryList(v)
 function parseNum(v: unknown): number | null {
   const n = Number(v)
   return v !== undefined && v !== '' && Number.isFinite(n) ? n : null
@@ -133,15 +136,15 @@ const apiQueryNow = computed(() => {
   const f = filters.value
   const q: Record<string, unknown> = {}
   if (f.search) q.search = f.search
-  if (f.tag.length) q.tag = f.tag.join(',')
-  if (f.buyers.length) q.buyers = f.buyers.join(',')
-  if (f.buyerIds.length) q.buyerIds = f.buyerIds.join(',')
-  if (f.suppliers.length) q.suppliers = f.suppliers.join(',')
-  if (f.category.length) q.category = f.category.join(',')
-  if (f.categoryId.length) q.categoryId = f.categoryId.join(',')
-  if (f.procurementMethodDetails.length) q.procurementMethodDetails = f.procurementMethodDetails.join(',')
-  if (f.status.length) q.status = f.status.join(',')
-  if (f.currency.length) q.currency = f.currency.join(',')
+  if (f.tag.length) q.tag = encodeQueryList(f.tag)
+  if (f.buyers.length) q.buyers = encodeQueryList(f.buyers)
+  if (f.buyerIds.length) q.buyerIds = encodeQueryList(f.buyerIds)
+  if (f.suppliers.length) q.suppliers = encodeQueryList(f.suppliers)
+  if (f.category.length) q.category = encodeQueryList(f.category)
+  if (f.categoryId.length) q.categoryId = encodeQueryList(f.categoryId)
+  if (f.procurementMethodDetails.length) q.procurementMethodDetails = encodeQueryList(f.procurementMethodDetails)
+  if (f.status.length) q.status = encodeQueryList(f.status)
+  if (f.currency.length) q.currency = encodeQueryList(f.currency)
   if (f.yearFrom) q.yearFrom = f.yearFrom
   if (f.yearTo) q.yearTo = f.yearTo
   if (f.amountFrom !== null) q.amountFrom = f.amountFrom
@@ -183,7 +186,7 @@ function urlQueryNow(): Record<string, string> {
   // `tag` is always written, including as an empty string, so that
   // "show me every stage" survives a reload instead of snapping back to
   // the award default.
-  q.tag = filters.value.tag.join(',')
+  q.tag = encodeQueryList(filters.value.tag)
   if (page.value > 1) q.page = String(page.value)
   if (sort.value !== 'dateDesc') q.sort = sort.value
   return q
@@ -249,6 +252,28 @@ watch(() => filters.value.search, (s) => {
 
 const { data: optionsRes, pending: optionsPending } = await useFetch<any>('/api/contracts/filters')
 const options = computed(() => optionsRes.value?.data ?? null)
+
+/**
+ * Heals a link written before the separator was escaped.
+ *
+ * `?buyers=Administración Nacional de Combustible, Alcohol y Portland` parses to
+ * two fragments. The API still resolves them (it also tries the unsplit value),
+ * but the rail would show two chips that name no real buyer — and removing
+ * either one would leave a fragment that genuinely matches nothing. So once the
+ * facet list is in, any run of consecutive fragments that re-joins into a real
+ * option collapses back into that one value, and the URL writer rewrites the
+ * address bar in the escaped form.
+ */
+watch(options, (o) => {
+  if (!o) return
+  const patch: Partial<FilterState> = {}
+  for (const key of ['buyers', 'suppliers'] as const) {
+    const known = new Set<string>((o[key] ?? []).map((x: { value: string }) => String(x.value)))
+    const healed = collapseSplitValues(filters.value[key], known)
+    if (healed.length !== filters.value[key].length) patch[key] = healed
+  }
+  if (Object.keys(patch).length) filters.value = { ...filters.value, ...patch }
+}, { immediate: true })
 
 // A supplier filter loaded from the URL (e.g. a supplier profile's "ver contratos"
 // link passes the supplierId) isn't in the top-suppliers option list, so the

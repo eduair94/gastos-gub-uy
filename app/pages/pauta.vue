@@ -5,6 +5,8 @@
  * payer (via /api/pauta over product_analytics). The point is the cross: which
  * public bodies pay for advertising, and which media/agencies collect it.
  */
+import { toQueryListParam } from '#shared/utils/query-list'
+
 const { t } = useI18n()
 const localePath = useLocalePath()
 
@@ -92,7 +94,7 @@ useSeo(() => ({
           class="rank__row"
         >
           <NuxtLink
-            :to="localePath(`/contracts?suppliers=${encodeURIComponent(o.name)}`)"
+            :to="localePath(`/contracts?suppliers=${toQueryListParam(o.name)}`)"
             class="rank__link"
             :title="t('pauta.viewContracts', { name: o.name })"
           >
@@ -146,7 +148,7 @@ useSeo(() => ({
             class="rank__row"
           >
             <NuxtLink
-              :to="localePath(`/contracts?buyers=${encodeURIComponent(b.name)}`)"
+              :to="localePath(`/contracts?buyers=${toQueryListParam(b.name)}`)"
               class="rank__link"
               :title="t('pauta.viewContracts', { name: b.name })"
             >

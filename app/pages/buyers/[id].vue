@@ -41,6 +41,8 @@
  * Outliers are NOT filtered out of any of this: per DESIGN.md the source's
  * number is the source's number, and every row links to the official record.
  */
+import { toQueryListParam } from '#shared/utils/query-list'
+
 interface BuyerDetail {
   buyerId: string
   name: string
@@ -76,15 +78,10 @@ const buyerId = computed(() => decodeURIComponent(String(route.params.id ?? ''))
  */
 const statsQuery = computed(() => (buyerId.value ? { buyerIds: buyerId.value } : {}))
 
-/** `buyer.id` is `<inciso>-<unidad ejecutora>`; the JUTEP roster is published per inciso. */
-const incisoCode = computed(() => buyerId.value.split('-')[0] ?? '')
-
 const [
   { data: buyer, error },
   { data: statsRes },
   { data: contractsRes },
-  { data: signalsRes },
-  { data: omisosRes },
 ] = await Promise.all([
   useFetch<BuyerDetail>(() => `/api/buyers/${encodeURIComponent(buyerId.value)}`),
 
@@ -105,78 +102,9 @@ const [
     })),
     immediate: Boolean(buyerId.value),
   }),
-
-  // Señales de gestión for this organism, precomputed nightly. A miss is normal and silent: the
-  // collection only holds bodies with at least 20 priced awards in the window.
-  useFetch<any>('/api/analytics/integrity-signals', {
-    query: computed(() => ({ buyerId: buyerId.value, limit: 1 })),
-    immediate: Boolean(buyerId.value),
-  }),
-
-  // JUTEP omisos for this organism's INCISO — the roster is published per inciso, not per
-  // execution unit, so the count belongs to the whole ministry/department, and the panel says so.
-  useFetch<any>('/api/analytics/omisos', {
-    query: computed(() => ({ incisoCode: incisoCode.value, limit: 1 })),
-    immediate: Boolean(incisoCode.value),
-  }),
 ])
 
 const notFound = computed(() => !buyer.value || (error.value as any)?.statusCode === 404)
-
-/**
- * NuxtLink RESOLVED, not named by string. A string  does not resolve the component and Vue
- * emits a literal <NuxtLink> element: the card looks right and nothing is clickable. Documented
- * repo gotcha, reproduced here before this line existed.
- */
-const NuxtLinkComponent = resolveComponent('NuxtLink')
-
-/** Only the indicators actually raised — see the panel comment for why none means silence. */
-const raisedSignals = computed<any[]>(() => {
-  const row = signalsRes.value?.data?.organisms?.[0]
-  return (row?.signals ?? []).filter((s: any) => s.level === 'watch' || s.level === 'high')
-})
-
-/** Officials of this INCISO on JUTEP's omisos roster. 0 renders nothing. */
-const omisosCount = computed<number>(() => omisosRes.value?.data?.meta?.total ?? 0)
-
-/**
- * Where a raised signal takes the reader — the records behind it, not our arithmetic.
- * Mirrors /analytics/senales; null where the corpus cannot support a drill-down.
- */
-function signalDrill(key: string): string | null {
-  const row = signalsRes.value?.data?.organisms?.[0]
-  if (!row) return null
-  if (key === 'concentration' && row.topSupplierName) {
-    return localePath(`/contracts?buyerIds=${encodeURIComponent(row.buyerId)}&suppliers=${encodeURIComponent(row.topSupplierName)}`)
-  }
-  if (key === 'bursts' && row.burstWorstSupplier) {
-    const year = String(row.burstWorstMonth ?? '').slice(0, 4)
-    const range = /^\d{4}$/.test(year) ? `&yearFrom=${year}&yearTo=${year}` : ''
-    return localePath(`/contracts?buyerIds=${encodeURIComponent(row.buyerId)}&suppliers=${encodeURIComponent(row.burstWorstSupplier)}${range}`)
-  }
-  if (key === 'directAward') {
-    return localePath(
-      `/contracts?buyerIds=${encodeURIComponent(row.buyerId)}`
-      + `&procurementMethodDetails=${encodeURIComponent('Compra Directa')}`
-      + `&procurementMethodDetails=${encodeURIComponent('Compra por Excepción')}`
-      // tag=tender is LOAD-BEARING: the method only exists on the tender-phase release, and the
-      // explorer defaults to awards only — without it this link renders an empty list (measured:
-      // 0 rows vs 25).
-      + '&tag=tender',
-    )
-  }
-  if (key === 'unexplainedPrices' && row.buyerName) {
-    return localePath(`/analytics/anomalies?ai=unexplained&buyer=${encodeURIComponent(row.buyerName)}`)
-  }
-  return null
-}
-
-/** Counts read as counts, shares as percentages. Mirrors /analytics/senales. */
-function signalValue(key: string, value: number | null): string {
-  if (value === null || value === undefined) return t('senales.notMeasurable')
-  if (key === 'bursts' || key === 'unexplainedPrices') return String(value)
-  return `${(value * 100).toFixed(1)}%`
-}
 
 // A missing agency is a 404 for a crawler too, not a 200 with an apology.
 if (notFound.value) {
@@ -185,8 +113,10 @@ if (notFound.value) {
 
 const name = computed(() => buyer.value?.name ?? '')
 
-/** The explorer reads `buyers` as an exact name match. */
-const explorerLink = computed(() => `/contracts?buyers=${encodeURIComponent(name.value)}`)
+/** The explorer reads `buyers` as an exact name match. `toQueryListParam` escapes
+ *  the comma half these names carry ("… de Combustible, Alcohol y Portland"),
+ *  which the explorer would otherwise read as its list separator. */
+const explorerLink = computed(() => `/contracts?buyers=${toQueryListParam(name.value)}`)
 
 // Live breakdowns are keyed by id, not name: `buyer.id` is the field the
 // release indexes, and it sidesteps agencies whose name differs between
@@ -299,13 +229,13 @@ function supplierTo(supplierName: string) {
   const id = supplierIdByName.value.get(supplierName)
   return id
     ? supplierRoute(id)
-    : localePath(`/contracts?suppliers=${encodeURIComponent(supplierName)}`)
+    : localePath(`/contracts?suppliers=${toQueryListParam(supplierName)}`)
 }
 
 function contractSupplierTo(s: { id?: string, name: string }) {
   return s.id
     ? supplierRoute(s.id)
-    : localePath(`/contracts?suppliers=${encodeURIComponent(s.name)}`)
+    : localePath(`/contracts?suppliers=${toQueryListParam(s.name)}`)
 }
 
 const years = computed(() =>
@@ -452,75 +382,6 @@ useSeo(() => ({
         :last-year="lastYear"
       />
 
-      <!-- ===== Señales de gestión =====
-           Only the signals actually raised are shown here; the full five-indicator card lives on
-           /analytics/senales. Silent when the organism raises none, or when it is too small to be
-           measured at all — an empty panel would read as a clean bill of health this data cannot
-           give. -->
-      <section
-        v-if="raisedSignals.length"
-        class="block"
-      >
-        <div class="block__head">
-          <h2>{{ t('senales.title') }}</h2>
-          <NuxtLink
-            :to="localePath('/analytics/senales')"
-            class="block__all"
-          >
-            {{ t('common.viewAll') }}
-          </NuxtLink>
-        </div>
-        <p class="block__help block__help--wide">
-          {{ t('senales.caveat') }}
-        </p>
-        <ul class="bsig">
-          <li
-            v-for="s in raisedSignals"
-            :key="s.key"
-            class="bsig__item"
-            :class="`bsig__item--${s.level}`"
-          >
-            <component
-              :is="signalDrill(s.key) ? NuxtLinkComponent : 'div'"
-              :to="signalDrill(s.key) ?? undefined"
-              class="bsig__body"
-            >
-              <span class="bsig__label">{{ t(`senales.signal.${s.key}.label`) }}</span>
-              <span class="bsig__value u-mono">{{ signalValue(s.key, s.value) }}</span>
-              <span
-                v-if="typeof s.populationPercentile === 'number'"
-                class="bsig__pct"
-              >{{ t('senales.percentile', { pct: Math.round(s.populationPercentile * 100) }) }}</span>
-              <span
-                v-if="signalDrill(s.key)"
-                class="bsig__go"
-              >{{ t(s.key === 'directAward' ? 'senales.drillCalls' : 'senales.drill') }}</span>
-            </component>
-          </li>
-        </ul>
-      </section>
-
-      <!-- ===== Declaraciones juradas omitidas (JUTEP) =====
-           Published per INCISO, so this counts the whole ministry or department rather than this
-           execution unit alone — the copy says so rather than implying a narrower attribution. -->
-      <section
-        v-if="omisosCount > 0"
-        class="block"
-      >
-        <div class="block__head">
-          <h2>{{ t('omisos.organismPanelTitle') }}</h2>
-          <NuxtLink
-            :to="localePath('/analytics/omisos')"
-            class="block__all"
-          >
-            {{ t('omisos.organismPanelLink') }}
-          </NuxtLink>
-        </div>
-        <p class="block__help block__help--wide">
-          {{ t('omisos.organismPanelBody', { n: omisosCount }) }}
-        </p>
-      </section>
-
       <!-- ===== Spending by year ===== -->
       <section
         v-if="byYear.length"
@@ -533,7 +394,7 @@ useSeo(() => ({
           <YearBars
             :data="byYear"
             :height="150"
-            :href-for="(y) => localePath(`/contracts?buyers=${encodeURIComponent(name)}&year=${y}`)"
+            :href-for="(y) => localePath(`/contracts?buyers=${toQueryListParam(name)}&year=${y}`)"
           />
         </div>
       </section>
@@ -627,7 +488,7 @@ useSeo(() => ({
             class="rank__row"
           >
             <NuxtLink
-              :to="localePath(`/contracts?buyers=${encodeURIComponent(name)}&category=${encodeURIComponent(c.name)}`)"
+              :to="localePath(`/contracts?buyers=${toQueryListParam(name)}&category=${toQueryListParam(c.name)}`)"
               class="rank__link"
             >
               <span class="rank__name u-truncate">{{ c.name }}</span>
@@ -1140,35 +1001,4 @@ useSeo(() => ({
 @media (max-width: 380px) {
   .stats { grid-template-columns: 1fr; }
 }
-
-/* ---- Señales de gestión ---- */
-.bsig {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
-  gap: var(--s-2);
-}
-
-.bsig__item {
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-  padding: var(--s-3);
-  min-width: 0;
-}
-
-/* Level is carried by tone AND by the printed percentile, never by colour alone. */
-.bsig__item--watch { border-color: var(--alerta); background: var(--alerta-wash); }
-.bsig__item--high { border-color: var(--alerta); background: var(--alerta-wash); border-width: 2px; }
-
-.bsig__body { display: block; color: inherit; text-decoration: none; }
-a.bsig__body:hover .bsig__go { text-decoration: underline; }
-
-.bsig__label { display: block; font-size: var(--t-xs); color: var(--text-muted); }
-.bsig__value { display: block; font-weight: 600; }
-.bsig__pct { display: block; font-size: var(--t-xs); color: var(--text-muted); }
-
-/* Named in words, not by colour alone. */
-.bsig__go { display: block; margin-top: var(--s-1); font-size: var(--t-xs); color: var(--celeste-deep); }
 </style>
