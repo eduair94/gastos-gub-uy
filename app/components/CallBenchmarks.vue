@@ -11,6 +11,8 @@
  * All data is precomputed (product_analytics + item_price_baselines) and delivered by
  * /api/open-calls/{compraId}/benchmarks — this component only renders and links.
  */
+import { toQueryListParam } from '#shared/utils/query-list'
+
 interface RankEntry { id: string | null, name: string, spendUYU: number, lines: number }
 interface PriceBaseline { currency: string, unitName: string, n: number, p25: number, p50: number, p75: number, p95: number }
 interface BenchProduct {
@@ -36,8 +38,11 @@ const localePath = useLocalePath()
 
 const productTo = (code: string) => localePath(`/products/${encodeURIComponent(code)}`)
 const explorerTo = (code: string) => localePath(`/contracts?categoryId=${encodeURIComponent(code)}`)
-const sellerContractsTo = (code: string, name: string) => localePath(`/contracts?categoryId=${encodeURIComponent(code)}&suppliers=${encodeURIComponent(name)}`)
-const buyerContractsTo = (code: string, name: string) => localePath(`/contracts?categoryId=${encodeURIComponent(code)}&buyers=${encodeURIComponent(name)}`)
+// Names go through `toQueryListParam`, not plain encodeURIComponent: a comma in
+// a company or organism name is the explorer's list separator and would split
+// the value in two. See shared/utils/query-list.ts.
+const sellerContractsTo = (code: string, name: string) => localePath(`/contracts?categoryId=${encodeURIComponent(code)}&suppliers=${toQueryListParam(name)}`)
+const buyerContractsTo = (code: string, name: string) => localePath(`/contracts?categoryId=${encodeURIComponent(code)}&buyers=${toQueryListParam(name)}`)
 
 /**
  * Supplier ids may or may not carry the `R/` slash that supplier profiles key on.
@@ -45,13 +50,13 @@ const buyerContractsTo = (code: string, name: string) => localePath(`/contracts?
  * doesn't split the path. Mirrors the helper on the product ficha.
  */
 function supplierTo(s: RankEntry) {
-  if (!s.id) return localePath(`/contracts?suppliers=${encodeURIComponent(s.name)}`)
+  if (!s.id) return localePath(`/contracts?suppliers=${toQueryListParam(s.name)}`)
   const key = /^[A-Za-z]\d+$/.test(s.id) ? s.id.replace(/^([A-Za-z])/, '$1/') : s.id
   return localePath({ name: 'suppliers-id', params: { id: key } })
 }
 const buyerTo = (b: RankEntry) => b.id
   ? localePath(`/buyers/${encodeURIComponent(b.id)}`)
-  : localePath(`/contracts?buyers=${encodeURIComponent(b.name)}`)
+  : localePath(`/contracts?buyers=${toQueryListParam(b.name)}`)
 
 const priceUnitLabel = (pb: PriceBaseline) => [pb.currency, pb.unitName].filter(Boolean).join(' · ')
 </script>

@@ -2,7 +2,7 @@ import { createError, defineEventHandler, getQuery } from 'h3'
 import type { PipelineStage } from 'mongoose'
 import { ReleaseModel } from '../../../../shared/models/release'
 import { connectToDatabase, mongoose } from '../../utils/database'
-import { escapeRegex, safeRegex, sanitizeSearch, sourceUrl, toArray, toInt, toNumberOrNull } from '../../utils/query'
+import { escapeRegex, safeRegex, sanitizeSearch, sourceUrl, toArray, toInt, toNameCandidates, toNumberOrNull } from '../../utils/query'
 
 /** Fields that may be sorted on. All are indexed except `title`. */
 const SORT_FIELDS: Record<string, string> = {
@@ -170,7 +170,7 @@ export function buildContractFilters(query: Record<string, unknown>): ContractFi
   // and enter `and` as a single clause — this is what stops one filter's `$or`
   // from overwriting another's.
   const buyerClauses: Record<string, unknown>[] = []
-  const buyerNameFilter = nameFilter('buyer.name', toArray(query.buyers))
+  const buyerNameFilter = nameFilter('buyer.name', toNameCandidates(query.buyers))
   if (buyerNameFilter) buyerClauses.push(buyerNameFilter)
 
   const buyerIds = toArray(query.buyerIds)
@@ -181,7 +181,7 @@ export function buildContractFilters(query: Record<string, unknown>): ContractFi
 
   // --- Suppliers (by name and/or id) ----------------------------------------
   const supplierClauses: Record<string, unknown>[] = []
-  const rawSuppliers = toArray(query.suppliers)
+  const rawSuppliers = toNameCandidates(query.suppliers)
 
   // Explicit id param — the supported way to filter by supplier id.
   const supplierIds = toArray(query.supplierIds)
@@ -226,9 +226,10 @@ export function buildContractFilters(query: Record<string, unknown>): ContractFi
   // Maps to the award item classification description. NOT indexed, so this is
   // a refinement filter: cheap alongside a year/buyer filter, expensive alone.
   // Prefer `categoryId` below wherever the exact catalogue code is known — the
-  // description is unnormalised and frequently contains commas, which the list
-  // parsing splits into bogus fragments.
-  const categoryFilter = nameFilter('awards.items.classification.description', toArray(query.category))
+  // description is unnormalised and many-to-many with codes. Its frequent
+  // commas are no longer a hazard: they are escaped in the param and, for links
+  // written before that, recovered by `toNameCandidates`.
+  const categoryFilter = nameFilter('awards.items.classification.description', toNameCandidates(query.category))
   if (categoryFilter) and.push(categoryFilter)
 
   // --- Category by catalogue code (classification.id) ------------------------

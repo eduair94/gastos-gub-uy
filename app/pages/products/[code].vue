@@ -7,6 +7,8 @@
  * `item_price_baselines` rows. Counts are exact; spend is the plausibility-capped UYU total and is
  * shown only where the source actually priced the purchases (never a "$ 0" under a gold rule).
  */
+import { toQueryListParam } from '#shared/utils/query-list'
+
 const route = useRoute()
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -83,7 +85,7 @@ const explorerLink = computed(() => `/contracts?categoryId=${encodeURIComponent(
  * slash inside a single named-route param so the router doesn't split the path.
  */
 function supplierTo(s: { id?: string, name: string }) {
-  if (!s.id) return localePath(`/contracts?suppliers=${encodeURIComponent(s.name)}`)
+  if (!s.id) return localePath(`/contracts?suppliers=${toQueryListParam(s.name)}`)
   const key = /^[A-Za-z]\d+$/.test(s.id) ? s.id.replace(/^([A-Za-z])/, '$1/') : s.id
   return localePath({ name: 'suppliers-id', params: { id: key } })
 }
@@ -91,14 +93,14 @@ function supplierTo(s: { id?: string, name: string }) {
 function buyerTo(b: { id?: string, name: string }) {
   return b.id
     ? localePath(`/buyers/${encodeURIComponent(b.id)}`)
-    : localePath(`/contracts?buyers=${encodeURIComponent(b.name)}`)
+    : localePath(`/contracts?buyers=${toQueryListParam(b.name)}`)
 }
 
 // The rank rows' PRIMARY action: this product's contracts from THIS party, i.e.
 // filtered by product AND supplier/buyer at once (the profile link stays as a
 // secondary affordance where an id exists).
-const sellerContractsTo = (s: { name: string }) => localePath(`/contracts?categoryId=${encodeURIComponent(code.value)}&suppliers=${encodeURIComponent(s.name)}`)
-const buyerContractsTo = (b: { name: string }) => localePath(`/contracts?categoryId=${encodeURIComponent(code.value)}&buyers=${encodeURIComponent(b.name)}`)
+const sellerContractsTo = (s: { name: string }) => localePath(`/contracts?categoryId=${encodeURIComponent(code.value)}&suppliers=${toQueryListParam(s.name)}`)
+const buyerContractsTo = (b: { name: string }) => localePath(`/contracts?categoryId=${encodeURIComponent(code.value)}&buyers=${toQueryListParam(b.name)}`)
 
 // Supplier concentration bars: top suppliers by number of purchases (few = captive market).
 const supplierConcentration = computed(() =>
