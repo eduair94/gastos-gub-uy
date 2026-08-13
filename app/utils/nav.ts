@@ -102,6 +102,7 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             // should land.
             { key: 'senalesGestion', to: localePath('/analytics/senales'), icon: 'mdi-gauge-low' },
             { key: 'competencia', to: localePath('/analytics/competencia'), icon: 'mdi-account-group-outline' },
+            { key: 'tribunalCuentas', to: localePath('/analytics/tribunal-cuentas'), icon: 'mdi-gavel' },
             // The integrity record from the other side: not how a body buys, but who inside it
             // never declared their assets.
             { key: 'omisos', to: localePath('/analytics/omisos'), icon: 'mdi-file-document-alert-outline' },
