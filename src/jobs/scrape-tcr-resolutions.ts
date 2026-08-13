@@ -165,7 +165,11 @@ async function run(options: Options): Promise<void> {
     const highest = await TcrResolutionModel.findOne({ exists: true }, { _id: 0, tcrId: 1 })
       .sort({ tcrId: -1 })
       .lean();
-    const discovered = highest ? (highest as { tcrId: number }).tcrId + HEADROOM : DEFAULT_MAX_ID;
+    // `.lean()` se tipa como documento O arreglo, así que no admite un cast directo a
+    // la forma que se necesita: hay que pasar por unknown y validar el campo. Un cast
+    // directo compila local con --noEmit pero rompe el build del deploy (TS2352).
+    const highestId = (highest as unknown as { tcrId?: number } | null)?.tcrId;
+    const discovered = typeof highestId === "number" ? highestId + HEADROOM : DEFAULT_MAX_ID;
     const to = options.to ?? Math.max(discovered, DEFAULT_MAX_ID);
     const from = options.from ?? 1;
     // Más nuevas primero: los ids altos son las resoluciones recientes.
