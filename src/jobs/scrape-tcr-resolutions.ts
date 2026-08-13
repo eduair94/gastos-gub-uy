@@ -29,8 +29,17 @@ const UA = "gastos-gub tcr reader (+https://github.com/eduair94/gastos-gub-uy)";
 const DELAY_MS = 800;
 const FETCH_TIMEOUT_MS = 45_000;
 const DEFAULT_LIMIT = 300;
-/** Techo del recorrido. Se descubre sondeando; por encima las fichas no existen. */
-const DEFAULT_MAX_ID = 45000;
+/**
+ * Techo del recorrido, MEDIDO el 2026-08-13 por búsqueda binaria: 39590 existe, 39595 y
+ * todo lo de arriba está vacío. Arrancar más arriba no es gratis — una corrida con techo
+ * 45000 gastó 688 requests contra el sitio del Estado para traer cero fichas.
+ *
+ * En cada corrida el techo real se recalcula como (mayor id existente en base + HEADROOM),
+ * así que si el TC vuelve a publicar el recorrido se estira solo. Para re-medirlo a mano:
+ * pedir ids salteados y buscar dónde deja de aparecer "Fecha Resolución".
+ */
+const DEFAULT_MAX_ID = 39600;
+const HEADROOM = 200;
 
 interface Options {
   from: number | null;
@@ -152,7 +161,12 @@ async function run(options: Options): Promise<void> {
   if (options.id) {
     ids = [options.id];
   } else {
-    const to = options.to ?? DEFAULT_MAX_ID;
+    // El techo sale de lo que ya se vio existir, no de una constante que envejece.
+    const highest = await TcrResolutionModel.findOne({ exists: true }, { _id: 0, tcrId: 1 })
+      .sort({ tcrId: -1 })
+      .lean();
+    const discovered = highest ? (highest as { tcrId: number }).tcrId + HEADROOM : DEFAULT_MAX_ID;
+    const to = options.to ?? Math.max(discovered, DEFAULT_MAX_ID);
     const from = options.from ?? 1;
     // Más nuevas primero: los ids altos son las resoluciones recientes.
     const all: number[] = [];
