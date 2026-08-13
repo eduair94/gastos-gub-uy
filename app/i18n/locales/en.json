@@ -505,6 +505,9 @@
     "biddersHelp": "The open procurement data never says who else bid: it publishes only the winner. This comes from the award resolution, which sometimes lists them. When this panel is absent, the resolution did not say — not that there was no competition.",
     "biddersSoleHtml": "Only one company bid",
     "biddersOfficial": "See the official purchase record",
+    "tcrHelp": "The Court of Accounts audits the State itself. These rulings name this purchase. We show the VISTO — the case heading, which is all the online archive publishes — and a link to the full ruling: whether the spending was formally observed, and for how much, is in the PDF, not here.",
+    "tcrPdf": "Open the ruling (PDF)",
+    "tcrSource": "See the record at the Court of Accounts",
     "biddersCount": "{n} offers were received",
     "biddersSole": "The resolution records a single offer",
     "biddersWinner": "awarded",
@@ -528,6 +531,7 @@
     "ocid": "OCDS identifier",
     "sections": {
       "bidders": "Who else bid",
+      "tcr": "What the Court of Accounts said",
       "summary": "Summary",
       "items": "What was bought",
       "parties": "Who is involved",
