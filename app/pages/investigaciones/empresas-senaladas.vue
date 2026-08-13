@@ -7,7 +7,7 @@
  */
 import { EMP_CASES, EMP_OVERVIEW_STATS, empContent, type EmpCase, type EmpSector } from '~/data/investigaciones-empresas'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const localePath = useLocalePath()
 const c = computed(() => empContent(locale.value))
 
@@ -45,310 +45,206 @@ const lang = <T,>(b: { es: T, en: T }) => (locale.value === 'en' ? b.en : b.es)
 function supplierHref(k: EmpCase) {
   return k.db.inData && k.db.supplierId ? localePath(`/suppliers/${k.db.supplierId}`) : null
 }
+
+const headlineTiles = computed(() => [
+  { value: EMP_OVERVIEW_STATS.companies, label: c.value.tiles.companies, sub: c.value.tiles.companiesSub },
+  { value: EMP_OVERVIEW_STATS.inData, tone: 'verde' as const, label: c.value.tiles.inData, sub: c.value.tiles.inDataSub },
+  { value: EMP_OVERVIEW_STATS.notInData, tone: 'alerta' as const, label: c.value.tiles.notInData, sub: c.value.tiles.notInDataSub },
+  { value: EMP_OVERVIEW_STATS.condenas, tone: 'alerta' as const, label: c.value.tiles.condenas, sub: c.value.tiles.condenasSub },
+])
+
+/** The two deep-dives this catalogue opens into. Copy lives here rather than in
+ *  the template, where no locale file could ever reach it. */
+const DEEP_DIVES = [
+  {
+    path: '/investigaciones/asse-ambulancias',
+    emoji: '🚑',
+    eyebrow: { es: 'Salud · ASSE', en: 'Health · ASSE' },
+    title: { es: 'ITHG: 5 fichas para US$ 20 millones', en: 'ITHG: 5 records for US$20 million' },
+    dek: {
+      es: 'Una proveedora marítima que concentró el 96% de los traslados de ASSE por compra directa. La base registra $33 M; el Tribunal de Cuentas, más de $2.000 M.',
+      en: 'A maritime supplier that concentrated 96% of ASSE transfers by direct purchase. The data shows $33 M; the Tribunal de Cuentas, over $2,000 M.',
+    },
+  },
+  {
+    path: '/investigaciones/frigorifico-saturno',
+    emoji: '🥩',
+    eyebrow: { es: 'Defensa · FF.AA.', en: 'Defense · Armed forces' },
+    title: { es: 'Saturno: la carne de los cuarteles', en: 'Saturno: the barracks’ meat' },
+    dek: {
+      es: '283 contratos por $1.140 M con las tres fuerzas y el INDA. En la Armada, un faltante de 57 toneladas terminó en la Fiscalía.',
+      en: '283 contracts for $1,140 M with all three forces and INDA. In the Navy, a 57-tonne shortfall ended up with prosecutors.',
+    },
+  },
+]
+
+const SECTOR_LABEL = { es: 'Sector', en: 'Sector' }
+const META_LABELS = {
+  atStake: { es: 'En juego', en: 'At stake' },
+  status: { es: 'Estado', en: 'Status' },
+  inData: { es: 'En la base', en: 'In the data' },
+  otherSide: { es: 'La otra campana', en: 'The other side' },
+  sources: { es: 'Fuentes', en: 'Sources' },
+}
 </script>
 
 <template>
   <div class="inv">
-    <!-- Cover -->
-    <header class="inv-cover">
-      <div class="u-container">
-        <div class="inv-file">
-          <span>EXPEDIENTE&nbsp; <b>{{ c.file.org }}</b></span>
-          <span>{{ c.file.tag }}</span>
-          <span>PERÍODO&nbsp; <b>{{ c.file.period }}</b></span>
-          <span>{{ c.common.source }}</span>
-        </div>
-        <p class="inv-kicker">
-          {{ c.kicker }}
-        </p>
-        <h1>{{ c.title }}</h1>
-        <p class="inv-dek">
-          {{ c.dek }}
-        </p>
-        <div class="inv-chips">
-          <span
-            v-for="ch in c.chips"
-            :key="ch"
-            class="inv-chip"
-          >{{ ch }}</span>
-        </div>
-      </div>
-    </header>
+    <InvCover
+      :fields="[
+        { label: t('inv.file.expediente'), value: c.file.org },
+        { value: c.file.tag },
+        { label: t('inv.file.periodo'), value: c.file.period },
+        { value: c.common.source },
+      ]"
+      :kicker="c.kicker"
+      :title="c.title"
+      :dek="c.dek"
+      :chips="c.chips"
+    />
 
-    <!-- Tiles -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-tiles">
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              {{ EMP_OVERVIEW_STATS.companies }}
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tiles.companies }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tiles.companiesSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n emp-good">
-              {{ EMP_OVERVIEW_STATS.inData }}
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tiles.inData }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tiles.inDataSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n emp-warn">
-              {{ EMP_OVERVIEW_STATS.notInData }}
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tiles.notInData }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tiles.notInDataSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n emp-cond">
-              {{ EMP_OVERVIEW_STATS.condenas }}
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tiles.condenas }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tiles.condenasSub }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <InvSection alt>
+      <InvTiles :items="headlineTiles" />
+    </InvSection>
 
     <!-- Método -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.method.tag }}
-          </p>
-          <h2>{{ c.method.title }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.method.p1 }}</p>
-          <p>{{ c.method.p2 }}</p>
-        </div>
-        <div
-          class="inv-finding"
-          style="margin-top: var(--s-6);"
-        >
-          <p class="inv-kicker">
-            {{ c.gap.tag }}
-          </p>
-          <h3 style="margin: 0 0 6px;">
-            {{ c.gap.title }}
-          </h3>
-          <p>{{ c.gap.p }}</p>
-        </div>
+    <InvSection
+      :eyebrow="c.method.tag"
+      :title="c.method.title"
+    >
+      <div class="inv-prose">
+        <p>{{ c.method.p1 }}</p>
+        <p>{{ c.method.p2 }}</p>
       </div>
-    </section>
+      <InvFinding
+        :kicker="c.gap.tag"
+        :title="c.gap.title"
+        :body="c.gap.p"
+      />
+    </InvSection>
 
     <!-- Deep-dive CTAs -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-serie">
-          <span class="inv-serie__tag">{{ c.cta.tag }}</span>
-          <h2>{{ c.cta.title }}</h2>
-        </div>
-        <p
-          class="inv-prose"
-          style="margin-bottom: var(--s-6); color: var(--text-muted);"
-        >
-          {{ c.cta.intro }}
-        </p>
-        <div class="inv-cards">
-          <NuxtLink
-            :to="localePath('/investigaciones/asse-ambulancias')"
-            class="inv-icard"
-          >
-            <div class="inv-icard__top">
-              <div>
-                <p class="inv-icard__eyebrow">
-                  {{ lang({ es: 'Salud · ASSE', en: 'Health · ASSE' }) }}
-                </p>
-                <h3 class="inv-icard__title">
-                  {{ lang({ es: 'ITHG: 5 fichas para US$ 20 millones', en: 'ITHG: 5 records for US$20 million' }) }}
-                </h3>
-              </div>
-              <div class="inv-icard__emoji">
-                🚑
-              </div>
-            </div>
-            <div class="inv-icard__body">
-              <p class="inv-icard__dek">
-                {{ lang({ es: 'Una proveedora marítima que concentró el 96% de los traslados de ASSE por compra directa. La base registra $33 M; el Tribunal de Cuentas, más de $2.000 M.', en: 'A maritime supplier that concentrated 96% of ASSE transfers by direct purchase. The data shows $33 M; the Tribunal de Cuentas, over $2,000 M.' }) }}
-              </p>
-            </div>
-            <div class="inv-icard__cta">
-              {{ c.common.readMore }} →
-            </div>
-          </NuxtLink>
-
-          <NuxtLink
-            :to="localePath('/investigaciones/frigorifico-saturno')"
-            class="inv-icard"
-          >
-            <div class="inv-icard__top">
-              <div>
-                <p class="inv-icard__eyebrow">
-                  {{ lang({ es: 'Defensa · FF.AA.', en: 'Defense · Armed forces' }) }}
-                </p>
-                <h3 class="inv-icard__title">
-                  {{ lang({ es: 'Saturno: la carne de los cuarteles', en: 'Saturno: the barracks’ meat' }) }}
-                </h3>
-              </div>
-              <div class="inv-icard__emoji">
-                🥩
-              </div>
-            </div>
-            <div class="inv-icard__body">
-              <p class="inv-icard__dek">
-                {{ lang({ es: '283 contratos por $1.140 M con las tres fuerzas y el INDA. En la Armada, un faltante de 57 toneladas terminó en la Fiscalía.', en: '283 contracts for $1,140 M with all three forces and INDA. In the Navy, a 57-tonne shortfall ended up with prosecutors.' }) }}
-              </p>
-            </div>
-            <div class="inv-icard__cta">
-              {{ c.common.readMore }} →
-            </div>
-          </NuxtLink>
-        </div>
-      </div>
-    </section>
-
-    <!-- Catálogo por sector -->
-    <section
-      v-for="(g, gi) in grouped"
-      :key="g.sector"
-      class="inv-sec"
-      :class="{ 'inv-sec--alt': gi % 2 === 1 }"
+    <InvSection
+      alt
+      serie
+      :tag="c.cta.tag"
+      :title="c.cta.title"
+      :dek="c.cta.intro"
     >
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ lang({ es: 'Sector', en: 'Sector' }) }}
-          </p>
-          <h2>{{ (c.sector as Record<string, string>)[g.sector] }}</h2>
-        </div>
-
-        <div class="emp-list">
-          <article
-            v-for="k in g.cases"
-            :key="k.key"
-            class="emp-card"
-          >
-            <header class="emp-card__head">
-              <h3 class="emp-card__name">
-                {{ k.company }}
-              </h3>
-              <div class="emp-badges">
-                <span
-                  class="emp-flag"
-                  :class="`emp-flag--${k.flag}`"
-                >{{ (c.flag as Record<string, string>)[k.flag] }}</span>
-                <span
-                  class="emp-db"
-                  :class="k.db.inData ? 'emp-db--in' : 'emp-db--out'"
-                >
-                  <template v-if="k.db.inData">✓ {{ c.common.inData }} · {{ k.db.contracts }} · {{ k.db.years }}</template>
-                  <template v-else>○ {{ c.common.notInData }}</template>
-                </span>
-              </div>
-            </header>
-
-            <p class="emp-card__alleg">
-              {{ lang(k.allegation) }}
-            </p>
-
-            <div class="emp-meta">
-              <div
-                v-if="k.amount"
-                class="emp-meta__row"
-              >
-                <span class="emp-meta__k">{{ lang({ es: 'En juego', en: 'At stake' }) }}</span>
-                <span class="emp-meta__v u-mono">{{ lang(k.amount) }}</span>
-              </div>
-              <div class="emp-meta__row">
-                <span class="emp-meta__k">{{ lang({ es: 'Estado', en: 'Status' }) }}</span>
-                <span class="emp-meta__v">{{ lang(k.status) }}</span>
-              </div>
-              <div class="emp-meta__row">
-                <span class="emp-meta__k">{{ lang({ es: 'En la base', en: 'In the data' }) }}</span>
-                <span class="emp-meta__v emp-dbnote">{{ k.db.note ? lang(k.db.note) : (k.db.reason ? lang(k.db.reason) : '—') }}</span>
-              </div>
-            </div>
-
-            <p class="emp-caveat">
-              <span class="emp-caveat__tag">{{ lang({ es: 'La otra campana', en: 'The other side' }) }}</span>
-              {{ lang(k.caveat) }}
-            </p>
-
-            <footer class="emp-card__foot">
-              <div class="emp-src">
-                <span class="emp-src__lbl">{{ lang({ es: 'Fuentes', en: 'Sources' }) }}:</span>
-                <a
-                  v-for="s in k.sources"
-                  :key="s.url"
-                  :href="s.url"
-                  target="_blank"
-                  rel="noopener"
-                  class="emp-src__a"
-                >{{ s.outlet }}</a>
-              </div>
-              <NuxtLink
-                v-if="supplierHref(k)"
-                :to="supplierHref(k)!"
-                class="emp-profile u-mono"
-              >{{ c.common.supplierProfile }} →</NuxtLink>
-            </footer>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <LeakTip
-          :subject="c.title"
-          path="/investigaciones/empresas-senaladas"
+      <div class="inv-cards">
+        <InvLinkCard
+          v-for="d in DEEP_DIVES"
+          :key="d.path"
+          :to="localePath(d.path)"
+          :emoji="d.emoji"
+          :eyebrow="lang(d.eyebrow)"
+          :title="lang(d.title)"
+          :dek="lang(d.dek)"
+          :cta="c.common.readMore"
         />
       </div>
-    </section>
+    </InvSection>
 
-    <!-- Disclaimer -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-disclaimer">
-          <h3>{{ c.disclaimerTitle }}</h3>
-          <p
-            v-for="(p, i) in c.disclaimer"
-            :key="i"
-          >
-            {{ p }}
+    <!-- Catálogo por sector -->
+    <InvSection
+      v-for="(g, gi) in grouped"
+      :key="g.sector"
+      :alt="gi % 2 === 1"
+      :eyebrow="lang(SECTOR_LABEL)"
+      :title="(c.sector as Record<string, string>)[g.sector]"
+    >
+      <div class="emp-list">
+        <article
+          v-for="k in g.cases"
+          :key="k.key"
+          class="emp-card"
+        >
+          <header class="emp-card__head">
+            <h3 class="emp-card__name">
+              {{ k.company }}
+            </h3>
+            <div class="emp-badges">
+              <span
+                class="emp-flag"
+                :class="`emp-flag--${k.flag}`"
+              >{{ (c.flag as Record<string, string>)[k.flag] }}</span>
+              <span
+                class="emp-db"
+                :class="k.db.inData ? 'emp-db--in' : 'emp-db--out'"
+              >
+                <template v-if="k.db.inData">✓ {{ c.common.inData }} · {{ k.db.contracts }} · {{ k.db.years }}</template>
+                <template v-else>○ {{ c.common.notInData }}</template>
+              </span>
+            </div>
+          </header>
+
+          <p class="emp-card__alleg">
+            {{ lang(k.allegation) }}
           </p>
-        </div>
+
+          <div class="emp-meta">
+            <div
+              v-if="k.amount"
+              class="emp-meta__row"
+            >
+              <span class="emp-meta__k">{{ lang(META_LABELS.atStake) }}</span>
+              <span class="emp-meta__v u-mono">{{ lang(k.amount) }}</span>
+            </div>
+            <div class="emp-meta__row">
+              <span class="emp-meta__k">{{ lang(META_LABELS.status) }}</span>
+              <span class="emp-meta__v">{{ lang(k.status) }}</span>
+            </div>
+            <div class="emp-meta__row">
+              <span class="emp-meta__k">{{ lang(META_LABELS.inData) }}</span>
+              <span class="emp-meta__v emp-dbnote">{{ k.db.note ? lang(k.db.note) : (k.db.reason ? lang(k.db.reason) : '—') }}</span>
+            </div>
+          </div>
+
+          <p class="emp-caveat">
+            <span class="emp-caveat__tag">{{ lang(META_LABELS.otherSide) }}</span>
+            {{ lang(k.caveat) }}
+          </p>
+
+          <footer class="emp-card__foot">
+            <div class="emp-src">
+              <span class="emp-src__lbl">{{ lang(META_LABELS.sources) }}:</span>
+              <a
+                v-for="s in k.sources"
+                :key="s.url"
+                :href="s.url"
+                target="_blank"
+                rel="noopener"
+                class="emp-src__a"
+              >{{ s.outlet }}</a>
+            </div>
+            <NuxtLink
+              v-if="supplierHref(k)"
+              :to="supplierHref(k)!"
+              class="emp-profile u-mono"
+            >{{ c.common.supplierProfile }} →</NuxtLink>
+          </footer>
+        </article>
       </div>
-    </section>
+    </InvSection>
+
+    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
+    <InvSection>
+      <LeakTip
+        :subject="c.title"
+        path="/investigaciones/empresas-senaladas"
+      />
+    </InvSection>
+
+    <InvSection alt>
+      <InvDisclaimer
+        :title="c.disclaimerTitle"
+        :paragraphs="c.disclaimer"
+      />
+    </InvSection>
   </div>
 </template>
 
 <style scoped>
-/* A count of companies found in the data — presence, not pesos. Not gold. */
-.emp-good { color: var(--verde); }
-.emp-warn { color: var(--alerta); }
-.emp-cond { color: var(--alerta); }
-
 .emp-list { display: flex; flex-direction: column; gap: var(--s-4); }
 .emp-card {
   padding: var(--s-5) var(--s-5) var(--s-4);

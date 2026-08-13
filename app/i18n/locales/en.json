@@ -3354,5 +3354,18 @@
       },
       "bpValue": "{n}",
       "sources": "Sources:"
+  },
+  "inv": {
+    "file": {
+      "expediente": "File",
+      "organismo": "Body",
+      "organismos": "Bodies",
+      "inciso": "Budget line",
+      "periodo": "Period",
+      "alcance": "Scope",
+      "articulo": "Article",
+      "recalculado": "Recomputed {date}"
+    },
+    "verifiedSources": "Verified sources"
   }
 }

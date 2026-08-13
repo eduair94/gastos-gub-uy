@@ -22,7 +22,7 @@
 import type { IndicatorGroup, IndicatorRow, IndicatorVerdict } from '~/data/investigaciones-mejor-o-peor'
 import { MOP_INDICATORS, MOP_MECHANISMS, MOP_SOURCES, MOP_TALLY } from '~/data/investigaciones-mejor-o-peor'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const isEn = computed(() => locale.value === 'en')
 
 const ES = {
@@ -339,6 +339,14 @@ const gapRows = computed(() => {
 const WORSE_KEYS = ['homicidios-tasa', 'suicidios', 'poblacion-privada-libertad', 'deuda-gobierno-central-serie-larga', 'resultado-fiscal-spg', 'asentamientos-personas', 'desempleo']
 const worseRows = computed(() => WORSE_KEYS.map(k => byKey[k]!).filter(Boolean))
 
+/** The first tile is a two-colour tally, so it takes the `value:tally` slot. */
+const headlineTiles = computed(() => [
+  { key: 'tally', label: c.value.tiles.a, sub: c.value.tiles.aSub },
+  { value: MOP_TALLY.vs14.igual, label: c.value.tiles.b, sub: c.value.tiles.bSub },
+  { value: '×1,7', tone: 'alerta' as const, label: c.value.tiles.c, sub: c.value.tiles.cSub },
+  { value: '46 pts', label: c.value.tiles.d, sub: c.value.tiles.dSub },
+])
+
 // ---- SEO -----------------------------------------------------------------
 const localePath = useLocalePath()
 const siteUrl = useRuntimeConfig().public.siteUrl as string
@@ -378,543 +386,443 @@ useSeo(() => ({
 
 <template>
   <div class="inv mop">
-    <!-- Cover -->
-    <header class="inv-cover">
-      <div class="u-container">
-        <div class="inv-file">
-          <span>EXPEDIENTE&nbsp; <b>{{ c.file.org }}</b></span>
-          <span>{{ c.file.scope }}</span>
-          <span>PERÍODO&nbsp; <b>{{ c.file.period }}</b></span>
-          <span>{{ c.file.source }}</span>
-        </div>
-        <p class="inv-kicker">
-          {{ c.kicker }}
-        </p>
-        <h1>{{ c.title }}</h1>
-        <p class="inv-dek">
-          {{ c.dek }}
-        </p>
-        <div class="inv-chips">
-          <span
-            v-for="ch in c.chips"
-            :key="ch"
-            class="inv-chip"
-          >{{ ch }}</span>
-        </div>
-      </div>
-    </header>
+    <InvCover
+      :fields="[
+        { label: t('inv.file.expediente'), value: c.file.org },
+        { value: c.file.scope },
+        { label: t('inv.file.periodo'), value: c.file.period },
+        { value: c.file.source },
+      ]"
+      :kicker="c.kicker"
+      :title="c.title"
+      :dek="c.dek"
+      :chips="c.chips"
+    />
 
-    <!-- Tiles -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-tiles">
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              <span class="mop-good">{{ MOP_TALLY.vsStart.mejor }}</span>
-              <span class="mop-sep">/</span>
-              <span class="mop-bad">{{ MOP_TALLY.vsStart.peor }}</span>
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tiles.a }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tiles.aSub }}
-            </div>
+    <InvSection alt>
+      <InvTiles :items="headlineTiles">
+        <template #value:tally>
+          <div class="inv-tile__n">
+            <span class="mop-good">{{ MOP_TALLY.vsStart.mejor }}</span>
+            <span class="mop-sep">/</span>
+            <span class="mop-bad">{{ MOP_TALLY.vsStart.peor }}</span>
           </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              {{ MOP_TALLY.vs14.igual }}
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tiles.b }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tiles.bSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n inv-tile__n--alerta">
-              ×1,7
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tiles.c }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tiles.cSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              46 pts
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tiles.d }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tiles.dSub }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+        </template>
+      </InvTiles>
+    </InvSection>
 
     <!-- The baseline trap -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <span class="inv-serie__tag">{{ c.baseTag }}</span>
-          <h2>{{ c.baseTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p
-            v-for="(p, i) in [c.base1, c.base2, c.base3]"
-            :key="i"
+    <InvSection
+      :tag="c.baseTag"
+      :title="c.baseTitle"
+    >
+      <div class="inv-prose">
+        <p
+          v-for="(p, i) in [c.base1, c.base2, c.base3]"
+          :key="i"
+        >
+          <template
+            v-for="(s, j) in segments(p)"
+            :key="j"
           >
-            <template
-              v-for="(s, j) in segments(p)"
-              :key="j"
-            >
-              <strong v-if="s.strong">{{ s.text }}</strong>
-              <template v-else>
-                {{ s.text }}
-              </template>
+            <strong v-if="s.strong">{{ s.text }}</strong>
+            <template v-else>
+              {{ s.text }}
             </template>
-          </p>
-        </div>
+          </template>
+        </p>
+      </div>
 
-        <h3 class="mop-h3">
-          {{ c.cardsTitle }}
-        </h3>
-        <div class="mop-boards">
-          <div
-            v-for="b in [
-              { k: 'start', title: c.vsStartLabel, t: MOP_TALLY.vsStart },
-              { k: '14', title: c.vs14Label, t: MOP_TALLY.vs14 },
-            ]"
-            :key="b.k"
-            class="mop-board"
-          >
-            <h4>{{ b.title }}</h4>
-            <ul>
-              <li>
-                <b class="mop-good">{{ b.t.mejor }}</b><span>{{ c.mejor }}</span>
-              </li>
-              <li>
-                <b class="mop-flat">{{ b.t.igual }}</b><span>{{ c.igual }}</span>
-              </li>
-              <li>
-                <b class="mop-bad">{{ b.t.peor }}</b><span>{{ c.peor }}</span>
-              </li>
-              <li class="is-dim">
-                <b>{{ b.t.sinDato }}</b><span>{{ c.sinDato }}</span>
-              </li>
-            </ul>
-          </div>
+      <h3 class="inv-subhead">
+        {{ c.cardsTitle }}
+      </h3>
+      <div class="mop-boards">
+        <div
+          v-for="b in [
+            { k: 'start', title: c.vsStartLabel, t: MOP_TALLY.vsStart },
+            { k: '14', title: c.vs14Label, t: MOP_TALLY.vs14 },
+          ]"
+          :key="b.k"
+          class="mop-board"
+        >
+          <h4>{{ b.title }}</h4>
+          <ul>
+            <li>
+              <b class="mop-good">{{ b.t.mejor }}</b><span>{{ c.mejor }}</span>
+            </li>
+            <li>
+              <b class="mop-flat">{{ b.t.igual }}</b><span>{{ c.igual }}</span>
+            </li>
+            <li>
+              <b class="mop-bad">{{ b.t.peor }}</b><span>{{ c.peor }}</span>
+            </li>
+            <li class="is-dim">
+              <b>{{ b.t.sinDato }}</b><span>{{ c.sinDato }}</span>
+            </li>
+          </ul>
         </div>
       </div>
-    </section>
+    </InvSection>
 
     <!-- What got worse -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <span class="inv-serie__tag">{{ c.worseTag }}</span>
-          <h2>{{ c.worseTitle }}</h2>
-          <p>{{ c.worseIntro }}</p>
-        </div>
-
-        <ol class="mop-worse">
-          <li
-            v-for="r in worseRows"
-            :key="r.key"
-          >
-            <div class="mop-worse__head">
-              <h3>{{ label(r) }}</h3>
-              <p class="mop-worse__delta">
-                <span class="mop-worse__from">{{ r.startYear ?? r.series[0]!.year }}: {{ num(r.vStart ?? r.series[0]!.value, r.decimals) }}</span>
-                <span aria-hidden="true">→</span>
-                <span class="mop-worse__to">{{ r.lastYear }}: {{ num(r.vLast, r.decimals) }}</span>
-                <span class="mop-worse__unit">{{ unit(r) }}</span>
-              </p>
-            </div>
-            <p class="mop-worse__note">
-              {{ note(r) }}
-            </p>
-          </li>
-        </ol>
-
-        <div class="inv-finding mop-finding">
-          <span class="inv-obs__tag">1989 – 2025</span>
-          <h3>{{ c.worseFinding }}</h3>
-        </div>
-
-        <ChartBlock
-          :title="label(byKey['homicidios-tasa']!)"
-          :help="unit(byKey['homicidios-tasa']!)"
-          :scroll="false"
-          class="mop-chart"
+    <InvSection
+      alt
+      :tag="c.worseTag"
+      :title="c.worseTitle"
+      :dek="c.worseIntro"
+    >
+      <ol class="mop-worse">
+        <li
+          v-for="r in worseRows"
+          :key="r.key"
         >
-          <TrendLines
-            :labels="homicideChart.labels"
-            :series="homicideChart.series"
-            format="plain"
-            :decimals="1"
-            :unit="unit(byKey['homicidios-tasa']!)"
-            :height="300"
-            :label="label(byKey['homicidios-tasa']!)"
-          />
-          <template #meta>
-            <a
-              :href="byKey['homicidios-tasa']!.sourceUrl"
-              target="_blank"
-              rel="noopener"
-            >{{ byKey['homicidios-tasa']!.source }}</a>
-          </template>
-        </ChartBlock>
-      </div>
-    </section>
+          <div class="mop-worse__head">
+            <h3>{{ label(r) }}</h3>
+            <p class="mop-worse__delta">
+              <span class="mop-worse__from">{{ r.startYear ?? r.series[0]!.year }}: {{ num(r.vStart ?? r.series[0]!.value, r.decimals) }}</span>
+              <span aria-hidden="true">→</span>
+              <span class="mop-worse__to">{{ r.lastYear }}: {{ num(r.vLast, r.decimals) }}</span>
+              <span class="mop-worse__unit">{{ unit(r) }}</span>
+            </p>
+          </div>
+          <p class="mop-worse__note">
+            {{ note(r) }}
+          </p>
+        </li>
+      </ol>
+
+      <InvFinding
+        class="mop-finding"
+        kicker="1989 – 2025"
+        :title="c.worseFinding"
+      />
+
+      <ChartBlock
+        :title="label(byKey['homicidios-tasa']!)"
+        :help="unit(byKey['homicidios-tasa']!)"
+        :scroll="false"
+        class="mop-chart"
+      >
+        <TrendLines
+          :labels="homicideChart.labels"
+          :series="homicideChart.series"
+          format="plain"
+          :decimals="1"
+          :unit="unit(byKey['homicidios-tasa']!)"
+          :height="300"
+          :label="label(byKey['homicidios-tasa']!)"
+        />
+        <template #meta>
+          <a
+            :href="byKey['homicidios-tasa']!.sourceUrl"
+            target="_blank"
+            rel="noopener"
+          >{{ byKey['homicidios-tasa']!.source }}</a>
+        </template>
+      </ChartBlock>
+    </InvSection>
 
     <!-- What contradicts the story -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <span class="inv-serie__tag">{{ c.contraTag }}</span>
-          <h2>{{ c.contraTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p
-            v-for="(p, i) in [c.contra1, c.contra2]"
-            :key="i"
-          >
-            <template
-              v-for="(s, j) in segments(p)"
-              :key="j"
-            >
-              <strong v-if="s.strong">{{ s.text }}</strong>
-              <template v-else>
-                {{ s.text }}
-              </template>
-            </template>
-          </p>
-        </div>
-
-        <ChartBlock
-          :title="label(byKey['rapinas-tasa']!)"
-          :help="unit(byKey['rapinas-tasa']!)"
-          :scroll="false"
-          class="mop-chart"
+    <InvSection
+      :tag="c.contraTag"
+      :title="c.contraTitle"
+    >
+      <div class="inv-prose">
+        <p
+          v-for="(p, i) in [c.contra1, c.contra2]"
+          :key="i"
         >
-          <TrendLines
-            :labels="robberyChart.labels"
-            :series="robberyChart.series"
-            format="plain"
-            :decimals="0"
-            :unit="unit(byKey['rapinas-tasa']!)"
-            :height="280"
-            :label="label(byKey['rapinas-tasa']!)"
-          />
-          <template #meta>
-            <a
-              :href="byKey['rapinas-tasa']!.sourceUrl"
-              target="_blank"
-              rel="noopener"
-            >{{ byKey['rapinas-tasa']!.source }}</a>
+          <template
+            v-for="(s, j) in segments(p)"
+            :key="j"
+          >
+            <strong v-if="s.strong">{{ s.text }}</strong>
+            <template v-else>
+              {{ s.text }}
+            </template>
           </template>
-        </ChartBlock>
+        </p>
       </div>
-    </section>
+
+      <ChartBlock
+        :title="label(byKey['rapinas-tasa']!)"
+        :help="unit(byKey['rapinas-tasa']!)"
+        :scroll="false"
+        class="mop-chart"
+      >
+        <TrendLines
+          :labels="robberyChart.labels"
+          :series="robberyChart.series"
+          format="plain"
+          :decimals="0"
+          :unit="unit(byKey['rapinas-tasa']!)"
+          :height="280"
+          :label="label(byKey['rapinas-tasa']!)"
+        />
+        <template #meta>
+          <a
+            :href="byKey['rapinas-tasa']!.sourceUrl"
+            target="_blank"
+            rel="noopener"
+          >{{ byKey['rapinas-tasa']!.source }}</a>
+        </template>
+      </ChartBlock>
+    </InvSection>
 
     <!-- The gap -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <span class="inv-serie__tag">{{ c.gapTag }}</span>
-          <h2>{{ c.gapTitle }}</h2>
-          <p>{{ c.gapIntro }}</p>
+    <InvSection
+      alt
+      :tag="c.gapTag"
+      :title="c.gapTitle"
+      :dek="c.gapIntro"
+    >
+      <div class="mop-gap">
+        <div class="mop-gap__legend">
+          <span class="mop-gap__key mop-gap__key--life">{{ c.gapLife }}</span>
+          <span class="mop-gap__key mop-gap__key--country">{{ c.gapCountry }}</span>
         </div>
-        <div class="mop-gap">
-          <div class="mop-gap__legend">
-            <span class="mop-gap__key mop-gap__key--life">{{ c.gapLife }}</span>
-            <span class="mop-gap__key mop-gap__key--country">{{ c.gapCountry }}</span>
-          </div>
-          <ol class="mop-gap__rows">
-            <li
-              v-for="g in gapRows"
-              :key="g.year"
+        <ol class="mop-gap__rows">
+          <li
+            v-for="g in gapRows"
+            :key="g.year"
+          >
+            <span class="mop-gap__year">{{ g.year }}</span>
+            <span
+              class="mop-gap__track"
+              role="img"
+              :aria-label="`${g.year}: ${c.gapLife} ${g.life}%, ${c.gapCountry} ${g.country}%, ${c.gapDiff} ${g.gap}`"
             >
-              <span class="mop-gap__year">{{ g.year }}</span>
               <span
-                class="mop-gap__track"
-                role="img"
-                :aria-label="`${g.year}: ${c.gapLife} ${g.life}%, ${c.gapCountry} ${g.country}%, ${c.gapDiff} ${g.gap}`"
-              >
-                <span
-                  class="mop-gap__bar"
-                  :style="{ left: `${Math.min(g.life, g.country)}%`, width: `${Math.abs(g.gap)}%` }"
-                />
-                <span
-                  class="mop-gap__dot mop-gap__dot--country"
-                  :style="{ left: `${g.country}%` }"
-                ><b>{{ g.country }}%</b></span>
-                <span
-                  class="mop-gap__dot mop-gap__dot--life"
-                  :style="{ left: `${g.life}%` }"
-                ><b>{{ g.life }}%</b></span>
-              </span>
-              <span class="mop-gap__diff">{{ g.gap }} {{ c.gapPts }}</span>
-            </li>
-          </ol>
-          <p class="mop-gap__src">
-            <a
-              href="https://www.latinobarometro.org/latOnline.jsp"
-              target="_blank"
-              rel="noopener"
-            >Corporación Latinobarómetro</a> · {{ c.gapOnlyBoth }}
-          </p>
-        </div>
+                class="mop-gap__bar"
+                :style="{ left: `${Math.min(g.life, g.country)}%`, width: `${Math.abs(g.gap)}%` }"
+              />
+              <span
+                class="mop-gap__dot mop-gap__dot--country"
+                :style="{ left: `${g.country}%` }"
+              ><b>{{ g.country }}%</b></span>
+              <span
+                class="mop-gap__dot mop-gap__dot--life"
+                :style="{ left: `${g.life}%` }"
+              ><b>{{ g.life }}%</b></span>
+            </span>
+            <span class="mop-gap__diff">{{ g.gap }} {{ c.gapPts }}</span>
+          </li>
+        </ol>
+        <p class="mop-gap__src">
+          <a
+            href="https://www.latinobarometro.org/latOnline.jsp"
+            target="_blank"
+            rel="noopener"
+          >Corporación Latinobarómetro</a> · {{ c.gapOnlyBoth }}
+        </p>
       </div>
-    </section>
+    </InvSection>
 
     <!-- Mechanisms -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <span class="inv-serie__tag">{{ c.mechTag }}</span>
-          <h2>{{ c.mechTitle }}</h2>
-          <p>{{ c.mechIntro }}</p>
-        </div>
-        <div class="mop-mechs">
-          <article
-            v-for="m in MOP_MECHANISMS"
-            :key="m.key"
-            class="mop-mech"
-          >
-            <h3>{{ isEn ? m.titleEn : m.titleEs }}</h3>
-            <p>{{ isEn ? m.bodyEn : m.bodyEs }}</p>
-            <div class="mop-mech__ev">
-              <span class="mop-mech__evtag">{{ c.mechEvidence }}</span>
-              <p>{{ isEn ? m.evidenceEn : m.evidenceEs }}</p>
-              <a
-                :href="m.sourceUrl"
-                target="_blank"
-                rel="noopener"
-              >{{ m.source }}</a>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- Scoreboard -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <span class="inv-serie__tag">{{ c.scoreTag }}</span>
-          <h2>{{ c.scoreTitle }}</h2>
-          <p>{{ c.scoreIntro }}</p>
-        </div>
-
-        <div
-          class="mop-filters"
-          role="group"
-          :aria-label="c.scoreTitle"
+    <InvSection
+      :tag="c.mechTag"
+      :title="c.mechTitle"
+      :dek="c.mechIntro"
+    >
+      <div class="mop-mechs">
+        <article
+          v-for="m in MOP_MECHANISMS"
+          :key="m.key"
+          class="mop-mech"
         >
-          <button
-            v-for="f in FILTERS"
-            :key="f"
-            type="button"
-            class="mop-filter"
-            :class="{ 'is-on': filter === f }"
-            :aria-pressed="filter === f"
-            @click="filter = f"
-          >
-            {{ c.filters[f] }}
-          </button>
-        </div>
-        <p
-          class="u-visually-hidden"
-          role="status"
-        >
-          {{ shownAnnounce }}
-        </p>
-
-        <div
-          v-for="sec in grouped"
-          :key="sec.group"
-          class="mop-group"
-        >
-          <h3 class="mop-group__h">
-            {{ c.groups[sec.group] }}
-            <span class="mop-group__n">{{ sec.rows.length }}/{{ sec.total }}</span>
-          </h3>
-          <p
-            v-if="c.groupNote[sec.group]"
-            class="mop-group__note"
-          >
-            {{ c.groupNote[sec.group] }}
-          </p>
-
-          <p
-            v-if="!sec.rows.length"
-            class="mop-empty"
-          >
-            {{ c.emptyFilter }}
-          </p>
-
-          <article
-            v-for="r in sec.rows"
-            :key="r.key"
-            class="mop-row"
-          >
-            <div class="mop-row__id">
-              <h4>{{ label(r) }}</h4>
-              <p class="mop-row__unit">
-                {{ unit(r) }} ·
-                <a
-                  :href="r.sourceUrl"
-                  target="_blank"
-                  rel="noopener"
-                >{{ c.srcLink }} ↗</a>
-              </p>
-            </div>
-
-            <div class="mop-row__spark">
-              <InvSpark
-                :series="r.series"
-                :direction="r.direction"
-                :tone="toneFor(r)"
-                :mark-year="2014"
-                :label="`${label(r)} — ${r.series[0]!.year}–${r.lastYear}`"
-              />
-            </div>
-
-            <dl class="mop-row__vals">
-              <div>
-                <dt>{{ r.startYear ?? c.colStart }}</dt>
-                <dd>{{ num(r.vStart, r.decimals) }}</dd>
-              </div>
-              <div>
-                <dt>{{ r.y14 ?? c.col14 }}</dt>
-                <dd>{{ num(r.v14, r.decimals) }}</dd>
-              </div>
-              <div>
-                <dt>{{ r.lastYear }}</dt>
-                <dd class="is-last">
-                  {{ num(r.vLast, r.decimals) }}
-                </dd>
-              </div>
-            </dl>
-
-            <div class="mop-row__verdicts">
-              <span
-                v-for="(v, i) in verdictsFor(r)"
-                :key="i"
-                class="mop-v"
-                :class="`mop-v--${v}`"
-              >{{ verdictLabel(v) }}</span>
-            </div>
-
-            <p class="mop-row__note">
-              {{ note(r) }}
-            </p>
-          </article>
-        </div>
-
-        <div class="mop-ceiling">
-          <h3>{{ c.ceilTitle }}</h3>
-          <p>{{ c.ceilBody }}</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Transparency -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <span class="inv-serie__tag">{{ c.transTag }}</span>
-          <h2>{{ c.transTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p
-            v-for="(p, i) in [c.trans1, c.trans2]"
-            :key="i"
-          >
-            {{ p }}
-          </p>
-          <p>
-            <NuxtLink :to="localePath('/analytics/evolucion-gasto')">
-              {{ c.transCta }} →
-            </NuxtLink>
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <LeakTip
-          :subject="c.title"
-          path="/investigaciones/mejor-o-peor"
-        />
-      </div>
-    </section>
-
-    <!-- How to read -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-disclaimer">
-          <h3>{{ c.discTitle }}</h3>
-          <p
-            v-for="(d, i) in c.disc"
-            :key="i"
-          >
-            <template
-              v-for="(s, j) in segments(d)"
-              :key="j"
-            >
-              <strong v-if="s.strong">{{ s.text }}</strong>
-              <template v-else>
-                {{ s.text }}
-              </template>
-            </template>
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Sources -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <h2>{{ c.srcTitle }}</h2>
-          <p>{{ c.srcIntro }}</p>
-        </div>
-        <ul class="inv-srclist mop-srclist">
-          <li
-            v-for="s in MOP_SOURCES"
-            :key="s.url"
-          >
+          <h3>{{ isEn ? m.titleEn : m.titleEs }}</h3>
+          <p>{{ isEn ? m.bodyEn : m.bodyEs }}</p>
+          <div class="mop-mech__ev">
+            <span class="mop-mech__evtag">{{ c.mechEvidence }}</span>
+            <p>{{ isEn ? m.evidenceEn : m.evidenceEs }}</p>
             <a
-              :href="s.url"
+              :href="m.sourceUrl"
               target="_blank"
               rel="noopener"
-            >{{ s.label }}</a>
-          </li>
-        </ul>
+            >{{ m.source }}</a>
+          </div>
+        </article>
       </div>
-    </section>
+    </InvSection>
+
+    <!-- Scoreboard -->
+    <InvSection
+      alt
+      :tag="c.scoreTag"
+      :title="c.scoreTitle"
+      :dek="c.scoreIntro"
+    >
+      <div
+        class="mop-filters"
+        role="group"
+        :aria-label="c.scoreTitle"
+      >
+        <button
+          v-for="f in FILTERS"
+          :key="f"
+          type="button"
+          class="mop-filter"
+          :class="{ 'is-on': filter === f }"
+          :aria-pressed="filter === f"
+          @click="filter = f"
+        >
+          {{ c.filters[f] }}
+        </button>
+      </div>
+      <p
+        class="u-visually-hidden"
+        role="status"
+      >
+        {{ shownAnnounce }}
+      </p>
+
+      <div
+        v-for="sec in grouped"
+        :key="sec.group"
+        class="mop-group"
+      >
+        <h3 class="mop-group__h">
+          {{ c.groups[sec.group] }}
+          <span class="mop-group__n">{{ sec.rows.length }}/{{ sec.total }}</span>
+        </h3>
+        <p
+          v-if="c.groupNote[sec.group]"
+          class="mop-group__note"
+        >
+          {{ c.groupNote[sec.group] }}
+        </p>
+
+        <p
+          v-if="!sec.rows.length"
+          class="mop-empty"
+        >
+          {{ c.emptyFilter }}
+        </p>
+
+        <article
+          v-for="r in sec.rows"
+          :key="r.key"
+          class="mop-row"
+        >
+          <div class="mop-row__id">
+            <h4>{{ label(r) }}</h4>
+            <p class="mop-row__unit">
+              {{ unit(r) }} ·
+              <a
+                :href="r.sourceUrl"
+                target="_blank"
+                rel="noopener"
+              >{{ c.srcLink }} ↗</a>
+            </p>
+          </div>
+
+          <div class="mop-row__spark">
+            <InvSpark
+              :series="r.series"
+              :direction="r.direction"
+              :tone="toneFor(r)"
+              :mark-year="2014"
+              :label="`${label(r)} — ${r.series[0]!.year}–${r.lastYear}`"
+            />
+          </div>
+
+          <dl class="mop-row__vals">
+            <div>
+              <dt>{{ r.startYear ?? c.colStart }}</dt>
+              <dd>{{ num(r.vStart, r.decimals) }}</dd>
+            </div>
+            <div>
+              <dt>{{ r.y14 ?? c.col14 }}</dt>
+              <dd>{{ num(r.v14, r.decimals) }}</dd>
+            </div>
+            <div>
+              <dt>{{ r.lastYear }}</dt>
+              <dd class="is-last">
+                {{ num(r.vLast, r.decimals) }}
+              </dd>
+            </div>
+          </dl>
+
+          <div class="mop-row__verdicts">
+            <span
+              v-for="(v, i) in verdictsFor(r)"
+              :key="i"
+              class="mop-v"
+              :class="`mop-v--${v}`"
+            >{{ verdictLabel(v) }}</span>
+          </div>
+
+          <p class="mop-row__note">
+            {{ note(r) }}
+          </p>
+        </article>
+      </div>
+
+      <div class="mop-ceiling">
+        <h3>{{ c.ceilTitle }}</h3>
+        <p>{{ c.ceilBody }}</p>
+      </div>
+    </InvSection>
+
+    <!-- Transparency -->
+    <InvSection
+      :tag="c.transTag"
+      :title="c.transTitle"
+    >
+      <div class="inv-prose">
+        <p
+          v-for="(p, i) in [c.trans1, c.trans2]"
+          :key="i"
+        >
+          {{ p }}
+        </p>
+        <p>
+          <NuxtLink :to="localePath('/analytics/evolucion-gasto')">
+            {{ c.transCta }} →
+          </NuxtLink>
+        </p>
+      </div>
+    </InvSection>
+
+    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
+    <InvSection>
+      <LeakTip
+        :subject="c.title"
+        path="/investigaciones/mejor-o-peor"
+      />
+    </InvSection>
+
+    <!-- How to read -->
+    <InvSection alt>
+      <InvDisclaimer :title="c.discTitle">
+        <p
+          v-for="(d, i) in c.disc"
+          :key="i"
+        >
+          <template
+            v-for="(s, j) in segments(d)"
+            :key="j"
+          >
+            <strong v-if="s.strong">{{ s.text }}</strong>
+            <template v-else>
+              {{ s.text }}
+            </template>
+          </template>
+        </p>
+      </InvDisclaimer>
+    </InvSection>
+
+    <!-- Sources -->
+    <InvSection
+      :title="c.srcTitle"
+      :dek="c.srcIntro"
+    >
+      <InvSources :items="MOP_SOURCES" />
+    </InvSection>
   </div>
 </template>
 
 <style scoped lang="scss">
-.mop-h3 {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 700;
-  margin: var(--s-7) 0 var(--s-4);
-}
-
 .mop-good { color: var(--verde); }
 .mop-bad { color: var(--alerta); }
 .mop-flat { color: var(--text-muted); }
@@ -1108,8 +1016,13 @@ useSeo(() => ({
   }
 }
 
-.mop-gap__dot--life { background: var(--verde); b { color: var(--verde); } }
-.mop-gap__dot--country { background: var(--alerta); b { color: var(--alerta); } }
+/* The dots carry the colour; the numbers carry ink. Painted in their own hue
+   the labels measured 3.5–4.2:1 at 12px against the track in both themes —
+   `--verde` and `--alerta` are fills sized for a marker, not inks sized for
+   text, and the legend above already says which colour is which. */
+.mop-gap__dot--life { background: var(--verde); }
+.mop-gap__dot--country { background: var(--alerta); }
+.mop-gap__dot b { color: var(--text); }
 
 .mop-gap__diff {
   font-family: var(--font-mono);
@@ -1326,23 +1239,10 @@ useSeo(() => ({
   p { margin: 0; color: var(--text-muted); font-size: 0.95rem; max-width: 84ch; }
 }
 
-.mop-srclist {
-  columns: 2;
-  column-gap: var(--s-7);
-
-  li { break-inside: avoid; }
-
-  /* Some institutional source strings carry a bare URL with no break
-     opportunity; without this the line box runs past the viewport and the
-     whole page scrolls sideways at 360px. */
-  a { overflow-wrap: anywhere; }
-}
-
 /* Below the desktop grid the row becomes a stacked card: the label line, then
    the sparkline and the three values sharing a line, then the verdicts. */
 @media (max-width: 900px) {
   .mop-boards { grid-template-columns: minmax(0, 1fr); }
-  .mop-srclist { columns: 1; }
 
   .mop-row {
     grid-template-columns: minmax(0, 1fr) auto;

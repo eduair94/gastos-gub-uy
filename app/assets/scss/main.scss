@@ -100,7 +100,13 @@ h1, h2, h3, h4,
 // --celeste-deep, so painting its label the same token made the label vanish
 // into its own button — 1.00:1, the newsletter CTA. Vuetify owns the colour of
 // its own components; this rule only speaks for plain anchors.
-a:not([class*="v-"]) { color: var(--celeste-deep); }
+// `:where()` keeps this at ZERO specificity. Without it the selector scores
+// (0,1,1) — the `:not()` counts — which outranks any single-class rule on an
+// `<a>`: `.casohub__cta` set `color: var(--cta-fg)` on a `var(--cta-fill)`
+// background and lost, so the hub's primary CTA rendered its label in the
+// exact colour of its own fill, i.e. invisible, in both themes. A link that
+// carries a class is styling itself on purpose; this is only the default.
+:where(a:not([class*="v-"])) { color: var(--celeste-deep); }
 
 h1 { font-size: var(--t-2xl); }
 h2 { font-size: var(--t-xl); }

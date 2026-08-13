@@ -132,6 +132,50 @@ finding — and it puts every amount through `<MoneyAmount>`. `RelatedRail` is t
 Spanish title clips instead of widening the document. `NotFoundPanel` is the
 soft-404 body; the page that renders it must also pass `noindex` to `useSeo()`.
 
+### The long-form investigation grammar: InvCover, InvSection and the rest
+
+`pages/investigaciones/*` are twelve pages that argue the same way, and they
+used to say so twelve times: 157 hand-written `<section class="inv-sec">`, 68
+heads, 40 stat tiles, 11 covers, 9 identical disclaimers, and the same ledger
+table copy-pasted with ~120 lines of scoped CSS into four files. Build a
+long-form piece out of these; do not copy a page.
+
+| Component | What it is | Notes |
+| --- | --- | --- |
+| `InvCover` | The ink band: file line, kicker, headline, dek, chips | Field **labels are parameters** (`t('inv.file.*')`) — they used to be literal Spanish inside bilingual pages |
+| `InvSection` | One band, one gutter, one optional head | `eyebrow` (article head) or `tag` (pill); `serie` switches to the hub's inline head; `alt` tints |
+| `InvTiles` | The headline figure row | `amount` goes through `MoneyAmount`; `value` for anything else; `tone` never tints money; `value:<key>` slot for richer figures |
+| `InvFinding` | The ink panel carrying a section's decisive sentence | `spaced` replaces the `style="margin-top: var(--s-6)"` four pages repeated |
+| `InvLedger` | The evidence table | Columns are declared, cells come from `#cell:<key>` slots; reflows to cards under 760px |
+| `InvSources` | The citation panel | `groups` or `items`; long lists split into two columns and break unbreakable URLs |
+| `InvDisclaimer` | "Cómo leer esta investigación" | Optional `sources` list inside the panel |
+| `InvLinkCard` | One investigation as a card | Without `to` it is the "coming soon" state |
+| `InvNewsCards` | Press cases behind a piece | Amounts are plain ink: they are reported, not derived — gold means "we computed this" |
+| `InvExplore` / `InvActions` | The band and the button row that send the reader into the live explorer | `InvActions` owns the `:deep(.v-btn)` wrap fix for sentence-length labels |
+| `InvRows` | Record list: identity grows, figure stays put | Figure typography is opt-in (`.invrows__n` / `.invrows__u`) so a `MoneyAmount` is not repainted |
+| `InvLegend` | A chart's key | Root is a `<span>`: it belongs in `ChartBlock`'s `#meta`, which is a paragraph |
+
+```vue
+<InvSection alt :eyebrow="c.gapTag" :title="c.gapTitle" :dek="c.gapIntro">
+  <ChartBlock framed :level="3" :title="c.chart">
+    <InvHBars :items="gapBars" format="moneyM" />
+  </ChartBlock>
+  <InvFinding spaced :kicker="c.gapTag" :body="c.gapFinding" />
+</InvSection>
+```
+
+**Do not give a block its own top margin.** The rhythm between blocks inside a
+section is one rule in `_investigaciones.scss`
+(`:where(.inv-sec > .u-container) > * + *`), at zero specificity so anything
+that needs a bigger beat still wins by having a class. Per-block margins are
+what welded an ink panel to the ledger under it on a phone: each of the two
+expected the other to bring the space.
+
+Charts inside an investigation are `<ChartBlock framed>` like everywhere else —
+the old `.inv-cardc` / `.inv-cardsub` / `.inv-scroll` trio was a second, weaker
+copy of that box, and each page wired its own scroller. `ChartBlock`'s `title`
+is optional for the case where the section head already names the chart.
+
 ### DataTable, PaginatedList and DataPager
 
 Use this trio for directory results. `DataTable` preserves table semantics on

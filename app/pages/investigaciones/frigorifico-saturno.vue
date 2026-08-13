@@ -13,6 +13,9 @@ const ES = {
   title: 'Frigorífico Saturno: la carne de los cuarteles y las toneladas que no llegaron',
   dek: 'Abasto de Carnes Saturno es uno de los grandes proveedores de carne del Estado: 283 contratos por unos 1.140 millones de pesos con el INDA, el Ejército, la Armada y la Fuerza Aérea. En la Armada, una pericia detectó un faltante de unas 57 toneladas de carne, sobreprecios y cortes no licitados. El caso está en la Fiscalía de Delitos Económicos.',
   chips: ['283 contratos', '$1.140 M', 'Las tres fuerzas', 'Faltante 57 toneladas'],
+  kicker: 'Investigación · Empresas señaladas',
+  fileSubject: 'Abasto de Carnes Saturno S.A.',
+  fileSource: 'Compras Estatales + causa penal · verificado',
   fileOrg: 'INDA · Ejército · Armada · Fuerza Aérea', filePeriod: '2012–2026',
   tContracts: 'contratos en la base', tContractsSub: 'de carne, 2012–2026',
   tTotal: 'facturado al Estado', tTotalSub: '32 organismos compradores',
@@ -44,6 +47,9 @@ const EN: typeof ES = {
   title: 'Frigorífico Saturno: the barracks’ meat and the tonnes that never arrived',
   dek: 'Abasto de Carnes Saturno is one of the State\'s major meat suppliers: 283 contracts for about 1,140 million pesos with INDA, the Army, the Navy and the Air Force. In the Navy, an audit found a shortfall of about 57 tonnes of meat, over-prices and un-tendered cuts. The case is with the Economic Crimes Prosecutor.',
   chips: ['283 contracts', '$1,140 M', 'All three forces', '57-tonne shortfall'],
+  kicker: 'Investigation · Flagged companies',
+  fileSubject: 'Abasto de Carnes Saturno S.A.',
+  fileSource: 'State procurement + criminal case · verified',
   fileOrg: 'INDA · Army · Navy · Air Force', filePeriod: '2012–2026',
   tContracts: 'contracts in the data', tContractsSub: 'of meat, 2012–2026',
   tTotal: 'billed to the State', tTotalSub: '32 buying bodies',
@@ -71,7 +77,7 @@ const EN: typeof ES = {
   ],
 }
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const c = computed(() => (locale.value === 'en' ? EN : ES))
 
 const personLd = usePersonLd()
@@ -117,6 +123,23 @@ useSeo(() => ({
 const buyerBars = computed(() =>
   SATURNO_BY_BUYER.map(b => ({ label: b.buyer, value: b.spend, color: b.force ? 'alerta' : 'gold' })))
 
+const headlineTiles = computed(() => [
+  { value: SATURNO_STATS.contracts, label: c.value.tContracts, sub: c.value.tContractsSub },
+  { amount: SATURNO_STATS.totalUYU, label: c.value.tTotal, sub: c.value.tTotalSub },
+  { amount: SATURNO_STATS.armadaUYU, label: c.value.tArmada, sub: c.value.tArmadaSub },
+  { value: '57 t', label: c.value.tFaltante, sub: c.value.tFaltanteSub },
+])
+
+const ledgerColumns = computed(() => [
+  { key: 'year', label: c.value.colDate, mono: true, nowrap: true },
+  { key: 'desc', label: c.value.colObjeto, primary: true, minWidth: '300px' },
+  { key: 'amount', label: c.value.colAmount, align: 'end' as const },
+  { key: 'ficha', align: 'end' as const },
+])
+
+/** The cut the shortfall is about: flagged in place, with the house row flag. */
+const isPork = (row: { desc: string }) => row.desc.toLowerCase().includes('porcina')
+
 const SOURCES = [
   { label: 'El Observador — Almirantes encargaban lomo a un frigorífico que había ganado la licitación por bondiola', url: 'https://www.elobservador.com.uy/nacional/almirantes-encargaban-lomo-un-frigorifico-que-habia-ganado-licitacion-bondiola-n6014952' },
   { label: 'El Observador — Doce oficiales de la Armada citados por la desaparición de 35 toneladas de carne', url: 'https://www.elobservador.com.uy/nacional/doce-oficiales-la-armada-citados-la-fiscal-sandra-fleitas-caso-la-desaparicion-35-toneladas-carne-n6008254' },
@@ -128,308 +151,122 @@ const SOURCES = [
 
 <template>
   <div class="inv">
-    <header class="inv-cover">
-      <div class="u-container">
-        <div class="inv-file">
-          <span>EXPEDIENTE&nbsp; <b>Abasto de Carnes Saturno S.A.</b></span>
-          <span>{{ c.fileOrg }}</span>
-          <span>PERÍODO&nbsp; <b>{{ c.filePeriod }}</b></span>
-          <span>Compras Estatales + causa penal · verificado</span>
-        </div>
-        <p class="inv-kicker">
-          Investigación · Empresas señaladas
-        </p>
-        <h1>{{ c.title }}</h1>
-        <p class="inv-dek">
-          {{ c.dek }}
-        </p>
-        <div class="inv-chips">
-          <span
-            v-for="ch in c.chips"
-            :key="ch"
-            class="inv-chip"
-          >{{ ch }}</span>
-        </div>
-      </div>
-    </header>
+    <InvCover
+      :fields="[
+        { label: t('inv.file.expediente'), value: c.fileSubject },
+        { value: c.fileOrg },
+        { label: t('inv.file.periodo'), value: c.filePeriod },
+        { value: c.fileSource },
+      ]"
+      :kicker="c.kicker"
+      :title="c.title"
+      :dek="c.dek"
+      :chips="c.chips"
+    />
 
-    <!-- Tiles -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-tiles">
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              {{ SATURNO_STATS.contracts }}
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tContracts }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tContractsSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <MoneyAmount
-              :amount="SATURNO_STATS.totalUYU"
-              size="lg"
-              align="start"
-              :rule="false"
-              compact
-            />
-            <div class="inv-tile__l">
-              {{ c.tTotal }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tTotalSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <MoneyAmount
-              :amount="SATURNO_STATS.armadaUYU"
-              size="lg"
-              align="start"
-              :rule="false"
-              compact
-            />
-            <div class="inv-tile__l">
-              {{ c.tArmada }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tArmadaSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              57 t
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tFaltante }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tFaltanteSub }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <InvSection alt>
+      <InvTiles :items="headlineTiles" />
+    </InvSection>
 
     <!-- Contexto -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.ctxTag }}
-          </p>
-          <h2>{{ c.ctxTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.ctx1 }}</p>
-          <p>{{ c.ctx2 }}</p>
-        </div>
+    <InvSection
+      :eyebrow="c.ctxTag"
+      :title="c.ctxTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.ctx1 }}</p>
+        <p>{{ c.ctx2 }}</p>
       </div>
-    </section>
+    </InvSection>
 
     <!-- Chart por comprador -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.chartTag }}
-          </p>
-          <h2>{{ c.chartTitle }}</h2>
-          <p>{{ c.chartIntro }}</p>
-        </div>
-        <div class="inv-cardc">
-          <div class="inv-scroll">
-            <InvHBars
-              :items="buyerBars"
-              format="moneyM"
-              :row-height="42"
-            />
-          </div>
-        </div>
-      </div>
-    </section>
+    <InvSection
+      alt
+      :eyebrow="c.chartTag"
+      :title="c.chartTitle"
+      :dek="c.chartIntro"
+    >
+      <ChartBlock framed>
+        <InvHBars
+          :items="buyerBars"
+          format="moneyM"
+          :row-height="42"
+        />
+      </ChartBlock>
+    </InvSection>
 
     <!-- El caso -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.caseTag }}
-          </p>
-          <h2>{{ c.caseTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.case1 }}</p>
-          <p>{{ c.case2 }}</p>
-        </div>
+    <InvSection
+      :eyebrow="c.caseTag"
+      :title="c.caseTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.case1 }}</p>
+        <p>{{ c.case2 }}</p>
       </div>
-    </section>
+    </InvSection>
 
     <!-- Ledger Armada -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.ledgerTag }}
-          </p>
-          <h2>{{ c.ledgerTitle }}</h2>
-          <p>{{ c.ledgerIntro }}</p>
-        </div>
-        <div class="im-ledger u-scroll-x">
-          <table>
-            <thead>
-              <tr>
-                <th>{{ c.colDate }}</th>
-                <th>{{ c.colObjeto }}</th>
-                <th class="num">
-                  {{ c.colAmount }}
-                </th>
-                <th aria-hidden="true" />
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="row in SATURNO_ARMADA_LEDGER"
-                :key="row.ocid"
-                :class="{ 'is-pork': row.desc.toLowerCase().includes('porcina') }"
-              >
-                <td
-                  class="u-mono nowrap"
-                  :data-label="c.colDate"
-                >
-                  {{ row.year }}
-                </td>
-                <td class="obj">
-                  {{ row.desc }}
-                </td>
-                <td
-                  class="num"
-                  :data-label="c.colAmount"
-                >
-                  <MoneyAmount
-                    :amount="row.amount"
-                    compact
-                  />
-                </td>
-                <td class="num">
-                  <NuxtLink
-                    :to="localePath(`/contracts/adjudicacion-${row.idc}`)"
-                    class="im-ficha u-mono"
-                  >{{ c.ficha }} →</NuxtLink>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+    <InvSection
+      alt
+      :eyebrow="c.ledgerTag"
+      :title="c.ledgerTitle"
+      :dek="c.ledgerIntro"
+    >
+      <InvLedger
+        :columns="ledgerColumns"
+        :rows="SATURNO_ARMADA_LEDGER"
+        row-key="ocid"
+        :row-class="(row) => ({ rowflag: isPork(row) })"
+        :min-width="560"
+      >
+        <template #cell:amount="{ row }">
+          <MoneyAmount
+            :amount="row.amount"
+            compact
+          />
+        </template>
+        <template #cell:ficha="{ row }">
+          <NuxtLink :to="localePath(`/contracts/adjudicacion-${row.idc}`)">
+            {{ c.ficha }} →
+          </NuxtLink>
+        </template>
+      </InvLedger>
+    </InvSection>
 
     <!-- Estado -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.statusTag }}
-          </p>
-          <h2>{{ c.statusTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.status1 }}</p>
-          <p>{{ c.status2 }}</p>
-        </div>
+    <InvSection
+      :eyebrow="c.statusTag"
+      :title="c.statusTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.status1 }}</p>
+        <p>{{ c.status2 }}</p>
       </div>
-    </section>
+    </InvSection>
 
     <!-- Fuentes -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.srcTitle }}
-          </p>
-          <h2>{{ locale === 'en' ? 'Verified sources' : 'Fuentes verificadas' }}</h2>
-        </div>
-        <ul class="inv-srclist">
-          <li
-            v-for="s in SOURCES"
-            :key="s.url"
-          >
-            <a
-              :href="s.url"
-              target="_blank"
-              rel="noopener"
-            >{{ s.label }}</a>
-          </li>
-        </ul>
-      </div>
-    </section>
+    <InvSection
+      alt
+      :eyebrow="c.srcTitle"
+      :title="t('inv.verifiedSources')"
+    >
+      <InvSources :items="SOURCES" />
+    </InvSection>
 
     <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <LeakTip
-          :subject="c.title"
-          path="/investigaciones/frigorifico-saturno"
-        />
-      </div>
-    </section>
+    <InvSection>
+      <LeakTip
+        :subject="c.title"
+        path="/investigaciones/frigorifico-saturno"
+      />
+    </InvSection>
 
-    <!-- Disclaimer -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-disclaimer">
-          <h3>{{ c.discTitle }}</h3>
-          <p
-            v-for="(p, i) in c.disc"
-            :key="i"
-          >
-            {{ p }}
-          </p>
-        </div>
-      </div>
-    </section>
+    <InvSection>
+      <InvDisclaimer
+        :title="c.discTitle"
+        :paragraphs="c.disc"
+      />
+    </InvSection>
   </div>
 </template>
-
-<style scoped>
-.im-ledger table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); min-width: 560px; }
-.im-ledger thead th {
-  text-align: left; padding: var(--s-2) var(--s-3); font-family: var(--font-mono);
-  font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--text-muted); border-bottom: 1px solid var(--rule);
-}
-.im-ledger thead th.num { text-align: right; }
-.im-ledger tbody td { padding: var(--s-3); border-bottom: 1px solid var(--rule); vertical-align: top; }
-.im-ledger tbody tr:hover { background: var(--surface-sunken); }
-.im-ledger tbody tr.is-pork .obj { color: var(--alerta); font-weight: 700; }
-.im-ledger .num { text-align: right; white-space: nowrap; }
-.im-ledger .nowrap { white-space: nowrap; }
-.im-ledger .obj { font-weight: 600; min-width: 300px; }
-.im-ficha { color: var(--celeste-deep); text-decoration: none; font-size: var(--t-xs); white-space: nowrap; }
-.im-ficha:hover { text-decoration: underline; }
-
-@media (max-width: 760px) {
-  .im-ledger { overflow-x: visible; }
-  .im-ledger table { min-width: 0; display: block; }
-  .im-ledger thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
-  .im-ledger tbody { display: flex; flex-direction: column; gap: var(--s-3); }
-  .im-ledger tbody tr {
-    display: block; padding: var(--s-4); background: var(--surface);
-    border: 1px solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow-1);
-  }
-  .im-ledger tbody tr:hover { background: var(--surface); }
-  .im-ledger tbody td {
-    display: block; min-width: 0; padding: var(--s-2) 0; border: 0;
-    border-top: 1px solid color-mix(in srgb, var(--rule) 55%, transparent); text-align: left; white-space: normal;
-  }
-  .im-ledger tbody td:first-child { border-top: 0; padding-top: 0; }
-  .im-ledger tbody td[data-label]::before {
-    content: attr(data-label); display: block; margin-bottom: 3px; font-family: var(--font-mono);
-    font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
-  }
-  .im-ledger tbody td.obj { min-width: 0; font-weight: 700; }
-  .im-ledger tbody td.num { text-align: left; white-space: normal; }
-}
-</style>

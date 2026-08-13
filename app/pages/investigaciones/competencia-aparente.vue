@@ -13,10 +13,11 @@ import { invContent } from '~/data/investigaciones'
 import {
   ARTIFACT_CHECK,
   COVERAGE,
+  EXTERNAL_SOURCES,
   OUTLIER,
   PAIRS,
+  PAIR_EVIDENCE,
   PAIR_CALLS,
-  PAIR_CALLS_BOTH_WON,
   SHARED_BUYERS,
   SOLE_BY_METHOD,
   SOLE_RATE_BY_METHOD,
@@ -25,7 +26,7 @@ import {
   competenciaContent,
 } from '~/data/investigaciones-competencia'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const localePath = useLocalePath()
 const c = computed(() => invContent(locale.value))
 const cx = computed(() => competenciaContent(locale.value))
@@ -81,6 +82,25 @@ const pairCalls = computed(() => PAIRS
   })))
   .sort((a, b) => b.uyu - a.uyu))
 
+/**
+ * La verificación externa, ordenada por fuerza de evidencia: primero lo que declara la propia
+ * empresa, último lo que sólo dice una ficha de Google. El grado no es decorativo — es lo que
+ * le dice al lector cuánto pesa cada fila.
+ */
+const GRADE_CLASS: Record<string, string> = { A: 'inv-badge--ok', B: 'inv-badge--co', C: 'inv-badge--nd' }
+const evidence = computed(() => PAIR_EVIDENCE.map(ev => ({
+  ...ev,
+  gradeClass: GRADE_CLASS[ev.grade] ?? 'inv-badge--nd',
+  gradeShort: ev.grade === 'A' ? cx.value.gradeAShort : ev.grade === 'B' ? cx.value.gradeBShort : cx.value.gradeCShort,
+})))
+
+/** La leyenda de grados: se explica una vez, no ocho. */
+const gradeLegend = computed(() => [
+  { cls: 'inv-badge--ok', short: cx.value.gradeAShort, label: cx.value.gradeA },
+  { cls: 'inv-badge--co', short: cx.value.gradeBShort, label: cx.value.gradeB },
+  { cls: 'inv-badge--nd', short: cx.value.gradeCShort, label: cx.value.gradeC },
+])
+
 /** Segunda capa: el organismo donde el par coincide con más plata. */
 const sharedRows = computed(() => SHARED_BUYERS.map(g => ({
   ...g,
@@ -95,6 +115,74 @@ const methodRows = computed(() => SOLE_RATE_BY_METHOD.map((m) => {
   return { ...m, amount, share: m.probed > 0 ? m.sole / m.probed : 0 }
 }))
 
+const heroTiles = computed(() => cx.value.tiles.map(t2 => ({ value: t2.n, label: t2.l, sub: t2.s })))
+
+const pairColumns = computed(() => [
+  { key: 'pair', label: cx.value.colSupplier, primary: true, minWidth: '220px' },
+  { key: 'link', label: cx.value.paresColLink },
+  { key: 'calls', label: cx.value.paresColCalls, align: 'end' as const, mono: true },
+  { key: 'bothWon', label: cx.value.paresColBoth, align: 'end' as const, mono: true },
+  { key: 'uyu', label: cx.value.colAmount, align: 'end' as const },
+])
+
+const pairCallColumns = computed(() => [
+  { key: 'id', label: cx.value.colCall },
+  { key: 'buyer', label: cx.value.colBuyer },
+  { key: 'firms', label: cx.value.colSupplier, primary: true, minWidth: '220px' },
+  { key: 'bidders', label: cx.value.colBidders, align: 'end' as const, mono: true },
+  { key: 'uyu', label: cx.value.colAmount, align: 'end' as const },
+  { key: 'who', label: cx.value.colWho },
+])
+
+const sharedColumns = computed(() => [
+  { key: 'pair', label: cx.value.colPair, primary: true, minWidth: '220px' },
+  { key: 'sharedCount', label: cx.value.colSharedOrgs, align: 'end' as const, mono: true },
+  { key: 'topBuyer', label: cx.value.colTopOrg },
+  { key: 'topTotal', label: cx.value.colBilledPair, align: 'end' as const },
+])
+
+const methodColumns = computed(() => [
+  { key: 'method', label: cx.value.colMethod, primary: true },
+  { key: 'probed', label: cx.value.colProbed, align: 'end' as const, mono: true },
+  { key: 'sole', label: cx.value.colSole, align: 'end' as const, mono: true },
+  { key: 'share', label: cx.value.colShare, align: 'end' as const, mono: true },
+  { key: 'amount', label: cx.value.colAmount, align: 'end' as const },
+])
+
+const topColumns = computed(() => [
+  { key: 'id', label: cx.value.colCall },
+  { key: 'buyer', label: cx.value.colBuyer },
+  { key: 'sup', label: cx.value.colSupplier, primary: true, minWidth: '200px' },
+  { key: 'method', label: cx.value.colMethod },
+  { key: 'uyu', label: cx.value.colAmount, align: 'end' as const },
+])
+
+const artifactColumns = computed(() => [
+  { key: 'buyer', label: cx.value.artifactCol, primary: true },
+  { key: 'probed', label: cx.value.artifactProbed, align: 'end' as const, mono: true },
+  { key: 'multi', label: cx.value.artifactMulti, align: 'end' as const, mono: true },
+  { key: 'withLosers', label: cx.value.artifactLosers, align: 'end' as const, mono: true },
+  { key: 'measurable', label: cx.value.artifactVerdict },
+])
+
+/**
+ * Las fuentes de afuera viven en el módulo de datos, junto al hecho que sostienen; acá sólo
+ * se les agrega la única que es de casa: el indicador en vivo, que sí cambia con cada tanda.
+ */
+const SOURCE_TITLE: Record<string, keyof ReturnType<typeof competenciaContent>> = {
+  norma: 'srcNorma',
+  indicador: 'srcIndicador',
+  antecedente: 'srcAntecedente',
+  fichas: 'srcFichas',
+}
+const sourceGroups = computed(() => [
+  ...EXTERNAL_SOURCES.map(g => ({ title: String(cx.value[SOURCE_TITLE[g.key]!]), items: g.items })),
+  {
+    title: cx.value.srcSitio,
+    items: [{ label: cx.value.liveLink, to: localePath('/analytics/competencia') }],
+  },
+])
+
 /** Los datos ya publicados que viajan dentro del mensaje a Uruguay Leaks. */
 const leakFacts = computed(() => [
   `${nf.value.format(COVERAGE.sole)} de ${nf.value.format(COVERAGE.withBlock)} compras competitivas miradas (2025-2026) recibieron una sola oferta.`,
@@ -105,623 +193,413 @@ const leakFacts = computed(() => [
 
 <template>
   <div class="inv">
-    <!-- Cover -->
-    <header class="inv-cover">
-      <div class="u-container">
-        <div class="inv-file">
-          <span>ALCANCE&nbsp; <b>{{ cx.fileScope }}</b></span>
-          <span>ORGANISMOS&nbsp; <b>{{ cx.fileOrg }}</b></span>
-          <span>PERÍODO&nbsp; <b>{{ cx.filePeriod }}</b></span>
-          <span>{{ c.common.source }}</span>
-        </div>
-        <p class="inv-kicker">
-          {{ cx.kicker }}
-        </p>
-        <h1>{{ cx.title }}</h1>
-        <p class="inv-dek">
-          {{ cx.dek }}
-        </p>
-        <div class="inv-chips">
-          <span
-            v-for="ch in cx.chips"
-            :key="ch"
-            class="inv-chip"
-          >{{ ch }}</span>
-        </div>
-      </div>
-    </header>
+    <InvCover
+      :fields="[
+        { label: t('inv.file.alcance'), value: cx.fileScope },
+        { label: t('inv.file.organismos'), value: cx.fileOrg },
+        { label: t('inv.file.periodo'), value: cx.filePeriod },
+        { value: c.common.source },
+      ]"
+      :kicker="cx.kicker"
+      :title="cx.title"
+      :dek="cx.dek"
+      :chips="cx.chips"
+    />
 
     <!-- Hero -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-hero">
-          <div>
-            <p class="u-eyebrow">
-              {{ cx.statHead }}
-            </p>
-            <MoneyAmount
-              :amount="SOLE_TOTAL_UYU_SIN_ATIPICO"
-              size="xl"
-              align="start"
-              :rule="false"
-            />
-            <p class="inv-hero__usd">
-              {{ cx.statSub }}
-            </p>
-          </div>
-          <div class="inv-tiles inv-tiles--2">
-            <div
-              v-for="tl in cx.tiles"
-              :key="tl.l"
-              class="inv-tile"
-            >
-              <div class="inv-tile__n">
-                {{ tl.n }}
-              </div>
-              <div class="inv-tile__l">
-                {{ tl.l }}
-              </div>
-              <div class="inv-tile__s">
-                {{ tl.s }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Qué miramos -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
+    <InvSection alt>
+      <div class="inv-hero">
+        <div>
           <p class="u-eyebrow">
-            {{ cx.queTag }}
+            {{ cx.statHead }}
           </p>
-          <h2>{{ cx.queTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p
-            v-for="(p, i) in cx.que"
-            :key="i"
-          >
-            {{ p }}
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Hallazgo 1 · pares -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cx.paresTag }}
-          </p>
-          <h2>{{ cx.paresTitle }}</h2>
-          <p>{{ cx.paresIntro }}</p>
-        </div>
-
-        <div class="inv-finding">
-          <p class="inv-kicker">
-            {{ PAIRS.length }} · {{ PAIR_CALLS }} · {{ PAIR_CALLS_BOTH_WON }}
-          </p>
-          <h3>{{ cx.paresTitle }}</h3>
-          <p>{{ cx.paresLead }}</p>
-        </div>
-
-        <div class="inv-ledger u-scroll-x">
-          <table>
-            <thead>
-              <tr>
-                <th>{{ cx.colSupplier }}</th>
-                <th>{{ cx.paresColLink }}</th>
-                <th class="num">
-                  {{ cx.paresColCalls }}
-                </th>
-                <th class="num">
-                  {{ cx.paresColBoth }}
-                </th>
-                <th class="num">
-                  {{ cx.colAmount }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="p in pairRows"
-                :key="p.a.rut + p.b.rut"
-              >
-                <td class="sup">
-                  {{ p.nameA }}
-                  <span class="inv-flagword">+</span>
-                  {{ p.nameB }}
-                </td>
-                <td :data-label="cx.paresColLink">
-                  <span
-                    v-if="p.addr"
-                    class="inv-badge inv-badge--exc"
-                  >{{ cx.paresAddr }}</span>
-                  <span
-                    v-if="p.phone"
-                    class="inv-badge inv-badge--co"
-                  >{{ cx.paresPhone }}</span>
-                  <div class="cmp-linkdet u-mono">
-                    {{ p.addr ? titn(p.addr) : `tel. ${p.phone}` }} —
-                    {{ cx.paresOwners(p.addr ? p.addrOwners : p.phoneOwners) }}
-                  </div>
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.paresColCalls"
-                >
-                  {{ p.calls.length }}
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.paresColBoth"
-                >
-                  {{ p.bothWon }}
-                </td>
-                <td
-                  class="num"
-                  :data-label="cx.colAmount"
-                >
-                  <MoneyAmount
-                    :amount="p.uyu"
-                    size="sm"
-                    compact
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div
-          class="inv-head"
-          style="margin-top: var(--s-8);"
-        >
-          <h3>{{ cx.paresCallsTitle }}</h3>
-        </div>
-        <div class="inv-ledger u-scroll-x">
-          <table>
-            <thead>
-              <tr>
-                <th>{{ cx.colCall }}</th>
-                <th>{{ cx.colBuyer }}</th>
-                <th>{{ cx.colSupplier }}</th>
-                <th class="num">
-                  {{ cx.colBidders }}
-                </th>
-                <th class="num">
-                  {{ cx.colAmount }}
-                </th>
-                <th>{{ cx.colWho }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="k in pairCalls"
-                :key="k.id + k.firms"
-                :class="{ rowflag: k.both }"
-              >
-                <td :data-label="cx.colCall">
-                  <NuxtLink :to="localePath(`/contracts/adjudicacion-${k.id}`)">
-                    {{ k.id }} →
-                  </NuxtLink>
-                </td>
-                <td :data-label="cx.colBuyer">
-                  {{ k.buyer }}
-                </td>
-                <td class="sup">
-                  {{ k.firms }}
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.colBidders"
-                >
-                  {{ k.bidders }}
-                </td>
-                <td
-                  class="num"
-                  :data-label="cx.colAmount"
-                >
-                  <MoneyAmount
-                    :amount="k.uyu"
-                    size="sm"
-                    compact
-                  />
-                </td>
-                <td :data-label="cx.colWho">
-                  <span
-                    class="inv-badge"
-                    :class="k.both ? 'inv-badge--exc' : 'inv-badge--nd'"
-                  >{{ k.who }}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Hallazgo 1, segunda capa · el mismo comprador por dos puertas -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cx.grupoTag }}
-          </p>
-          <h2>{{ cx.grupoTitle }}</h2>
-          <p>{{ cx.grupoIntro }}</p>
-        </div>
-
-        <div class="inv-finding">
-          <h3>{{ cx.grupoTitle }}</h3>
-          <p>{{ cx.grupoLead }}</p>
-        </div>
-
-        <div class="inv-ledger u-scroll-x">
-          <table>
-            <thead>
-              <tr>
-                <th>{{ cx.colPair }}</th>
-                <th class="num">
-                  {{ cx.colSharedOrgs }}
-                </th>
-                <th>{{ cx.colTopOrg }}</th>
-                <th class="num">
-                  {{ cx.colBilledPair }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="g in sharedRows"
-                :key="g.ra + g.rb"
-              >
-                <td class="sup">
-                  {{ g.nameA }}
-                  <span class="inv-flagword">+</span>
-                  {{ g.nameB }}
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.colSharedOrgs"
-                >
-                  {{ g.sharedCount }}
-                </td>
-                <td :data-label="cx.colTopOrg">
-                  {{ g.top?.buyer }}
-                  <div class="cmp-linkdet u-mono">
-                    {{ formatMoney(g.top?.aUyu ?? 0, 'UYU') }} / {{ g.top?.aN }} · {{ formatMoney(g.top?.bUyu ?? 0, 'UYU') }} / {{ g.top?.bN }}
-                  </div>
-                </td>
-                <td
-                  class="num"
-                  :data-label="cx.colBilledPair"
-                >
-                  <MoneyAmount
-                    :amount="g.topTotal"
-                    size="sm"
-                    compact
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="inv-note">
-          {{ cx.grupoNote }}
-        </div>
-      </div>
-    </section>
-
-    <!-- Hallazgo 2 · oferente único -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cx.unicoTag }}
-          </p>
-          <h2>{{ cx.unicoTitle }}</h2>
-          <p>{{ cx.unicoIntro }}</p>
-        </div>
-
-        <div class="inv-ledger u-scroll-x">
-          <table>
-            <thead>
-              <tr>
-                <th>{{ cx.colMethod }}</th>
-                <th class="num">
-                  {{ cx.colProbed }}
-                </th>
-                <th class="num">
-                  {{ cx.colSole }}
-                </th>
-                <th class="num">
-                  {{ cx.colShare }}
-                </th>
-                <th class="num">
-                  {{ cx.colAmount }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="m in methodRows"
-                :key="m.method"
-              >
-                <td class="sup">
-                  {{ m.method }}
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.colProbed"
-                >
-                  {{ nf.format(m.probed) }}
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.colSole"
-                >
-                  {{ nf.format(m.sole) }}
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.colShare"
-                >
-                  {{ pct(m.share) }}
-                </td>
-                <td
-                  class="num"
-                  :data-label="cx.colAmount"
-                >
-                  <MoneyAmount
-                    :amount="m.amount"
-                    size="sm"
-                    compact
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="inv-note">
-          {{ cx.unicoNote }}
-        </div>
-
-        <div
-          class="inv-head"
-          style="margin-top: var(--s-8);"
-        >
-          <h3>{{ cx.topTitle }}</h3>
-        </div>
-        <div class="inv-ledger u-scroll-x">
-          <table>
-            <thead>
-              <tr>
-                <th>{{ cx.colCall }}</th>
-                <th>{{ cx.colBuyer }}</th>
-                <th>{{ cx.colSupplier }}</th>
-                <th>{{ cx.colMethod }}</th>
-                <th class="num">
-                  {{ cx.colAmount }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="r in SOLE_TOP"
-                :key="r.id"
-              >
-                <td :data-label="cx.colCall">
-                  <NuxtLink :to="localePath(`/contracts/adjudicacion-${r.id}`)">
-                    {{ r.id }} →
-                  </NuxtLink>
-                </td>
-                <td :data-label="cx.colBuyer">
-                  {{ r.buyer }}
-                </td>
-                <td class="sup">
-                  {{ titn(r.sup) }}
-                </td>
-                <td :data-label="cx.colMethod">
-                  <span class="inv-badge inv-badge--nd">{{ r.method }}</span>
-                </td>
-                <td
-                  class="num"
-                  :data-label="cx.colAmount"
-                >
-                  <MoneyAmount
-                    :amount="r.uyu"
-                    size="sm"
-                    compact
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Lo que no se puede medir -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cx.inmedibleTag }}
-          </p>
-          <h2>{{ cx.inmedibleTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p
-            v-for="(p, i) in cx.inmedible"
-            :key="i"
-          >
-            {{ p }}
+          <MoneyAmount
+            :amount="SOLE_TOTAL_UYU_SIN_ATIPICO"
+            size="xl"
+            align="start"
+            :rule="false"
+          />
+          <p class="inv-hero__usd">
+            {{ cx.statSub }}
           </p>
         </div>
-
-        <div
-          class="inv-ledger u-scroll-x"
-          style="margin-top: var(--s-6);"
-        >
-          <table>
-            <thead>
-              <tr>
-                <th>{{ cx.artifactCol }}</th>
-                <th class="num">
-                  {{ cx.artifactProbed }}
-                </th>
-                <th class="num">
-                  {{ cx.artifactMulti }}
-                </th>
-                <th class="num">
-                  {{ cx.artifactLosers }}
-                </th>
-                <th>{{ cx.artifactVerdict }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="a in ARTIFACT_CHECK"
-                :key="a.buyer"
-                :class="{ rowflag: !a.measurable }"
-              >
-                <td class="sup">
-                  {{ a.buyer }}
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.artifactProbed"
-                >
-                  {{ nf.format(a.probed) }}
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.artifactMulti"
-                >
-                  {{ nf.format(a.multi) }}
-                </td>
-                <td
-                  class="num mono"
-                  :data-label="cx.artifactLosers"
-                >
-                  {{ nf.format(a.withLosers) }}
-                </td>
-                <td :data-label="cx.artifactVerdict">
-                  <span
-                    class="inv-badge"
-                    :class="a.measurable ? 'inv-badge--co' : 'inv-badge--exc'"
-                  >{{ a.measurable ? cx.yes : cx.no }}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div
-          class="inv-balance"
-          style="margin-top: var(--s-7);"
-        >
-          <div class="inv-balance__h">
-            {{ cx.outlierTitle }}
-          </div>
-          <p>{{ cx.outlierP }}</p>
-          <p
-            class="u-mono"
-            style="font-size: 0.82rem;"
-          >
-            <NuxtLink :to="localePath(`/contracts/adjudicacion-${OUTLIER.id}`)">
-              {{ OUTLIER.id }} →
-            </NuxtLink>
-            · {{ OUTLIER.buyer }} · {{ nf.format(OUTLIER.qty) }} × {{ formatMoney(OUTLIER.unit, 'UYU') }}
-            = {{ formatMoney(OUTLIER.uyu, 'UYU') }}
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Uruguay Leaks -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <LeakTip
-          :subject="cx.title"
-          path="/investigaciones/competencia-aparente"
-          :facts="leakFacts"
+        <InvTiles
+          :columns="2"
+          :items="heroTiles"
         />
       </div>
-    </section>
+    </InvSection>
+
+    <!-- Qué miramos -->
+    <InvSection
+      :eyebrow="cx.queTag"
+      :title="cx.queTitle"
+    >
+      <div class="inv-prose">
+        <p
+          v-for="(p, i) in cx.que"
+          :key="i"
+        >
+          {{ p }}
+        </p>
+      </div>
+    </InvSection>
+
+    <!-- El contexto: qué es esta señal afuera, qué dice la norma acá, y el antecedente -->
+    <InvSection
+      alt
+      :eyebrow="cx.ctxTag"
+      :title="cx.ctxTitle"
+    >
+      <div class="inv-prose">
+        <p
+          v-for="(p, i) in cx.ctx"
+          :key="i"
+        >
+          {{ p }}
+        </p>
+      </div>
+
+      <InvFinding
+        :title="cx.precedenteTitle"
+        :body="cx.precedente"
+        :law="cx.lawText"
+      />
+      <p class="cmp-cite">
+        {{ cx.lawCite }}
+      </p>
+    </InvSection>
+
+    <!-- Hallazgo 1 · pares -->
+    <InvSection
+      :eyebrow="cx.paresTag"
+      :title="cx.paresTitle"
+      :dek="cx.paresIntro"
+    >
+      <InvFinding
+        :kicker="cx.paresFindingKicker"
+        :title="cx.paresFindingH"
+        :body="cx.paresLead"
+      />
+
+      <InvLedger
+        :columns="pairColumns"
+        :rows="pairRows"
+        :row-key="(row) => row.a.rut + row.b.rut"
+        :min-width="720"
+      >
+        <template #cell:pair="{ row }">
+          {{ row.nameA }}
+          <span class="inv-flagword">+</span>
+          {{ row.nameB }}
+        </template>
+        <template #cell:link="{ row }">
+          <span class="chip-row">
+            <span
+              v-if="row.addr"
+              class="inv-badge inv-badge--exc"
+            >{{ cx.paresAddr }}</span>
+            <span
+              v-if="row.phone"
+              class="inv-badge inv-badge--co"
+            >{{ cx.paresPhone }}</span>
+          </span>
+          <span class="cmp-linkdet u-mono">
+            {{ row.addr ? titn(row.addr) : `tel. ${row.phone}` }} —
+            {{ cx.paresOwners(row.addr ? row.addrOwners : row.phoneOwners) }}
+          </span>
+        </template>
+        <template #cell:calls="{ row }">
+          {{ row.calls.length }}
+        </template>
+        <template #cell:uyu="{ row }">
+          <MoneyAmount
+            :amount="row.uyu"
+            size="sm"
+            compact
+          />
+        </template>
+      </InvLedger>
+
+      <h3 class="inv-subhead">
+        {{ cx.paresCallsTitle }}
+      </h3>
+      <InvLedger
+        :columns="pairCallColumns"
+        :rows="pairCalls"
+        :row-key="(row) => row.id + row.firms"
+        :row-class="(row) => ({ rowflag: row.both })"
+        :min-width="760"
+      >
+        <template #cell:id="{ row }">
+          <NuxtLink :to="localePath(`/contracts/adjudicacion-${row.id}`)">
+            {{ row.id }} →
+          </NuxtLink>
+        </template>
+        <template #cell:uyu="{ row }">
+          <MoneyAmount
+            :amount="row.uyu"
+            size="sm"
+            compact
+          />
+        </template>
+        <template #cell:who="{ row }">
+          <span
+            class="inv-badge"
+            :class="row.both ? 'inv-badge--exc' : 'inv-badge--nd'"
+          >{{ row.who }}</span>
+        </template>
+      </InvLedger>
+    </InvSection>
+
+    <!-- Verificación: qué publica cada empresa de sí misma -->
+    <InvSection
+      alt
+      :eyebrow="cx.verifTag"
+      :title="cx.verifTitle"
+      :dek="cx.verifIntro"
+    >
+      <dl class="cmp-ev__legend">
+        <div
+          v-for="g in gradeLegend"
+          :key="g.short"
+        >
+          <dt>
+            <span
+              class="inv-badge"
+              :class="g.cls"
+            >{{ g.short }}</span>
+          </dt>
+          <dd>{{ g.label }}</dd>
+        </div>
+      </dl>
+
+      <div class="cmp-ev">
+        <article
+          v-for="ev in evidence"
+          :key="ev.key"
+          class="cmp-ev__item"
+        >
+          <header class="cmp-ev__head">
+            <span
+              class="inv-badge"
+              :class="ev.gradeClass"
+            >{{ ev.gradeShort }}</span>
+            <h3>{{ ev.firms }}</h3>
+          </header>
+          <ul class="cmp-ev__facts">
+            <li
+              v-for="(f, i) in ev.facts"
+              :key="i"
+            >
+              {{ f }}
+            </li>
+          </ul>
+          <p
+            v-if="ev.sources.length"
+            class="cmp-ev__src"
+          >
+            <span class="u-mono">{{ cx.verifSourcesLabel }}:</span>
+            <a
+              v-for="s in ev.sources"
+              :key="s.url"
+              :href="s.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >{{ s.label }}</a>
+          </p>
+        </article>
+      </div>
+
+      <p class="inv-note cmp-ev__note">
+        {{ cx.verifNote }}
+      </p>
+    </InvSection>
+
+    <!-- Hallazgo 1, segunda capa · el mismo comprador por dos puertas -->
+    <InvSection
+      :eyebrow="cx.grupoTag"
+      :title="cx.grupoTitle"
+      :dek="cx.grupoIntro"
+    >
+      <InvFinding
+        :title="cx.grupoFindingH"
+        :body="cx.grupoLead"
+      />
+
+      <InvLedger
+        :columns="sharedColumns"
+        :rows="sharedRows"
+        :row-key="(row) => row.ra + row.rb"
+      >
+        <template #cell:pair="{ row }">
+          {{ row.nameA }}
+          <span class="inv-flagword">+</span>
+          {{ row.nameB }}
+        </template>
+        <template #cell:topBuyer="{ row }">
+          {{ row.top?.buyer }}
+          <span class="cmp-linkdet u-mono">
+            {{ formatMoney(row.top?.aUyu ?? 0, 'UYU') }} / {{ row.top?.aN }} · {{ formatMoney(row.top?.bUyu ?? 0, 'UYU') }} / {{ row.top?.bN }}
+          </span>
+        </template>
+        <template #cell:topTotal="{ row }">
+          <MoneyAmount
+            :amount="row.topTotal"
+            size="sm"
+            compact
+          />
+        </template>
+      </InvLedger>
+
+      <p class="inv-note">
+        {{ cx.grupoNote }}
+      </p>
+    </InvSection>
+
+    <!-- Hallazgo 2 · oferente único -->
+    <InvSection
+      alt
+      :eyebrow="cx.unicoTag"
+      :title="cx.unicoTitle"
+      :dek="cx.unicoIntro"
+    >
+      <InvLedger
+        :columns="methodColumns"
+        :rows="methodRows"
+        row-key="method"
+      >
+        <template #cell:probed="{ row }">
+          {{ nf.format(row.probed) }}
+        </template>
+        <template #cell:sole="{ row }">
+          {{ nf.format(row.sole) }}
+        </template>
+        <template #cell:share="{ row }">
+          {{ pct(row.share) }}
+        </template>
+        <template #cell:amount="{ row }">
+          <MoneyAmount
+            :amount="row.amount"
+            size="sm"
+            compact
+          />
+        </template>
+      </InvLedger>
+
+      <p class="inv-note">
+        {{ cx.unicoNote }}
+      </p>
+
+      <h3 class="inv-subhead">
+        {{ cx.topTitle }}
+      </h3>
+      <InvLedger
+        :columns="topColumns"
+        :rows="SOLE_TOP"
+        row-key="id"
+        :min-width="720"
+      >
+        <template #cell:id="{ row }">
+          <NuxtLink :to="localePath(`/contracts/adjudicacion-${row.id}`)">
+            {{ row.id }} →
+          </NuxtLink>
+        </template>
+        <template #cell:sup="{ row }">
+          {{ titn(row.sup) }}
+        </template>
+        <template #cell:method="{ row }">
+          <span class="inv-badge inv-badge--nd">{{ row.method }}</span>
+        </template>
+        <template #cell:uyu="{ row }">
+          <MoneyAmount
+            :amount="row.uyu"
+            size="sm"
+            compact
+          />
+        </template>
+      </InvLedger>
+    </InvSection>
+
+    <!-- Lo que no se puede medir -->
+    <InvSection
+      :eyebrow="cx.inmedibleTag"
+      :title="cx.inmedibleTitle"
+    >
+      <div class="inv-prose">
+        <p
+          v-for="(p, i) in cx.inmedible"
+          :key="i"
+        >
+          {{ p }}
+        </p>
+      </div>
+
+      <h3 class="inv-subhead">
+        {{ cx.artifactCol }}
+      </h3>
+      <InvLedger
+        :columns="artifactColumns"
+        :rows="ARTIFACT_CHECK"
+        row-key="buyer"
+        :row-class="(row) => ({ rowflag: !row.measurable })"
+      >
+        <template #cell:probed="{ row }">
+          {{ nf.format(row.probed) }}
+        </template>
+        <template #cell:multi="{ row }">
+          {{ nf.format(row.multi) }}
+        </template>
+        <template #cell:withLosers="{ row }">
+          {{ nf.format(row.withLosers) }}
+        </template>
+        <template #cell:measurable="{ row }">
+          <span
+            class="inv-badge"
+            :class="row.measurable ? 'inv-badge--co' : 'inv-badge--exc'"
+          >{{ row.measurable ? cx.yes : cx.no }}</span>
+        </template>
+      </InvLedger>
+
+      <div class="inv-balance">
+        <div class="inv-balance__h">
+          {{ cx.outlierTitle }}
+        </div>
+        <p>{{ cx.outlierP }}</p>
+        <p class="cmp-outlier u-mono">
+          <NuxtLink :to="localePath(`/contracts/adjudicacion-${OUTLIER.id}`)">
+            {{ OUTLIER.id }} →
+          </NuxtLink>
+          · {{ OUTLIER.buyer }} · {{ nf.format(OUTLIER.qty) }} × {{ formatMoney(OUTLIER.unit, 'UYU') }}
+          = {{ formatMoney(OUTLIER.uyu, 'UYU') }}
+        </p>
+      </div>
+    </InvSection>
+
+    <!-- Uruguay Leaks -->
+    <InvSection alt>
+      <LeakTip
+        :subject="cx.title"
+        path="/investigaciones/competencia-aparente"
+        :facts="leakFacts"
+      />
+    </InvSection>
 
     <!-- Fuentes -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cx.sourcesTag }}
-          </p>
-          <h2>{{ cx.sourcesTitle }}</h2>
-          <p>{{ cx.sourcesP }}</p>
-        </div>
-        <div class="inv-srcgroups">
-          <div class="inv-srcgroup">
-            <h3>Compras Estatales</h3>
-            <ul class="inv-srclist">
-              <li>
-                <a
-                  href="https://www.comprasestatales.gub.uy/consultas/detalle/id/1270831"
-                  target="_blank"
-                  rel="noopener"
-                >Ficha con oferentes — compra 1270831 (Casinos)</a>
-              </li>
-              <li>
-                <a
-                  href="https://www.comprasestatales.gub.uy/consultas/detalle/id/i473855"
-                  target="_blank"
-                  rel="noopener"
-                >Ficha donde participantes = adjudicatarios (IM)</a>
-              </li>
-            </ul>
-          </div>
-          <div class="inv-srcgroup">
-            <h3>Registros · sitio</h3>
-            <ul class="inv-srclist">
-              <li>
-                <a
-                  href="https://www.comprasestatales.gub.uy/rupe/"
-                  target="_blank"
-                  rel="noopener"
-                >RUPE — Registro Único de Proveedores del Estado</a>
-              </li>
-              <li>
-                <NuxtLink :to="localePath('/analytics/competencia')">
-                  Competencia por organismo (en vivo)
-                </NuxtLink>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
+    <InvSection
+      :eyebrow="cx.sourcesTag"
+      :title="cx.sourcesTitle"
+      :dek="cx.sourcesP"
+    >
+      <InvSources :groups="sourceGroups" />
+    </InvSection>
 
-    <!-- Disclaimer -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-disclaimer">
-          <h3>{{ c.common.disclaimerTitle }}</h3>
-          <p
-            v-for="(p, i) in c.common.disclaimer"
-            :key="i"
-          >
-            {{ p }}
-          </p>
-        </div>
-      </div>
-    </section>
+    <InvSection alt>
+      <InvDisclaimer
+        :title="c.common.disclaimerTitle"
+        :paragraphs="c.common.disclaimer"
+      />
+    </InvSection>
   </div>
 </template>
 
@@ -729,8 +607,82 @@ const leakFacts = computed(() => [
 /* El detalle del vínculo va bajo los badges: el badge dice QUÉ comparten, esta línea dice
    cuál es y cuántas empresas más lo declaran — que es lo que separa una pista de una central. */
 .cmp-linkdet {
+  display: block;
   margin-top: var(--s-1);
   font-size: 0.72rem;
   color: var(--text-muted);
 }
+
+.cmp-outlier { font-size: 0.82rem; }
+
+/* La cita de la norma va pegada al bloque legal, en el tono de una nota al pie. */
+.cmp-cite {
+  margin: var(--s-3) 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  max-width: 72ch;
+}
+
+/* Verificación: un asiento por par, separados por una regla, como las entradas de un
+   expediente. No son tarjetas: el peso lo lleva la etiqueta de grado, no un contenedor. */
+.cmp-ev__item + .cmp-ev__item {
+  border-top: 1px solid var(--rule);
+  margin-top: var(--s-6);
+  padding-top: var(--s-6);
+}
+
+.cmp-ev__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-3);
+}
+
+.cmp-ev__head h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.3;
+  max-width: 60ch;
+}
+
+/* Los grados se explican una vez, arriba de la lista. */
+.cmp-ev__legend {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-6);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.cmp-ev__legend > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+
+.cmp-ev__legend dt { min-width: 88px; }
+.cmp-ev__legend dd { margin: 0; }
+
+.cmp-ev__facts {
+  margin: var(--s-3) 0 0;
+  padding-left: var(--s-5);
+  display: grid;
+  gap: var(--s-2);
+  font-size: 0.92rem;
+}
+
+.cmp-ev__facts li { max-width: 72ch; }
+
+.cmp-ev__src {
+  margin: var(--s-4) 0 0;
+  font-size: 0.82rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  align-items: baseline;
+}
+
+.cmp-ev__src > span { color: var(--text-muted); }
+
+.cmp-ev__note { margin-top: var(--s-7); }
 </style>

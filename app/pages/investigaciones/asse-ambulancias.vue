@@ -13,6 +13,9 @@ const ES = {
   title: 'ITHG: cinco fichas en la base, veinte millones de dólares en la realidad',
   dek: 'Una sociedad creada en 2020 como «proveedora marítima» pasó a concentrar el 96% de los traslados en ambulancia de ASSE, todo por compra directa. La base de Compras Estatales registra apenas cinco contratos por unos 33 millones de pesos. La auditoría de ASSE y el Tribunal de Cuentas documentan más de dos mil millones. La diferencia es la parte del gasto que la transparencia no ve.',
   chips: ['5 fichas visibles', '96,47% de los traslados', 'US$ 800 mil por 1 ambulancia', 'Denuncia penal 2026'],
+  kicker: 'Investigación · Empresas señaladas',
+  fileSubject: 'ITHG Proveedores Marítimos',
+  fileSource: 'Compras Estatales + auditoría ASSE · verificado',
   fileOrg: 'ASSE · SAME 105', filePeriod: '2020–2026',
   tVisible: 'lo que muestra la base', tVisibleSub: '5 fichas · compras directas',
   tConc: 'del gasto en traslados', tConcSub: 'concentrado en una sola empresa',
@@ -46,6 +49,9 @@ const EN: typeof ES = {
   title: 'ITHG: five records in the data, twenty million dollars in reality',
   dek: 'A firm created in 2020 as a "maritime supplier" came to concentrate 96% of ASSE\'s ambulance transfers, all by direct purchase. The State-procurement data shows just five contracts for about 33 million pesos. The ASSE audit and the Tribunal de Cuentas document over two billion. The gap is the part of spending that transparency does not see.',
   chips: ['5 visible records', '96.47% of transfers', 'US$800k for 1 ambulance', 'Criminal complaint 2026'],
+  kicker: 'Investigation · Flagged companies',
+  fileSubject: 'ITHG Proveedores Marítimos',
+  fileSource: 'State procurement + ASSE audit · verified',
   fileOrg: 'ASSE · SAME 105', filePeriod: '2020–2026',
   tVisible: 'what the data shows', tVisibleSub: '5 records · direct purchases',
   tConc: 'of transfer spending', tConcSub: 'concentrated in a single firm',
@@ -75,7 +81,7 @@ const EN: typeof ES = {
   ],
 }
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const c = computed(() => (locale.value === 'en' ? EN : ES))
 
 const personLd = usePersonLd()
@@ -124,6 +130,21 @@ const gapBars = computed(() => [
   { label: c.value.gapObservado, value: ITHG_STATS.observadoUYU, color: 'alerta' },
 ])
 
+const headlineTiles = computed(() => [
+  { amount: ITHG_STATS.visibleUYU, label: c.value.tVisible, sub: c.value.tVisibleSub },
+  { value: `${ITHG_STATS.concentracionPct}%`, label: c.value.tConc, sub: c.value.tConcSub },
+  { value: `US$ ${ITHG_STATS.usdTres} M`, label: c.value.tDoc, sub: c.value.tDocSub },
+  { value: 'US$ 800 k', label: c.value.tAmb, sub: c.value.tAmbSub },
+])
+
+const ledgerColumns = computed(() => [
+  { key: 'year', label: c.value.colDate, mono: true, nowrap: true },
+  { key: 'buyer', label: c.value.colBuyer, muted: true, minWidth: '200px' },
+  { key: 'desc', label: c.value.colObjeto, primary: true, minWidth: '240px' },
+  { key: 'amount', label: c.value.colAmount, align: 'end' as const },
+  { key: 'ficha', align: 'end' as const },
+])
+
 const SOURCES = [
   { label: 'la diaria — ASSE pagó US$ 20 millones a ITHG por traslados en tres años (compras directas, observadas por el TCR)', url: 'https://ladiaria.com.uy/salud/articulo/2023/5/asse-pago-20-millones-de-dolares-a-la-empresa-maritima-ithg-por-traslados-en-tres-anos-fueron-todas-compras-directas-y-observadas-por-el-tribunal-de-cuentas/' },
   { label: 'El Observador — Se pagaron US$ 800 mil por una ambulancia que hizo un traslado cada dos días', url: 'https://www.elobservador.com.uy/nacional/investigacion-asse-se-pagaron-us-800-mil-ithg-un-ano-tener-disponible-una-ambulancia-que-hizo-un-traslado-cada-dos-dias-el-mides-n6041939' },
@@ -136,319 +157,124 @@ const SOURCES = [
 
 <template>
   <div class="inv">
-    <header class="inv-cover">
-      <div class="u-container">
-        <div class="inv-file">
-          <span>EXPEDIENTE&nbsp; <b>ITHG Proveedores Marítimos</b></span>
-          <span>{{ c.fileOrg }}</span>
-          <span>PERÍODO&nbsp; <b>{{ c.filePeriod }}</b></span>
-          <span>Compras Estatales + auditoría ASSE · verificado</span>
-        </div>
-        <p class="inv-kicker">
-          Investigación · Empresas señaladas
-        </p>
-        <h1>{{ c.title }}</h1>
-        <p class="inv-dek">
-          {{ c.dek }}
-        </p>
-        <div class="inv-chips">
-          <span
-            v-for="ch in c.chips"
-            :key="ch"
-            class="inv-chip"
-          >{{ ch }}</span>
-        </div>
-      </div>
-    </header>
+    <InvCover
+      :fields="[
+        { label: t('inv.file.expediente'), value: c.fileSubject },
+        { value: c.fileOrg },
+        { label: t('inv.file.periodo'), value: c.filePeriod },
+        { value: c.fileSource },
+      ]"
+      :kicker="c.kicker"
+      :title="c.title"
+      :dek="c.dek"
+      :chips="c.chips"
+    />
 
-    <!-- Tiles -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-tiles">
-          <div class="inv-tile">
-            <MoneyAmount
-              :amount="ITHG_STATS.visibleUYU"
-              size="lg"
-              align="start"
-              :rule="false"
-              compact
-            />
-            <div class="inv-tile__l">
-              {{ c.tVisible }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tVisibleSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              {{ ITHG_STATS.concentracionPct }}%
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tConc }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tConcSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              US$ {{ ITHG_STATS.usdTres }} M
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tDoc }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tDocSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              US$ 800 k
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tAmb }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tAmbSub }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <InvSection alt>
+      <InvTiles :items="headlineTiles" />
+    </InvSection>
 
     <!-- Contexto -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.ctxTag }}
-          </p>
-          <h2>{{ c.ctxTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.ctx1 }}</p>
-          <p>{{ c.ctx2 }}</p>
-        </div>
+    <InvSection
+      :eyebrow="c.ctxTag"
+      :title="c.ctxTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.ctx1 }}</p>
+        <p>{{ c.ctx2 }}</p>
       </div>
-    </section>
+    </InvSection>
 
     <!-- El hallazgo: gap -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.gapTag }}
-          </p>
-          <h2>{{ c.gapTitle }}</h2>
-          <p>{{ c.gapIntro }}</p>
-        </div>
-        <div class="inv-cardc">
-          <div class="inv-scroll">
-            <InvHBars
-              :items="gapBars"
-              format="moneyM"
-              :row-height="52"
-            />
-          </div>
-        </div>
-        <div
-          class="inv-finding"
-          style="margin-top: var(--s-6);"
-        >
-          <p class="inv-kicker">
-            {{ c.gapTag }}
-          </p>
-          <p>{{ c.gapFinding }}</p>
-        </div>
-      </div>
-    </section>
+    <InvSection
+      alt
+      :eyebrow="c.gapTag"
+      :title="c.gapTitle"
+      :dek="c.gapIntro"
+    >
+      <ChartBlock framed>
+        <InvHBars
+          :items="gapBars"
+          format="moneyM"
+          :row-height="52"
+        />
+      </ChartBlock>
+      <InvFinding
+        :kicker="c.gapTag"
+        :body="c.gapFinding"
+      />
+    </InvSection>
 
     <!-- Ledger -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.ledgerTag }}
-          </p>
-          <h2>{{ c.ledgerTitle }}</h2>
-          <p>{{ c.ledgerIntro }}</p>
-        </div>
-        <div class="im-ledger u-scroll-x">
-          <table>
-            <thead>
-              <tr>
-                <th>{{ c.colDate }}</th>
-                <th>{{ c.colBuyer }}</th>
-                <th>{{ c.colObjeto }}</th>
-                <th class="num">
-                  {{ c.colAmount }}
-                </th>
-                <th aria-hidden="true" />
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="row in ITHG_LEDGER"
-                :key="row.ocid"
-              >
-                <td
-                  class="u-mono nowrap"
-                  :data-label="c.colDate"
-                >
-                  {{ row.year }}
-                </td>
-                <td
-                  class="sup"
-                  :data-label="c.colBuyer"
-                >
-                  {{ row.buyer }}
-                </td>
-                <td class="obj">
-                  {{ row.desc }}
-                </td>
-                <td
-                  class="num"
-                  :data-label="c.colAmount"
-                >
-                  <MoneyAmount
-                    :amount="row.amount"
-                    compact
-                  />
-                </td>
-                <td class="num">
-                  <NuxtLink
-                    :to="localePath(`/contracts/adjudicacion-${row.idc}`)"
-                    class="im-ficha u-mono"
-                  >{{ c.ficha }} →</NuxtLink>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+    <InvSection
+      :eyebrow="c.ledgerTag"
+      :title="c.ledgerTitle"
+      :dek="c.ledgerIntro"
+    >
+      <InvLedger
+        :columns="ledgerColumns"
+        :rows="ITHG_LEDGER"
+        row-key="ocid"
+      >
+        <template #cell:amount="{ row }">
+          <MoneyAmount
+            :amount="row.amount"
+            compact
+          />
+        </template>
+        <template #cell:ficha="{ row }">
+          <NuxtLink :to="localePath(`/contracts/adjudicacion-${row.idc}`)">
+            {{ c.ficha }} →
+          </NuxtLink>
+        </template>
+      </InvLedger>
+    </InvSection>
 
     <!-- Solidar -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.solTag }}
-          </p>
-          <h2>{{ c.solTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.sol1 }}</p>
-          <p>{{ c.sol2 }}</p>
-        </div>
+    <InvSection
+      alt
+      :eyebrow="c.solTag"
+      :title="c.solTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.sol1 }}</p>
+        <p>{{ c.sol2 }}</p>
       </div>
-    </section>
+    </InvSection>
 
     <!-- Estado -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.statusTag }}
-          </p>
-          <h2>{{ c.statusTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.status1 }}</p>
-          <p>{{ c.status2 }}</p>
-        </div>
+    <InvSection
+      :eyebrow="c.statusTag"
+      :title="c.statusTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.status1 }}</p>
+        <p>{{ c.status2 }}</p>
       </div>
-    </section>
+    </InvSection>
 
     <!-- Fuentes -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.srcTitle }}
-          </p>
-          <h2>{{ locale === 'en' ? 'Verified sources' : 'Fuentes verificadas' }}</h2>
-        </div>
-        <ul class="inv-srclist">
-          <li
-            v-for="s in SOURCES"
-            :key="s.url"
-          >
-            <a
-              :href="s.url"
-              target="_blank"
-              rel="noopener"
-            >{{ s.label }}</a>
-          </li>
-        </ul>
-      </div>
-    </section>
+    <InvSection
+      alt
+      :eyebrow="c.srcTitle"
+      :title="t('inv.verifiedSources')"
+    >
+      <InvSources :items="SOURCES" />
+    </InvSection>
 
     <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <LeakTip
-          :subject="c.title"
-          path="/investigaciones/asse-ambulancias"
-        />
-      </div>
-    </section>
+    <InvSection>
+      <LeakTip
+        :subject="c.title"
+        path="/investigaciones/asse-ambulancias"
+      />
+    </InvSection>
 
-    <!-- Disclaimer -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-disclaimer">
-          <h3>{{ c.discTitle }}</h3>
-          <p
-            v-for="(p, i) in c.disc"
-            :key="i"
-          >
-            {{ p }}
-          </p>
-        </div>
-      </div>
-    </section>
+    <InvSection>
+      <InvDisclaimer
+        :title="c.discTitle"
+        :paragraphs="c.disc"
+      />
+    </InvSection>
   </div>
 </template>
-
-<style scoped>
-.im-ledger table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); min-width: 640px; }
-.im-ledger thead th {
-  text-align: left; padding: var(--s-2) var(--s-3); font-family: var(--font-mono);
-  font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--text-muted); border-bottom: 1px solid var(--rule);
-}
-.im-ledger thead th.num { text-align: right; }
-.im-ledger tbody td { padding: var(--s-3); border-bottom: 1px solid var(--rule); vertical-align: top; }
-.im-ledger tbody tr:hover { background: var(--surface-sunken); }
-.im-ledger .num { text-align: right; white-space: nowrap; }
-.im-ledger .nowrap { white-space: nowrap; }
-.im-ledger .obj { font-weight: 600; min-width: 240px; }
-.im-ledger .sup { color: var(--text-muted); min-width: 200px; }
-.im-ficha { color: var(--celeste-deep); text-decoration: none; font-size: var(--t-xs); white-space: nowrap; }
-.im-ficha:hover { text-decoration: underline; }
-
-@media (max-width: 760px) {
-  .im-ledger { overflow-x: visible; }
-  .im-ledger table { min-width: 0; display: block; }
-  .im-ledger thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
-  .im-ledger tbody { display: flex; flex-direction: column; gap: var(--s-3); }
-  .im-ledger tbody tr {
-    display: block; padding: var(--s-4); background: var(--surface);
-    border: 1px solid var(--rule); border-radius: var(--r-lg); box-shadow: var(--shadow-1);
-  }
-  .im-ledger tbody tr:hover { background: var(--surface); }
-  .im-ledger tbody td {
-    display: block; min-width: 0; padding: var(--s-2) 0; border: 0;
-    border-top: 1px solid color-mix(in srgb, var(--rule) 55%, transparent); text-align: left; white-space: normal;
-  }
-  .im-ledger tbody td:first-child { border-top: 0; padding-top: 0; }
-  .im-ledger tbody td[data-label]::before {
-    content: attr(data-label); display: block; margin-bottom: 3px; font-family: var(--font-mono);
-    font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
-  }
-  .im-ledger tbody td.obj { min-width: 0; font-weight: 700; }
-  .im-ledger tbody td.num { text-align: left; white-space: normal; }
-}
-</style>
