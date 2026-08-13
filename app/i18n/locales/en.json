@@ -1007,6 +1007,12 @@
     }
   },
   "buyers": {
+    "tcrTitle": "What the Court of Accounts said",
+    "tcrHelp": "The State’s own auditor ruled at least {n} times on this body’s procurement. We show the VISTO — the case heading, which is all the online archive publishes — and a link to the full ruling: whether the spending was observed, and for how much, is in the PDF. The count does not measure irregularity: the Court rules routinely and the number tracks the body’s size.",
+    "tcrContract": "See the purchase: {title}",
+    "tcrPdf": "Ruling (PDF)",
+    "tcrSource": "Record at the Court",
+    "tcrAll": "See every ruling cross-referenced with a purchase",
     "newsTitle": "What the press published about its purchases",
     "newsHelp": "Automated search of Uruguayan media for this body’s name plus procurement terms. It is a search, not a selection of ours: we neither verify nor endorse what the articles say. Each headline opens the article at its source.",
     "title": "Buying agencies",
