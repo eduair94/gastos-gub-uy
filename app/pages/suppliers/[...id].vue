@@ -374,6 +374,12 @@ useSeo(() => ({
         </div>
       </dl>
 
+      <!-- ===== Who it competes against =====
+           Se presentó a N llamados y ganó M, más los rivales con los que más coincide.
+           Lo habilita el bloque de oferentes de la ficha del gobierno: el feed OCDS
+           publica sólo al ganador, así que las ofertas perdidas no existían en el corpus. -->
+      <SupplierCompetition :supplier-id="supplierId" />
+
       <!-- ===== Industrial registry (DEI) =====
            Shown only when the supplier's RUT is a registered industrial company.
            Official MIEM open data, cross-referenced — a fact of record. -->

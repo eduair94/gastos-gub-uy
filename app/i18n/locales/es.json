@@ -755,6 +755,14 @@
     }
   },
   "suppliers": {
+    "competitionTitle": "A qué se presentó y contra quién",
+    "competitionHelp": "Los datos abiertos publican sólo al ganador, así que las ofertas perdidas no figuran en ningún lado. Esto sale de los oferentes que publica la ficha de cada compra. Es sobre los {n} llamados de esta empresa que llegamos a mirar, no sobre todos: el sondeo avanza de a poco.",
+    "competitionWon": "ganados de los mirados",
+    "competitionRate": "tasa de éxito",
+    "competitionRivalsAvg": "rivales por llamado, en promedio",
+    "competitionSole": "llamados donde se presentó sola",
+    "competitionRivals": "Con quiénes coincide más seguido",
+    "competitionTimes": "{n} veces",
     "title": "Proveedores del Estado",
     "lead": "{total} empresas y personas que vendieron al Estado uruguayo.",
     "resultsSummary": "{count} proveedores",

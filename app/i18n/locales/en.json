@@ -755,6 +755,14 @@
     }
   },
   "suppliers": {
+    "competitionTitle": "What it bid for, and against whom",
+    "competitionHelp": "Open data publishes only the winner, so losing bids appear nowhere. This comes from the bidders each purchase record publishes. It covers the {n} calls of this company we have checked so far, not all of them: the scan advances gradually.",
+    "competitionWon": "won of those checked",
+    "competitionRate": "win rate",
+    "competitionRivalsAvg": "rivals per call, on average",
+    "competitionSole": "calls where it bid alone",
+    "competitionRivals": "Who it meets most often",
+    "competitionTimes": "{n} times",
     "title": "State suppliers",
     "lead": "{total} companies and individuals that sold to the Uruguayan state.",
     "resultsSummary": "{count} suppliers",
