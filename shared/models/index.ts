@@ -55,6 +55,9 @@ export * from "./call_bidders";
 // Per-organism competition rollup over call_bidders (bidder_competition).
 export * from "./bidder_competition";
 
+// Court of Accounts resolutions tied to the purchase they name (tcr_resolutions).
+export * from "./tcr_resolution";
+
 // Spending topics — subject-of-spending rollups (topic_spending) and the
 // per-contract classification behind them (topic_contracts)
 export * from "./topic_spending";

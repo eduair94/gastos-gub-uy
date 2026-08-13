@@ -461,6 +461,16 @@ async function main(): Promise<void> {
       await bidderCompetition.createIndex({ dataVersion: 1 }, { background: true })
       console.log('✅ bidder_competition indexes ensured (buyerId unique, conclusive+soleRate, dataVersion)')
 
+      // tcr_resolutions: Court of Accounts rulings tied to the purchase they name, written by
+      // src/jobs/scrape-tcr-resolutions.ts. tcrId unique is both the upsert key and the
+      // resumable id walk; matchedOcid backs the contract-page panel; isProcurement+resolvedAt
+      // backs the public listing.
+      const tcrResolutions = client.db(DB_NAME).collection('tcr_resolutions')
+      await tcrResolutions.createIndex({ tcrId: 1 }, { unique: true, background: true })
+      await tcrResolutions.createIndex({ matchedOcid: 1 }, { background: true })
+      await tcrResolutions.createIndex({ isProcurement: 1, resolvedAt: -1 }, { background: true })
+      console.log('✅ tcr_resolutions indexes ensured (tcrId unique, matchedOcid, isProcurement+resolvedAt)')
+
       // topic_contracts: per-contract classification behind a spending topic
       // (shared/spending-topics.ts), written by src/jobs/refresh-topic-spending.ts.
       // topicKey+ocid unique is the upsert key; the inTopic-prefixed compounds serve

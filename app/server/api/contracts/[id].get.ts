@@ -2,7 +2,7 @@ import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { isValidObjectId } from 'mongoose'
 import type { IRelease } from '../../../types'
 import { connectToDatabase } from '../../utils/database'
-import { ActaBiddersModel, CallBiddersModel, ContractItemFeaturesModel, ItemPriceBaselineModel, ReleaseModel } from '../../utils/models'
+import { ActaBiddersModel, CallBiddersModel, TcrResolutionModel, ContractItemFeaturesModel, ItemPriceBaselineModel, ReleaseModel } from '../../utils/models'
 import { awardUrl, compraIdFromOcid, ocdsJsonUrl, sourceUrl } from '../../utils/query'
 import { loadRateTable } from '../../utils/rates'
 import { toTodayUyu } from '../../../../shared/utils/real-value'
@@ -223,6 +223,17 @@ export default defineEventHandler(async (event) => {
       ).lean()
       : null
 
+    // Rulings of the Court of Accounts that name THIS purchase. Tied by
+    // <organism, "Licitación Pública 5/2021"> — see src/jobs/scrape-tcr-resolutions.ts.
+    // The HTML archive publishes only the VISTO, so this can say the Court ruled on the
+    // purchase and link the PDF; it can never claim the spending was observed.
+    const tcr = contract.ocid
+      ? await TcrResolutionModel.find(
+        { matchedOcid: contract.ocid },
+        { _id: 0, tcrId: 1, date: 1, organism: 1, subject: 1, expediente: 1, visto: 1, pdfUrl: 1, sourceUrl: 1 },
+      ).sort({ resolvedAt: -1 }).limit(5).lean()
+      : []
+
     // Calculate additional fields for the detailed view
     const enhancedContract = {
       ...contract,
@@ -268,6 +279,7 @@ export default defineEventHandler(async (event) => {
       // did not say" — never as "no competition". See shared/acta-bidders.ts.
       bidders: actaBidders,
       callBidders,
+      tcr,
       // The amount restated in today's pesos (see above). `realNativeCurrency`
       // lets the page note when a conversion from USD/EUR also happened.
       realTodayAmount,

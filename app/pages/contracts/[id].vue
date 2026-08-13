@@ -1280,6 +1280,9 @@ useSeo(() => ({
             </div>
           </section>
 
+          <!-- ===== What the Court of Accounts said ===== -->
+          <ContractTcr :rulings="(contract as any)?.tcr ?? null" />
+
           <!-- ===== Who else bid ===== -->
           <ContractBidders
             :call-bidders="(contract as any)?.callBidders ?? null"
