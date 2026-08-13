@@ -14,7 +14,7 @@ colors:
   moneyRule: "#d9a441"
   alert: "#b2423b"
   active: "#3c7860"
-  muted: "#596b76"
+  muted: "#536672"
   rule: "#d3dade"
   ruleStrong: "#b6c1c7"
   focus: "#1f6feb"

@@ -32,7 +32,13 @@
   // 4.21:1 on paper at #64757f — under the 4.5:1 AA floor for normal text
   // (Lighthouse flagged it on MandateTimeline's small mono labels). Darkened
   // to clear AA (4.88:1) without changing the hue.
-  --grafito: #596b76;      // secondary text
+  // Secondary text. Darkened from #596b76, which cleared 4.5:1 on paper (4.88)
+  // and on white (5.54) but not on `--surface-sunken` (4.44) — and muted text
+  // inside a sunken panel is one of the most repeated pairings on the site (78
+  // files use that surface). #536672 is the same blue-grey three percent down:
+  // 5.27 on paper, 5.98 on surface, 4.80 on sunken. Dark theme is unaffected
+  // (--text-muted there already runs 6.06-7.07).
+  --grafito: #536672;      // secondary text
   // 4.28:1 on paper at #3f7d62 — under 4.5:1 AA (flagged on the "activo" tag,
   // whose 12%-tint fill sits close to paper). Darkened to 4.57:1.
   --verde: #3c7860;        // completed / active status

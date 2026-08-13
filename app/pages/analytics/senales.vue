@@ -378,6 +378,12 @@ useSeo(() => ({
    whole declaration was invalid and the page opened welded to the hero. */
 .page { padding-block: var(--s-8) var(--s-9); }
 .caveat { margin-bottom: var(--s-4); }
+
+/* Vuetify's tonal variant paints its own content in the theme colour, so this
+   alert rendered --celeste as TEXT: 2.87:1 on paper. It is the publication
+   contract for every number on the page — the one sentence that must be read.
+   The tint stays as the signal; the words take the body ink. */
+.caveat :deep(.v-alert__content) { color: var(--text); }
 .window { font-size: var(--t-xs); color: var(--text-muted); margin-bottom: var(--s-6); }
 
 .legend { margin-bottom: var(--s-6); }
@@ -441,6 +447,12 @@ a.sig__body:hover .sig__go { text-decoration: underline; }
   font-size: var(--t-xs);
   color: var(--celeste-deep);
 }
+
+/* On a tinted card the link blue lands at 4.40:1 against --alerta-wash, just
+   under the floor. The alert red clears it (4.55) and is the tone the card is
+   already carrying, so the affordance stays a link without inventing a colour. */
+.sig__item--watch .sig__go,
+.sig__item--high .sig__go { color: var(--alerta); }
 
 .pager { margin-top: var(--s-6); }
 
