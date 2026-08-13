@@ -381,6 +381,14 @@ useSeo(() => ({
         :buyer-id="buyerId"
       />
 
+      <!-- ===== What the Court of Accounts said about this body =====
+           Sin ranking ni comparación entre organismos: el conteo sigue al tamaño del
+           organismo, no a su conducta, y sólo tiene sentido dentro de su propia ficha. -->
+      <OrganismTcr
+        v-if="buyerId"
+        :buyer-id="buyerId"
+      />
+
       <!-- ===== Spending by year ===== -->
       <section
         v-if="byYear.length"

@@ -22,6 +22,8 @@ export interface ITcrResolution {
   resolvedAt: Date | null;
   organismPath: string | null;
   organism: string | null;
+  /** Organismo normalizado (sin tildes, mayúsculas) — clave del panel por organismo. */
+  organismKey: string | null;
   subject: string | null;
   expediente: string | null;
   visto: string | null;
@@ -51,6 +53,7 @@ const TcrResolutionSchema = new Schema<ITcrResolution>(
     resolvedAt: { type: Date, default: null },
     organismPath: { type: String, default: null },
     organism: { type: String, default: null },
+    organismKey: { type: String, default: null },
     subject: { type: String, default: null },
     expediente: { type: String, default: null },
     visto: { type: String, default: null },
@@ -73,6 +76,9 @@ const TcrResolutionSchema = new Schema<ITcrResolution>(
 TcrResolutionSchema.index({ tcrId: 1 }, { unique: true });
 // El panel de la ficha del contrato: "¿el TC dijo algo de esta compra?".
 TcrResolutionSchema.index({ matchedOcid: 1 });
+// El panel de la ficha del organismo: sin esto el endpoint traía 600 documentos por
+// render y los filtraba en memoria.
+TcrResolutionSchema.index({ organismKey: 1, resolvedAt: -1 });
 // El listado público: contrataciones, más nuevas primero.
 TcrResolutionSchema.index({ isProcurement: 1, resolvedAt: -1 });
 
