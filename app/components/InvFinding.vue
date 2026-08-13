@@ -5,10 +5,10 @@
  * Nine pages built it by hand, four of them repeating the same
  * `style="margin-top: var(--s-6)"` because the panel almost always follows a
  * chart or a table; one wrote its own `style="margin: 0 0 6px"` on the heading.
- * That spacing is the component's job now (`spaced`), and the heading rank is
- * fixed so the outline cannot drift between two pages of the same series.
+ * The spacing is the SECTION's job now (see `_investigaciones.scss`), and the
+ * heading rank is fixed here, so neither can drift page to page.
  *
- *   <InvFinding spaced :kicker="c.disc.tag" :body="c.disc.finding" />
+ *   <InvFinding :kicker="c.disc.tag" :body="c.disc.finding" />
  *   <InvFinding :kicker="cx.hallazgoKicker" :title="cx.hallazgoH" :body="cx.hallazgoP" :law="cx.hallazgoLaw">
  *     …the contra grid…
  *   </InvFinding>
@@ -25,11 +25,7 @@ const props = withDefaults(defineProps<{
   body?: string | string[]
   /** Verbatim legal text, in the quoted block with the gold edge. */
   law?: string
-  /** The full section beat above it, for a panel that follows a chart or table. */
-  spaced?: boolean
-}>(), {
-  spaced: false,
-})
+}>(), {})
 
 const paragraphs = computed(() => {
   if (!props.body) return []
@@ -38,10 +34,7 @@ const paragraphs = computed(() => {
 </script>
 
 <template>
-  <div
-    class="inv-finding"
-    :class="{ 'inv-finding--spaced': spaced }"
-  >
+  <div class="inv-finding">
     <p
       v-if="kicker"
       class="inv-kicker"
@@ -66,9 +59,3 @@ const paragraphs = computed(() => {
     <slot />
   </div>
 </template>
-
-<style scoped>
-/* Was an inline style on four pages. A finding almost always answers the chart
-   or table above it, so it needs the full section beat, not a paragraph gap. */
-.inv-finding--spaced { margin-top: var(--s-6); }
-</style>

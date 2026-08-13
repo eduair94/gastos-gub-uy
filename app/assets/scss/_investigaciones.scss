@@ -52,6 +52,16 @@
 .inv-sec { padding-block: var(--s-8); }
 .inv-sec--alt { background: var(--surface); }
 .inv-sec + .inv-sec { border-top: 1px solid var(--rule); }
+
+/* The rhythm INSIDE a section, laid down once instead of per block. Two
+   evidence blocks in a row — an ink panel and the ledger that backs it — were
+   rendering welded together, because each of them expected the other to bring
+   the space.
+   `:where()` keeps this at zero specificity, so it is a floor: any block that
+   wants a bigger beat (a sub-head, a chart after its prose) still wins by
+   simply having a class. Margins collapse against `.inv-head`'s bottom, so a
+   head and its body keep exactly one interval, not two. */
+:where(.inv-sec > .u-container) > * + * { margin-top: var(--s-6); }
 .inv-head { max-width: 66ch; margin-bottom: var(--s-6); }
 .inv-head h2 {
   font-family: var(--font-display); font-weight: 700; font-stretch: 108%;
@@ -72,8 +82,6 @@
 .inv-prose p { margin: 0 0 var(--s-4); }
 .inv-prose strong { font-weight: 600; }
 .inv-note { font-size: 0.9rem; color: var(--text-muted); max-width: 74ch; }
-/* A note that answers the block above it, rather than trailing its paragraph. */
-.inv-note--spaced { margin-top: var(--s-4); }
 
 /* ---- Hero number ---- */
 .inv-hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--s-7); align-items: center; }
@@ -232,6 +240,15 @@
 @media (max-width: 640px) {
   .inv-tiles, .inv-obs-grid, .inv-cards, .inv-how, .inv-hubstats { grid-template-columns: 1fr; }
   .inv-hubhero, .inv-cover { padding-block: var(--s-6); }
+
+  /* A 3rem inset on a 390px phone leaves a 26-character measure: the panel's
+     own padding was squeezing the sentence it exists to carry. */
+  .inv-finding,
+  .inv-disclaimer,
+  .inv-deep,
+  .inv-obs { padding: var(--s-5); }
+  .inv-balance { padding: var(--s-4) var(--s-5); }
+  .inv-law { padding: var(--s-3) var(--s-4); }
 }
 
 /* ---- Caso collection promo (investigations hub) ----

@@ -140,7 +140,6 @@ const newsItems = computed(() => IM_NEWS.map(n => ({
         />
       </ChartBlock>
       <InvFinding
-        spaced
         :kicker="c.disc.tag"
         :body="c.disc.finding"
       />

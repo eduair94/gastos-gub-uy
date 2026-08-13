@@ -164,6 +164,13 @@ long-form piece out of these; do not copy a page.
 </InvSection>
 ```
 
+**Do not give a block its own top margin.** The rhythm between blocks inside a
+section is one rule in `_investigaciones.scss`
+(`:where(.inv-sec > .u-container) > * + *`), at zero specificity so anything
+that needs a bigger beat still wins by having a class. Per-block margins are
+what welded an ink panel to the ledger under it on a phone: each of the two
+expected the other to bring the space.
+
 Charts inside an investigation are `<ChartBlock framed>` like everywhere else —
 the old `.inv-cardc` / `.inv-cardsub` / `.inv-scroll` trio was a second, weaker
 copy of that box, and each page wired its own scroller. `ChartBlock`'s `title`

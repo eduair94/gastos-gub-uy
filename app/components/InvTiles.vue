@@ -44,18 +44,15 @@ withDefaults(defineProps<{
   items: InvTileItem[]
   /** Track count on desktop. Two for a hero pairing, four for a headline row. */
   columns?: 2 | 4
-  /** The full section beat above, for a row that follows a chart or table. */
-  spaced?: boolean
 }>(), {
   columns: 4,
-  spaced: false,
 })
 </script>
 
 <template>
   <div
     class="inv-tiles"
-    :class="{ 'inv-tiles--2': columns === 2, 'inv-tiles--spaced': spaced }"
+    :class="{ 'inv-tiles--2': columns === 2 }"
   >
     <div
       v-for="(t, i) in items"
@@ -96,9 +93,3 @@ withDefaults(defineProps<{
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Was an inline style: a tile row that answers the chart above it needs the
-   section beat, not a paragraph gap. */
-.inv-tiles--spaced { margin-top: var(--s-6); }
-</style>

@@ -343,7 +343,7 @@ const leakFacts = computed(() => [
         </template>
       </InvLedger>
 
-      <p class="inv-note inv-note--spaced">
+      <p class="inv-note">
         {{ cx.grupoNote }}
       </p>
     </InvSection>
@@ -378,7 +378,7 @@ const leakFacts = computed(() => [
         </template>
       </InvLedger>
 
-      <p class="inv-note inv-note--spaced">
+      <p class="inv-note">
         {{ cx.unicoNote }}
       </p>
 

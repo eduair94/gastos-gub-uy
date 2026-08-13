@@ -201,7 +201,6 @@ const mapaTiles = computed(() => [
         </template>
       </ChartBlock>
       <InvTiles
-        spaced
         :columns="2"
         :items="mapaTiles"
       />
@@ -225,7 +224,7 @@ const mapaTiles = computed(() => [
           :row-height="36"
         />
       </ChartBlock>
-      <p class="inv-note inv-note--spaced">
+      <p class="inv-note">
         {{ cc.provNote }}
       </p>
     </InvSection>

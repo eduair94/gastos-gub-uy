@@ -304,7 +304,7 @@ const ledger = computed(() => CORTESIA_CONTRACTS
       :title="c.common.verified"
     >
       <InvSources :groups="SOURCE_GROUPS" />
-      <p class="inv-note--spaced">
+      <p>
         <NuxtLink :to="localePath('/investigaciones/casinos')">
           ← {{ c.casinos.title }}
         </NuxtLink>

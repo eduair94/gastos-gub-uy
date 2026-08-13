@@ -200,7 +200,6 @@ const SOURCES = [
         />
       </ChartBlock>
       <InvFinding
-        spaced
         :kicker="c.gapTag"
         :body="c.gapFinding"
       />

@@ -117,7 +117,6 @@ const META_LABELS = {
         <p>{{ c.method.p2 }}</p>
       </div>
       <InvFinding
-        spaced
         :kicker="c.gap.tag"
         :title="c.gap.title"
         :body="c.gap.p"

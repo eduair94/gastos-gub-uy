@@ -134,7 +134,6 @@ const newsItems = computed(() => TVC_NEWS.map(n => ({
         />
       </ChartBlock>
       <InvFinding
-        spaced
         :kicker="c.disc.tag"
         :body="c.disc.finding"
       />
