@@ -219,6 +219,16 @@ export const INV_CONTENT = {
           "cinco proveedores concentran"
         ]
       },
+      "cardCompetencia": {
+        "eyebrow": "Investigación propia · Oferentes",
+        "title": "El llamado parecía competitivo",
+        "dek": "En 852 de las 4.372 compras competitivas que pudimos mirar se presentó una sola empresa. En otras 24, dos de las que competían entre sí comparten teléfono o domicilio declarado ante el Estado.",
+        "tags": [
+          "19,5 % con una sola oferta",
+          "8 pares vinculados",
+          "un 93,8 % que no publicamos"
+        ]
+      },
       "cardMensajes": {
         "eyebrow": "Series · Catálogo SICE",
         "title": "Qué compra el Estado cuando compra palabras",
@@ -589,6 +599,16 @@ export const INV_CONTENT = {
           "live data",
           "method published",
           "five suppliers concentrate it"
+        ]
+      },
+      "cardCompetencia": {
+        "eyebrow": "Own investigation · Bidders",
+        "title": "The tender looked competitive",
+        "dek": "In 852 of the 4,372 competitive purchases we could inspect, exactly one company bid. In another 24, two of the firms bidding against each other share a phone number or the address they filed with the State.",
+        "tags": [
+          "19.5% single offer",
+          "8 linked pairs",
+          "a 93.8% we did not publish"
         ]
       },
       "cardMensajes": {

@@ -413,6 +413,16 @@ const ledger = computed(() => CORTESIA_CONTRACTS
       </div>
     </section>
 
+    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
+    <section class="inv-sec">
+      <div class="u-container">
+        <LeakTip
+          :subject="cx.title"
+          path="/investigaciones/casinos-cortesia"
+        />
+      </div>
+    </section>
+
     <!-- Disclaimer -->
     <section class="inv-sec">
       <div class="u-container">

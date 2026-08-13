@@ -2296,6 +2296,25 @@
     "accept": "Aceptar",
     "reject": "Rechazar"
   },
+  "leak": {
+    "tag": "¿Sabés algo de esto?",
+    "title": "Contalo donde te puedan proteger",
+    "dek": "Nosotros publicamos lo que está en los datos abiertos. Lo que no está —el expediente, el mensaje, lo que se dijo en la reunión— se manda a Uruguay Leaks, el buzón anónimo de la diaria, PODER y DATA Uruguay. Te dejamos el mensaje escrito: copialo, completá lo que sepas y pegalo en el formulario.",
+    "messageLabel": "Mensaje listo para enviar",
+    "copy": "Copiar mensaje",
+    "copied": "Copiado",
+    "selected": "Seleccionado — copialo con Ctrl+C",
+    "open": "Abrir uruguayleaks.uy",
+    "warn": "No lo mandes desde la computadora ni el correo del trabajo. Uruguay Leaks protege el envío, no el equipo desde el que salís.",
+    "who": "Uruguay Leaks es un proyecto de la diaria, PODER y DATA Uruguay. No tenemos relación con ellos ni recibimos copia de lo que envíes.",
+    "tplSubject": "Tema",
+    "tplIntro": "Vi esta investigación de Con la tuya, contribuyente y tengo información sobre el tema: {url}",
+    "tplPublished": "Lo que ya está publicado",
+    "tplKnow": "Lo que yo sé",
+    "tplKnowHint": "(Escribí acá lo que sepas: organismo, empresa, personas, fechas, número de expediente o de compra.)",
+    "tplDocs": "Lo que puedo aportar",
+    "tplDocsHint": "(Documentos, correos, actas, fotos. Adjuntalos en el formulario.)"
+  },
   "legalPage": {
     "updated": "Última actualización: {date}",
     "privacyDesc": "Qué datos tratamos, con quién y qué derechos tenés. Proyecto independiente sobre compras del Estado uruguayo.",

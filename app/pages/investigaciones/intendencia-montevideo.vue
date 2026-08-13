@@ -390,6 +390,16 @@ const ledger = computed(() => IM_LEDGER.slice().sort((a, b) => b.amount - a.amou
       </div>
     </section>
 
+    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
+    <section class="inv-sec">
+      <div class="u-container">
+        <LeakTip
+          :subject="c.title"
+          path="/investigaciones/intendencia-montevideo"
+        />
+      </div>
+    </section>
+
     <!-- Disclaimer -->
     <section class="inv-sec">
       <div class="u-container">
