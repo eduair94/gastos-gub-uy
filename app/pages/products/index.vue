@@ -193,48 +193,24 @@ useSeo(() => ({
       v-model:page="page"
       :total-pages="pagination?.totalPages ?? 1"
     >
-      <div
+      <StatePanel
         v-if="error"
-        class="state"
-      >
-        <h2 class="state__t">
-          {{ t('errors.generic.title') }}
-        </h2>
-        <p class="state__b">
-          {{ t('errors.generic.body') }}
-        </p>
-      </div>
+        :title="t('errors.generic.title')"
+        :body="t('errors.generic.body')"
+      />
 
-      <div
+      <SkeletonList
         v-else-if="pending && !products.length"
-        class="skeleton"
-      >
-        <div
-          v-for="i in 8"
-          :key="i"
-          class="skeleton__row"
-        />
-      </div>
+        :rows="8"
+      />
 
-      <div
+      <StatePanel
         v-else-if="!products.length"
-        class="state"
-      >
-        <h2 class="state__t">
-          {{ t('products.empty.title') }}
-        </h2>
-        <p class="state__b">
-          {{ t('products.empty.body') }}
-        </p>
-        <button
-          v-if="search"
-          class="state__a"
-          type="button"
-          @click="search = ''"
-        >
-          {{ t('common.clearAll') }}
-        </button>
-      </div>
+        :title="t('products.empty.title')"
+        :body="t('products.empty.body')"
+        :action-label="search ? t('common.clearAll') : undefined"
+        @action="search = ''"
+      />
 
       <!-- The link lives in the name cell, not on the whole row: an <a> as a
          direct child of <table>/<tbody> is invalid HTML the browser hoists out
@@ -422,56 +398,7 @@ useSeo(() => ({
   color: var(--text-muted);
 }
 
-/* ---- States / skeleton / pager (shared with the anomalies page) ---- */
-.state {
-  padding: var(--s-8) var(--s-5);
-  text-align: center;
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-}
-
-.state__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-
-.state__b {
-  margin: 0 auto var(--s-4);
-  max-width: 46ch;
-  color: var(--text-muted);
-  font-size: var(--t-sm);
-}
-
-.state__a {
-  padding: var(--s-2) var(--s-5);
-  border: 0;
-  border-radius: var(--r-md);
-  background: var(--ink);
-  color: #fff;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: var(--t-sm);
-  cursor: pointer;
-}
-
-.skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-
-.skeleton__row {
-  height: 64px;
-  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-sunken) 37%, var(--surface) 63%);
-  background-size: 400% 100%;
-  animation: shimmer 1.4s ease infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
+/* ---- Pager ---- */
 
 @media (max-width: 560px) {
   .bar { flex-direction: column; align-items: stretch; }

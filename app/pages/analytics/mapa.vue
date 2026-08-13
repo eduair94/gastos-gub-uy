@@ -203,17 +203,12 @@ useSeo(() => ({
         </v-btn-toggle>
       </div>
 
-      <div
+      <StatePanel
         v-if="error"
-        class="empty"
-      >
-        <p class="empty__t">
-          {{ t('organismos.empty.title') }}
-        </p>
-        <p class="empty__b">
-          {{ t('organismos.empty.body') }}
-        </p>
-      </div>
+        :title="t('organismos.empty.title')"
+        :body="t('organismos.empty.body')"
+        level="p"
+      />
 
       <div
         v-else-if="treeGroups.length && view === 'map'"
@@ -337,10 +332,6 @@ useSeo(() => ({
   text-decoration: none;
 }
 .foot__link:hover { text-decoration: underline; }
-
-.empty { padding: var(--s-8) var(--s-5); text-align: center; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); }
-.empty__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-.empty__b { margin: 0; color: var(--text-muted); font-size: var(--t-sm); }
 
 @media (max-width: 600px) {
   .controls { flex-direction: column; align-items: flex-start; }

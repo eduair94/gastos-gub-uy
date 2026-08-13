@@ -288,23 +288,14 @@ useSeo(() => ({
 <template>
   <div class="u-container page">
     <!-- ===== Not found ===== -->
-    <div
+    <StatePanel
       v-if="notFound"
-      class="state"
-    >
-      <h1 class="state__t">
-        {{ t('buyers.detail.notFound.title') }}
-      </h1>
-      <p class="state__b">
-        {{ t('buyers.detail.notFound.body') }}
-      </p>
-      <NuxtLink
-        :to="localePath('/buyers')"
-        class="state__a"
-      >
-        {{ t('buyers.detail.notFound.action') }}
-      </NuxtLink>
-    </div>
+      :title="t('buyers.detail.notFound.title')"
+      :body="t('buyers.detail.notFound.body')"
+      :action-to="localePath('/buyers')"
+      :action-label="t('buyers.detail.notFound.action')"
+      level="h1"
+    />
 
     <template v-else>
       <!-- ===== Header ===== -->
@@ -526,14 +517,11 @@ useSeo(() => ({
           {{ t('buyers.detail.contractsHelp') }}
         </p>
 
-        <div
+        <StatePanel
           v-if="!contracts.length"
-          class="state state--inline"
-        >
-          <p class="state__b">
-            {{ t('buyers.detail.noAmounts') }}
-          </p>
-        </div>
+          :body="t('buyers.detail.noAmounts')"
+          variant="inline"
+        />
 
         <div v-else>
           <table class="ctable dtable">
@@ -949,37 +937,6 @@ useSeo(() => ({
 }
 
 /* ---- States ---- */
-.state {
-  padding: var(--s-8) var(--s-5);
-  text-align: center;
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-}
-
-.state--inline { padding: var(--s-6) var(--s-5); }
-
-.state__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-
-.state__b {
-  margin: 0 auto;
-  max-width: 46ch;
-  color: var(--text-muted);
-  font-size: var(--t-sm);
-}
-
-.state__a {
-  display: inline-block;
-  margin-top: var(--s-4);
-  padding: var(--s-2) var(--s-5);
-  border-radius: var(--r-md);
-  background: var(--ink);
-  color: #fff;
-  font-weight: 600;
-  font-size: var(--t-sm);
-  text-decoration: none;
-}
-
 /* ---- Responsive ---- */
 @media (max-width: 980px) {
   .cols { grid-template-columns: minmax(0, 1fr); }

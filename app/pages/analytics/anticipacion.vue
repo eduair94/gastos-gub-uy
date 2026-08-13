@@ -193,17 +193,12 @@ useSeo(() => ({
         </p>
       </v-alert>
 
-      <div
+      <StatePanel
         v-if="error"
-        class="empty"
-      >
-        <p class="empty__t">
-          {{ t('errors.generic.title') }}
-        </p>
-        <p class="empty__b">
-          {{ t('anticipacion.notReady.body') }}
-        </p>
-      </div>
+        :title="t('errors.generic.title')"
+        :body="t('anticipacion.notReady.body')"
+        level="p"
+      />
 
       <v-skeleton-loader
         v-else-if="pending && !rows.length"
@@ -337,16 +332,12 @@ useSeo(() => ({
           </p>
         </template>
 
-        <div
+        <StatePanel
           v-else
-          class="empty"
+          :title="t('anticipacion.noMatches.title')"
+          :body="t('anticipacion.noMatches.body')"
+          level="p"
         >
-          <p class="empty__t">
-            {{ t('anticipacion.noMatches.title') }}
-          </p>
-          <p class="empty__b">
-            {{ t('anticipacion.noMatches.body') }}
-          </p>
           <v-btn
             v-if="hasActiveFilters()"
             color="primary"
@@ -356,20 +347,15 @@ useSeo(() => ({
           >
             {{ t('common.clearAll') }}
           </v-btn>
-        </div>
+        </StatePanel>
       </template>
 
-      <div
+      <StatePanel
         v-else
-        class="empty"
-      >
-        <p class="empty__t">
-          {{ t('anticipacion.notReady.title') }}
-        </p>
-        <p class="empty__b">
-          {{ t('anticipacion.notReady.body') }}
-        </p>
-      </div>
+        :title="t('anticipacion.notReady.title')"
+        :body="t('anticipacion.notReady.body')"
+        level="p"
+      />
     </div>
   </div>
 </template>
@@ -407,10 +393,6 @@ useSeo(() => ({
 .amt--none { color: var(--text-muted); font-size: var(--t-sm); }
 
 .coverage { margin-top: var(--s-3); font-size: var(--t-xs); color: var(--text-muted); line-height: 1.5; }
-
-.empty { padding: var(--s-8) var(--s-5); text-align: center; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); }
-.empty__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-.empty__b { margin: 0 0 var(--s-3); color: var(--text-muted); font-size: var(--t-sm); }
 
 @media (max-width: 640px) {
   .controls__field { flex: 1 1 100%; }

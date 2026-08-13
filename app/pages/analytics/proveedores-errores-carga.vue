@@ -789,16 +789,13 @@ useSeo(() => ({
         </template>
 
         <!-- Shared empty state. -->
-        <div
+        <StatePanel
           v-else
-          class="empty"
+          :title="t('provLoadErr.empty.title')"
+          :body="t('provLoadErr.empty.body')"
+          level="p"
+          variant="bare"
         >
-          <p class="empty__t">
-            {{ t('provLoadErr.empty.title') }}
-          </p>
-          <p class="empty__b">
-            {{ t('provLoadErr.empty.body') }}
-          </p>
           <v-btn
             v-if="hasActiveFilters()"
             color="primary"
@@ -808,7 +805,7 @@ useSeo(() => ({
           >
             {{ t('common.clearAll') }}
           </v-btn>
-        </div>
+        </StatePanel>
       </v-card>
 
       <!-- Pattern panels -->
@@ -1191,10 +1188,6 @@ useSeo(() => ({
 .tablecard :deep(.v-data-table__td) { vertical-align: top; }
 
 /* ---- Empty ---- */
-.empty { padding: var(--s-7) var(--s-5); text-align: center; }
-.empty__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-.empty__b { margin: 0 auto var(--s-4); max-width: 46ch; color: var(--text-muted); font-size: var(--t-sm); }
-
 /* ---- Pattern panels ---- */
 .patterns { margin-top: var(--s-7); }
 .patterns__head { margin-bottom: var(--s-4); }

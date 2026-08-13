@@ -343,17 +343,12 @@ useSeo(() => ({
         </p>
       </v-card>
 
-      <div
+      <StatePanel
         v-if="error"
-        class="empty"
-      >
-        <p class="empty__t">
-          {{ t('errors.generic.title') }}
-        </p>
-        <p class="empty__b">
-          {{ t('errors.generic.body') }}
-        </p>
-      </div>
+        :title="t('errors.generic.title')"
+        :body="t('errors.generic.body')"
+        level="p"
+      />
 
       <v-skeleton-loader
         v-else-if="pending && !rows.length"
@@ -850,10 +845,6 @@ useSeo(() => ({
 .dist__none { margin: var(--s-2) 0 0; font-size: var(--t-xs); color: var(--text-muted); }
 
 .interlink { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-5); }
-
-.empty { padding: var(--s-8) var(--s-5); text-align: center; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); }
-.empty__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-.empty__b { margin: 0; color: var(--text-muted); font-size: var(--t-sm); }
 
 @media (max-width: 600px) {
   .dist { grid-template-columns: 1fr; }

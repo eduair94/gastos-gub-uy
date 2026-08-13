@@ -315,40 +315,24 @@ useSeo(() => ({
       v-model:page="page"
       :total-pages="pagination?.totalPages ?? 1"
     >
-      <div
+      <StatePanel
         v-if="error"
-        class="state"
-      >
-        <h2 class="state__t">
-          {{ t('errors.generic.title') }}
-        </h2>
-        <p class="state__b">
-          {{ t('errors.generic.body') }}
-        </p>
-      </div>
+        :title="t('errors.generic.title')"
+        :body="t('errors.generic.body')"
+      />
 
-      <div
+      <SkeletonList
         v-else-if="pending && !flags.length"
-        class="skeleton"
-      >
-        <div
-          v-for="i in 6"
-          :key="i"
-          class="skeleton__row"
-        />
-      </div>
+        :rows="6"
+        variant="cards"
+        :card-height="150"
+      />
 
-      <div
+      <StatePanel
         v-else-if="!flags.length"
-        class="state"
-      >
-        <h2 class="state__t">
-          {{ t('erroresCarga.empty.title') }}
-        </h2>
-        <p class="state__b">
-          {{ t('erroresCarga.empty.body') }}
-        </p>
-      </div>
+        :title="t('erroresCarga.empty.title')"
+        :body="t('erroresCarga.empty.body')"
+      />
 
       <ol
         v-else
@@ -854,24 +838,6 @@ useSeo(() => ({
 .flag__see:hover { text-decoration: underline; }
 
 /* ---- States ---- */
-.state { text-align: center; padding: var(--s-8) var(--s-4); }
-.state__t { margin: 0 0 var(--s-2); }
-.state__b { margin: 0; color: var(--text-muted); }
-
-.skeleton { display: flex; flex-direction: column; gap: var(--s-3); }
-
-.skeleton__row {
-  height: 150px;
-  border-radius: var(--r-lg);
-  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-sunken) 37%, var(--surface) 63%);
-  background-size: 400% 100%;
-  animation: shimmer 1.4s ease infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
 
 .disclaimer {
   margin: var(--s-6) 0 0;
