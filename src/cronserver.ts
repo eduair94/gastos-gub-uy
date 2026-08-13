@@ -1110,6 +1110,26 @@ class CronServer {
     );
     this.logger.info(`Court of Accounts scrape scheduled with expression: ${tcrExpression} (Uruguay timezone)`);
 
+    // Press coverage of each organism procurement, nightly at 04:50 — last of the
+    // scraper chain and the only one that reads a third party rather than a government
+    // host. One query per organism with a delay, and only for entries older than a week:
+    // the press does not change hourly and there is no reason to re-ask nightly.
+    const organismNewsExpression = "50 4 * * *";
+    cron.schedule(
+      organismNewsExpression,
+      async () => {
+        try {
+          this.logger.info("Starting organism news refresh...");
+          await this.runJobProcess("jobs/refresh-organism-news", ["--limit=80"]);
+          this.logger.info("Organism news refresh completed successfully");
+        } catch (error) {
+          this.logger.error("Organism news refresh failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Organism news refresh scheduled with expression: ${organismNewsExpression} (Uruguay timezone)`);
+
     // Year-over-year spending decomposition, monthly at 05:00 on the 1st — after the two
     // rollups above so the three heavy full-collection scans never overlap. Rebuilds
     // spending_trend, which /analytics/evolucion-gasto reads. `--ai` is deliberately NOT

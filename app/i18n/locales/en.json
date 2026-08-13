@@ -1007,6 +1007,8 @@
     }
   },
   "buyers": {
+    "newsTitle": "What the press published about its purchases",
+    "newsHelp": "Automated search of Uruguayan media for this body’s name plus procurement terms. It is a search, not a selection of ours: we neither verify nor endorse what the articles say. Each headline opens the article at its source.",
     "title": "Buying agencies",
     "lead": "{total} Uruguayan state agencies that run procurement.",
     "resultsSummary": "{count} agencies",

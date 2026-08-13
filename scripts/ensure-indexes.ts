@@ -471,6 +471,14 @@ async function main(): Promise<void> {
       await tcrResolutions.createIndex({ isProcurement: 1, resolvedAt: -1 }, { background: true })
       console.log('✅ tcr_resolutions indexes ensured (tcrId unique, matchedOcid, isProcurement+resolvedAt)')
 
+      // organism_news: press coverage of each organism procurement, written by
+      // src/jobs/refresh-organism-news.ts. buyerId unique is the upsert key and the
+      // panel lookup; fetchedAt ascending drives "refresh the stalest first".
+      const organismNews = client.db(DB_NAME).collection('organism_news')
+      await organismNews.createIndex({ buyerId: 1 }, { unique: true, background: true })
+      await organismNews.createIndex({ fetchedAt: 1 }, { background: true })
+      console.log('✅ organism_news indexes ensured (buyerId unique, fetchedAt)')
+
       // topic_contracts: per-contract classification behind a spending topic
       // (shared/spending-topics.ts), written by src/jobs/refresh-topic-spending.ts.
       // topicKey+ocid unique is the upsert key; the inTopic-prefixed compounds serve
