@@ -31,6 +31,7 @@
     "anticipacion": "Upcoming tenders",
     "estadisticas": "Statistics",
     "investigaciones": "Investigations",
+    "invFichas": "Files: where the money is argued over",
     "tvciudad": "TV Ciudad",
     "llamados": "Open calls",
     "comparativa": "Alert services compared",
@@ -2054,6 +2055,17 @@
     }
   },
   "seo": {
+      "casos": {
+        "title": "Where the money is argued over — public investment files",
+        "description": "Files on questioned Uruguayan state investment and spending, with verified sources and the cross-reference against the official Compras Estatales data."
+      },
+      "casosDetail": {
+        "title": "{title}"
+      },
+      "casosTema": {
+        "title": "{theme} — where the money is argued over",
+        "description": "{dek}"
+      },
     "sanciones": {
       "title": "State suppliers sanctioned by consumer protection",
       "description": "Companies sanctioned by Uruguay’s Consumer Protection Unit that also sell to the State, cross-referenced by tax ID against public procurement."
@@ -3085,6 +3097,146 @@
       "rescision": "Contract annulled"
     }
   },
+    "casos": {
+      "eyebrow": "Public investment files",
+      "indexTitle": "Where the money is argued over",
+      "indexLead": "Files on Uruguayan state investments and spending that are under question — by an audit body, by the courts, by parliament, or by the state of the works themselves. Each one cites its sources and, where the open data allows, shows the contract-by-contract cross-reference.",
+      "disclaimer": "A file accuses no one. It states who questioned what, on which source, and where it stands today. A cost overrun or a direct purchase is not a crime.",
+      "backToAll": "All files",
+      "backToHub": "Investigations",
+      "count": "{n} files",
+      "sourcesTotal": "{n} sources cited",
+      "themesTitle": "By topic",
+      "themesLead": "Fourteen fronts where Uruguay's public money is argued over.",
+      "allThemes": "All topics",
+      "filters": {
+        "title": "Filter",
+        "theme": "Topic",
+        "kind": "Kind of question",
+        "all": "All",
+        "search": "Search",
+        "searchPlaceholder": "Antel Arena, ambulances, Ceibal…",
+        "clear": "Clear filters",
+        "results": "{n} of {total} files",
+        "empty": "No file matches that filter.",
+        "emptyAction": "See every file"
+      },
+      "kind": {
+        "judicial": "In the courts",
+        "auditoria": "Flagged by auditors",
+        "gestion": "Questioned management",
+        "debate": "Under public debate"
+      },
+      "kindShort": {
+        "judicial": "Courts",
+        "auditoria": "Audit",
+        "gestion": "Management",
+        "debate": "Debate"
+      },
+      "status": {
+        "condena": "Conviction",
+        "procesamiento": "Prosecuted",
+        "formalizacion": "Formalised",
+        "imputacion": "Charged",
+        "juicio": "At trial",
+        "investigacion": "Investigation",
+        "denuncia": "Complaint",
+        "absolucion": "Acquitted",
+        "archivo": "Shelved",
+        "rescision": "Rescinded",
+        "auditoria": "Flagged",
+        "sobrecosto": "Cost overrun",
+        "inconcluso": "Unfinished",
+        "en-ejecucion": "Under way",
+        "terminado": "Completed",
+        "debate": "Under debate",
+        "sin-resolver": "Unresolved"
+      },
+      "card": {
+        "sources": "{n} sources",
+        "reported": "Published figure",
+        "noFigure": "No single published figure",
+        "crossRef": "With data cross-reference",
+        "noCrossRef": "Outside state procurement"
+      },
+      "sec": {
+        "contexto": "What it is",
+        "hallazgo": "What is questioned",
+        "porQue": "Why it matters to you",
+        "estado": "Where it stands",
+        "fuentes": "Sources",
+        "organismos": "Bodies involved",
+        "empresas": "Companies named by the sources"
+      },
+      "reportedLabel": "Figure published by the sources",
+      "crossRef": {
+        "title": "The open-data cross-reference",
+        "help": "What the state awarded to the bodies and companies named in this file, according to the official Compras Estatales data. It is a cross-reference for scale, not proof of irregularity: it includes contracts nobody questioned.",
+        "kpiTotal": "Awarded (cross-ref)",
+        "kpiCount": "Contracts",
+        "kpiSuppliers": "Suppliers",
+        "buyersTitle": "Which body paid",
+        "suppliersTitle": "Who was paid",
+        "suppliersHelp": "Suppliers ranked by amount awarded in the cross-reference. A contract with several suppliers counts in full against each one: this is a ceiling, not a split.",
+        "categoriesTitle": "What it bought",
+        "categoriesHelp": "Spending by category, from price times quantity of each awarded item, in the contract currency.",
+        "byYearTitle": "Contracts per year",
+        "ledgerTitle": "The detail",
+        "ledgerHelp": "The largest contracts in the cross-reference, high to low. Tap one for its record and the link to the official purchase.",
+        "ledgerCount": "{n} contracts",
+        "ledgerNote": "Amounts in pesos, normalised. Records with impossible quantities are excluded from the total.",
+        "explorer": "Open this set in the explorer",
+        "scopeLabel": "How this cross-reference was built",
+        "scopeSearch": "contracts whose object mentions “{term}”",
+        "scopeBuyers": "everything recorded under {n} buying units of the named bodies (not only this case)",
+        "scopeBuyersOne": "everything recorded under the body's buying unit (not only this case)",
+        "scopeSuppliers": "awarded to: {list}",
+        "scopeYears": "between {from} and {to}",
+        "scopeAll": "every recorded contract of the named bodies"
+      },
+      "noData": {
+        "title": "This money does not travel through state procurement",
+        "titleLikely": "We could not isolate a defensible set of contracts",
+        "bodyLikely": "This spending does travel through public procurement, but we found no filter that separates this file's contracts from everything else those bodies buy. Rather than show a total that mixes the questioned spending with what nobody disputes, we show none. You can explore the body's contracts yourself from the explorer.",
+        "body": "The contract-by-contract cross-reference is not available for this file. The money is executed through a channel the public-procurement open data does not record, so putting a total here would be inventing it. The cited sources are, for now, the only public quantification.",
+        "explore": "Explore contracts in the explorer",
+        "channelsTitle": "Where it goes instead",
+        "channels": "Public-private partnerships (PPP), trusts, state-to-state contracts, direct agreements, or a state company's own budget. None of those channels publish their awards on the Compras Estatales portal."
+      },
+      "feed": {
+        "label": "Data coverage",
+        "likely": "Recorded state purchase",
+        "partial": "Partially recorded",
+        "unlikely": "Outside the procurement record",
+        "likelyDesc": "This file's spending travels through normal public procurement, so the cross-reference should be representative.",
+        "partialDesc": "Part of the spending travels through public procurement and part through a channel the open data does not record. The cross-reference shows only the first.",
+        "unlikelyDesc": "Most of the spending is executed outside the Compras Estatales portal, so the cross-reference shows little or nothing."
+      },
+      "relatedTitle": "Read next",
+      "readInvestigation": "Read the full investigation",
+      "themePageLead": "{n} files on this topic.",
+      "themeAllCta": "See all fourteen topics",
+      "notFound": {
+        "title": "We could not find that file",
+        "body": "The link may be mistyped, or the file may have moved.",
+        "action": "See every file"
+      },
+      "hub": {
+        "tag": "Series",
+        "title": "Where the money is argued over",
+        "intro": "Short files on state investments and spending under question — by an audit body, by the courts, by parliament, or by works that never appeared — each with its sources and with the cross-reference against the official data where one exists.",
+        "cta": "See the {n} files",
+        "byTheme": "Browse by topic"
+      },
+      "method": {
+        "title": "How a file is built",
+        "body": "Every file starts from public sources: press reports, audit-court rulings, parliamentary records, official reports. A minimum of three verified sources is required, and we always distinguish between what someone alleged, what a body flagged, and what a court decided. Then we look in the Compras Estatales open data for the contracts belonging to those bodies and companies, and that cross-reference is resolved live each time you open the page. When the money does not travel through the procurement portal, the file says so instead of inventing a number.",
+        "sourcesTitle": "What counts as a source",
+        "sourcesBody": "Uruguayan outlets with their own newsroom, state bodies (audit court, JUTEP, parliament, ministries, prosecutors) and international organisations. Anonymous blogs and social media are never used as a sole source.",
+        "correctionsTitle": "If something is wrong",
+        "correctionsBody": "These files get corrected. If you have a source that contradicts or updates one, write to us and we will review it."
+      }
+    },
   "inbox": {
     "title": "Notifications",
     "lead": "The tenders that matched your alerts.",

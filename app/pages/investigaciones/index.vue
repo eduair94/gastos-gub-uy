@@ -13,6 +13,19 @@ const c = computed(() => invContent(locale.value).hub)
 const siteUrl = useRuntimeConfig().public.siteUrl as string
 const orgLd = useOrgLd()
 
+// The dossier collection is the one part of this hub that is not static copy:
+// it grows every time a caso is added, so the hub asks the API for the roster
+// instead of hard-coding fourteen counts that would go stale on the next entry.
+// `summary=1` returns the themes and the totals WITHOUT the ~100 cards, which
+// this page does not render.
+const { data: casosRes } = await useFetch<any>('/api/casos?summary=1')
+const casoThemes = computed<any[]>(() => casosRes.value?.data?.themes ?? [])
+const casoTotal = computed<number>(() => casosRes.value?.data?.totalAll ?? 0)
+const casoSources = computed<number>(() => casosRes.value?.data?.sourceTotal ?? 0)
+function casoThemeText(th: any) {
+  return locale.value === 'en' ? th.en : th.es
+}
+
 useSeo(() => ({
   title: c.value.title,
   description: c.value.dek.slice(0, 155),
@@ -30,6 +43,7 @@ useSeo(() => ({
       '@type': 'ItemList',
       // Mirrors the investigation cards actually rendered below, in the same order.
       'itemListElement': [
+        { name: t('casos.hub.title'), url: `${siteUrl}/investigaciones/casos` },
         { name: c.value.cardCasinos.title, url: `${siteUrl}/investigaciones/casinos` },
         { name: c.value.cardCortesia.title, url: `${siteUrl}/investigaciones/casinos-cortesia` },
         { name: c.value.cardIm.title, url: `${siteUrl}/investigaciones/intendencia-montevideo` },
@@ -76,6 +90,51 @@ useSeo(() => ({
         </div>
       </div>
     </header>
+
+    <!-- Serie: the dossier collection. First, because it is the widest door:
+         fourteen subjects and a hundred-odd files, against one long-form piece
+         per card below. Plain (not --alt) so the section rhythm below it is
+         unchanged: the next section is the one that carries the tint. -->
+    <section class="inv-sec">
+      <div class="u-container">
+        <div class="inv-serie">
+          <span class="inv-serie__tag">{{ t('casos.hub.tag') }}</span>
+          <h2>{{ t('casos.hub.title') }}</h2>
+        </div>
+        <p
+          class="inv-prose"
+          style="margin-bottom: var(--s-6); color: var(--text-muted);"
+        >
+          {{ t('casos.hub.intro') }}
+        </p>
+
+        <div class="casohub">
+          <NuxtLink
+            v-for="th in casoThemes"
+            :key="th.key"
+            :to="localePath(`/investigaciones/temas/${th.key}`)"
+            class="casohub__chip"
+          >
+            <span class="casohub__emoji">{{ th.emoji }}</span>
+            <span class="casohub__label">{{ casoThemeText(th).label }}</span>
+            <span class="casohub__n u-mono">{{ th.count }}</span>
+          </NuxtLink>
+        </div>
+
+        <div class="casohub__foot">
+          <NuxtLink
+            :to="localePath('/investigaciones/casos')"
+            class="casohub__cta"
+          >
+            {{ t('casos.hub.cta', { n: casoTotal }) }}
+            <v-icon size="16">
+              mdi-arrow-right
+            </v-icon>
+          </NuxtLink>
+          <span class="casohub__meta u-mono">{{ t('casos.sourcesTotal', { n: casoSources }) }}</span>
+        </div>
+      </div>
+    </section>
 
     <!-- Serie: Casinos -->
     <section class="inv-sec inv-sec--alt">
