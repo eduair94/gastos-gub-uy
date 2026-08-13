@@ -58,6 +58,9 @@ export * from "./bidder_competition";
 // Court of Accounts resolutions tied to the purchase they name (tcr_resolutions).
 export * from "./tcr_resolution";
 
+// Press coverage of each organism procurement (organism_news). See shared/news-search.ts.
+export * from "./organism_news";
+
 // Spending topics — subject-of-spending rollups (topic_spending) and the
 // per-contract classification behind them (topic_contracts)
 export * from "./topic_spending";

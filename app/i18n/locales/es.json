@@ -1008,6 +1008,8 @@
     }
   },
   "buyers": {
+    "newsTitle": "Lo que se publicó sobre sus compras",
+    "newsHelp": "Búsqueda automática en medios uruguayos por el nombre de este organismo más términos de compras públicas. Es una búsqueda, no una selección nuestra: no verificamos ni respaldamos el contenido de las notas. Cada titular abre la nota en su medio.",
     "title": "Organismos compradores",
     "lead": "{total} organismos del Estado uruguayo que ejecutan compras.",
     "resultsSummary": "{count} organismos",

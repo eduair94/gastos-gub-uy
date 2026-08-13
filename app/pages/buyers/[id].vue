@@ -382,6 +382,14 @@ useSeo(() => ({
         :last-year="lastYear"
       />
 
+      <!-- ===== What the press published about this body's purchases =====
+           Se rellena de a tandas por noche y sólo se muestra si hay notas relevantes:
+           medio uruguayo Y el organismo nombrado en el titular. -->
+      <OrganismNews
+        v-if="buyerId"
+        :buyer-id="buyerId"
+      />
+
       <!-- ===== Spending by year ===== -->
       <section
         v-if="byYear.length"

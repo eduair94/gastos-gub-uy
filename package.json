@@ -32,6 +32,7 @@
     "scrape-call-bidders": "tsx src/jobs/scrape-call-bidders.ts",
     "refresh-bidder-competition": "tsx src/jobs/refresh-bidder-competition.ts",
     "scrape-tcr-resolutions": "tsx src/jobs/scrape-tcr-resolutions.ts",
+    "refresh-organism-news": "tsx src/jobs/refresh-organism-news.ts",
     "refresh-spending-trend": "tsx src/jobs/refresh-spending-trend.ts",
     "refresh-topic-spending": "tsx src/jobs/refresh-topic-spending.ts",
     "refresh-macro-table": "node scripts/refresh-macro-table.mjs",
