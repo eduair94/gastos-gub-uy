@@ -555,6 +555,15 @@ useSeo(() => ({
         </template>
       </div>
     </section>
+    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
+    <section class="inv-sec">
+      <div class="u-container">
+        <LeakTip
+          :subject="c.title"
+          path="/investigaciones/gasto-en-genero"
+        />
+      </div>
+    </section>
   </div>
 </template>
 

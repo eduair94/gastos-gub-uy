@@ -383,6 +383,16 @@ const fichaUrl = (id: string) => `https://www.comprasestatales.gub.uy/consultas/
       </div>
     </section>
 
+    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
+    <section class="inv-sec">
+      <div class="u-container">
+        <LeakTip
+          :subject="cc.title"
+          path="/investigaciones/casinos"
+        />
+      </div>
+    </section>
+
     <!-- Disclaimer -->
     <section class="inv-sec">
       <div class="u-container">

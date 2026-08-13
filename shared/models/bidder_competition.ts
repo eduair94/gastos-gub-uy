@@ -27,6 +27,17 @@ export interface IBidderCompetition {
   probed: number;
   /** Sondeadas que publicaron oferentes. */
   withBidders: number;
+  /**
+   * De `withBidders`, cuántas publicaron algún oferente que NO fue adjudicado.
+   *
+   * Es el control de artefacto del indicador. Algunos organismos alimentan el bloque
+   * "Proveedores participantes" con la lista de ADJUDICATARIOS y no con la de ofertas
+   * recibidas: en las 65 compras sondeadas de la Intendencia de Montevideo (ids `i…`) el
+   * bloque nunca contiene un perdedor, y leer eso como "se presentó una sola empresa"
+   * fabricaría un 94% de oferente único que no dice nada sobre la competencia real.
+   * Con `withLosers === 0` el organismo es INMEDIBLE, no limpio ni sospechoso.
+   */
+  withLosers: number;
   /** De `withBidders`, cuántas tuvieron exactamente uno. */
   soleBidder: number;
   /** soleBidder / withBidders, 0..1. Null si la muestra no alcanza. */
@@ -48,6 +59,7 @@ const BidderCompetitionSchema = new Schema<IBidderCompetition>(
     universe: { type: Number, required: true, default: 0 },
     probed: { type: Number, required: true, default: 0 },
     withBidders: { type: Number, required: true, default: 0 },
+    withLosers: { type: Number, required: true, default: 0 },
     soleBidder: { type: Number, required: true, default: 0 },
     soleRate: { type: Number, default: null },
     avgBidders: { type: Number, default: null },

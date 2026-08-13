@@ -2293,6 +2293,25 @@
     "accept": "Accept",
     "reject": "Reject"
   },
+  "leak": {
+    "tag": "Do you know something about this?",
+    "title": "Tell it where you can be protected",
+    "dek": "We publish what is in the open data. What isn't — the file, the message, what was said in the meeting — goes to Uruguay Leaks, the anonymous inbox run by la diaria, PODER and DATA Uruguay. The message is written for you: copy it, add what you know and paste it into their form.",
+    "messageLabel": "Message ready to send",
+    "copy": "Copy message",
+    "copied": "Copied",
+    "selected": "Selected — copy it with Ctrl+C",
+    "open": "Open uruguayleaks.uy",
+    "warn": "Do not send it from your work computer or work email. Uruguay Leaks protects the submission, not the machine you send it from.",
+    "who": "Uruguay Leaks is a project by la diaria, PODER and DATA Uruguay. We are not affiliated with them and receive no copy of what you send.",
+    "tplSubject": "Subject",
+    "tplIntro": "I saw this investigation by Con la tuya, contribuyente and I have information about it: {url}",
+    "tplPublished": "What is already published",
+    "tplKnow": "What I know",
+    "tplKnowHint": "(Write here what you know: public body, company, people, dates, file or purchase number.)",
+    "tplDocs": "What I can provide",
+    "tplDocsHint": "(Documents, emails, minutes, photos. Attach them in the form.)"
+  },
   "legalPage": {
     "updated": "Last updated: {date}",
     "privacyDesc": "What data we process, with whom, and what rights you have. An independent project on Uruguay's public procurement.",
