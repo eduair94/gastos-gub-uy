@@ -56,6 +56,42 @@ Required for row-level navigation and trailing-arrow actions.
 Use for finite status vocabularies. Do not put sentences or uncertain
 interpretations in chips.
 
+### The investigation chrome: RecordHero, SourceList, ContractLedger, RelatedRail, NotFoundPanel
+
+The five pieces every investigation surface repeats. They were hand-rolled once
+per page across `curros`, `recopilatorios` and `investigaciones/casos`, and had
+already drifted — two hero tints, three title measures, a `<h3>` heading where
+the siblings used `<h2>`. Build a new investigation surface out of these rather
+than copying the markup again.
+
+```vue
+<RecordHero
+  tone="alerta"
+  :emoji="data.emoji"
+  :eyebrow="t('curros.eyebrow')"
+  :title="text.title"
+  :dek="text.dek"
+  :back-to="localePath('/curros')"
+  :back-label="t('curros.backToAll')"
+>
+  <template #eyebrow> · {{ data.period }}</template>
+  <div class="hero__tags"><StatusChip … on="ink" /></div>
+</RecordHero>
+```
+
+`RecordHero` sits on `--ink`, which does **not** flip in dark mode: anything
+placed in its slots uses the fixed `--ink-fg` / `--ink-fg-dim` pair, and a chip
+inside it needs `on="ink"`. `tone` tints only the corner glow — `alerta` for the
+surfaces about wrongdoing under investigation, `celeste` for a neutral record.
+
+`SourceList` is the citation panel the evidence contract rests on; its links
+always open in a new tab so the reader does not lose the argument they are in
+the middle of. `ContractLedger` is the `<ol>` of contracts — the order is the
+finding — and it puts every amount through `<MoneyAmount>`. `RelatedRail` is the
+"read next" pill row, where only the label may shrink so a 200-character
+Spanish title clips instead of widening the document. `NotFoundPanel` is the
+soft-404 body; the page that renders it must also pass `noindex` to `useSeo()`.
+
 ### DataTable, PaginatedList and DataPager
 
 Use this trio for directory results. `DataTable` preserves table semantics on

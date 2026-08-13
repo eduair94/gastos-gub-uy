@@ -120,48 +120,34 @@ useSeo(() => ({
 <template>
   <div class="casos">
     <!-- Hero -->
-    <section class="chero">
-      <div class="chero__in u-container">
-        <NuxtLink
-          :to="localePath('/investigaciones')"
-          class="chero__back"
-        >
-          <v-icon size="16">
-            mdi-arrow-left
-          </v-icon>
-          {{ t('casos.backToHub') }}
-        </NuxtLink>
-        <p class="u-eyebrow chero__eyebrow">
-          {{ t('casos.eyebrow') }}
-        </p>
-        <h1 class="chero__title">
-          {{ t('casos.indexTitle') }}
-        </h1>
-        <p class="chero__dek">
-          {{ t('casos.indexLead') }}
-        </p>
-        <div class="chero__stats">
-          <div class="cstat">
-            <b>{{ formatNumber(items.length) }}</b>
-            <span>{{ t('casos.count', { n: items.length }) }}</span>
-          </div>
-          <div class="cstat">
-            <b>{{ formatNumber(sourceTotal) }}</b>
-            <span>{{ t('casos.sourcesTotal', { n: sourceTotal }) }}</span>
-          </div>
-          <div class="cstat">
-            <b>{{ themes.length }}</b>
-            <span>{{ t('casos.themesTitle') }}</span>
-          </div>
+    <RecordHero
+      :eyebrow="t('casos.eyebrow')"
+      :title="t('casos.indexTitle')"
+      :dek="t('casos.indexLead')"
+      :back-to="localePath('/investigaciones')"
+      :back-label="t('casos.backToHub')"
+    >
+      <div class="hero__stats">
+        <div class="hero__stat">
+          <b>{{ formatNumber(items.length) }}</b>
+          <span>{{ t('casos.count', { n: items.length }) }}</span>
         </div>
-        <p class="chero__disclaimer">
-          <v-icon size="15">
-            mdi-scale-balance
-          </v-icon>
-          {{ t('casos.disclaimer') }}
-        </p>
+        <div class="hero__stat">
+          <b>{{ formatNumber(sourceTotal) }}</b>
+          <span>{{ t('casos.sourcesTotal', { n: sourceTotal }) }}</span>
+        </div>
+        <div class="hero__stat">
+          <b>{{ themes.length }}</b>
+          <span>{{ t('casos.themesTitle') }}</span>
+        </div>
       </div>
-    </section>
+      <p class="hero__disclaimer">
+        <v-icon size="15">
+          mdi-scale-balance
+        </v-icon>
+        {{ t('casos.disclaimer') }}
+      </p>
+    </RecordHero>
 
     <!-- Theme grid -->
     <section class="u-container sec">
@@ -338,58 +324,20 @@ useSeo(() => ({
 <style scoped>
 .casos { padding-bottom: var(--s-9); }
 
-.chero {
-  background:
-    radial-gradient(1000px 340px at 88% -20%, color-mix(in srgb, var(--celeste) 22%, transparent), transparent 70%),
-    var(--ink);
-  color: var(--ink-fg);
-  border-bottom: 1px solid var(--rule);
-}
 /* padding-block, never the `padding` shorthand: this element also carries
    .u-container, whose padding-inline IS the page gutter, and a shorthand here
    outranks it and flushes the page against the phone's edge. */
-.chero__in { padding-block: clamp(var(--s-7), 6vw, var(--s-9)); }
-.chero__back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-1);
-  margin-bottom: var(--s-4);
-  color: var(--ink-fg-dim);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  text-decoration: none;
-}
-.chero__back:hover { color: #fff; }
-.chero__eyebrow { color: var(--sol); }
-.chero__title {
-  margin: var(--s-3) 0 0;
-  max-width: 20ch;
-  font-family: var(--font-display);
-  font-size: clamp(28px, 5vw, var(--t-3xl));
-  font-stretch: 112%;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  color: #fff;
-  text-wrap: balance;
-}
-.chero__dek {
-  margin: var(--s-4) 0 0;
-  max-width: 66ch;
-  font-size: var(--t-md);
-  line-height: 1.55;
-  color: var(--ink-fg-dim);
-}
-.chero__stats { display: flex; flex-wrap: wrap; gap: var(--s-6); margin-top: var(--s-6); }
-.cstat { display: flex; flex-direction: column; gap: 2px; }
-.cstat b {
+.hero__stats { display: flex; flex-wrap: wrap; gap: var(--s-6); margin-top: var(--s-6); }
+.hero__stat { display: flex; flex-direction: column; gap: 2px; }
+.hero__stat b {
   font-family: var(--font-display);
   font-size: var(--t-2xl);
   font-stretch: 112%;
   line-height: 1;
   color: #fff;
 }
-.cstat span { font-size: var(--t-xs); color: var(--ink-fg-dim); }
-.chero__disclaimer {
+.hero__stat span { font-size: var(--t-xs); color: var(--ink-fg-dim); }
+.hero__disclaimer {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);

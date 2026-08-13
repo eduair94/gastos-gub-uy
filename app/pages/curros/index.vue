@@ -52,25 +52,19 @@ useSeo(() => ({
 <template>
   <div class="curros">
     <!-- Hero -->
-    <section class="chero">
-      <div class="chero__in u-container">
-        <p class="u-eyebrow chero__eyebrow">
-          {{ t('curros.eyebrow') }}
-        </p>
-        <h1 class="chero__title">
-          {{ t('curros.indexTitle') }}
-        </h1>
-        <p class="chero__dek">
-          {{ t('curros.indexLead') }}
-        </p>
-        <p class="chero__disclaimer">
-          <v-icon size="15">
-            mdi-scale-balance
-          </v-icon>
-          {{ t('curros.disclaimer') }}
-        </p>
-      </div>
-    </section>
+    <RecordHero
+      tone="alerta"
+      :eyebrow="t('curros.eyebrow')"
+      :title="t('curros.indexTitle')"
+      :dek="t('curros.indexLead')"
+    >
+      <p class="hero__disclaimer">
+        <v-icon size="15">
+          mdi-scale-balance
+        </v-icon>
+        {{ t('curros.disclaimer') }}
+      </p>
+    </RecordHero>
 
     <!-- Cards -->
     <section class="u-container grid">
@@ -152,38 +146,7 @@ useSeo(() => ({
 <style scoped>
 .curros { padding-bottom: var(--s-9); }
 
-.chero {
-  background:
-    radial-gradient(1000px 340px at 88% -20%, color-mix(in srgb, var(--ink-alerta) 22%, transparent), transparent 70%),
-    var(--ink);
-  color: var(--ink-fg);
-  border-bottom: 1px solid var(--rule);
-}
-
-.chero__in { padding-block: clamp(var(--s-7), 6vw, var(--s-9)); }
-.chero__eyebrow { color: var(--sol); }
-
-.chero__title {
-  margin: var(--s-3) 0 0;
-  max-width: 20ch;
-  font-family: var(--font-display);
-  font-size: clamp(28px, 5vw, var(--t-3xl));
-  font-stretch: 112%;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  color: #fff;
-  text-wrap: balance;
-}
-
-.chero__dek {
-  margin: var(--s-4) 0 0;
-  max-width: 60ch;
-  font-size: var(--t-md);
-  line-height: 1.55;
-  color: var(--ink-fg-dim);
-}
-
-.chero__disclaimer {
+.hero__disclaimer {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);

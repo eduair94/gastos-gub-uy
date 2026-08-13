@@ -1,7 +1,7 @@
 import type { CasoDef } from '../types'
 
 /**
- * deporte-y-cultura — 9 dossiers, 6 of them with a live cross-reference.
+ * deporte-y-cultura — 10 dossiers, 7 of them with a live cross-reference.
  *
  * Every source URL was fetched and every query was resolved against the live
  * collection before this file was committed (scripts/verify-casos.ts re-checks
@@ -172,6 +172,52 @@ export const CASOS_DEPORTE_Y_CULTURA: CasoDef[] = [
       statusNote: 'The municipality defended the spending: it said the aim was to "break traditional paradigms and promote representation, leadership and equal opportunity in culture", and grounded the choice of Espósito in her international standing and advocacy for gender equality, and that of Mercury in her philanthropic work and feminist and LGBT activism, according to El Observador and Infobae. Among the verified sources there is no record of a criminal complaint or a Court of Accounts objection over these contracts: the challenge was political and about transparency. As of this file\'s closing (August 2026) there are no developments after the March 2023 coverage.',
       porQueImporta: 'These festivals are financed by Montevideo\'s taxpayers through property and departmental taxes: even with 400-peso tickets, the bulk of the cost is public budget. Knowing what each performer charges — and knowing it before the show, not after — is what makes it possible to debate whether that money is well spent against sewerage, street lighting or road repairs.',
       caveat: 'Performer fees are contracted directly because of the artistic nature of the service, and may appear in procurement data under the promoter\'s name rather than the artist\'s. The waived public entertainment tax appears as spending in no purchasing record at all.',
+    },
+  },
+  {
+    slug: 'cupo-mujeres-disidencias-espectaculos-estatales',
+    emoji: '🎤',
+    theme: 'deporte-y-cultura',
+    period: '2018–2026',
+    statusKind: 'debate',
+    status: 'debate',
+    amountReported: 'El proyecto no fija un monto: condiciona el acceso a los espectáculos que el Estado organiza, patrocina o financia, y prevé una multa del 6% de la recaudación del evento y tres años sin fondos públicos ante el incumplimiento',
+    organisms: ['Ministerio de Educación y Cultura', 'Intendencia de Montevideo', 'Ministerio de Turismo'],
+    feedCoverage: 'partial',
+    query: {
+      buyers: [
+        'Intendencia de Montevideo',
+        'Dirección Nacional de Turismo',
+      ],
+      search: 'espectáculo',
+      yearFrom: 2015,
+      yearTo: 2026,
+    },
+    sources: [
+      { outlet: 'El Observador', title: 'Proponen cupo para artistas "mujeres y disidencias" en grilla de espectáculos patrocinados por el Estado', url: 'https://www.elobservador.com.uy/nota/proponen-cupo-para-mujeres-y-disidencias-en-espectaculos-musicales-patrocinados-por-el-estado-20211216144550', date: '2021-12-16' },
+      { outlet: 'Montevideo Portal', title: '¿Cupo para mujeres en festivales de música? Los planteos de Agadu y el rechazo de Gandini', url: 'https://www.montevideo.com.uy/Noticias/-Cupo-para-mujeres-en-festivales-de-musica-Los-planteos-de-Agadu-y-el-rechazo-de-Gandini-uc861060', date: '2023-07-28' },
+      { outlet: 'El Observador', title: 'Proyecto de ley busca asegurar cuota femenina para festivales con fondos públicos', url: 'https://www.elobservador.com.uy/nota/proyecto-de-ley-busca-asegurar-cuota-femenina-para-festivales-con-fondos-publicos-201872500', date: '2018-07-25' },
+      { outlet: 'Portal Medios Públicos', title: 'Parlamento debate ley de cupo en eventos musicales financiados por el Estado', url: 'https://mediospublicos.uy/parlamento-debate-ley-de-cupo-en-eventos-musicales-financiados-por-el-estado/' },
+      { outlet: 'MasMusicas Uruguay', title: 'Ingresó al parlamento uruguayo proyecto de ley de cupo para escenarios musicales', url: 'https://www.masmusicas.uy/ingreso-al-parlamento-uruguayo-proyecto-de-ley-de-cupo-para-escenarios-musicales/' },
+      { outlet: 'Semanario Brecha', title: 'Más mujeres en los escenarios musicales', url: 'https://brecha.com.uy/mas-mujeres-en-los-escenarios-musicales/', date: '2019-11-20' },
+    ],
+    es: {
+      title: 'El cupo para mujeres y disidencias en los escenarios que paga el Estado',
+      dek: 'El proyecto uruguayo pide 50% de la grilla, no 30%: el 30% es la ley argentina de 2019. Condiciona qué espectáculos puede financiar el Estado.',
+      contexto: 'El 15 de diciembre de 2021 las senadoras Sandra Lazo (Frente Amplio) y Gloria Rodríguez (Partido Nacional) presentaron un proyecto de ley elaborado por el colectivo Mujeres y Disidencias en la Música Uruguaya (Mydmus). Según El Observador, alcanza a los espectáculos musicales —en vivo o por plataforma— que el Estado organiza, patrocina o financia directa o indirectamente y que reúnan al menos dos artistas o grupos. Existe un antecedente: en julio de 2018 El Observador informó de otro proyecto que buscaba asegurar una cuota femenina en festivales con fondos públicos. La discusión no es sobre gustos musicales sino sobre una condición de acceso al dinero público: qué grilla habilita a cobrar del Estado.',
+      hallazgo: 'El texto que reportó El Observador el 16 de diciembre de 2021 exige que al menos el 50% de las propuestas de la grilla sean de artistas mujeres y de identidades de género disidentes de origen nacional; en el interior, ese 50% debe ser de artistas locales o regionales. Suma una distribución equitativa por fecha, horario y escenario, el reparto por mitades del financiamiento estatal, la inscripción en el Registro de Artistas del Ministerio de Trabajo, y sanciones: una multa del 6% de la recaudación del evento y tres años sin acceso a fondos públicos para quien incumpla. El fundamento que cita el proyecto es que las mujeres son el 52% de la población pero su participación en espectáculos financiados con dinero público no llega al 8%. En la comisión hubo reparos: según Montevideo Portal (28 de julio de 2023), AGADU acompañó el espíritu pero pidió precisar qué cuenta como «financiamiento estatal» y advirtió sobre crear un órgano centralizado de control, mientras el senador Jorge Gandini (Partido Nacional) rechazó la obligatoriedad —«la cultura es libertad y nada la puede limitar»— y dijo preferir incentivos.',
+      statusNote: 'La última instancia parlamentaria que pudimos documentar es el estudio en la Comisión de Derechos Humanos y Equidad de Género del Senado, con las delegaciones recibidas en julio de 2023 (Montevideo Portal). Al cierre de esta ficha (agosto de 2026) circularon versiones sobre una votación en el Senado que no pudimos confirmar en las fuentes consultadas, y la ficha del asunto en parlamento.gub.uy no es accesible de forma automatizada. Atención a un dato que se repite mal: la cuota del 30% es la ley argentina aprobada en 2019 (Brecha), no el proyecto uruguayo, que pide 50%.',
+      porQueImporta: 'Si se aprueba, cambia una condición de contratación para todo espectáculo que reciba dinero público: intendencias, MEC, Turismo y cualquier fondo estatal. Eso alcanza a los cachés que ya pagan esos organismos y que este sitio publica contrato por contrato. Y define quién puede cobrar del Estado por subirse a un escenario, que es una decisión de gasto público aunque se discuta como política cultural.',
+      caveat: 'El cruce muestra los contratos de espectáculos artísticos de los organismos nombrados, no la grilla de cada evento: los datos abiertos registran la contratación, no el género de quien se sube al escenario. Sirve para dimensionar cuánto dinero mueve la contratación de espectáculos, no para medir el cumplimiento del cupo.',
+    },
+    en: {
+      title: 'The quota for women and gender-dissident artists on state-funded stages',
+      dek: 'The Uruguayan bill asks for 50% of the lineup, not 30%: the 30% figure is Argentina\'s 2019 law. It conditions which shows the state may fund.',
+      contexto: 'On 15 December 2021 senators Sandra Lazo (Frente Amplio) and Gloria Rodríguez (Partido Nacional) introduced a bill drafted by the collective Mujeres y Disidencias en la Música Uruguaya (Mydmus). According to El Observador, it covers musical events —live or on any platform— that the state organises, sponsors or funds directly or indirectly and that feature at least two artists or groups. There is a precedent: in July 2018 El Observador reported another bill seeking a female quota at festivals with public funding. The argument is not about musical taste but about a condition of access to public money: which lineup qualifies to be paid by the state.',
+      hallazgo: 'The text El Observador reported on 16 December 2021 requires at least 50% of the lineup to be women and gender-dissident artists of national origin; in the interior, that 50% must be local or regional artists. It adds equitable distribution across dates, time slots and stages, an even split of the state funding, registration in the Labour Ministry\'s Artist Registry, and penalties: a fine of 6% of the event\'s takings and three years without access to public funds for non-compliance. The bill\'s stated basis is that women are 52% of the population but their participation in publicly funded musical events does not reach 8%. There were objections in committee: according to Montevideo Portal (28 July 2023), AGADU backed the spirit but asked for a precise definition of what counts as “state funding” and warned against creating a centralised oversight body, while senator Jorge Gandini (Partido Nacional) rejected making it mandatory —“culture is freedom and nothing can limit it”— and said he preferred incentives.',
+      statusNote: 'The latest parliamentary stage we could document is the study in the Senate\'s Human Rights and Gender Equality Committee, with delegations heard in July 2023 (Montevideo Portal). At this file\'s close (August 2026) there were reports of a Senate vote that we could not confirm in the sources consulted, and the bill\'s record on parlamento.gub.uy is not machine-readable. Note one figure that is frequently misreported: the 30% quota is Argentina\'s 2019 law (Brecha), not the Uruguayan bill, which asks for 50%.',
+      porQueImporta: 'If passed, it changes a contracting condition for every show that receives public money: city governments, the Education and Culture Ministry, Tourism and any state fund. That reaches the performance fees those bodies already pay, which this site publishes contract by contract. And it defines who may be paid by the state to take the stage — a public-spending decision, however much it is argued as cultural policy.',
+      caveat: 'The cross-reference shows the named bodies\' contracts for artistic performances, not each event\'s lineup: the open data records the contracting, not the gender of whoever takes the stage. It is useful for sizing how much money performance contracting moves, not for measuring compliance with the quota.',
     },
   },
   {
