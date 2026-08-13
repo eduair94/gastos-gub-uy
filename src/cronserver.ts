@@ -1088,6 +1088,28 @@ class CronServer {
     );
     this.logger.info(`HTML bidder scrape scheduled with expression: ${callBiddersExpression} (Uruguay timezone)`);
 
+    // Court of Accounts archive, nightly at 04:20 — after both bidder passes, so the three
+    // scrapers never overlap and only one government host is being read at a time. The
+    // archive walks sequential ids newest-first and every probed id is stored (including the
+    // ones that do not exist), so a re-run never re-fetches. 400/night: the backlog is tens
+    // of thousands of records and grinding it in one go is exactly what throttled this same
+    // host before.
+    const tcrExpression = "20 4 * * *";
+    cron.schedule(
+      tcrExpression,
+      async () => {
+        try {
+          this.logger.info("Starting Court of Accounts resolution scrape...");
+          await this.runJobProcess("jobs/scrape-tcr-resolutions", ["--limit=400"]);
+          this.logger.info("Court of Accounts resolution scrape completed successfully");
+        } catch (error) {
+          this.logger.error("Court of Accounts resolution scrape failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Court of Accounts scrape scheduled with expression: ${tcrExpression} (Uruguay timezone)`);
+
     // Year-over-year spending decomposition, monthly at 05:00 on the 1st — after the two
     // rollups above so the three heavy full-collection scans never overlap. Rebuilds
     // spending_trend, which /analytics/evolucion-gasto reads. `--ai` is deliberately NOT
