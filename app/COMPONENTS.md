@@ -56,6 +56,46 @@ Required for row-level navigation and trailing-arrow actions.
 Use for finite status vocabularies. Do not put sentences or uncertain
 interpretations in chips.
 
+### StatePanel and SkeletonList
+
+The two things every list renders before — or instead of — its rows. Do not
+hand-roll either; both were hand-rolled across twenty-one files and both had
+already drifted into four variants, and in `contactos/index.vue` both were used
+with the class names but **no CSS at all**, so its loading state was a column of
+invisible divs and its error state was unstyled flush text.
+
+```vue
+<SkeletonList v-if="pending && !rows.length" :rows="8" />
+
+<StatePanel
+  v-else-if="error"
+  :title="t('errors.generic.title')"
+  :body="t('errors.generic.body')"
+  :action-label="t('errors.generic.action')"
+  @action="refreshNuxtData()"
+/>
+
+<StatePanel
+  v-else-if="!rows.length"
+  :title="t('suppliers.empty.title')"
+  :body="t('suppliers.empty.body')"
+  :action-label="term ? t('suppliers.empty.action') : undefined"
+  @action="clearSearch"
+/>
+```
+
+`StatePanel`'s `level` is a prop because the panel plays two roles: on a detail
+route that resolved to nothing it IS the page's `h1` (and that page must also
+pass `noindex` to `useSeo()`); inside a section that already has one it is an
+`h2`; a soft "no rows match this filter" is a `p`. `variant` is `card` in a
+list, `bare` inside a panel that already draws a border, `inline` for the
+one-line note that replaces a table. Pass `actionLabel` conditionally rather
+than putting a button in the slot — an `undefined` label renders no action.
+
+`SkeletonList` is `aria-hidden`: it is a picture of content that is not there,
+and it holds still under `prefers-reduced-motion` because a loop the reader
+cannot dismiss is the one animation they cannot escape.
+
 ### The investigation chrome: RecordHero, SourceList, ContractLedger, RelatedRail, NotFoundPanel
 
 The five pieces every investigation surface repeats. They were hand-rolled once

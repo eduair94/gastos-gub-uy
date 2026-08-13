@@ -230,55 +230,26 @@ useSeo(() => ({
       :total-pages="totalPages"
       @update:page="page = $event"
     >
-      <div
+      <StatePanel
         v-if="error"
-        class="state"
-      >
-        <h2 class="state__t">
-          {{ t('errors.generic.title') }}
-        </h2>
-        <p class="state__b">
-          {{ t('errors.generic.body') }}
-        </p>
-        <button
-          class="state__a"
-          type="button"
-          @click="() => refreshNuxtData()"
-        >
-          {{ t('errors.generic.action') }}
-        </button>
-      </div>
+        :title="t('errors.generic.title')"
+        :body="t('errors.generic.body')"
+        :action-label="t('errors.generic.action')"
+        @action="() => refreshNuxtData()"
+      />
 
-      <div
+      <SkeletonList
         v-else-if="pending && !all.length"
-        class="skeleton"
-      >
-        <div
-          v-for="i in 10"
-          :key="i"
-          class="skeleton__row"
-        />
-      </div>
+        :rows="10"
+      />
 
-      <div
+      <StatePanel
         v-else-if="!rows.length"
-        class="state"
-      >
-        <h2 class="state__t">
-          {{ t('buyers.empty.title') }}
-        </h2>
-        <p class="state__b">
-          {{ t('buyers.empty.body') }}
-        </p>
-        <button
-          v-if="term"
-          class="state__a"
-          type="button"
-          @click="clearSearch"
-        >
-          {{ t('buyers.empty.action') }}
-        </button>
-      </div>
+        :title="t('buyers.empty.title')"
+        :body="t('buyers.empty.body')"
+        :action-label="term ? t('buyers.empty.action') : undefined"
+        @action="clearSearch"
+      />
 
       <!-- ===== Table ===== -->
       <div v-else>
@@ -513,55 +484,6 @@ useSeo(() => ({
 .ctable th.ctable__c-amt { text-align: right; }
 
 /* ---- States ---- */
-.state {
-  padding: var(--s-8) var(--s-5);
-  text-align: center;
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-}
-
-.state__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-
-.state__b {
-  margin: 0 auto var(--s-4);
-  max-width: 46ch;
-  color: var(--text-muted);
-  font-size: var(--t-sm);
-}
-
-.state__a {
-  padding: var(--s-2) var(--s-5);
-  border: 0;
-  border-radius: var(--r-md);
-  background: var(--ink);
-  color: #fff;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: var(--t-sm);
-  cursor: pointer;
-}
-
-.skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-
-.skeleton__row {
-  height: 52px;
-  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-sunken) 37%, var(--surface) 63%);
-  background-size: 400% 100%;
-  animation: shimmer 1.4s ease infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
 
 /* ---- Responsive ---- */
 @media (max-width: 760px) {

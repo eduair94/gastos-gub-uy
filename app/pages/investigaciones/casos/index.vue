@@ -282,19 +282,13 @@ useSeo(() => ({
           class="pager"
         />
       </template>
-      <div
+      <StatePanel
         v-else
-        class="empty"
-      >
-        <p>{{ t('casos.filters.empty') }}</p>
-        <button
-          type="button"
-          class="btn btn--primary"
-          @click="clearFilters"
-        >
-          {{ t('casos.filters.emptyAction') }}
-        </button>
-      </div>
+        :title="t('casos.filters.empty')"
+        level="p"
+        :action-label="t('casos.filters.emptyAction')"
+        @action="clearFilters"
+      />
     </section>
 
     <!-- Method -->
@@ -455,24 +449,6 @@ useSeo(() => ({
   gap: var(--s-5);
 }
 .pager { margin-top: var(--s-6); }
-.empty { padding-block: var(--s-8); text-align: center; }
-.empty p { margin: 0 0 var(--s-4); color: var(--text-muted); }
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-3) var(--s-5);
-  border: 0;
-  border-radius: var(--r-full);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-}
-.btn--primary { background: var(--cta-fill); color: var(--cta-fg); }
-.btn--primary:hover { filter: brightness(1.06); }
-
 .method {
   padding: clamp(var(--s-5), 4vw, var(--s-6));
   background: var(--surface-sunken);

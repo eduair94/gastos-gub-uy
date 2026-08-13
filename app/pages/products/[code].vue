@@ -228,43 +228,24 @@ useSeo(() => ({
 <template>
   <div class="u-container page">
     <!-- ===== Not found ===== -->
-    <div
+    <StatePanel
       v-if="notFound"
-      class="state"
-    >
-      <h1 class="state__t">
-        {{ t('products.detail.notFound.title') }}
-      </h1>
-      <p class="state__b">
-        {{ t('products.detail.notFound.body') }}
-      </p>
-      <NuxtLink
-        :to="localePath('/products')"
-        class="state__a"
-      >
-        {{ t('products.detail.notFound.action') }}
-      </NuxtLink>
-    </div>
+      :title="t('products.detail.notFound.title')"
+      :body="t('products.detail.notFound.body')"
+      :action-to="localePath('/products')"
+      :action-label="t('products.detail.notFound.action')"
+      level="h1"
+    />
 
     <!-- ===== Transient load error (never a 404) ===== -->
-    <div
+    <StatePanel
       v-else-if="loadError"
-      class="state"
-    >
-      <h1 class="state__t">
-        {{ t('products.detail.error.title') }}
-      </h1>
-      <p class="state__b">
-        {{ t('products.detail.error.body') }}
-      </p>
-      <button
-        type="button"
-        class="state__a"
-        @click="refresh()"
-      >
-        {{ t('products.detail.error.action') }}
-      </button>
-    </div>
+      :title="t('products.detail.error.title')"
+      :body="t('products.detail.error.body')"
+      level="h1"
+      :action-label="t('products.detail.error.action')"
+      @action="refresh()"
+    />
 
     <template v-else>
       <!-- ===== Header ===== -->
@@ -782,35 +763,6 @@ useSeo(() => ({
 .allcta:hover { background: var(--surface-sunken); }
 
 /* ---- States ---- */
-.state {
-  padding: var(--s-8) var(--s-5);
-  text-align: center;
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-}
-
-.state__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-
-.state__b {
-  margin: 0 auto var(--s-4);
-  max-width: 46ch;
-  color: var(--text-muted);
-  font-size: var(--t-sm);
-}
-
-.state__a {
-  display: inline-block;
-  margin-top: var(--s-4);
-  padding: var(--s-2) var(--s-5);
-  border-radius: var(--r-md);
-  background: var(--ink);
-  color: #fff;
-  font-weight: 600;
-  font-size: var(--t-sm);
-  text-decoration: none;
-}
-
 /* ---- Responsive ---- */
 @media (max-width: 980px) {
   .cols { grid-template-columns: minmax(0, 1fr); }

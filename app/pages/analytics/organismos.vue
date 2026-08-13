@@ -203,17 +203,12 @@ useSeo(() => ({
         </v-chip>
       </v-chip-group>
 
-      <div
+      <StatePanel
         v-if="error"
-        class="empty"
-      >
-        <p class="empty__t">
-          {{ t('organismos.empty.title') }}
-        </p>
-        <p class="empty__b">
-          {{ t('organismos.empty.body') }}
-        </p>
-      </div>
+        :title="t('organismos.empty.title')"
+        :body="t('organismos.empty.body')"
+        level="p"
+      />
 
       <v-skeleton-loader
         v-else-if="pending && !groups.length"
@@ -473,8 +468,4 @@ useSeo(() => ({
 .tablecard__foot { margin: 0; padding: var(--s-2) var(--s-4); font-size: var(--t-xs); color: var(--text-muted); border-top: 1px solid var(--rule); }
 
 .interlink { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-5); }
-
-.empty { padding: var(--s-8) var(--s-5); text-align: center; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); }
-.empty__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-.empty__b { margin: 0; color: var(--text-muted); font-size: var(--t-sm); }
 </style>

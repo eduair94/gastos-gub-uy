@@ -246,55 +246,26 @@ useSeo(() => {
       v-model:page="page"
       :total-pages="totalPages"
     >
-      <div
+      <StatePanel
         v-if="error"
-        class="state"
-      >
-        <h2 class="state__t">
-          {{ t('errors.generic.title') }}
-        </h2>
-        <p class="state__b">
-          {{ t('errors.generic.body') }}
-        </p>
-        <button
-          class="state__a"
-          type="button"
-          @click="() => refreshNuxtData()"
-        >
-          {{ t('errors.generic.action') }}
-        </button>
-      </div>
+        :title="t('errors.generic.title')"
+        :body="t('errors.generic.body')"
+        :action-label="t('errors.generic.action')"
+        @action="() => refreshNuxtData()"
+      />
 
-      <div
+      <SkeletonList
         v-else-if="pending && !contacts.length"
-        class="skeleton"
-      >
-        <div
-          v-for="i in 8"
-          :key="i"
-          class="skeleton__row"
-        />
-      </div>
+        :rows="8"
+      />
 
-      <div
+      <StatePanel
         v-else-if="!contacts.length"
-        class="state"
-      >
-        <h2 class="state__t">
-          {{ t('contactos.empty.title') }}
-        </h2>
-        <p class="state__b">
-          {{ t('contactos.empty.body') }}
-        </p>
-        <button
-          v-if="searchTerm || hasFilters"
-          class="state__a"
-          type="button"
-          @click="clearFilters"
-        >
-          {{ t('contactos.empty.action') }}
-        </button>
-      </div>
+        :title="t('contactos.empty.title')"
+        :body="t('contactos.empty.body')"
+        :action-label="searchTerm || hasFilters ? t('contactos.empty.action') : undefined"
+        @action="clearFilters"
+      />
 
       <DataTable
         v-else

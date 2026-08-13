@@ -266,17 +266,12 @@ useSeo(() => ({
         </p>
       </v-card>
 
-      <div
+      <StatePanel
         v-if="error"
-        class="empty"
-      >
-        <p class="empty__t">
-          {{ t('errors.generic.title') }}
-        </p>
-        <p class="empty__b">
-          {{ t('partidos.notReady') }}
-        </p>
-      </div>
+        :title="t('errors.generic.title')"
+        :body="t('partidos.notReady')"
+        level="p"
+      />
 
       <v-skeleton-loader
         v-else-if="pending && !allRows.length"
@@ -663,10 +658,6 @@ useSeo(() => ({
 .tablecard__foot { margin: 0; padding: var(--s-2) var(--s-4); font-size: var(--t-xs); color: var(--text-muted); border-top: 1px solid var(--rule); }
 
 .interlink { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-5); }
-.empty { padding: var(--s-8) var(--s-5); text-align: center; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); }
-.empty__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-.empty__b { margin: 0; color: var(--text-muted); font-size: var(--t-sm); }
-
 @media (max-width: 860px) {
   .mapwrap { grid-template-columns: 1fr; }
   .controls__metric, .controls__year { max-width: 100%; flex: 1 1 100%; }

@@ -258,23 +258,14 @@ useSeo(() => ({
 <template>
   <div class="u-container page">
     <!-- ===== Not found ===== -->
-    <div
+    <StatePanel
       v-if="notFound"
-      class="state"
-    >
-      <h1 class="state__t">
-        {{ t('suppliers.detail.notFound.title') }}
-      </h1>
-      <p class="state__b">
-        {{ t('suppliers.detail.notFound.body') }}
-      </p>
-      <NuxtLink
-        :to="localePath('/suppliers')"
-        class="state__a"
-      >
-        {{ t('suppliers.detail.notFound.action') }}
-      </NuxtLink>
-    </div>
+      :title="t('suppliers.detail.notFound.title')"
+      :body="t('suppliers.detail.notFound.body')"
+      :action-to="localePath('/suppliers')"
+      :action-label="t('suppliers.detail.notFound.action')"
+      level="h1"
+    />
 
     <template v-else-if="supplier">
       <!-- ===== Header ===== -->
@@ -600,14 +591,11 @@ useSeo(() => ({
           </NuxtLink>
         </div>
 
-        <div
+        <StatePanel
           v-if="!contracts.length"
-          class="state state--sm"
-        >
-          <p class="state__b">
-            {{ t('contracts.empty.body') }}
-          </p>
-        </div>
+          :body="t('contracts.empty.body')"
+          variant="inline"
+        />
 
         <div v-else>
           <table class="ctable dtable">
@@ -1012,38 +1000,6 @@ a.rank__link:hover { background: var(--surface-sunken); }
 .ctable th.ctable__c-amt { text-align: right; }
 
 /* ---- States ---- */
-.state {
-  padding: var(--s-8) var(--s-5);
-  text-align: center;
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-}
-
-.state--sm { padding: var(--s-6) var(--s-5); }
-
-.state__t { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
-
-.state__b {
-  margin: 0 auto var(--s-4);
-  max-width: 46ch;
-  color: var(--text-muted);
-  font-size: var(--t-sm);
-}
-
-.state--sm .state__b { margin-bottom: 0; }
-
-.state__a {
-  display: inline-block;
-  padding: var(--s-2) var(--s-5);
-  border-radius: var(--r-md);
-  background: var(--ink);
-  color: #fff;
-  font-weight: 600;
-  font-size: var(--t-sm);
-  text-decoration: none;
-}
-
 /* ---- Source ---- */
 .source {
   margin-top: var(--s-7);

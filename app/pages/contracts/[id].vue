@@ -960,23 +960,14 @@ useSeo(() => ({
 <template>
   <div class="u-container page">
     <!-- ===== Not found ===== -->
-    <div
+    <StatePanel
       v-if="notFound"
-      class="state"
-    >
-      <h1 class="state__t">
-        {{ t('contract.notFound.title') }}
-      </h1>
-      <p class="state__b">
-        {{ t('contract.notFound.body') }}
-      </p>
-      <NuxtLink
-        :to="localePath('/contracts')"
-        class="state__a"
-      >
-        {{ t('contract.notFound.action') }}
-      </NuxtLink>
-    </div>
+      :title="t('contract.notFound.title')"
+      :body="t('contract.notFound.body')"
+      :action-to="localePath('/contracts')"
+      :action-label="t('contract.notFound.action')"
+      level="h1"
+    />
 
     <template v-else-if="contract">
       <!-- ===== Header ===== -->
@@ -2966,30 +2957,6 @@ a.itable__code:hover { text-decoration: underline; }
 }
 
 /* ---- State ---- */
-.state {
-  padding: var(--s-9) var(--s-5);
-  text-align: center;
-}
-
-.state__t { margin: 0 0 var(--s-2); }
-
-.state__b {
-  margin: 0 auto var(--s-5);
-  max-width: 46ch;
-  color: var(--text-muted);
-}
-
-.state__a {
-  display: inline-block;
-  padding: var(--s-3) var(--s-5);
-  border-radius: var(--r-md);
-  background: var(--ink);
-  color: #fff;
-  font-weight: 600;
-  font-size: var(--t-sm);
-  text-decoration: none;
-}
-
 /* ---- Responsive ---- */
 @media (max-width: 960px) {
   .grid { grid-template-columns: 1fr; }
