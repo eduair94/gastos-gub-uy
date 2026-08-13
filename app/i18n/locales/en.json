@@ -35,6 +35,7 @@
     "llamados": "Open calls",
     "comparativa": "Alert services compared",
     "competencia": "Competition",
+    "tribunalCuentas": "Court of Accounts",
     "plataformas": "Other platforms",
     "more": "More",
     "explorar": "Explore",
@@ -2104,6 +2105,10 @@
       "title": "Who else watches the Uruguayan State: transparency platforms compared",
       "description": "A sourced comparison of the platforms publishing data about the Uruguayan State: Control Ciudadano, datospublicos.uy, DATA Uruguay, ARCE, OPP, JUTEP and this site. What each covers, what it costs and what it is for."
     },
+    "tribunalCuentas": {
+      "title": "What the Court of Accounts said about state purchases",
+      "description": "Court of Accounts rulings on Uruguayan public procurement, each next to the purchase it names, with a link to the original ruling."
+    },
     "competencia": {
       "title": "How much competition is there in Uruguayan public procurement?",
       "description": "How often a single company bids for each Uruguayan public body’s purchases, measured from the bidders published on each official record."
@@ -2437,6 +2442,35 @@
     "worldHelp": "They are not in the table — they do not compete for the same data — but they set the ceiling for what public data can do.",
     "methodologyTitle": "How this was put together",
     "backToAlertas": "See also: tender-alert services compared"
+  },
+  "tcr": {
+    "eyebrow": "Analysis",
+    "title": "What the Court of Accounts said",
+    "lead": "The State’s own auditor rules on specific purchases, and its archive is public — but it lives outside open procurement data. Here each ruling appears next to the purchase it names.",
+    "kpi": {
+      "read": "rulings read",
+      "procurement": "about procurement",
+      "linked": "tied to a purchase",
+      "ambiguous": "untied for ambiguity"
+    },
+    "warnTitle": "What this says and what it does not",
+    "warnBody": "The Court’s online archive publishes only the VISTO: the case heading and which call was being examined. Whether the spending was formally observed, for how much and on what grounds, is in the ruling PDF alone — linked on every row. That is why this page says the Court ruled on that purchase, and never that it observed it: that would be inventing the verdict.",
+    "warnRange": "What has been read is also partial: the archive is walked in nightly batches, and today it covers rulings between {from} and {to}.",
+    "searchLabel": "Search body, call or text",
+    "includeUnlinked": "Include the ones that could not be tied",
+    "countLabel": "{n} rulings",
+    "openContract": "See the purchase: {title}",
+    "ambiguous": "That call number matches {n} different purchases, so it is tied to none.",
+    "openPdf": "Ruling (PDF)",
+    "openSource": "Record at the Court",
+    "empty": "No rulings match.",
+    "prev": "Previous",
+    "next": "Next",
+    "methodTitle": "How they are tied",
+    "method1": "The ruling identifies the purchase by body and call number (“Licitación Pública Nº 5/2021”), which is exactly how public procurement stores the call title. That is the join.",
+    "method2": "When that number matches more than one purchase, it is tied to none and says so. Hanging one purchase’s ruling on another contract would be worse than showing nothing.",
+    "method3": "The text shown is the VISTO exactly as the Court publishes it, neither summarised nor interpreted.",
+    "sourceLabel": "Source: Court of Accounts of Uruguay,"
   },
   "competencia": {
     "eyebrow": "Analysis",

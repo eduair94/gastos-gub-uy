@@ -35,6 +35,7 @@
     "llamados": "Llamados",
     "comparativa": "Comparativa de alertas",
     "competencia": "Competencia",
+    "tribunalCuentas": "Tribunal de Cuentas",
     "plataformas": "Otras plataformas",
     "more": "Más",
     "explorar": "Explorar",
@@ -2105,6 +2106,10 @@
       "title": "Quién más vigila al Estado uruguayo: comparativa de plataformas de transparencia",
       "description": "Comparativa con fuentes de las plataformas que publican datos sobre el Estado uruguayo: Control Ciudadano, datospublicos.uy, DATA Uruguay, ARCE, OPP, JUTEP y este sitio. Qué cubre cada una, qué cuesta y para qué sirve."
     },
+    "tribunalCuentas": {
+      "title": "Lo que dijo el Tribunal de Cuentas sobre las compras del Estado",
+      "description": "Resoluciones del Tribunal de Cuentas sobre compras públicas uruguayas, cada una junto a la compra que nombra y con el enlace a la resolución original."
+    },
     "competencia": {
       "title": "¿Cuánta competencia hay en las compras del Estado uruguayo?",
       "description": "Con qué frecuencia se presenta una sola empresa a las compras de cada organismo público uruguayo, medido sobre los oferentes que publica cada ficha oficial."
@@ -2438,6 +2443,35 @@
     "worldHelp": "No entran en la tabla —no compiten por el mismo dato— pero marcan el techo de lo que se puede hacer con datos públicos.",
     "methodologyTitle": "Cómo se armó esto",
     "backToAlertas": "Ver también: comparativa de servicios de alertas de licitaciones"
+  },
+  "tcr": {
+    "eyebrow": "Análisis",
+    "title": "Lo que dijo el Tribunal de Cuentas",
+    "lead": "El auditor del propio Estado se pronuncia sobre compras concretas, y su archivo es público — pero vive fuera de los datos abiertos de compras. Acá cada resolución aparece junto a la compra que nombra.",
+    "kpi": {
+      "read": "resoluciones leídas",
+      "procurement": "sobre contrataciones",
+      "linked": "atadas a una compra",
+      "ambiguous": "sin atar por ambigüedad"
+    },
+    "warnTitle": "Qué dice y qué no dice esto",
+    "warnBody": "El archivo en línea del Tribunal publica sólo el VISTO: el encabezado del expediente y qué llamado se estaba mirando. Si el gasto fue observado, por cuánto y con qué fundamento está únicamente en el PDF de la resolución, que enlazamos en cada fila. Por eso acá se dice que el Tribunal se pronunció sobre esa compra, y nunca que la observó: sería inventar el fallo.",
+    "warnRange": "Además, lo leído es parcial: el archivo se recorre de a tandas por noche, y hoy cubre resoluciones entre {from} y {to}.",
+    "searchLabel": "Buscar organismo, llamado o texto",
+    "includeUnlinked": "Incluir las que no se pudieron atar",
+    "countLabel": "{n} resoluciones",
+    "openContract": "Ver la compra: {title}",
+    "ambiguous": "El número de llamado coincide con {n} compras distintas, así que no se ata a ninguna.",
+    "openPdf": "Resolución (PDF)",
+    "openSource": "Ficha en el Tribunal",
+    "empty": "No hay resoluciones que coincidan.",
+    "prev": "Anterior",
+    "next": "Siguiente",
+    "methodTitle": "Cómo se atan",
+    "method1": "La resolución identifica la compra por organismo y número de llamado («Licitación Pública Nº 5/2021»), que es exactamente la forma en que las compras públicas guardan el título del llamado. Ese es el cruce.",
+    "method2": "Cuando ese número coincide con más de una compra, no se ata a ninguna y se dice. Colgarle a un contrato el pronunciamiento de otro sería peor que no mostrar nada.",
+    "method3": "El texto que se muestra es el VISTO tal cual lo publica el Tribunal, sin resumir ni interpretar.",
+    "sourceLabel": "Fuente: Tribunal de Cuentas de la República,"
   },
   "competencia": {
     "eyebrow": "Análisis",
