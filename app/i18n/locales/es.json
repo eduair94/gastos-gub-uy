@@ -31,6 +31,7 @@
     "anticipacion": "Próximos llamados",
     "estadisticas": "Estadísticas",
     "investigaciones": "Investigaciones",
+    "invFichas": "Fichas: dónde se discute la plata",
     "tvciudad": "TV Ciudad",
     "llamados": "Llamados",
     "comparativa": "Comparativa de alertas",
@@ -2055,6 +2056,17 @@
     }
   },
   "seo": {
+      "casos": {
+        "title": "Dónde se discute la plata — fichas de inversión pública",
+        "description": "Fichas sobre inversiones y gastos del Estado uruguayo que están cuestionados, con fuentes verificadas y el cruce con los datos oficiales de Compras Estatales."
+      },
+      "casosDetail": {
+        "title": "{title}"
+      },
+      "casosTema": {
+        "title": "{theme} — dónde se discute la plata",
+        "description": "{dek}"
+      },
     "sanciones": {
       "title": "Proveedores del Estado sancionados por Defensa del Consumidor",
       "description": "Empresas sancionadas por la Unidad de Defensa del Consumidor que además venden al Estado uruguayo, cruzadas por RUT contra las compras públicas."
@@ -3086,6 +3098,146 @@
       "rescision": "Rescisión"
     }
   },
+    "casos": {
+      "eyebrow": "Fichas de inversión pública",
+      "indexTitle": "Dónde se discute la plata",
+      "indexLead": "Fichas sobre inversiones y gastos del Estado uruguayo que están cuestionados: por una auditoría, por la Justicia, por el Parlamento o por la propia realidad de la obra. Cada una cita sus fuentes y, cuando los datos abiertos lo permiten, muestra el cruce contrato por contrato.",
+      "disclaimer": "Una ficha no acusa a nadie. Dice quién cuestionó qué, con qué fuente y en qué estado está hoy. Un sobrecosto o una compra directa no son delitos.",
+      "backToAll": "Todas las fichas",
+      "backToHub": "Investigaciones",
+      "count": "{n} fichas",
+      "sourcesTotal": "{n} fuentes citadas",
+      "themesTitle": "Por tema",
+      "themesLead": "Catorce frentes donde se discute el dinero público uruguayo.",
+      "allThemes": "Todos los temas",
+      "filters": {
+        "title": "Filtrar",
+        "theme": "Tema",
+        "kind": "Tipo de cuestionamiento",
+        "all": "Todo",
+        "search": "Buscar",
+        "searchPlaceholder": "Antel Arena, ambulancias, Ceibal…",
+        "clear": "Limpiar filtros",
+        "results": "{n} de {total} fichas",
+        "empty": "Ninguna ficha coincide con ese filtro.",
+        "emptyAction": "Ver todas las fichas"
+      },
+      "kind": {
+        "judicial": "En la Justicia",
+        "auditoria": "Observado por auditoría",
+        "gestion": "Gestión cuestionada",
+        "debate": "En debate público"
+      },
+      "kindShort": {
+        "judicial": "Justicia",
+        "auditoria": "Auditoría",
+        "gestion": "Gestión",
+        "debate": "Debate"
+      },
+      "status": {
+        "condena": "Condena",
+        "procesamiento": "Procesamiento",
+        "formalizacion": "Formalizado",
+        "imputacion": "Imputación",
+        "juicio": "En juicio",
+        "investigacion": "Investigación",
+        "denuncia": "Denuncia",
+        "absolucion": "Absolución",
+        "archivo": "Archivado",
+        "rescision": "Rescindido",
+        "auditoria": "Observado",
+        "sobrecosto": "Sobrecosto",
+        "inconcluso": "Sin terminar",
+        "en-ejecucion": "En ejecución",
+        "terminado": "Terminado",
+        "debate": "En debate",
+        "sin-resolver": "Sin resolver"
+      },
+      "card": {
+        "sources": "{n} fuentes",
+        "reported": "Cifra publicada",
+        "noFigure": "Sin cifra única publicada",
+        "crossRef": "Con cruce de datos",
+        "noCrossRef": "Fuera de Compras Estatales"
+      },
+      "sec": {
+        "contexto": "Qué es",
+        "hallazgo": "Qué se cuestiona",
+        "porQue": "Por qué te importa",
+        "estado": "En qué está hoy",
+        "fuentes": "Fuentes",
+        "organismos": "Organismos involucrados",
+        "empresas": "Empresas nombradas por las fuentes"
+      },
+      "reportedLabel": "Cifra publicada por las fuentes",
+      "crossRef": {
+        "title": "El cruce con los datos abiertos",
+        "help": "Lo que el Estado adjudicó a los organismos y empresas nombrados en esta ficha, según los datos oficiales de Compras Estatales. Es un cruce para dimensionar, no una prueba de irregularidad: incluye contratos que nadie cuestionó.",
+        "kpiTotal": "Adjudicado (cruce)",
+        "kpiCount": "Contratos",
+        "kpiSuppliers": "Proveedores",
+        "buyersTitle": "Qué organismo pagó",
+        "suppliersTitle": "Quién cobró",
+        "suppliersHelp": "Proveedores ordenados por monto adjudicado en el cruce. El monto de un contrato con varios proveedores se cuenta entero en cada uno: es un techo, no un reparto.",
+        "categoriesTitle": "En qué se fue",
+        "categoriesHelp": "Gasto por rubro, según el precio por la cantidad de cada artículo adjudicado, en la moneda del contrato.",
+        "byYearTitle": "Contratos por año",
+        "ledgerTitle": "El detalle",
+        "ledgerHelp": "Los contratos más grandes del cruce, del mayor al menor. Tocá uno para ver su ficha y el enlace a la compra oficial.",
+        "ledgerCount": "{n} contratos",
+        "ledgerNote": "Montos en pesos, normalizados. Se excluyen del total los registros con cantidades imposibles.",
+        "explorer": "Abrir este conjunto en el explorador",
+        "scopeLabel": "Cómo se armó este cruce",
+        "scopeSearch": "contratos cuyo objeto menciona «{term}»",
+        "scopeBuyers": "todo lo registrado a nombre de {n} unidades compradoras de los organismos nombrados (no sólo lo de este caso)",
+        "scopeBuyersOne": "todo lo registrado a nombre de la unidad compradora del organismo (no sólo lo de este caso)",
+        "scopeSuppliers": "adjudicados a: {list}",
+        "scopeYears": "entre {from} y {to}",
+        "scopeAll": "todos los contratos registrados de los organismos nombrados"
+      },
+      "noData": {
+        "title": "Esta plata no pasa por Compras Estatales",
+        "titleLikely": "No pudimos aislar un conjunto de contratos defendible",
+        "bodyLikely": "Este gasto sí pasa por compras públicas, pero no encontramos un filtro que separe los contratos de esta ficha del resto de lo que compran esos organismos. Antes que mostrar un total que mezcla lo cuestionado con lo que nadie discute, preferimos no mostrar ninguno. Podés explorar los contratos del organismo por tu cuenta desde el buscador.",
+        "body": "El cruce contrato por contrato no está disponible para esta ficha. El dinero se ejecuta por un canal que los datos abiertos de compras públicas no registran, así que mostrar un total acá sería inventarlo. Las fuentes citadas son, por ahora, la única cuantificación pública.",
+        "explore": "Explorar contratos en el buscador",
+        "channelsTitle": "Por dónde va, entonces",
+        "channels": "Participación público-privada (PPP), fideicomisos, contratos entre Estados, convenios directos, o el presupuesto propio de una empresa pública. Ninguno de esos canales publica sus adjudicaciones en el portal de Compras Estatales."
+      },
+      "feed": {
+        "label": "Cobertura de los datos",
+        "likely": "Compra estatal registrada",
+        "partial": "Registro parcial",
+        "unlikely": "Fuera del registro de compras",
+        "likelyDesc": "El gasto de esta ficha viaja por compras públicas normales, así que el cruce debería ser representativo.",
+        "partialDesc": "Una parte del gasto viaja por compras públicas y otra por un canal que los datos abiertos no registran. El cruce muestra sólo la primera.",
+        "unlikelyDesc": "El grueso del gasto se ejecuta por fuera del portal de Compras Estatales, así que el cruce muestra poco o nada."
+      },
+      "relatedTitle": "Seguí leyendo",
+      "readInvestigation": "Leer la investigación completa",
+      "themePageLead": "{n} fichas sobre este tema.",
+      "themeAllCta": "Ver los catorce temas",
+      "notFound": {
+        "title": "No encontramos esa ficha",
+        "body": "El enlace puede estar mal escrito o la ficha puede haber cambiado de dirección.",
+        "action": "Ver todas las fichas"
+      },
+      "hub": {
+        "tag": "Serie",
+        "title": "Dónde se discute la plata",
+        "intro": "Fichas cortas sobre inversiones y gastos del Estado que están cuestionados —por una auditoría, por la Justicia, por el Parlamento o por la obra que no aparece—, cada una con sus fuentes y con el cruce contra los datos oficiales cuando existe.",
+        "cta": "Ver las {n} fichas",
+        "byTheme": "Explorar por tema"
+      },
+      "method": {
+        "title": "Cómo se arma una ficha",
+        "body": "Cada ficha nace de fuentes públicas: notas de prensa, resoluciones del Tribunal de Cuentas, expedientes parlamentarios, informes de organismos. Se exige un mínimo de tres fuentes verificadas y se distingue siempre entre lo que alguien denunció, lo que un organismo observó y lo que la Justicia resolvió. Después se busca en los datos abiertos de Compras Estatales qué contratos corresponden a esos organismos y empresas, y ese cruce se resuelve en vivo cada vez que abrís la página. Cuando la plata no pasa por el portal de compras, la ficha lo dice en lugar de inventar un número.",
+        "sourcesTitle": "Qué cuenta como fuente",
+        "sourcesBody": "Medios uruguayos con redacción propia, organismos del Estado (Tribunal de Cuentas, JUTEP, Parlamento, ministerios, Fiscalía) y organismos internacionales. No se usan blogs anónimos ni redes sociales como fuente única.",
+        "correctionsTitle": "Si algo está mal",
+        "correctionsBody": "Estas fichas se corrigen. Si tenés una fuente que contradice o actualiza una, escribinos y la revisamos."
+      }
+    },
   "inbox": {
     "title": "Notificaciones",
     "lead": "Los llamados que coincidieron con tus alertas.",

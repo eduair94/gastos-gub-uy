@@ -159,6 +159,10 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
         {
           key: 'casos',
           items: [
+            // First in the section: it is the only entry that is a COLLECTION
+            // rather than a single piece, so a reader with no particular case
+            // in mind should land there and browse by theme.
+            { key: 'invFichas', to: localePath('/investigaciones/casos'), icon: 'mdi-book-open-variant' },
             { key: 'tvciudad', to: localePath('/investigaciones/tv-ciudad'), icon: 'mdi-television-classic' },
             { key: 'invCasinos', to: localePath('/investigaciones/casinos'), icon: 'mdi-slot-machine-outline' },
             { key: 'invCasinosCortesia', to: localePath('/investigaciones/casinos-cortesia'), icon: 'mdi-cards-playing-outline' },

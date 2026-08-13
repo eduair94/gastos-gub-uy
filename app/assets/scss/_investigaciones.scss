@@ -278,3 +278,60 @@
   .inv-tiles, .inv-obs-grid, .inv-sibs, .inv-cards, .inv-how, .inv-hubstats { grid-template-columns: 1fr; }
   .inv-hubhero, .inv-cover { padding-block: var(--s-6); }
 }
+
+/* ---- Caso collection promo (investigations hub) ----
+   A chip rail, not another card grid: fourteen themes as cards would out-weigh
+   the long-form pieces below them, which are the hub's headline work. The chips
+   wrap, so this needs no breakpoint of its own. */
+.casohub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.casohub__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: 100%;
+  min-width: 0;
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+.casohub__chip:hover { border-color: var(--celeste); background: var(--surface-sunken); }
+.casohub__emoji { flex: 0 0 auto; font-size: 1.05em; }
+.casohub__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.casohub__n { flex: 0 0 auto; font-size: var(--t-xs); color: var(--text-muted); }
+
+.casohub__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+}
+
+.casohub__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-5);
+  border-radius: var(--r-full);
+  background: var(--cta-fill);
+  color: var(--cta-fg);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.casohub__cta:hover { filter: brightness(1.06); }
+.casohub__meta { font-size: var(--t-xs); color: var(--text-muted); }
