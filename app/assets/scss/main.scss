@@ -66,7 +66,16 @@ h1, h2, h3, h4,
   font-weight: 700;
   line-height: 1.06;
   letter-spacing: -0.02em;
-  color: var(--text);
+
+  // `inherit`, NOT `var(--text)`. `--text` is the paper ink, and this rule beat
+  // the `color` of every dark ancestor: a heading inside a `--ink` hero came out
+  // #0f2233 on #0f2233 — contrast 1.00, an invisible headline. The weekly issue
+  // shipped that way, with 250px of empty navy where its title should have been,
+  // because the hero set `color: var(--ink-fg)` on the container and the heading
+  // silently refused it. `body` carries `color: var(--text)`, so every heading on
+  // paper renders exactly as before; only headings that sit on a surface which
+  // declared a different ink now follow it.
+  color: inherit;
   font-stretch: 112%; // Archivo's wide cut — the form title block
 
   // Source data contains 85-character single words and unbroken
@@ -77,6 +86,15 @@ h1, h2, h3, h4,
   // items. Only the former is wanted.
   overflow-wrap: break-word;
 }
+
+// Vuetify 4 ships no anchor colour and the reset above restores the browser's
+// other defaults but never re-declared this one, so any <a> a page forgot to
+// style fell back to #0000EE — pure browser blue, on no palette in this system,
+// and 1.61:1 against the dark theme's card. `/about` and `/analytics/senales`
+// both shipped links that way: blue text on the blue-grey surface, unreadable
+// in dark mode and off-brand in light. Anchors that declare their own colour or
+// `inherit` (every card, row and nav link does) outrank this and are untouched.
+a { color: var(--celeste-deep); }
 
 h1 { font-size: var(--t-2xl); }
 h2 { font-size: var(--t-xl); }
