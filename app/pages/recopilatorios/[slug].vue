@@ -167,28 +167,10 @@ useSeo(() => ({
         <p class="block__help">
           {{ t('recop.ledgerHelp') }}
         </p>
-        <ol class="ledger">
-          <li
-            v-for="c in ledger"
-            :key="c.id"
-            class="ledger__row"
-          >
-            <NuxtLink
-              :to="localePath(`/contracts/${c.id}`)"
-              class="ledger__link"
-            >
-              <span class="ledger__text">
-                <span class="ledger__what u-truncate">{{ c.title || t('common.contract') }}</span>
-                <span class="ledger__who u-truncate">{{ c.supplier || c.buyerName }}<span v-if="c.date"> · {{ formatDate(c.date) }}</span></span>
-              </span>
-              <MoneyAmount
-                :amount="c.amount"
-                compact
-                size="sm"
-              />
-            </NuxtLink>
-          </li>
-        </ol>
+        <ContractLedger
+          :items="ledger"
+          :empty-label="t('common.contract')"
+        />
         <p
           v-if="data.meta"
           class="ledger__foot"
@@ -233,23 +215,13 @@ useSeo(() => ({
     </template>
 
     <!-- Not found -->
-    <section
+    <NotFoundPanel
       v-else
-      class="u-container notfound"
-    >
-      <h1 class="notfound__t">
-        {{ t('recop.notFound.title') }}
-      </h1>
-      <p class="notfound__b">
-        {{ t('recop.notFound.body') }}
-      </p>
-      <NuxtLink
-        :to="localePath('/recopilatorios')"
-        class="btn btn--primary"
-      >
-        {{ t('recop.notFound.action') }}
-      </NuxtLink>
-    </section>
+      :title="t('recop.notFound.title')"
+      :body="t('recop.notFound.body')"
+      :action-to="localePath('/recopilatorios')"
+      :action-label="t('recop.notFound.action')"
+    />
   </div>
 </template>
 
@@ -379,35 +351,6 @@ useSeo(() => ({
 .cols > * { min-width: 0; margin-top: 0; }
 
 /* Ledger */
-.ledger {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  overflow: hidden;
-}
-
-.ledger__row + .ledger__row { border-top: 1px solid var(--rule); }
-
-.ledger__link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-4);
-  padding: var(--s-3) var(--s-4);
-  text-decoration: none;
-  color: inherit;
-  transition: background var(--dur) var(--ease);
-}
-
-.ledger__link:hover { background: var(--surface-sunken); }
-
-.ledger__text { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
-.ledger__what { font-size: var(--t-sm); font-weight: 600; }
-.ledger__who { font-size: var(--t-xs); color: var(--text-muted); }
-
 .ledger__foot {
   margin: var(--s-3) 0 0;
   font-size: var(--t-xs);
@@ -439,24 +382,6 @@ useSeo(() => ({
 .relcard__arrow { color: var(--celeste-deep); }
 
 /* Buttons + not found */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-3) var(--s-5);
-  border-radius: var(--r-full);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.btn--primary { background: var(--cta-fill); color: var(--cta-fg); }
-.btn--primary:hover { filter: brightness(1.06); }
-
-.notfound { padding-block: var(--s-9); text-align: center; }
-.notfound__t { font-size: var(--t-2xl); margin: 0 0 var(--s-2); }
-.notfound__b { color: var(--text-muted); margin: 0 0 var(--s-5); }
-
 @media (max-width: 900px) {
   /* Never bare `1fr` around a chart: that is `minmax(auto, 1fr)`, and the auto
      floor is the chart's own min-width, which scrolls the whole page sideways. */

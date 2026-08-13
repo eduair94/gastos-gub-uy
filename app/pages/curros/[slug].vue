@@ -12,7 +12,10 @@ const localePath = useLocalePath()
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
-const { data: res, error } = await useFetch<any>(() => `/api/curros/${slug.value}`)
+// `error` is deliberately not destructured: an unknown slug renders
+// <NotFoundPanel> from `data` being null, so the fetch error has no separate
+// UI and binding it only left an unused variable behind.
+const { data: res } = await useFetch<any>(() => `/api/curros/${slug.value}`)
 
 const data = computed(() => res.value?.data ?? null)
 const text = computed(() => (locale.value === 'en' ? data.value?.en : data.value?.es) ?? null)
@@ -27,6 +30,13 @@ const byYear = computed(() =>
   (data.value?.byYear ?? []).map((y: any) => ({ year: y.year, value: y.count })))
 const ledger = computed<any[]>(() => data.value?.ledger ?? [])
 const related = computed<any[]>(() => data.value?.related ?? [])
+const relatedItems = computed(() => related.value.map((r: any) => ({
+  to: localePath(`/curros/${r.slug}`),
+  emoji: r.emoji,
+  label: (locale.value === 'en' ? r.en : r.es).title,
+  status: r.status,
+  statusLabel: statusLabel(r.status),
+})))
 
 function statusLabel(s: string) {
   return t(`curros.status.${s}`)
@@ -74,36 +84,26 @@ useSeo(() => ({
   <div class="curro">
     <template v-if="data">
       <!-- Hero -->
-      <section class="chero">
-        <div class="chero__in u-container">
-          <NuxtLink
-            :to="localePath('/curros')"
-            class="chero__back"
-          >
-            <v-icon size="16">
-              mdi-arrow-left
-            </v-icon>
-            {{ t('curros.backToAll') }}
-          </NuxtLink>
-          <p class="u-eyebrow chero__eyebrow">
-            <span class="chero__emoji">{{ data.emoji }}</span>
-            {{ t('curros.eyebrow') }}<span v-if="data.period"> · {{ data.period }}</span>
-          </p>
-          <h1 class="chero__title">
-            {{ text?.title }}
-          </h1>
-          <p class="chero__dek">
-            {{ text?.dek }}
-          </p>
-          <div class="chero__tags">
-            <StatusChip
-              :status="data.status"
-              :label="statusLabel(data.status)"
-              on="ink"
-            />
-          </div>
+      <RecordHero
+        tone="alerta"
+        :emoji="data.emoji"
+        :eyebrow="t('curros.eyebrow')"
+        :title="text?.title ?? ''"
+        :dek="text?.dek"
+        :back-to="localePath('/curros')"
+        :back-label="t('curros.backToAll')"
+      >
+        <template #eyebrow>
+          <span v-if="data.period">· {{ data.period }}</span>
+        </template>
+        <div class="hero__tags">
+          <StatusChip
+            :status="data.status"
+            :label="statusLabel(data.status)"
+            on="ink"
+          />
         </div>
-      </section>
+      </RecordHero>
 
       <!-- KPIs -->
       <section class="u-container kpis">
@@ -168,31 +168,10 @@ useSeo(() => ({
         </div>
 
         <!-- Sources -->
-        <aside class="sources">
-          <h3 class="sources__h">
-            {{ t('curros.sourcesTitle') }}
-          </h3>
-          <ul class="sources__list">
-            <li
-              v-for="(s, idx) in sources"
-              :key="idx"
-              class="sources__item"
-            >
-              <a
-                :href="s.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="sources__link"
-              >
-                <span class="sources__outlet">{{ s.outlet }}<span
-                  v-if="s.date"
-                  class="sources__date"
-                > · {{ s.date }}</span></span>
-                <span class="sources__title">{{ s.title }}</span>
-              </a>
-            </li>
-          </ul>
-        </aside>
+        <SourceList
+          :title="t('curros.sourcesTitle')"
+          :sources="sources"
+        />
       </section>
 
       <!-- Breakdown charts -->
@@ -245,28 +224,10 @@ useSeo(() => ({
         <p class="block__help">
           {{ t('curros.ledgerHelp') }}
         </p>
-        <ol class="ledger">
-          <li
-            v-for="c in ledger"
-            :key="c.id"
-            class="ledger__row"
-          >
-            <NuxtLink
-              :to="localePath(`/contracts/${c.id}`)"
-              class="ledger__link"
-            >
-              <span class="ledger__text">
-                <span class="ledger__what u-truncate">{{ c.title || t('common.contract') }}</span>
-                <span class="ledger__who u-truncate">{{ c.supplier || c.buyerName }}<span v-if="c.date"> · {{ formatDate(c.date) }}</span></span>
-              </span>
-              <MoneyAmount
-                :amount="c.amount"
-                compact
-                size="sm"
-              />
-            </NuxtLink>
-          </li>
-        </ol>
+        <ContractLedger
+          :items="ledger"
+          :empty-label="t('common.contract')"
+        />
         <p class="ledger__foot">
           {{ t('curros.ledgerNote') }}
           <span v-if="text?.caveat"> {{ text.caveat }}</span>
@@ -287,89 +248,27 @@ useSeo(() => ({
             {{ t('common.viewAll') }}
           </NuxtLink>
         </div>
-        <div class="rel">
-          <NuxtLink
-            v-for="r in related"
-            :key="r.slug"
-            :to="localePath(`/curros/${r.slug}`)"
-            class="relcard"
-          >
-            <span class="relcard__emoji">{{ r.emoji }}</span>
-            <span class="relcard__t">{{ (locale === 'en' ? r.en : r.es).title }}</span>
-            <StatusChip
-              :status="r.status"
-              :label="statusLabel(r.status)"
-              variant="micro"
-            />
-          </NuxtLink>
-        </div>
+        <RelatedRail :items="relatedItems" />
       </section>
     </template>
 
     <!-- Not found -->
-    <section
+    <NotFoundPanel
       v-else
-      class="u-container notfound"
-    >
-      <h1 class="notfound__t">
-        {{ t('curros.notFound.title') }}
-      </h1>
-      <p class="notfound__b">
-        {{ t('curros.notFound.body') }}
-      </p>
-      <NuxtLink
-        :to="localePath('/curros')"
-        class="btn btn--primary"
-      >
-        {{ t('curros.notFound.action') }}
-      </NuxtLink>
-    </section>
+      :title="t('curros.notFound.title')"
+      :body="t('curros.notFound.body')"
+      :action-to="localePath('/curros')"
+      :action-label="t('curros.notFound.action')"
+    />
   </div>
 </template>
 
 <style scoped>
 .curro { padding-bottom: var(--s-8); }
 
-.chero {
-  background:
-    radial-gradient(1000px 340px at 88% -20%, color-mix(in srgb, var(--ink-alerta) 20%, transparent), transparent 70%),
-    var(--ink);
-  color: var(--ink-fg);
-  border-bottom: 1px solid var(--rule);
-}
-.chero__in { padding-block: clamp(var(--s-6), 5vw, var(--s-8)); }
-.chero__back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-1);
-  margin-bottom: var(--s-4);
-  color: var(--ink-fg-dim);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  text-decoration: none;
-}
-.chero__back:hover { color: #fff; }
-.chero__eyebrow { color: var(--sol); display: flex; align-items: center; gap: var(--s-2); }
-.chero__emoji { font-size: 1.15em; }
-.chero__title {
-  margin: var(--s-3) 0 0;
-  max-width: 22ch;
-  font-family: var(--font-display);
-  font-size: clamp(26px, 5vw, var(--t-3xl));
-  font-stretch: 112%;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-  color: #fff;
-  text-wrap: balance;
-}
-.chero__dek {
-  margin: var(--s-4) 0 0;
-  max-width: 62ch;
-  font-size: var(--t-md);
-  line-height: 1.55;
-  color: var(--ink-fg-dim);
-}
-.chero__tags { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-5); }
+/* Page-owned: the status chip row is this surface's vocabulary, not the
+   shared header's. It sits on the permanent --ink surface, hence `on="ink"`. */
+.hero__tags { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-5); }
 
 /* KPIs */
 .kpis {
@@ -434,23 +333,6 @@ useSeo(() => ({
 }
 .narrative__inv:hover { text-decoration: underline; }
 
-.sources {
-  align-self: start;
-  padding: var(--s-4);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-}
-.sources__h { margin: 0 0 var(--s-3); font-size: var(--t-sm); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
-.sources__list { margin: 0; padding: 0; list-style: none; }
-.sources__item + .sources__item { border-top: 1px solid var(--rule); }
-.sources__link { display: flex; flex-direction: column; gap: 2px; padding: var(--s-3) 0; text-decoration: none; color: inherit; }
-.sources__link:hover .sources__title { color: var(--celeste-deep); text-decoration: underline; }
-.sources__outlet { font-size: var(--t-xs); font-weight: 700; color: var(--text); }
-.sources__date { color: var(--text-muted); font-weight: 400; }
-.sources__title { font-size: var(--t-sm); color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
 /* Blocks */
 .block { margin-top: var(--s-8); }
 .block__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-4); margin-bottom: var(--s-2); }
@@ -466,29 +348,10 @@ useSeo(() => ({
 .cols > * { min-width: 0; margin-top: 0; }
 
 /* Ledger */
-.ledger { margin: 0; padding: 0; list-style: none; border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; }
-.ledger__row + .ledger__row { border-top: 1px solid var(--rule); }
-.ledger__link { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); padding: var(--s-3) var(--s-4); text-decoration: none; color: inherit; transition: background var(--dur) var(--ease); }
-.ledger__link:hover { background: var(--surface-sunken); }
-.ledger__text { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
-.ledger__what { font-size: var(--t-sm); font-weight: 600; }
-.ledger__who { font-size: var(--t-xs); color: var(--text-muted); }
 .ledger__foot { margin: var(--s-3) 0 0; font-size: var(--t-xs); color: var(--text-muted); line-height: 1.5; max-width: 80ch; }
 
 /* Related */
-.rel { display: flex; flex-wrap: wrap; gap: var(--s-3); }
-.relcard { display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-4); border: 1px solid var(--rule); border-radius: var(--r-md); background: var(--surface); color: var(--text); font-size: var(--t-sm); font-weight: 600; text-decoration: none; transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
-.relcard:hover { border-color: var(--celeste); background: var(--surface-sunken); }
-.relcard__emoji { font-size: 1.2em; }
-
 /* Buttons + not found */
-.btn { display: inline-flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-5); border-radius: var(--r-full); font-size: var(--t-sm); font-weight: 600; text-decoration: none; }
-.btn--primary { background: var(--cta-fill); color: var(--cta-fg); }
-.btn--primary:hover { filter: brightness(1.06); }
-.notfound { padding-block: var(--s-9); text-align: center; }
-.notfound__t { font-size: var(--t-2xl); margin: 0 0 var(--s-2); }
-.notfound__b { color: var(--text-muted); margin: 0 0 var(--s-5); }
-
 @media (max-width: 900px) {
   .narrative { grid-template-columns: minmax(0, 1fr); }
   /* `1fr` here is `minmax(auto, 1fr)`, whose auto floor is the chart's
