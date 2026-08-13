@@ -23,7 +23,7 @@
  */
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
 import { ReleaseModel, TcrResolutionModel } from "../../shared/models";
-import { parseTcrResolution } from "../../shared/tcr-resolution";
+import { organismKey, parseTcrResolution } from "../../shared/tcr-resolution";
 
 const UA = "gastos-gub tcr reader (+https://github.com/eduair94/gastos-gub-uy)";
 const DELAY_MS = 800;
@@ -229,6 +229,7 @@ async function run(options: Options): Promise<void> {
           resolvedAt: toDate(parsed?.date ?? null),
           organismPath: parsed?.organismPath ?? null,
           organism: parsed?.organism ?? null,
+          organismKey: organismKey(parsed?.organism ?? null),
           subject: parsed?.subject ?? null,
           expediente: parsed?.expediente ?? null,
           visto: parsed?.visto ?? null,

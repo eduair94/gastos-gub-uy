@@ -43,25 +43,23 @@ export default defineEventHandler(async (event) => {
   if (!name) return { success: true, data: { items: [], total: 0, matchedOn: null } }
 
   const target = norm(name)
-  // El nombre se guarda tal cual lo escribe el Tribunal, así que se trae por regex sobre
-  // el organismo y se confirma en memoria con la normalización — un regex laxo solo
-  // traería parecidos, y uno estricto perdería las diferencias de tildes y puntuación.
-  const candidates = await TcrResolutionModel.find(
-    { isProcurement: true, exists: true, organism: { $ne: null } },
-    { _id: 0, tcrId: 1, date: 1, resolvedAt: 1, organism: 1, subject: 1, expediente: 1, visto: 1, pdfUrl: 1, sourceUrl: 1, procurementTitle: 1, matchedOcid: 1 },
-  )
-    .sort({ resolvedAt: -1 })
-    .limit(600)
-    .lean()
 
-  const mine = (candidates as Array<Record<string, any>>).filter(r => norm(String(r.organism ?? '')) === target)
+  // Consulta EXACTA sobre la clave normalizada, servida por el índice
+  // {organismKey, resolvedAt}. La primera versión traía 600 documentos por render y los
+  // filtraba en memoria: caro en cada carga de ficha de organismo, y sin techo real.
+  const [items, total] = await Promise.all([
+    TcrResolutionModel.find(
+      { organismKey: target, isProcurement: true, exists: true },
+      { _id: 0, tcrId: 1, date: 1, subject: 1, expediente: 1, visto: 1, pdfUrl: 1, sourceUrl: 1, procurementTitle: 1, matchedOcid: 1 },
+    )
+      .sort({ resolvedAt: -1 })
+      .limit(MAX_ITEMS)
+      .lean(),
+    TcrResolutionModel.countDocuments({ organismKey: target, isProcurement: true, exists: true }),
+  ])
 
   return {
     success: true,
-    data: {
-      items: mine.slice(0, MAX_ITEMS),
-      total: mine.length,
-      matchedOn: name,
-    },
+    data: { items, total, matchedOn: name },
   }
 })

@@ -469,6 +469,8 @@ async function main(): Promise<void> {
       await tcrResolutions.createIndex({ tcrId: 1 }, { unique: true, background: true })
       await tcrResolutions.createIndex({ matchedOcid: 1 }, { background: true })
       await tcrResolutions.createIndex({ isProcurement: 1, resolvedAt: -1 }, { background: true })
+      // Panel de la ficha del organismo: consulta exacta por clave normalizada.
+      await tcrResolutions.createIndex({ organismKey: 1, resolvedAt: -1 }, { background: true })
       console.log('✅ tcr_resolutions indexes ensured (tcrId unique, matchedOcid, isProcurement+resolvedAt)')
 
       // organism_news: press coverage of each organism procurement, written by

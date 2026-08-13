@@ -165,3 +165,18 @@ export function parseTcrResolution(html: string, id: number): ParsedTcrResolutio
     isProcurement,
   }
 }
+
+/**
+ * Clave normalizada del organismo. La MISMA función la usa el job al escribir y el
+ * endpoint al leer: si divergen, el panel de la ficha del organismo queda mudo sin error.
+ */
+export function organismKey(name: string | null | undefined): string | null {
+  if (!name) return null
+  const key = String(name)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .trim()
+  return key || null
+}
