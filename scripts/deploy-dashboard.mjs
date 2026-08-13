@@ -45,8 +45,30 @@ const SMOKE_PORT = Number(process.env.SMOKE_PORT || 3799)
 const HEALTH_PATH = '/api/contracts?limit=1&hasAmount=true'
 const HEALTH_NONCE = `${Date.now()}-${process.pid}`
 const BUILD_RETRIES = 5
-const HEALTH_TIMEOUT_MS = 30_000
-const SMOKE_TIMEOUT_MS = 30_000
+
+/**
+ * PACIENCIA DEL CHEQUEO DE SALUD. Estos tres números tumbaron producción el 2026-08-13.
+ *
+ * Qué pasó: el build salió bien, el bundle en staging sirvió datos, se hizo el swap, y el
+ * chequeo posterior falló con `not healthy within 30s (last: The operation was aborted due to
+ * timeout)`. Ese "aborted" NO es la ventana de 30s: es el corte por request, que estaba en
+ * 5s. Después el rollback al build anterior —código que ya había funcionado— falló igual, y
+ * el sitio quedó caído hasta que se volvió a disparar el workflow a mano.
+ *
+ * Por qué 5s no alcanzaba: el primer request contra un worker recién recargado tiene que
+ * cargar 33 MB de bundle, abrir Mongo y calentar el JIT. Medido en el deploy exitoso de esa
+ * misma noche, el chequeo tardó 12,0s en pasar (22:09:44 → 22:09:56). Con un corte de 5s por
+ * sonda, un arranque que tarda más que eso NO PUEDE pasar nunca: cada intento se aborta antes
+ * de que el servidor conteste, y las diez sondas de la ventana fallan por la misma razón.
+ *
+ * Por eso el corte por request tiene que ser mayor que un arranque en frío, no menor. Y la
+ * verificación del ROLLBACK es la última línea de defensa: se le da más tiempo que al deploy,
+ * porque si ésa se declara enferma no queda nada atrás.
+ */
+const HEALTH_PROBE_TIMEOUT_MS = 20_000
+const HEALTH_TIMEOUT_MS = 120_000
+const ROLLBACK_TIMEOUT_MS = 180_000
+const SMOKE_TIMEOUT_MS = 60_000
 const STALE_LOCK_MS = 30 * 60 * 1000
 
 const IS_WIN = platform() === 'win32'
@@ -219,7 +241,7 @@ function parseEnvFile(file) {
 // ---------------------------------------------------------------------- http
 async function probe(port, path) {
   try {
-    const res = await fetch(`http://127.0.0.1:${port}${path}`, { signal: AbortSignal.timeout(5000) })
+    const res = await fetch(`http://127.0.0.1:${port}${path}`, { signal: AbortSignal.timeout(HEALTH_PROBE_TIMEOUT_MS) })
     if (res.status !== 200) return { ok: false, reason: `HTTP ${res.status}` }
     const json = await res.json().catch(() => null)
     const contracts = json?.data?.contracts
@@ -440,7 +462,7 @@ async function main() {
   catch (e) {
     warn(`rolling reload failed after swap: ${e.message}`)
     rollback()
-    const back = await waitHealthy(PORT, HEALTH_TIMEOUT_MS, 'post-reload-rollback')
+    const back = await waitHealthy(PORT, ROLLBACK_TIMEOUT_MS, 'post-reload-rollback')
     die(`deploy reload failed — rolled back (rollback healthy: ${back}).`, 3)
   }
   pm2(['save'])
@@ -449,7 +471,7 @@ async function main() {
   log(`health-checking :${PORT} …`)
   if (!await waitHealthy(PORT, HEALTH_TIMEOUT_MS, 'post-deploy')) {
     rollback()
-    const back = await waitHealthy(PORT, HEALTH_TIMEOUT_MS, 'post-rollback')
+    const back = await waitHealthy(PORT, ROLLBACK_TIMEOUT_MS, 'post-rollback')
     die(`deploy unhealthy — rolled back (rollback healthy: ${back}).`, 3)
   }
 
