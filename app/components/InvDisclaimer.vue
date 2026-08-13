@@ -79,10 +79,10 @@ defineProps<{
   font-size: 0.92rem;
 }
 
-/* On ink the celeste link token loses its contrast, so the panel uses the same
-   light blue the cover's CTA uses on this surface. */
+/* On ink the celeste link token flips with the theme while the surface under it
+   does not, so links here use the ink pair's own link tone. */
 .invdisc__src a {
-  color: #7fb0dd;
+  color: var(--ink-link);
   overflow-wrap: anywhere;
 }
 </style>

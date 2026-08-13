@@ -17,14 +17,22 @@
   --paper: #eef1f2;        // official form paper (cool, not cream)
   --paper-2: #ffffff;      // card face
   --paper-3: #e2e7e9;      // sunken / rule
-  --celeste: #5e93c4;      // structure, links, interactive
-  --celeste-deep: #3c6d9c; // pressed / hover
+  --celeste: #5e93c4;      // structure, links, interactive — FILL, never ink
+  // Ink: links, pressed/hover, small labels. Was #3c6d9c, which cleared AA on
+  // white (5.4:1) but landed at 4.36–4.40:1 on every tinted wash the product
+  // actually puts it on — sunken bands, celeste badges, flagged ledger rows.
+  // Darkened to clear AA on ALL of them (4.9+) instead of on paper only.
+  --celeste-deep: #37658f;
   --celeste-wash: #dce8f3; // tint fill
   --sol: #d9a441;          // MONEY ONLY — sol de mayo ochre
   --sol-deep: #8a6318;     // money as text on paper — 4.77:1, AA
   --sol-wash: #f6ecd7;     // magnitude rule track
   --alerta: #b2423b;       // anomalies — the watchdog signal
-  --alerta-wash: #f6e3e1;
+  // The flagged-row tint. Lightened from #f6e3e1: a flagged ledger row carries
+  // a money figure and a link, and both sat at 4.38–4.40:1 on the old value —
+  // the row that matters most was the one hardest to read. Still reads as
+  // tinted (1.17:1 against the card face).
+  --alerta-wash: #f9eae8;
   // Label on a filled `--alerta` surface. Same contract as --cta-fg:
   // --alerta INVERTS to a light salmon in dark mode, so a hardcoded
   // white label washes out. Always pair the fill with this.
@@ -73,6 +81,9 @@
   --ink-fg: #eaf1f6;
   --ink-fg-dim: #b9c8d4;
   --ink-rule: rgb(255 255 255 / 22%);
+  // A link ON the ink surface. `--celeste-deep` cannot serve here: it flips
+  // per theme while the surface under it does not. 7.1:1 on `--ink`.
+  --ink-link: #7fb0dd;
   --ink-alerta: #c0392b;
   --ink-alerta-fg: #ffffff;
 

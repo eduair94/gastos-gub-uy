@@ -1016,8 +1016,13 @@ useSeo(() => ({
   }
 }
 
-.mop-gap__dot--life { background: var(--verde); b { color: var(--verde); } }
-.mop-gap__dot--country { background: var(--alerta); b { color: var(--alerta); } }
+/* The dots carry the colour; the numbers carry ink. Painted in their own hue
+   the labels measured 3.5–4.2:1 at 12px against the track in both themes —
+   `--verde` and `--alerta` are fills sized for a marker, not inks sized for
+   text, and the legend above already says which colour is which. */
+.mop-gap__dot--life { background: var(--verde); }
+.mop-gap__dot--country { background: var(--alerta); }
+.mop-gap__dot b { color: var(--text); }
 
 .mop-gap__diff {
   font-family: var(--font-mono);

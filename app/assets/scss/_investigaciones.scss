@@ -32,7 +32,7 @@
   font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600;
   letter-spacing: 0.14em; text-transform: uppercase; color: var(--sol);
 }
-.inv-kicker--celeste { color: #7fb0dd; }
+.inv-kicker--celeste { color: var(--ink-link); }
 .inv-cover h1 {
   font-family: var(--font-display); font-weight: 800; font-stretch: 112%;
   font-size: clamp(2.4rem, 6.5vw, 4.6rem); color: #fff; letter-spacing: -0.03em;
@@ -107,8 +107,12 @@
    of that box which each page wired to its own scroller. */
 .inv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
 
-/* ---- Finding (ink) ---- */
-.inv-finding { background: var(--ink); color: #e7eef4; border-radius: var(--r-lg); padding: var(--s-7); box-shadow: var(--shadow-2); }
+/* ---- Finding (ink) ----
+   The hairline is load-bearing in dark mode: `--ink` and `--surface` sit at
+   1.07:1 there, so without it the panel's edge dissolves into the section
+   behind it and only the shadow survives. One page had discovered this and
+   patched itself; it belongs to every ink panel. */
+.inv-finding { background: var(--ink); color: #e7eef4; border: 1px solid var(--ink-rule); border-radius: var(--r-lg); padding: var(--s-7); box-shadow: var(--shadow-2); }
 .inv-finding h3 { font-family: var(--font-display); color: #fff; font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 700; margin: var(--s-3) 0 var(--s-4); max-width: 30ch; }
 .inv-finding p { color: #c4d2de; max-width: 64ch; margin: 0 0 var(--s-4); }
 .inv-law {
@@ -140,6 +144,9 @@
 .inv-badge--exc { background: var(--alerta-wash); color: var(--alerta); border: 1px solid var(--alerta); }
 .inv-badge--co { background: var(--celeste-wash); color: var(--celeste-deep); border: 1px solid var(--celeste); }
 .inv-badge--nd { background: var(--surface-sunken); color: var(--text-muted); border: 1px solid var(--rule); }
+/* Verificado en la fuente. `--verde` es el estado comprobado del sistema, y es el que
+   corresponde cuando el hecho lo declara la propia parte y no lo dedujo el sitio. */
+.inv-badge--ok { background: transparent; color: var(--verde); border: 1px solid var(--verde); }
 .inv-warnpill { display: inline-block; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600; color: var(--alerta-fg); background: var(--alerta); border-radius: 3px; padding: 1px 5px; margin-left: 6px; }
 .inv-flagword { color: var(--alerta); font-weight: 600; }
 
@@ -158,18 +165,18 @@
 .inv-srclist .u { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted); word-break: break-all; }
 
 /* ---- Disclaimer ---- */
-.inv-disclaimer { background: var(--ink); color: #c4d2de; border-radius: var(--r-lg); padding: var(--s-7); box-shadow: var(--shadow-2); }
+.inv-disclaimer { background: var(--ink); color: #c4d2de; border: 1px solid var(--ink-rule); border-radius: var(--r-lg); padding: var(--s-7); box-shadow: var(--shadow-2); }
 .inv-disclaimer h3 { font-family: var(--font-display); color: #fff; font-weight: 700; margin-bottom: var(--s-4); }
 .inv-disclaimer p { max-width: 76ch; margin: 0 0 var(--s-3); font-size: 0.98rem; }
 .inv-disclaimer strong { color: #fff; }
 
 /* ---- Deep-dive CTA panel ---- */
-.inv-deep { display: block; background: var(--ink); color: #e7eef4; border-radius: var(--r-lg); padding: var(--s-7); text-decoration: none; box-shadow: var(--shadow-2); transition: transform var(--dur) var(--ease); }
+.inv-deep { display: block; background: var(--ink); color: #e7eef4; border: 1px solid var(--ink-rule); border-radius: var(--r-lg); padding: var(--s-7); text-decoration: none; box-shadow: var(--shadow-2); transition: transform var(--dur) var(--ease); }
 .inv-deep:hover { transform: translateY(-2px); }
 .inv-deep__eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sol); }
 .inv-deep h3 { font-family: var(--font-display); color: #fff; font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 700; margin: var(--s-2) 0 var(--s-3); }
 .inv-deep p { color: #c4d2de; max-width: 62ch; margin: 0 0 var(--s-3); }
-.inv-deep__cta { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; color: #7fb0dd; }
+.inv-deep__cta { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; color: var(--ink-link); }
 
 /* ---- Hub: hero + cards + how + soon ---- */
 .inv-hubhero { background: var(--ink); color: #e9f0f6; padding-block: var(--s-9) var(--s-8); position: relative; overflow: hidden; }

@@ -464,14 +464,10 @@ useSeo(() => ({
    read as the argument's proof rather than as another paragraph. */
 .gen-evidence { margin-top: var(--s-7); }
 
-/* The decisive finding, on the house ink panel. In the dark theme the panel and
-   the section behind it are both near-ink (1.1:1), so the panel's edge dissolves
-   and only its shadow remains. A hairline in the ink surface's own rule token
-   restores the boundary in both themes. */
-.gen-finding {
-  margin-top: var(--s-7);
-  border: 1px solid var(--ink-rule);
-}
+/* The decisive finding, on the house ink panel. (The hairline that keeps its
+   edge from dissolving in dark mode now belongs to every ink panel, in
+   `_investigaciones.scss`.) */
+.gen-finding { margin-top: var(--s-7); }
 
 .gen-finding__n {
   font-family: var(--font-display);

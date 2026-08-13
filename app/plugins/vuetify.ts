@@ -12,7 +12,7 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi'
 // values, so these two files must move together — tokens is the source
 // of truth for anything CSS can reach.
 const light = {
-  'primary': '#3c6d9c', // celeste-deep — clears AA on paper
+  'primary': '#37658f', // celeste-deep — clears AA on paper AND on every tint
   'secondary': '#64757f', // grafito
   'accent': '#8a6318', // sol-deep. Reserved for money.
   'error': '#b2423b', // alerta

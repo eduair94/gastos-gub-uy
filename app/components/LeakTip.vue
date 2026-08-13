@@ -145,7 +145,9 @@ async function copy() {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--celeste);
+  /* `--celeste` is a fill, not an ink: as 11px text on the panel's sunken
+     surface it measured 2.6:1. The deep tone is the ink of that pair. */
+  color: var(--celeste-deep);
   margin-bottom: var(--s-2);
 }
 
@@ -206,7 +208,8 @@ async function copy() {
 
 .leak__btn--primary {
   border-color: var(--celeste);
-  color: var(--celeste);
+  /* Label ink, not the border's fill: on white the bright tone was 3.3:1. */
+  color: var(--celeste-deep);
 }
 
 .leak__warn,
