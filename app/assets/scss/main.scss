@@ -94,7 +94,13 @@ h1, h2, h3, h4,
 // both shipped links that way: blue text on the blue-grey surface, unreadable
 // in dark mode and off-brand in light. Anchors that declare their own colour or
 // `inherit` (every card, row and nav link does) outrank this and are untouched.
-a { color: var(--celeste-deep); }
+//
+// `:not([class*="v-"])` excludes anchors Vuetify rendered, and it is not
+// cosmetic: a `<v-btn>` with `bg-primary` is an <a> whose FILL is
+// --celeste-deep, so painting its label the same token made the label vanish
+// into its own button — 1.00:1, the newsletter CTA. Vuetify owns the colour of
+// its own components; this rule only speaks for plain anchors.
+a:not([class*="v-"]) { color: var(--celeste-deep); }
 
 h1 { font-size: var(--t-2xl); }
 h2 { font-size: var(--t-xl); }
