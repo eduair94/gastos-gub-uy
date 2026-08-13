@@ -17,6 +17,7 @@ import {
   PAIRS,
   PAIR_CALLS,
   PAIR_CALLS_BOTH_WON,
+  SHARED_BUYERS,
   SOLE_BY_METHOD,
   SOLE_RATE_BY_METHOD,
   SOLE_TOP,
@@ -79,6 +80,15 @@ const pairCalls = computed(() => PAIRS
     both: k.wonA && k.wonB,
   })))
   .sort((a, b) => b.uyu - a.uyu))
+
+/** Segunda capa: el organismo donde el par coincide con más plata. */
+const sharedRows = computed(() => SHARED_BUYERS.map(g => ({
+  ...g,
+  nameA: titn(g.na),
+  nameB: titn(g.nb),
+  top: g.shared[0],
+  topTotal: (g.shared[0]?.aUyu ?? 0) + (g.shared[0]?.bUyu ?? 0),
+})).sort((a, b) => b.topTotal - a.topTotal))
 
 const methodRows = computed(() => SOLE_RATE_BY_METHOD.map((m) => {
   const amount = SOLE_BY_METHOD.find(x => x.method === m.method)?.uyu ?? 0
@@ -335,8 +345,81 @@ const leakFacts = computed(() => [
       </div>
     </section>
 
-    <!-- Hallazgo 2 · oferente único -->
+    <!-- Hallazgo 1, segunda capa · el mismo comprador por dos puertas -->
     <section class="inv-sec">
+      <div class="u-container">
+        <div class="inv-head">
+          <p class="u-eyebrow">
+            {{ cx.grupoTag }}
+          </p>
+          <h2>{{ cx.grupoTitle }}</h2>
+          <p>{{ cx.grupoIntro }}</p>
+        </div>
+
+        <div class="inv-finding">
+          <h3>{{ cx.grupoTitle }}</h3>
+          <p>{{ cx.grupoLead }}</p>
+        </div>
+
+        <div class="inv-ledger u-scroll-x">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ cx.colPair }}</th>
+                <th class="num">
+                  {{ cx.colSharedOrgs }}
+                </th>
+                <th>{{ cx.colTopOrg }}</th>
+                <th class="num">
+                  {{ cx.colBilledPair }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="g in sharedRows"
+                :key="g.ra + g.rb"
+              >
+                <td class="sup">
+                  {{ g.nameA }}
+                  <span class="inv-flagword">+</span>
+                  {{ g.nameB }}
+                </td>
+                <td
+                  class="num mono"
+                  :data-label="cx.colSharedOrgs"
+                >
+                  {{ g.sharedCount }}
+                </td>
+                <td :data-label="cx.colTopOrg">
+                  {{ g.top?.buyer }}
+                  <div class="cmp-linkdet u-mono">
+                    {{ formatMoney(g.top?.aUyu ?? 0, 'UYU') }} / {{ g.top?.aN }} · {{ formatMoney(g.top?.bUyu ?? 0, 'UYU') }} / {{ g.top?.bN }}
+                  </div>
+                </td>
+                <td
+                  class="num"
+                  :data-label="cx.colBilledPair"
+                >
+                  <MoneyAmount
+                    :amount="g.topTotal"
+                    size="sm"
+                    compact
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="inv-note">
+          {{ cx.grupoNote }}
+        </div>
+      </div>
+    </section>
+
+    <!-- Hallazgo 2 · oferente único -->
+    <section class="inv-sec inv-sec--alt">
       <div class="u-container">
         <div class="inv-head">
           <p class="u-eyebrow">
@@ -466,7 +549,7 @@ const leakFacts = computed(() => [
     </section>
 
     <!-- Lo que no se puede medir -->
-    <section class="inv-sec inv-sec--alt">
+    <section class="inv-sec">
       <div class="u-container">
         <div class="inv-head">
           <p class="u-eyebrow">
@@ -564,7 +647,7 @@ const leakFacts = computed(() => [
     </section>
 
     <!-- Uruguay Leaks -->
-    <section class="inv-sec">
+    <section class="inv-sec inv-sec--alt">
       <div class="u-container">
         <LeakTip
           :subject="cx.title"
@@ -575,7 +658,7 @@ const leakFacts = computed(() => [
     </section>
 
     <!-- Fuentes -->
-    <section class="inv-sec inv-sec--alt">
+    <section class="inv-sec">
       <div class="u-container">
         <div class="inv-head">
           <p class="u-eyebrow">
@@ -626,7 +709,7 @@ const leakFacts = computed(() => [
     </section>
 
     <!-- Disclaimer -->
-    <section class="inv-sec">
+    <section class="inv-sec inv-sec--alt">
       <div class="u-container">
         <div class="inv-disclaimer">
           <h3>{{ c.common.disclaimerTitle }}</h3>

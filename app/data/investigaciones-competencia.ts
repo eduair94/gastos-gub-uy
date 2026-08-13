@@ -52,6 +52,22 @@ export interface Pair {
   phoneOwners: number
   calls: PairCall[]
 }
+export interface SharedBuyerRow { buyer: string, aUyu: number, aN: number, bUyu: number, bN: number }
+export interface SharedBuyers {
+  ra: string
+  rb: string
+  na: string
+  nb: string
+  /** Total adjudicado a cada empresa desde 2020, en todos los organismos. */
+  totA: number
+  totB: number
+  /** Organismos donde facturan LAS DOS. */
+  sharedCount: number
+  /** Los tres mayores, por monto sumado. */
+  shared: SharedBuyerRow[]
+  combined: number
+}
+
 export interface SoleCall {
   id: string
   year: number
@@ -72,6 +88,8 @@ export const SOLE_TOP: SoleCall[] = [{"id": "1335874","year": 2026,"buyer": "Adm
 export const SOLE_TOTAL_UYU = 2981657615
 export const SOLE_TOTAL_UYU_SIN_ATIPICO = 2304449015
 export const OUTLIER = {"id": "1339091", "year": 2026, "buyer": "Administración Nacional de Usinas y Trasmisiones Eléctricas", "sup": "RAMIREZ FERNANDEZ VIRGINIA, ACOSTA LEITES LETICIA KARLA Y OTROS", "method": "Licitación Abreviada", "uyu": 677208600, "qty": 1475400, "unit": 459}
+
+export const SHARED_BUYERS: SharedBuyers[] = [{"ra": "211984310019","rb": "214679320019","na": "ELECTROSISTEMAS S.A","nb": "UNION ELECTRICA S.A.","totA": 607038554,"totB": 791930315,"sharedCount": 9,"shared": [{"buyer": "Administración Nacional de Usinas y Trasmisiones Eléctricas","aUyu": 309261666,"aN": 15,"bUyu": 315831335,"bN": 19},{"buyer": "Banco de la República del Uruguay","aUyu": 494542,"aN": 9,"bUyu": 140922399,"bN": 14},{"buyer": "Intendencia de Montevideo","aUyu": 103387660,"aN": 30,"bUyu": 19719550,"bN": 4}],"combined": 1398968869},{"ra": "212605270011","rb": "213352490017","na": "SEVITEC LTDA","nb": "CONVI SOCIEDAD ANONIMA","totA": 1017076791,"totB": 1789710537,"sharedCount": 16,"shared": [{"buyer": "Dirección General de Casinos","aUyu": 266907112,"aN": 16,"bUyu": 20628925,"bN": 3},{"buyer": "Fiscalia General de la Nación","aUyu": 126142099,"aN": 24,"bUyu": 22748457,"bN": 6},{"buyer": "Dirección General de Secretaría","aUyu": 82424334,"aN": 40,"bUyu": 35137534,"bN": 10}],"combined": 2806787328},{"ra": "213985010015","rb": "214964620017","na": "DECOSTAR S A","nb": "FULLSYSTEM S R L","totA": 30764768,"totB": 27283240,"sharedCount": 13,"shared": [{"buyer": "Banco de la República del Uruguay","aUyu": 10731770,"aN": 48,"bUyu": 332559,"bN": 6},{"buyer": "Secretaría del Ministerio del Interior","aUyu": 3504536,"aN": 6,"bUyu": 18789,"bN": 2},{"buyer": "Intendencia de Montevideo","aUyu": 594,"aN": 1,"bUyu": 2526744,"bN": 75}],"combined": 58048008},{"ra": "211454500015","rb": "218037410011","na": "MERCOLUZ S A","nb": "FESCOMEL S.A.","totA": 98479282,"totB": 4929621,"sharedCount": 12,"shared": [{"buyer": "Intendencia de Montevideo","aUyu": 10884091,"aN": 696,"bUyu": 980,"bN": 1},{"buyer": "Administración de las Obras Sanitarias del Estado","aUyu": 1576215,"aN": 6,"bUyu": 1760879,"bN": 4},{"buyer": "Centro Hospitalario  Pereira Rossell","aUyu": 2842611,"aN": 62,"bUyu": 116820,"bN": 2}],"combined": 103408903},{"ra": "210572130015","rb": "210591790017","na": "RUTAS DEL SOL LTDA","nb": "CROMIN S A","totA": 27680934,"totB": 438135,"sharedCount": 1,"shared": [{"buyer": "Red de Atención Primaria de Rocha","aUyu": 10174850,"aN": 108,"bUyu": 438135,"bN": 34}],"combined": 28119069},{"ra": "160000820016","rb": "210237200015","na": "CHADRE S A","nb": "AGENCIA CENTRAL S A","totA": 5457091,"totB": 47478182,"sharedCount": 4,"shared": [{"buyer": "Red de Atención Primaria de Salto","aUyu": 2995998,"aN": 59,"bUyu": 3684463,"bN": 59},{"buyer": "Dirección de Educación","aUyu": 26539,"aN": 6,"bUyu": 2477951,"bN": 92},{"buyer": "Centro Auxiliar de Bella Unión","aUyu": 1987416,"aN": 18,"bUyu": 482630,"bN": 24}],"combined": 52935273},{"ra": "030256490017","rb": "218710800016","na": "GONZALEZ MOURA S R L","nb": "GRUPO OD S A S","totA": 150220674,"totB": 2540901,"sharedCount": 2,"shared": [{"buyer": "Dirección Nacional de Aduanas","aUyu": 6291033,"aN": 12,"bUyu": 200655,"bN": 1},{"buyer": "Corte Electoral","aUyu": 15600,"aN": 1,"bUyu": 259200,"bN": 1}],"combined": 152761575},{"ra": "030147340014","rb": "212629730012","na": "LA FLOTTA LIMITADA","nb": "DECATUR S R L","totA": 3484080,"totB": 1087847,"sharedCount": 9,"shared": [{"buyer": "Dirección de Educación","aUyu": 1318601,"aN": 2,"bUyu": 112727,"bN": 2},{"buyer": "Universidad Tecnológica del Uruguay","aUyu": 499636,"aN": 2,"bUyu": 148182,"bN": 3},{"buyer": "Direc. General de Secretaría.","aUyu": 289499,"aN": 2,"bUyu": 179364,"bN": 1}],"combined": 4571927}]
 
 /**
  * El control de artefacto, medido organismo por organismo.
@@ -143,6 +161,16 @@ export const COMPETENCIA_CONTENT = {
     bothWon: 'las dos',
     oneWon: 'una de las dos',
     noneWon: 'ninguna',
+
+    grupoTag: 'Hallazgo 1 · segunda capa',
+    grupoTitle: 'Y las dos le venden al mismo organismo',
+    grupoIntro: 'Competir en el mismo llamado es una foto. La otra pregunta es qué pasa el resto del año: de los ocho pares, los ocho le facturan a por lo menos un organismo en común. Acá el monto adjudicado a cada una desde 2020, en el organismo donde más coinciden.',
+    grupoLead: 'El caso más grande es UTE: ELECTROSISTEMAS S.A. y UNION ELECTRICA S.A. —que declaran el mismo teléfono— se reparten 625 millones de pesos del mismo organismo, casi mitad y mitad (309 millones en 15 adjudicaciones y 316 en 19). En los dos llamados donde se presentaron juntas, no ganó ninguna de las dos.',
+    grupoNote: 'Que un grupo empresarial venda a través de dos sociedades es legal y frecuente. Lo que agrega este cruce es de dónde sale la plata: el mismo comprador, por dos puertas.',
+    colPair: 'Empresas',
+    colSharedOrgs: 'Organismos donde facturan las dos',
+    colTopOrg: 'Donde más coinciden',
+    colBilledPair: 'Adjudicado ahí (2020→)',
 
     unicoTag: 'Hallazgo 2',
     unicoTitle: 'Una sola oferta en un llamado competitivo',
@@ -222,6 +250,16 @@ export const COMPETENCIA_CONTENT = {
     bothWon: 'both',
     oneWon: 'one of the two',
     noneWon: 'neither',
+
+    grupoTag: 'Finding 1 · second layer',
+    grupoTitle: 'And both sell to the same buyer',
+    grupoIntro: 'Bidding on the same tender is a snapshot. The other question is what happens the rest of the year: all eight pairs bill at least one public body in common. Below, what each firm was awarded since 2020 at the body where they overlap most.',
+    grupoLead: 'The largest case is the state power utility: ELECTROSISTEMAS S.A. and UNION ELECTRICA S.A. — which file the same phone number — split 625 million pesos from the same buyer, almost evenly (309 million across 15 awards and 316 across 19). In the two tenders where they bid together, neither won.',
+    grupoNote: 'A corporate group selling through two companies is legal and common. What this cross-reference adds is where the money comes from: one buyer, two doors.',
+    colPair: 'Firms',
+    colSharedOrgs: 'Bodies both bill',
+    colTopOrg: 'Biggest overlap',
+    colBilledPair: 'Awarded there (2020→)',
 
     unicoTag: 'Finding 2',
     unicoTitle: 'A single offer in a competitive tender',
