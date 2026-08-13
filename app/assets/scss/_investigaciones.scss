@@ -58,10 +58,22 @@
   font-size: clamp(1.6rem, 3.4vw, 2.35rem); letter-spacing: -0.025em; margin: var(--s-2) 0 var(--s-3);
 }
 .inv-head p { color: var(--text-muted); font-size: 1.05rem; margin: 0; max-width: 68ch; }
+/* A heading INSIDE a section, between two blocks of evidence. It was an inline
+   `style="margin-top: var(--s-8)"` on a `.inv-head` in one page and a private
+   `.mop-h3` in another. */
+.inv-subhead {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: var(--s-7) 0 var(--s-4);
+}
+
 .inv-prose { max-width: 66ch; font-size: 1.05rem; }
 .inv-prose p { margin: 0 0 var(--s-4); }
 .inv-prose strong { font-weight: 600; }
-.inv-note { font-size: 0.9rem; color: var(--text-muted); }
+.inv-note { font-size: 0.9rem; color: var(--text-muted); max-width: 74ch; }
+/* A note that answers the block above it, rather than trailing its paragraph. */
+.inv-note--spaced { margin-top: var(--s-4); }
 
 /* ---- Hero number ---- */
 .inv-hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--s-7); align-items: center; }
@@ -82,14 +94,9 @@
 .inv-tile__l { font-size: 0.9rem; color: var(--text-muted); margin-top: var(--s-2); }
 .inv-tile__s { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); margin-top: var(--s-1); }
 
-/* ---- Chart card ---- */
-.inv-cardc { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-lg); padding: var(--s-6); box-shadow: var(--shadow-1); }
-.inv-cardc h3 { font-family: var(--font-display); font-size: 1.18rem; font-weight: 700; }
-.inv-cardsub { color: var(--text-muted); font-size: 0.95rem; margin: var(--s-2) 0 var(--s-5); max-width: 72ch; }
-.inv-scroll { overflow-x: auto; }
-.inv-legend { display: flex; flex-wrap: wrap; gap: var(--s-4); margin-top: var(--s-4); font-size: 0.78rem; font-family: var(--font-mono); color: var(--text-muted); }
-.inv-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.inv-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+/* Charts live in <ChartBlock framed> and their keys in <InvLegend>: the old
+   `.inv-cardc` / `.inv-cardsub` / `.inv-scroll` trio was a second, weaker copy
+   of that box which each page wired to its own scroller. */
 .inv-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
 
 /* ---- Finding (ink) ---- */
@@ -120,16 +127,6 @@
 .inv-obs h3 { font-family: var(--font-display); font-size: 1.12rem; font-weight: 700; margin-bottom: var(--s-3); line-height: 1.2; }
 .inv-obs p { margin: 0; font-size: 0.95rem; color: var(--text-muted); }
 
-/* ---- Sib / rubro / how cards ---- */
-.inv-sibs { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-5); }
-.inv-sib { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-lg); padding: var(--s-6); box-shadow: var(--shadow-1); }
-.inv-sib__code { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); }
-.inv-sib h3 { font-family: var(--font-display); font-size: 1.06rem; font-weight: 700; margin: var(--s-2) 0 var(--s-3); }
-.inv-sib p { font-size: 0.92rem; color: var(--text-muted); margin: 0 0 var(--s-4); }
-.inv-sib__row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); padding: 6px 0; border-top: 1px dotted var(--rule); font-size: 0.86rem; }
-.inv-sib__row .k { color: var(--text-muted); }
-.inv-sib__row .v { font-family: var(--font-mono); font-weight: 500; text-align: right; }
-
 /* ---- Badges / flags ---- */
 .inv-badge { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 600; letter-spacing: 0.02em; padding: 2px 7px; border-radius: var(--r-full); white-space: nowrap; display: inline-block; }
 .inv-badge--exc { background: var(--alerta-wash); color: var(--alerta); border: 1px solid var(--alerta); }
@@ -138,57 +135,16 @@
 .inv-warnpill { display: inline-block; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600; color: var(--alerta-fg); background: var(--alerta); border-radius: 3px; padding: 1px 5px; margin-left: 6px; }
 .inv-flagword { color: var(--alerta); font-weight: 600; }
 
-/* ---- Ledger table (uses shared .u-scroll / DataTable elsewhere) ---- */
-.inv-tblcap { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4); margin-bottom: var(--s-4); flex-wrap: wrap; }
-.inv-tblcap .h { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); }
-.inv-ledger { border: 1px solid var(--rule); border-radius: var(--r-lg); background: var(--surface); overflow: hidden; box-shadow: var(--shadow-1); }
-.inv-ledger table { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
-.inv-ledger thead th { background: var(--surface-sunken); font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule-strong); white-space: nowrap; position: sticky; top: 0; z-index: 2; }
-.inv-ledger th.num, .inv-ledger td.num { text-align: right; }
-.inv-ledger tbody td { padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
-.inv-ledger tbody tr:last-child td { border-bottom: none; }
-.inv-ledger tbody tr:hover { background: var(--surface-sunken); }
-.inv-ledger td.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.inv-ledger .sup { font-weight: 600; }
-.inv-ledger .rowflag { background: var(--alerta-wash); }
-.inv-ledger a { font-family: var(--font-mono); font-size: 0.8rem; color: var(--celeste-deep); }
-
-/* Mobile: each ledger row becomes a card — no horizontal scroll. */
-@media (max-width: 760px) {
-  .inv-ledger { overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-  .inv-ledger table { display: block; }
-  .inv-ledger thead {
-    position: absolute; width: 1px; height: 1px;
-    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
-  }
-  .inv-ledger tbody { display: flex; flex-direction: column; gap: var(--s-3); }
-  .inv-ledger tbody tr {
-    display: block; padding: var(--s-4);
-    background: var(--surface); border: 1px solid var(--rule);
-    border-radius: var(--r-lg); box-shadow: var(--shadow-1);
-  }
-  .inv-ledger tbody tr.rowflag { border-color: var(--alerta); background: var(--alerta-wash); }
-  .inv-ledger tbody tr:hover { background: var(--surface); }
-  .inv-ledger tbody tr.rowflag:hover { background: var(--alerta-wash); }
-  .inv-ledger tbody td,
-  .inv-ledger td.num {
-    display: block; min-width: 0; padding: var(--s-2) 0; border: 0;
-    border-top: 1px solid color-mix(in srgb, var(--rule) 55%, transparent);
-    text-align: left; white-space: normal;
-  }
-  .inv-ledger tbody tr:last-child td { border-bottom: 0; }
-  .inv-ledger tbody td:first-child { border-top: 0; padding-top: 0; }
-  .inv-ledger tbody td[data-label]::before {
-    content: attr(data-label); display: block; margin-bottom: 3px;
-    font-family: var(--font-mono); font-size: var(--t-xs);
-    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);
-  }
-  .inv-ledger tbody td.sup { font-size: var(--t-base); font-weight: 700; }
-}
+/* The ledger table lives in <InvLedger> (one implementation, one mobile
+   reflow). `.inv-ledger` and the four copies of `.im-ledger` that used to sit
+   in page files are gone. */
 
 /* ---- Sources ---- */
 .inv-srcgroups { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-6) var(--s-7); }
-.inv-srcgroup h4 { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 var(--s-3); font-weight: 600; border-bottom: 1px solid var(--rule); padding-bottom: var(--s-2); }
+/* The group heading is an <h3> — it was dressed as `h4` here while all five
+   pages that use it wrote <h3>, so every source-group title on the site
+   shipped unstyled. <InvSources> is the only thing that renders it now. */
+.inv-srcgroup h3 { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 var(--s-3); font-weight: 600; border-bottom: 1px solid var(--rule); padding-bottom: var(--s-2); }
 .inv-srclist { list-style: none; margin: 0; padding: 0; }
 .inv-srclist li { margin-bottom: var(--s-3); font-size: 0.9rem; line-height: 1.4; }
 .inv-srclist .u { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted); word-break: break-all; }
@@ -256,7 +212,6 @@
 .inv-grid2 > *,
 .inv-contra > *,
 .inv-obs-grid > *,
-.inv-sibs > *,
 .inv-srcgroups > *,
 .inv-hubstats > *,
 .inv-cards > *,
@@ -265,7 +220,7 @@
 /* ---- Responsive ---- */
 @media (max-width: 980px) {
   .inv-hero, .inv-grid2 { grid-template-columns: 1fr; gap: var(--s-6); }
-  .inv-obs-grid, .inv-sibs, .inv-cards, .inv-how { grid-template-columns: 1fr 1fr; }
+  .inv-obs-grid, .inv-cards, .inv-how { grid-template-columns: 1fr 1fr; }
   .inv-contra { grid-template-columns: 1fr; }
   .inv-contra__vs { padding: var(--s-2) 0; }
   .inv-hubstats, .inv-tiles { grid-template-columns: repeat(2, 1fr); }
@@ -275,7 +230,7 @@
   .inv-hubhero { padding-block: var(--s-8) var(--s-7); }
 }
 @media (max-width: 640px) {
-  .inv-tiles, .inv-obs-grid, .inv-sibs, .inv-cards, .inv-how, .inv-hubstats { grid-template-columns: 1fr; }
+  .inv-tiles, .inv-obs-grid, .inv-cards, .inv-how, .inv-hubstats { grid-template-columns: 1fr; }
   .inv-hubhero, .inv-cover { padding-block: var(--s-6); }
 }
 

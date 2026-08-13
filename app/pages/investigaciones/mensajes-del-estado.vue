@@ -25,7 +25,7 @@
  * headline wrong by a factor of ~3.300.
  */
 const localePath = useLocalePath()
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 const { data: res } = await useFetch<any>('/api/analytics/mensajes')
 const d = computed<any>(() => res.value?.data ?? null)
@@ -76,6 +76,7 @@ const ES = {
   title: 'Qué compra el Estado cuando compra palabras',
   dek: 'La pregunta circula seguido: ¿el Estado gasta en adoctrinar? Las compras públicas no registran intenciones, registran compras — así que fuimos al catálogo. En sus 84.011 artículos vigentes no existe un código para un currículo, un texto escolar, una guía docente ni un programa educativo. El Estado no tiene forma de comprar una idea. Lo que sí compra, por 11.000 millones de pesos, es el vehículo que la transporta.',
   fileOrg: 'Todo el Estado · catálogo SICE + datos abiertos OCDS',
+  fileSubject: 'Mensajes del Estado',
   kicker: 'Investigación · Series',
   chips: ['Montos prorrateados por línea', '4 capas · 221 códigos', 'Sin búsqueda por palabras'],
 
@@ -140,6 +141,7 @@ const EN: typeof ES = {
   title: 'What the State buys when it buys words',
   dek: 'The question comes up often: does the State spend on indoctrination? Procurement records do not hold intentions, they hold purchases — so we went to the catalogue. Across its 84,011 live articles there is no code for a curriculum, a school textbook, a teacher\'s guide or an educational programme. The State has no way to buy an idea. What it does buy, for 11,000 million pesos, is the vehicle that carries one.',
   fileOrg: 'Whole state · SICE catalogue + OCDS open data',
+  fileSubject: 'The State\'s messages',
   kicker: 'Investigation · Series',
   chips: ['Amounts apportioned per line', '4 layers · 221 codes', 'No keyword search'],
 
@@ -217,6 +219,23 @@ function breadcrumbLd() {
   }
 }
 
+/** The recompute stamp only exists once the live rollup has answered. */
+const coverFields = computed(() => {
+  const fields: { label?: string, value: string }[] = [
+    { label: t('inv.file.expediente'), value: c.value.fileSubject },
+    { value: c.value.fileOrg },
+  ]
+  if (d.value) fields.push({ value: t('inv.file.recalculado', { date: fmtDate(d.value.calculatedAt) }) })
+  return fields
+})
+
+const headlineTiles = computed(() => [
+  { amount: d.value?.total, label: c.value.tTotal, sub: c.value.tTotalSub },
+  { value: '0', tone: 'alerta' as const, label: c.value.tCodes, sub: c.value.tCodesSub },
+  { value: d.value?.contracts?.toLocaleString('es-UY'), label: c.value.tContracts, sub: c.value.tContractsSub },
+  { value: `${adShare.value}%`, label: c.value.tAds, sub: c.value.tAdsSub },
+])
+
 useSeo(() => ({
   title: c.value.title,
   description: c.value.dek.slice(0, 155),
@@ -239,409 +258,288 @@ useSeo(() => ({
 
 <template>
   <div class="inv">
-    <header class="inv-cover">
-      <div class="u-container">
-        <div class="inv-file">
-          <span>EXPEDIENTE&nbsp; <b>Mensajes del Estado</b></span>
-          <span>{{ c.fileOrg }}</span>
-          <span v-if="d">Recalculado el {{ fmtDate(d.calculatedAt) }}</span>
-        </div>
-        <p class="inv-kicker">
-          {{ c.kicker }}
-        </p>
-        <h1>{{ c.title }}</h1>
-        <p class="inv-dek">
-          {{ c.dek }}
-        </p>
-        <div class="inv-chips">
-          <span
-            v-for="ch in c.chips"
-            :key="ch"
-            class="inv-chip"
-          >{{ ch }}</span>
-        </div>
-      </div>
-    </header>
+    <InvCover
+      :fields="coverFields"
+      :kicker="c.kicker"
+      :title="c.title"
+      :dek="c.dek"
+      :chips="c.chips"
+    />
 
     <!-- Headline figures -->
-    <section
+    <InvSection
       v-if="d"
-      class="inv-sec inv-sec--alt"
+      alt
     >
-      <div class="u-container">
-        <div class="inv-tiles">
-          <div class="inv-tile">
-            <MoneyAmount
-              :amount="d.total"
-              size="lg"
-              align="start"
-              :rule="false"
-              compact
-            />
-            <div class="inv-tile__l">
-              {{ c.tTotal }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tTotalSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n inv-tile__n--alerta">
-              0
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tCodes }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tCodesSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              {{ d.contracts.toLocaleString('es-UY') }}
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tContracts }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tContractsSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              {{ adShare }}%
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tAds }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tAdsSub }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+      <InvTiles :items="headlineTiles" />
+    </InvSection>
 
     <!-- The question -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.qTag }}
-          </p>
-          <h2>{{ c.qTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.q1 }}</p>
-          <p>{{ c.q2 }}</p>
-        </div>
+    <InvSection
+      :eyebrow="c.qTag"
+      :title="c.qTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.q1 }}</p>
+        <p>{{ c.q2 }}</p>
       </div>
-    </section>
+    </InvSection>
 
     <!-- Finding 1 — the catalogue has no code for an idea -->
-    <section
+    <InvSection
       v-if="d"
-      class="inv-sec inv-sec--alt"
+      alt
+      :eyebrow="c.catTag"
+      :title="c.catTitle"
     >
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.catTag }}
-          </p>
-          <h2>{{ c.catTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.cat1 }}</p>
-        </div>
+      <div class="inv-prose">
+        <p>{{ c.cat1 }}</p>
+      </div>
 
-        <ul class="msg-probes">
+      <ul class="msg-probes">
+        <li
+          v-for="p in emptyProbes"
+          :key="p.term"
+        >
+          <span class="msg-probes__t">«{{ isEn ? p.labelEn : p.labelEs }}»</span>
+          <span class="msg-probes__n u-mono">{{ c.catNone }}</span>
+        </li>
+      </ul>
+
+      <template v-if="foundProbes.length">
+        <p class="inv-note msg-found__h">
+          {{ c.catFoundIntro }}
+        </p>
+        <ul class="msg-found">
           <li
-            v-for="p in emptyProbes"
+            v-for="p in foundProbes"
             :key="p.term"
           >
-            <span class="msg-probes__t">«{{ isEn ? p.labelEn : p.labelEs }}»</span>
-            <span class="msg-probes__n u-mono">{{ c.catNone }}</span>
-          </li>
-        </ul>
-
-        <template v-if="foundProbes.length">
-          <p class="inv-note msg-found__h">
-            {{ c.catFoundIntro }}
-          </p>
-          <ul class="msg-found">
-            <li
-              v-for="p in foundProbes"
-              :key="p.term"
+            <span
+              v-for="ex in p.examples"
+              :key="ex.code"
+              class="msg-found__item"
             >
-              <span
-                v-for="ex in p.examples"
-                :key="ex.code"
-                class="msg-found__item"
-              >
-                <NuxtLink :to="localePath(`/products/${ex.code}`)">{{ ex.name }}</NuxtLink>
-                <MoneyAmount
-                  :amount="ex.total"
-                  size="sm"
-                  compact
-                />
-              </span>
-            </li>
-          </ul>
-        </template>
-
-        <div class="inv-prose msg-after">
-          <p>{{ c.cat2 }}</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Finding 2 — where the money is -->
-    <section
-      v-if="d"
-      class="inv-sec"
-    >
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.moneyTag }}
-          </p>
-          <h2>{{ c.moneyTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.money1 }}</p>
-          <p>{{ c.money2 }}</p>
-        </div>
-
-        <div class="msg-layers">
-          <article
-            v-for="l in layers"
-            :key="l.key"
-            class="msg-layer"
-          >
-            <h3>{{ layerLabel(l) }}</h3>
-            <MoneyAmount
-              :amount="l.total"
-              size="lg"
-              align="start"
-              :rule="false"
-              compact
-            />
-            <p class="msg-layer__meta u-mono">
-              {{ l.codes }} {{ isEn ? 'codes' : 'códigos' }} · {{ l.contracts.toLocaleString('es-UY') }} {{ isEn ? 'contracts' : 'contratos' }}
-            </p>
-            <p class="msg-layer__note">
-              {{ layerNote(l) }}
-            </p>
-          </article>
-        </div>
-
-        <div class="msg-charts">
-          <ChartBlock
-            :title="c.chartLayers"
-            :scroll="false"
-          >
-            <SpendBars :items="layerBars" />
-          </ChartBlock>
-          <ChartBlock
-            :title="c.chartYears"
-            :help="c.chartYearsHelp"
-            :scroll="false"
-          >
-            <SpendBars :items="yearBars" />
-          </ChartBlock>
-        </div>
-
-        <p class="inv-note msg-pauta">
-          {{ c.moneyPauta }}
-          <NuxtLink :to="localePath('/pauta')">
-            {{ c.moneyPautaCta }}
-          </NuxtLink>
-        </p>
-      </div>
-    </section>
-
-    <!-- Finding 3 — who gets paid -->
-    <section
-      v-if="d"
-      class="inv-sec inv-sec--alt"
-    >
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.whoTag }}
-          </p>
-          <h2>{{ c.whoTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.who1 }}</p>
-          <p>{{ c.who2 }}</p>
-          <p>{{ c.who3 }}</p>
-        </div>
-
-        <div class="msg-who">
-          <section
-            v-for="l in layers"
-            :key="l.key"
-            class="msg-who__col"
-          >
-            <h3>{{ layerLabel(l) }}</h3>
-            <ul class="msg-rows">
-              <li
-                v-for="s in l.topSuppliers.slice(0, 6)"
-                :key="s.name"
-              >
-                <NuxtLink
-                  v-if="s.id"
-                  class="msg-rows__n"
-                  :to="localePath(`/suppliers/${encodeURIComponent(s.id)}`)"
-                >
-                  {{ s.name }}
-                </NuxtLink>
-                <span
-                  v-else
-                  class="msg-rows__n"
-                >{{ s.name }}</span>
-                <MoneyAmount
-                  :amount="s.total"
-                  size="sm"
-                  compact
-                />
-              </li>
-            </ul>
-          </section>
-        </div>
-      </div>
-    </section>
-
-    <!-- The warning: the artifacts that would have made the headline false -->
-    <section
-      v-if="artifacts.length"
-      class="inv-sec"
-    >
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.artTag }}
-          </p>
-          <h2>{{ c.artTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.art1 }}</p>
-          <p>{{ c.art2 }}</p>
-        </div>
-
-        <ul class="msg-art">
-          <li
-            v-for="a in artifacts"
-            :key="a.ocid"
-          >
-            <div class="msg-art__id">
-              <NuxtLink
-                class="msg-art__t"
-                :to="localePath(`/contracts/${a.releaseId}`)"
-              >
-                {{ a.article }} · {{ a.buyer }} · {{ a.year }}
-              </NuxtLink>
-              <p class="msg-art__calc u-mono">
-                {{ a.quantity.toLocaleString('es-UY') }} × ${{ a.unitPrice.toLocaleString('es-UY') }} {{ c.artEach }}
-              </p>
-              <p class="msg-art__why">
-                {{ isEn ? a.reasonEn : a.reasonEs }}
-              </p>
-            </div>
-            <div class="msg-art__fig">
-              <p class="msg-art__lab u-mono">
-                {{ c.artExcluded }}
-              </p>
+              <NuxtLink :to="localePath(`/products/${ex.code}`)">{{ ex.name }}</NuxtLink>
               <MoneyAmount
-                :amount="a.amount"
+                :amount="ex.total"
                 size="sm"
                 compact
               />
-            </div>
+            </span>
           </li>
         </ul>
+      </template>
 
-        <div class="inv-prose msg-after">
-          <p>{{ c.art3 }}</p>
-        </div>
+      <div class="inv-prose msg-after">
+        <p>{{ c.cat2 }}</p>
       </div>
-    </section>
+    </InvSection>
+
+    <!-- Finding 2 — where the money is -->
+    <InvSection
+      v-if="d"
+      :eyebrow="c.moneyTag"
+      :title="c.moneyTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.money1 }}</p>
+        <p>{{ c.money2 }}</p>
+      </div>
+
+      <div class="msg-layers">
+        <article
+          v-for="l in layers"
+          :key="l.key"
+          class="msg-layer"
+        >
+          <h3>{{ layerLabel(l) }}</h3>
+          <MoneyAmount
+            :amount="l.total"
+            size="lg"
+            align="start"
+            :rule="false"
+            compact
+          />
+          <p class="msg-layer__meta u-mono">
+            {{ l.codes }} {{ isEn ? 'codes' : 'códigos' }} · {{ l.contracts.toLocaleString('es-UY') }} {{ isEn ? 'contracts' : 'contratos' }}
+          </p>
+          <p class="msg-layer__note">
+            {{ layerNote(l) }}
+          </p>
+        </article>
+      </div>
+
+      <div class="msg-charts">
+        <ChartBlock
+          :title="c.chartLayers"
+          :scroll="false"
+        >
+          <SpendBars :items="layerBars" />
+        </ChartBlock>
+        <ChartBlock
+          :title="c.chartYears"
+          :help="c.chartYearsHelp"
+          :scroll="false"
+        >
+          <SpendBars :items="yearBars" />
+        </ChartBlock>
+      </div>
+
+      <p class="inv-note msg-pauta">
+        {{ c.moneyPauta }}
+        <NuxtLink :to="localePath('/pauta')">
+          {{ c.moneyPautaCta }}
+        </NuxtLink>
+      </p>
+    </InvSection>
+
+    <!-- Finding 3 — who gets paid -->
+    <InvSection
+      v-if="d"
+      alt
+      :eyebrow="c.whoTag"
+      :title="c.whoTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.who1 }}</p>
+        <p>{{ c.who2 }}</p>
+        <p>{{ c.who3 }}</p>
+      </div>
+
+      <div class="msg-who">
+        <section
+          v-for="l in layers"
+          :key="l.key"
+          class="msg-who__col"
+        >
+          <h3>{{ layerLabel(l) }}</h3>
+          <InvRows
+            flush
+            :items="l.topSuppliers.slice(0, 6)"
+            item-key="name"
+            name-key="name"
+            :to-key="'to'"
+          >
+            <template #name="{ item }">
+              <NuxtLink
+                v-if="item.id"
+                class="invrows__name"
+                :to="localePath(`/suppliers/${encodeURIComponent(item.id)}`)"
+              >
+                {{ item.name }}
+              </NuxtLink>
+              <span
+                v-else
+                class="invrows__name"
+              >{{ item.name }}</span>
+            </template>
+            <template #fig="{ item }">
+              <MoneyAmount
+                :amount="item.total"
+                size="sm"
+                compact
+              />
+            </template>
+          </InvRows>
+        </section>
+      </div>
+    </InvSection>
+
+    <!-- The warning: the artifacts that would have made the headline false -->
+    <InvSection
+      v-if="artifacts.length"
+      :eyebrow="c.artTag"
+      :title="c.artTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.art1 }}</p>
+        <p>{{ c.art2 }}</p>
+      </div>
+
+      <ul class="msg-art">
+        <li
+          v-for="a in artifacts"
+          :key="a.ocid"
+        >
+          <div class="msg-art__id">
+            <NuxtLink
+              class="msg-art__t"
+              :to="localePath(`/contracts/${a.releaseId}`)"
+            >
+              {{ a.article }} · {{ a.buyer }} · {{ a.year }}
+            </NuxtLink>
+            <p class="msg-art__calc u-mono">
+              {{ a.quantity.toLocaleString('es-UY') }} × ${{ a.unitPrice.toLocaleString('es-UY') }} {{ c.artEach }}
+            </p>
+            <p class="msg-art__why">
+              {{ isEn ? a.reasonEn : a.reasonEs }}
+            </p>
+          </div>
+          <div class="msg-art__fig">
+            <p class="msg-art__lab u-mono">
+              {{ c.artExcluded }}
+            </p>
+            <MoneyAmount
+              :amount="a.amount"
+              size="sm"
+              compact
+            />
+          </div>
+        </li>
+      </ul>
+
+      <div class="inv-prose msg-after">
+        <p>{{ c.art3 }}</p>
+      </div>
+    </InvSection>
 
     <!-- Method -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.methodTag }}
-          </p>
-          <h2>{{ c.methodTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.method1 }}</p>
-          <p>{{ c.method2 }}</p>
-        </div>
-        <div class="msg-actions">
-          <v-btn
-            :to="localePath('/pauta')"
-            color="primary"
-            variant="flat"
-            prepend-icon="mdi-bullhorn-variant-outline"
-            class="text-none"
-          >
-            {{ c.moneyPautaCta }}
-          </v-btn>
-          <v-btn
-            :to="localePath('/products')"
-            variant="outlined"
-            class="text-none"
-          >
-            {{ c.exploreCta }}
-          </v-btn>
-        </div>
+    <InvSection
+      :eyebrow="c.methodTag"
+      :title="c.methodTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.method1 }}</p>
+        <p>{{ c.method2 }}</p>
       </div>
-    </section>
+      <InvActions class="msg-actions">
+        <v-btn
+          :to="localePath('/pauta')"
+          color="primary"
+          variant="flat"
+          prepend-icon="mdi-bullhorn-variant-outline"
+          class="text-none"
+        >
+          {{ c.moneyPautaCta }}
+        </v-btn>
+        <v-btn
+          :to="localePath('/products')"
+          variant="outlined"
+          class="text-none"
+        >
+          {{ c.exploreCta }}
+        </v-btn>
+      </InvActions>
+    </InvSection>
+
+    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
+    <InvSection>
+      <LeakTip
+        :subject="c.title"
+        path="/investigaciones/mensajes-del-estado"
+      />
+    </InvSection>
 
     <!-- How to read -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <h2>{{ c.discTitle }}</h2>
-        </div>
-        <ul class="msg-disc">
-          <li
-            v-for="(x, i) in c.disc"
-            :key="i"
-          >
-            {{ x }}
-          </li>
-        </ul>
-        <h3 class="msg-srch">
-          {{ c.srcTitle }}
-        </h3>
-        <ul class="msg-disc msg-disc--src">
-          <li
-            v-for="s in c.sources"
-            :key="s.url"
-          >
-            <a
-              :href="s.url"
-              target="_blank"
-              rel="noopener"
-            >{{ s.label }}</a>
-          </li>
-        </ul>
-      </div>
-    </section>
-    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <LeakTip
-          :subject="c.title"
-          path="/investigaciones/mensajes-del-estado"
-        />
-      </div>
-    </section>
+    <InvSection alt>
+      <InvDisclaimer
+        :title="c.discTitle"
+        :paragraphs="c.disc"
+        :sources-title="c.srcTitle"
+        :sources="c.sources"
+      />
+    </InvSection>
   </div>
 </template>
 
@@ -773,53 +671,7 @@ useSeo(() => ({
   margin-bottom: var(--s-3);
 }
 
-.msg-rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--s-2);
-}
-
-.msg-rows li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-2) var(--s-4);
-  padding: var(--s-3) var(--s-4);
-  background: var(--bg);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-md);
-}
-
-.msg-rows__n {
-  flex: 1 1 12rem;
-  min-width: 0;
-  font-size: 0.9rem;
-  overflow-wrap: anywhere;
-  color: var(--celeste-deep);
-  text-decoration: none;
-}
-
-a.msg-rows__n:hover { text-decoration: underline; }
-span.msg-rows__n { color: var(--text); }
-
-.msg-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3);
-  margin-top: var(--s-6);
-
-  :deep(.v-btn) {
-    height: auto;
-    min-height: 40px;
-    max-width: 100%;
-    padding-block: var(--s-2);
-  }
-
-  :deep(.v-btn__content) { white-space: normal; text-align: left; }
-}
+.msg-actions { margin-top: var(--s-6); }
 
 .msg-art {
   list-style: none;
@@ -876,27 +728,7 @@ span.msg-rows__n { color: var(--text); }
   margin: 0 0 var(--s-1);
 }
 
-.msg-disc {
-  margin: 0;
-  padding-left: var(--s-5);
-  max-width: 72ch;
-  display: grid;
-  gap: var(--s-3);
-  color: var(--text-muted);
-}
-
-.msg-disc--src { margin-top: var(--s-4); }
-.msg-disc--src a { color: var(--celeste-deep); }
-
-.msg-srch {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin: var(--s-6) 0 0;
-}
-
 @media (max-width: 640px) {
-  .msg-actions { display: grid; gap: var(--s-2); }
   .msg-layer { padding: var(--s-4); }
 }
 </style>

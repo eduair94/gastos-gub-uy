@@ -73,339 +73,200 @@ const supplierItems = computed(() => DGC_TOP_SUPPLIERS
   .slice(0, 10)
   .map(s => ({ label: titn(s.name), value: s.spend, color: 'gold', sub: `${s.awards} adj.` })))
 
-const sourcesLicitado = computed(() => RUBROS_MAP.filter(r => r.cat === 'competitivo'))
-const sourcesExcepcion = computed(() => RUBROS_MAP.filter(r => r.cat !== 'competitivo'))
 const fichaUrl = (id: string) => `https://www.comprasestatales.gub.uy/consultas/detalle/id/${id}`
+const rubroLabel = (key: string) => (c.value.rubro as Record<string, string>)[key] ?? key
+
+/** Verified rubros, split by how they were bought — each row links to its ficha. */
+function rubroSources(competitivo: boolean) {
+  return RUBROS_MAP
+    .filter(r => (r.cat === 'competitivo') === competitivo)
+    .map(r => ({ label: `${rubroLabel(r.key)} — ${r.verif}`, url: fichaUrl(r.id), note: `id ${r.id}` }))
+}
+
+const sourceGroups = computed(() => [
+  { title: cc.value.sourcesLicitado, items: rubroSources(true) },
+  { title: cc.value.sourcesExcepcion, items: rubroSources(false) },
+  {
+    title: cc.value.sourcesNorm,
+    items: [
+      { label: 'TOCAF Art. 33 — causales de excepción (IMPO)', url: 'https://impo.com.uy/bases/tocaf-tcr/150-2012/33' },
+      { label: 'Auditoría Interna de la Nación — DGC 2022 (PDF)', url: 'https://www.gub.uy/ministerio-economia-finanzas/sites/ministerio-economia-finanzas/files/documentos/publicaciones/2022_MinisteriodeEconomiayFinanzas-DireccionGeneraldeCasinos.pdf' },
+      { label: 'Todas las adjudicaciones DGC (Inciso 05 / UE 013)', url: 'https://www.comprasestatales.gub.uy/consultas/buscar/tipo-pub/ADJ/inciso/5/ue/13/tipo-doc/C/filtro-cat/CAT/tipo-orden/DESC' },
+    ],
+  },
+])
+
+const headlineTiles = computed(() => [
+  { value: '11.630', label: cc.value.statContracts },
+  { amount: 15410928465, label: cc.value.statCapped, sub: cc.value.statCappedSub },
+  { value: '770', label: cc.value.statRubros },
+  { value: '75%', tone: 'alerta' as const, label: cc.value.statExcepcion },
+])
+
+const mapaTiles = computed(() => [
+  { value: `$ ${Math.round(excepcionTotal / 1e6)} M`, tone: 'alerta' as const, label: cc.value.mapaExcepcion },
+  { value: `$ ${Math.round(licitadoTotal / 1e6)} M`, tone: 'verde' as const, label: cc.value.mapaLicitado },
+])
 </script>
 
 <template>
   <div class="inv">
-    <!-- Cover -->
-    <header class="inv-cover">
-      <div class="u-container">
-        <div class="inv-file">
-          <span>EXPEDIENTE&nbsp; <b>{{ cc.fileOrg }}</b></span>
-          <span>INCISO&nbsp; <b>{{ cc.fileInciso }}</b></span>
-          <span>PERÍODO&nbsp; <b>{{ cc.filePeriod }}</b></span>
-          <span>{{ c.common.source }}</span>
-        </div>
-        <p class="inv-kicker">
-          {{ cc.kicker }}
-        </p>
-        <h1>{{ cc.title }}</h1>
-        <p class="inv-dek">
-          {{ cc.dek }}
-        </p>
-        <div class="inv-chips">
-          <span
-            v-for="ch in cc.chips"
-            :key="ch"
-            class="inv-chip"
-          >{{ ch }}</span>
-        </div>
-      </div>
-    </header>
+    <InvCover
+      :fields="[
+        { label: t('inv.file.expediente'), value: cc.fileOrg },
+        { label: t('inv.file.inciso'), value: cc.fileInciso },
+        { label: t('inv.file.periodo'), value: cc.filePeriod },
+        { value: c.common.source },
+      ]"
+      :kicker="cc.kicker"
+      :title="cc.title"
+      :dek="cc.dek"
+      :chips="cc.chips"
+    />
 
-    <!-- Stat tiles -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-tiles">
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              11.630
-            </div>
-            <div class="inv-tile__l">
-              {{ cc.statContracts }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <MoneyAmount
-              :amount="15410928465"
-              size="lg"
-              align="start"
-              :rule="false"
-              compact
-            />
-            <div class="inv-tile__l">
-              {{ cc.statCapped }}
-            </div>
-            <div class="inv-tile__s">
-              {{ cc.statCappedSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              770
-            </div>
-            <div class="inv-tile__l">
-              {{ cc.statRubros }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n inv-tile__n--alerta">
-              75%
-            </div>
-            <div class="inv-tile__l">
-              {{ cc.statExcepcion }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <InvSection alt>
+      <InvTiles :items="headlineTiles" />
+    </InvSection>
 
     <!-- Qué compra -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cc.queTag }}
-          </p>
-          <h2>{{ cc.queTitle }}</h2>
-          <p>{{ cc.queIntro }}</p>
-        </div>
-        <div class="inv-cardc">
-          <h3>{{ cc.queChart }}</h3>
-          <p class="inv-cardsub">
-            {{ c.common.dataNote }}
-          </p>
-          <div class="inv-scroll">
-            <InvHBars
-              :items="opsItems"
-              format="count"
-            />
-          </div>
-        </div>
-      </div>
-    </section>
+    <InvSection
+      :eyebrow="cc.queTag"
+      :title="cc.queTitle"
+      :dek="cc.queIntro"
+    >
+      <ChartBlock
+        framed
+        :level="3"
+        :title="cc.queChart"
+        :help="c.common.dataNote"
+      >
+        <InvHBars
+          :items="opsItems"
+          format="count"
+        />
+      </ChartBlock>
+    </InvSection>
 
     <!-- Cómo compra -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cc.comoTag }}
-          </p>
-          <h2>{{ cc.comoTitle }}</h2>
-          <p>{{ cc.comoIntro }}</p>
-        </div>
-        <div class="inv-grid2">
-          <div class="inv-cardc">
-            <h3>{{ cc.comoChart }}</h3>
-            <p class="inv-cardsub">
-              {{ c.method.sinDato }}: 7.179
-            </p>
-            <div class="inv-scroll">
-              <InvHBars
-                :items="methodItems"
-                format="count"
-                :row-height="42"
-              />
-            </div>
-          </div>
-          <div class="inv-finding">
-            <p class="inv-kicker">
-              {{ cc.comoTag }}
-            </p>
-            <h3>{{ cc.comoFindingTitle }}</h3>
-            <p>{{ cc.comoFinding }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- El mapa -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cc.mapaTag }}
-          </p>
-          <h2>{{ cc.mapaTitle }}</h2>
-          <p>{{ cc.mapaIntro }}</p>
-        </div>
-        <div class="inv-cardc">
-          <h3>{{ cc.mapaChart }}</h3>
-          <div class="inv-scroll">
-            <InvHBars
-              :items="mapItems"
-              format="moneyM"
-              :row-height="46"
-            />
-          </div>
-          <div class="inv-legend">
-            <span><i style="background: var(--verde);" /> {{ c.cat.competitivo }}</span>
-            <span><i style="background: var(--alerta);" /> {{ c.method.excepcion }} · Art. 33.3</span>
-          </div>
-        </div>
-        <div
-          class="inv-tiles inv-tiles--2"
-          style="margin-top: var(--s-6);"
+    <InvSection
+      alt
+      :eyebrow="cc.comoTag"
+      :title="cc.comoTitle"
+      :dek="cc.comoIntro"
+    >
+      <div class="inv-grid2">
+        <ChartBlock
+          framed
+          :level="3"
+          :title="cc.comoChart"
+          :help="`${c.method.sinDato}: 7.179`"
         >
-          <div class="inv-tile">
-            <div class="inv-tile__n inv-tile__n--alerta">
-              {{ `$ ${Math.round(excepcionTotal / 1e6)} M` }}
-            </div>
-            <div class="inv-tile__l">
-              {{ cc.mapaExcepcion }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n inv-tile__n--verde">
-              {{ `$ ${Math.round(licitadoTotal / 1e6)} M` }}
-            </div>
-            <div class="inv-tile__l">
-              {{ cc.mapaLicitado }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Proveedores -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cc.provTag }}
-          </p>
-          <h2>{{ cc.provTitle }}</h2>
-          <p>{{ cc.provIntro }}</p>
-        </div>
-        <div class="inv-cardc">
-          <h3>{{ cc.provChart }}</h3>
-          <div class="inv-scroll">
-            <InvHBars
-              :items="supplierItems"
-              format="moneyM"
-              :row-height="36"
-            />
-          </div>
-        </div>
-        <p
-          class="inv-note"
-          style="margin-top: var(--s-4); max-width: 74ch;"
-        >
-          {{ cc.provNote }}
-        </p>
-      </div>
-    </section>
-
-    <!-- Deep-dive -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <NuxtLink
-          :to="localePath('/investigaciones/casinos-cortesia')"
-          class="inv-deep"
-        >
-          <p class="inv-deep__eyebrow">
-            {{ cc.deepTag }}
-          </p>
-          <h3>{{ cc.deepTitle }}</h3>
-          <p>{{ cc.deepDek }}</p>
-          <span class="inv-deep__cta">{{ c.common.readMore }} →</span>
-        </NuxtLink>
-      </div>
-    </section>
-
-    <!-- Sources -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ cc.sourcesTitle }}
-          </p>
-          <h2>{{ c.common.verified }}</h2>
-        </div>
-        <div class="inv-srcgroups">
-          <div class="inv-srcgroup">
-            <h3>{{ cc.sourcesLicitado }}</h3>
-            <ul class="inv-srclist">
-              <li
-                v-for="r in sourcesLicitado"
-                :key="r.code"
-              >
-                <a
-                  :href="fichaUrl(r.id)"
-                  target="_blank"
-                  rel="noopener"
-                >{{ (c.rubro as Record<string, string>)[r.key] }} — {{ r.verif }}</a>
-                <div class="u">
-                  id {{ r.id }}
-                </div>
-              </li>
-            </ul>
-          </div>
-          <div class="inv-srcgroup">
-            <h3>{{ cc.sourcesExcepcion }}</h3>
-            <ul class="inv-srclist">
-              <li
-                v-for="r in sourcesExcepcion"
-                :key="r.code"
-              >
-                <a
-                  :href="fichaUrl(r.id)"
-                  target="_blank"
-                  rel="noopener"
-                >{{ (c.rubro as Record<string, string>)[r.key] }} — {{ r.verif }}</a>
-                <div class="u">
-                  id {{ r.id }}
-                </div>
-              </li>
-            </ul>
-          </div>
-          <div class="inv-srcgroup">
-            <h3>{{ cc.sourcesNorm }}</h3>
-            <ul class="inv-srclist">
-              <li>
-                <a
-                  href="https://impo.com.uy/bases/tocaf-tcr/150-2012/33"
-                  target="_blank"
-                  rel="noopener"
-                >TOCAF Art. 33 — causales de excepción (IMPO)</a>
-              </li>
-              <li>
-                <a
-                  href="https://www.gub.uy/ministerio-economia-finanzas/sites/ministerio-economia-finanzas/files/documentos/publicaciones/2022_MinisteriodeEconomiayFinanzas-DireccionGeneraldeCasinos.pdf"
-                  target="_blank"
-                  rel="noopener"
-                >Auditoría Interna de la Nación — DGC 2022 (PDF)</a>
-              </li>
-              <li>
-                <a
-                  href="https://www.comprasestatales.gub.uy/consultas/buscar/tipo-pub/ADJ/inciso/5/ue/13/tipo-doc/C/filtro-cat/CAT/tipo-orden/DESC"
-                  target="_blank"
-                  rel="noopener"
-                >Todas las adjudicaciones DGC (Inciso 05 / UE 013)</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <LeakTip
-          :subject="cc.title"
-          path="/investigaciones/casinos"
+          <InvHBars
+            :items="methodItems"
+            format="count"
+            :row-height="42"
+          />
+        </ChartBlock>
+        <InvFinding
+          :kicker="cc.comoTag"
+          :title="cc.comoFindingTitle"
+          :body="cc.comoFinding"
         />
       </div>
-    </section>
+    </InvSection>
 
-    <!-- Disclaimer -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-disclaimer">
-          <h3>{{ c.common.disclaimerTitle }}</h3>
-          <p
-            v-for="(p, i) in c.common.disclaimer"
-            :key="i"
-          >
-            {{ p }}
-          </p>
-        </div>
-      </div>
-    </section>
+    <!-- El mapa -->
+    <InvSection
+      :eyebrow="cc.mapaTag"
+      :title="cc.mapaTitle"
+      :dek="cc.mapaIntro"
+    >
+      <ChartBlock
+        framed
+        :level="3"
+        :title="cc.mapaChart"
+      >
+        <InvHBars
+          :items="mapItems"
+          format="moneyM"
+          :row-height="46"
+        />
+        <template #meta>
+          <InvLegend
+            :items="[
+              { label: c.cat.competitivo, color: 'var(--verde)' },
+              { label: `${c.method.excepcion} · Art. 33.3`, color: 'var(--alerta)' },
+            ]"
+          />
+        </template>
+      </ChartBlock>
+      <InvTiles
+        spaced
+        :columns="2"
+        :items="mapaTiles"
+      />
+    </InvSection>
+
+    <!-- Proveedores -->
+    <InvSection
+      alt
+      :eyebrow="cc.provTag"
+      :title="cc.provTitle"
+      :dek="cc.provIntro"
+    >
+      <ChartBlock
+        framed
+        :level="3"
+        :title="cc.provChart"
+      >
+        <InvHBars
+          :items="supplierItems"
+          format="moneyM"
+          :row-height="36"
+        />
+      </ChartBlock>
+      <p class="inv-note inv-note--spaced">
+        {{ cc.provNote }}
+      </p>
+    </InvSection>
+
+    <!-- Deep-dive -->
+    <InvSection>
+      <NuxtLink
+        :to="localePath('/investigaciones/casinos-cortesia')"
+        class="inv-deep"
+      >
+        <p class="inv-deep__eyebrow">
+          {{ cc.deepTag }}
+        </p>
+        <h3>{{ cc.deepTitle }}</h3>
+        <p>{{ cc.deepDek }}</p>
+        <span class="inv-deep__cta">{{ c.common.readMore }} →</span>
+      </NuxtLink>
+    </InvSection>
+
+    <!-- Fuentes -->
+    <InvSection
+      alt
+      :eyebrow="cc.sourcesTitle"
+      :title="c.common.verified"
+    >
+      <InvSources :groups="sourceGroups" />
+    </InvSection>
+
+    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
+    <InvSection>
+      <LeakTip
+        :subject="cc.title"
+        path="/investigaciones/casinos"
+      />
+    </InvSection>
+
+    <InvSection>
+      <InvDisclaimer
+        :title="c.common.disclaimerTitle"
+        :paragraphs="c.common.disclaimer"
+      />
+    </InvSection>
   </div>
 </template>

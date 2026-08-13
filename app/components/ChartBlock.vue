@@ -36,7 +36,10 @@
  *   </ChartBlock>
  */
 withDefaults(defineProps<{
-  title: string
+  /** Omit ONLY when the section head above already names the chart — the
+   *  investigation pages that do this have an `<h2>` two lines up, and a second
+   *  heading with the same words would just duplicate the outline entry. */
+  title?: string
   /** One line under the heading: what the chart measures, or its caveat. */
   help?: string
   /** Footnote under the frame — source, cut-off date, method link. */
@@ -128,9 +131,13 @@ onBeforeUnmount(() => {
     class="cb"
     :class="{ 'cb--framed': framed, 'cb--l3': level === 3 }"
   >
-    <div class="cb__head">
+    <div
+      v-if="title || help || $slots.actions || overflowing"
+      class="cb__head"
+    >
       <component
         :is="level === 3 ? 'h3' : 'h2'"
+        v-if="title"
         class="cb__t"
       >
         {{ title }}<span
@@ -139,6 +146,13 @@ onBeforeUnmount(() => {
           aria-hidden="true"
         >⇄</span>
       </component>
+      <!-- Untitled chart (the section head names it): the affordance still has
+           to be visible, so it rides the head on its own. -->
+      <span
+        v-else-if="overflowing"
+        class="cb__swipe cb__swipe--alone"
+        aria-hidden="true"
+      >⇄</span>
       <div
         v-if="$slots.actions"
         class="cb__actions"
@@ -161,8 +175,8 @@ onBeforeUnmount(() => {
         v-if="scroll"
         ref="viewport"
         class="cb__vp u-scroll-x"
-        :role="focusable ? 'region' : undefined"
-        :aria-label="focusable ? title : undefined"
+        :role="focusable && title ? 'region' : undefined"
+        :aria-label="focusable && title ? title : undefined"
         :tabindex="focusable ? 0 : undefined"
         @scroll.passive="measure"
       >
@@ -223,6 +237,12 @@ onBeforeUnmount(() => {
 
 .cb__actions { flex: 0 0 auto; font-size: var(--t-sm); }
 
+/* The frame's beat belongs to the head above it. Without a head there is
+   nothing to separate from, and a stray top margin would push the chart off
+   its own box. */
+.cb__head + .cb__frame { margin-top: var(--s-4); }
+.cb__swipe--alone { margin-left: auto; }
+
 /* The help never competes with the heading for width — it takes the full row
    beneath it, same rule as .panel__head in main.scss. */
 .cb__help {
@@ -237,7 +257,6 @@ onBeforeUnmount(() => {
 .cb__frame {
   position: relative;
   min-width: 0;
-  margin-top: var(--s-4);
   padding: var(--s-5);
   background: var(--surface);
   border: 1px solid var(--rule);

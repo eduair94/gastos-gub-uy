@@ -3349,5 +3349,18 @@
       },
       "bpValue": "{n}",
       "sources": "Fuentes:"
+  },
+  "inv": {
+    "file": {
+      "expediente": "Expediente",
+      "organismo": "Organismo",
+      "organismos": "Organismos",
+      "inciso": "Inciso",
+      "periodo": "Período",
+      "alcance": "Alcance",
+      "articulo": "Artículo",
+      "recalculado": "Recalculado el {date}"
+    },
+    "verifiedSources": "Fuentes verificadas"
   }
 }

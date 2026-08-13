@@ -16,7 +16,7 @@
  *     does not make one, and the party figures are electoral context, not attribution.
  */
 const localePath = useLocalePath()
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 const { data: res } = await useFetch<any>('/api/analytics/topics/genero')
 const s = computed<any>(() => res.value?.data?.stats ?? null)
@@ -72,6 +72,7 @@ const ES = {
   title: 'Cuánto gasta el Estado uruguayo en políticas de género y diversidad',
   dek: 'El feed de compras públicas no tiene una etiqueta de «política de género»: hay que reconstruirla desde el texto que escribió cada funcionario. Al hacerlo aparecen tres cosas que el debate público casi nunca menciona: el gasto medible es chico, está concentrado en una sola red de atención a víctimas de violencia, y ocho de cada diez contratos del rubro no tienen monto cargado.',
   fileOrg: 'Todo el Estado · datos abiertos OCDS',
+  fileSubject: 'Género y diversidad',
   kicker: 'Investigación · Series',
   chips: ['Se actualiza cada lunes', 'Método publicado', 'Cada contrato con su ficha'],
   tTotal: 'medibles en total', tTotalSub: 'suma de los contratos que sí traen monto',
@@ -128,6 +129,7 @@ const EN: typeof ES = {
   title: 'How much Uruguay spends on gender and diversity policy',
   dek: 'The procurement feed has no "gender policy" label: it has to be rebuilt from the text each civil servant typed. Doing so surfaces three things the public debate rarely mentions: the measurable spend is small, it is concentrated in a single victim-support network, and eight in ten contracts in the field carry no amount at all.',
   fileOrg: 'Whole state · OCDS open data',
+  fileSubject: 'Gender and diversity',
   kicker: 'Investigation · Series',
   chips: ['Refreshed every Monday', 'Method published', 'Every contract linked to its record'],
   tTotal: 'measurable in total', tTotalSub: 'sum of the contracts that do carry an amount',
@@ -197,6 +199,40 @@ function breadcrumbLd() {
   }
 }
 
+/** The file line: the period and the recompute stamp only exist once the live
+ *  rollup has answered, so they are appended rather than rendered empty. */
+const coverFields = computed(() => {
+  const fields: { label?: string, value: string }[] = [
+    { label: t('inv.file.expediente'), value: c.value.fileSubject },
+    { value: c.value.fileOrg },
+  ]
+  if (s.value) {
+    fields.push({ label: t('inv.file.periodo'), value: `${s.value.minYear}–${s.value.maxYear}` })
+    fields.push({ value: t('inv.file.recalculado', { date: fmtDate(s.value.calculatedAt) }) })
+  }
+  return fields
+})
+
+const headlineTiles = computed(() => [
+  { amount: s.value?.total, label: c.value.tTotal, sub: c.value.tTotalSub },
+  { value: shareBp.value, label: c.value.tShare, sub: c.value.tShareSub },
+  { value: `${noAmountPct.value}%`, tone: 'alerta' as const, label: c.value.tCoverage, sub: c.value.tCoverageSub },
+  { value: s.value?.contracts, label: c.value.tContracts, sub: c.value.tContractsSub },
+])
+
+const partyRows = computed<any[]>(() => (s.value?.byParty ?? []).map((p: any) => ({
+  ...p,
+  name: p.partyLabel,
+  meta: `${p.organisms} ${c.value.partyUnits} · ${p.contracts} ${c.value.partyContracts}`,
+})))
+
+const openCallRows = computed<any[]>(() => (s.value?.openCalls ?? []).map((call: any) => ({
+  ...call,
+  name: call.title || `#${call.compraId}`,
+  meta: call.buyerName,
+  to: localePath(`/llamados/${call.compraId}`),
+})))
+
 useSeo(() => ({
   title: c.value.title,
   description: c.value.dek.slice(0, 155),
@@ -219,351 +255,202 @@ useSeo(() => ({
 
 <template>
   <div class="inv">
-    <header class="inv-cover">
-      <div class="u-container">
-        <div class="inv-file">
-          <span>EXPEDIENTE&nbsp; <b>Género y diversidad</b></span>
-          <span>{{ c.fileOrg }}</span>
-          <span v-if="s">PERÍODO&nbsp; <b>{{ s.minYear }}–{{ s.maxYear }}</b></span>
-          <span v-if="s">Recalculado el {{ fmtDate(s.calculatedAt) }}</span>
-        </div>
-        <p class="inv-kicker">
-          {{ c.kicker }}
-        </p>
-        <h1>{{ c.title }}</h1>
-        <p class="inv-dek">
-          {{ c.dek }}
-        </p>
-        <div class="inv-chips">
-          <span
-            v-for="ch in c.chips"
-            :key="ch"
-            class="inv-chip"
-          >{{ ch }}</span>
-        </div>
-      </div>
-    </header>
+    <InvCover
+      :fields="coverFields"
+      :kicker="c.kicker"
+      :title="c.title"
+      :dek="c.dek"
+      :chips="c.chips"
+    />
 
     <!-- Headline figures, all live -->
-    <section
+    <InvSection
       v-if="s"
-      class="inv-sec inv-sec--alt"
+      alt
     >
-      <div class="u-container">
-        <div class="inv-tiles">
-          <div class="inv-tile">
-            <MoneyAmount
-              :amount="s.total"
-              size="lg"
-              align="start"
-              :rule="false"
-              compact
-            />
-            <div class="inv-tile__l">
-              {{ c.tTotal }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tTotalSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              {{ shareBp }}
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tShare }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tShareSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n inv-tile__n--alerta">
-              {{ noAmountPct }}%
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tCoverage }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tCoverageSub }}
-            </div>
-          </div>
-          <div class="inv-tile">
-            <div class="inv-tile__n">
-              {{ s.contracts }}
-            </div>
-            <div class="inv-tile__l">
-              {{ c.tContracts }}
-            </div>
-            <div class="inv-tile__s">
-              {{ c.tContractsSub }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+      <InvTiles :items="headlineTiles" />
+    </InvSection>
 
     <!-- Context -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.ctxTag }}
-          </p>
-          <h2>{{ c.ctxTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.ctx1 }}</p>
-          <p>{{ c.ctx2 }}</p>
-        </div>
+    <InvSection
+      :eyebrow="c.ctxTag"
+      :title="c.ctxTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.ctx1 }}</p>
+        <p>{{ c.ctx2 }}</p>
       </div>
-    </section>
+    </InvSection>
 
     <!-- Finding 1 -->
-    <section
+    <InvSection
       v-if="s"
-      class="inv-sec inv-sec--alt"
+      alt
+      :eyebrow="c.findTag"
+      :title="c.findTitle"
     >
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.findTag }}
-          </p>
-          <h2>{{ c.findTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.find1 }}</p>
-          <p>
-            {{ c.find1b }}
-            <template v-if="topBuyer">
-              <strong>{{ topBuyer.buyerName }}: {{ topBuyerPct }}%</strong>.
-            </template>
-            <strong>{{ categoryLabel('vbg-atencion') }} + {{ categoryLabel('comuna-mujer') }}: {{ carePct }}%</strong>.
-          </p>
-        </div>
-        <div class="gen-evidence">
-          <ChartBlock
-            :title="c.chartCategories"
-            :scroll="false"
-          >
-            <SpendBars :items="categoryBars" />
-          </ChartBlock>
-        </div>
+      <div class="inv-prose">
+        <p>{{ c.find1 }}</p>
+        <p>
+          {{ c.find1b }}
+          <template v-if="topBuyer">
+            <strong>{{ topBuyer.buyerName }}: {{ topBuyerPct }}%</strong>.
+          </template>
+          <strong>{{ categoryLabel('vbg-atencion') }} + {{ categoryLabel('comuna-mujer') }}: {{ carePct }}%</strong>.
+        </p>
       </div>
-    </section>
+      <div class="gen-evidence">
+        <ChartBlock
+          :title="c.chartCategories"
+          :scroll="false"
+        >
+          <SpendBars :items="categoryBars" />
+        </ChartBlock>
+      </div>
+    </InvSection>
 
     <!-- Finding 2 — suppliers -->
-    <section
+    <InvSection
       v-if="s"
-      class="inv-sec"
+      :eyebrow="c.supTag"
+      :title="c.supTitle"
     >
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.supTag }}
-          </p>
-          <h2>{{ c.supTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>
-            {{ c.sup1 }}
-            <strong>{{ top5Pct }}%</strong>.
-          </p>
-          <p>{{ c.sup2 }}</p>
-        </div>
-        <div class="gen-evidence">
-          <ChartBlock
-            :title="c.chartSuppliers"
-            :help="c.supCaveat"
-            :scroll="false"
-          >
-            <SpendBars :items="supplierBars" />
-          </ChartBlock>
-        </div>
+      <div class="inv-prose">
+        <p>
+          {{ c.sup1 }}
+          <strong>{{ top5Pct }}%</strong>.
+        </p>
+        <p>{{ c.sup2 }}</p>
       </div>
-    </section>
+      <div class="gen-evidence">
+        <ChartBlock
+          :title="c.chartSuppliers"
+          :help="c.supCaveat"
+          :scroll="false"
+        >
+          <SpendBars :items="supplierBars" />
+        </ChartBlock>
+      </div>
+    </InvSection>
 
     <!-- Finding 3 — the coverage hole. The ink panel is the house device for
          "this is the decisive finding", and this one is decisive: it is why the
          total is a floor. -->
-    <section
+    <InvSection
       v-if="s"
-      class="inv-sec inv-sec--alt"
+      alt
+      :eyebrow="c.gapTag"
+      :title="c.gapTitle"
     >
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.gapTag }}
-          </p>
-          <h2>{{ c.gapTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.gap1 }}</p>
-        </div>
-        <div class="inv-finding gen-finding">
-          <p class="gen-finding__n">
-            {{ s.contractsWithoutAmount }} <span>/ {{ s.contracts }}</span>
-          </p>
-          <p class="gen-finding__l">
-            {{ c.gapPull }}
-          </p>
-          <p>{{ c.gap2 }}</p>
-        </div>
+      <div class="inv-prose">
+        <p>{{ c.gap1 }}</p>
       </div>
-    </section>
+      <InvFinding class="gen-finding">
+        <p class="gen-finding__n">
+          {{ s.contractsWithoutAmount }} <span>/ {{ s.contracts }}</span>
+        </p>
+        <p class="gen-finding__l">
+          {{ c.gapPull }}
+        </p>
+        <p>{{ c.gap2 }}</p>
+      </InvFinding>
+    </InvSection>
 
     <!-- Party -->
-    <section
+    <InvSection
       v-if="s?.byParty?.length"
-      class="inv-sec"
+      :eyebrow="c.partyTag"
+      :title="c.partyTitle"
     >
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.partyTag }}
-          </p>
-          <h2>{{ c.partyTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.party1 }}</p>
-          <p>{{ c.party2 }}</p>
-        </div>
-        <ul class="gen-rows gen-rows--party">
-          <li
-            v-for="p in s.byParty"
-            :key="p.party"
-          >
-            <div class="gen-rows__id">
-              <span class="gen-rows__name">{{ p.partyLabel }}</span>
-              <span class="gen-rows__meta u-mono">
-                {{ p.organisms }} {{ c.partyUnits }} · {{ p.contracts }} {{ c.partyContracts }}
-              </span>
-            </div>
-            <p class="gen-rows__fig">
-              <b class="u-mono">{{ p.weightedShareBp.toFixed(1) }}</b>
-              <span>{{ c.per10k }}</span>
-            </p>
-          </li>
-        </ul>
+      <div class="inv-prose">
+        <p>{{ c.party1 }}</p>
+        <p>{{ c.party2 }}</p>
       </div>
-    </section>
+      <InvRows
+        :items="partyRows"
+        item-key="party"
+        name-key="name"
+        meta-key="meta"
+      >
+        <template #fig="{ item }">
+          <b class="invrows__n u-mono">{{ item.weightedShareBp.toFixed(1) }}</b>
+          <span class="invrows__u">{{ c.per10k }}</span>
+        </template>
+      </InvRows>
+    </InvSection>
 
     <!-- Open calls -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.openTag }}
-          </p>
-          <h2>{{ c.openTitle }}</h2>
-        </div>
-        <p
-          v-if="!s?.openCalls?.length"
-          class="inv-note"
-        >
-          {{ c.openEmpty }}
-        </p>
-        <ul
-          v-else
-          class="gen-rows"
-        >
-          <li
-            v-for="call in s.openCalls"
-            :key="call.compraId"
-          >
-            <div class="gen-rows__id">
-              <NuxtLink
-                class="gen-rows__name"
-                :to="localePath(`/llamados/${call.compraId}`)"
-              >
-                {{ call.title || `#${call.compraId}` }}
-              </NuxtLink>
-              <span class="gen-rows__meta">{{ call.buyerName }}</span>
-            </div>
-            <p class="gen-rows__fig gen-rows__fig--date u-mono">
-              {{ c.closes }} {{ fmtDate(call.endDate) }}
-            </p>
-          </li>
-        </ul>
-      </div>
-    </section>
+    <InvSection
+      alt
+      :eyebrow="c.openTag"
+      :title="c.openTitle"
+    >
+      <p
+        v-if="!openCallRows.length"
+        class="inv-note"
+      >
+        {{ c.openEmpty }}
+      </p>
+      <InvRows
+        v-else
+        :items="openCallRows"
+        item-key="compraId"
+        name-key="name"
+        meta-key="meta"
+        to-key="to"
+      >
+        <template #fig="{ item }">
+          <span class="gen-date u-mono">{{ c.closes }} {{ fmtDate(item.endDate) }}</span>
+        </template>
+      </InvRows>
+    </InvSection>
 
     <!-- Method -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <div class="inv-head">
-          <p class="u-eyebrow">
-            {{ c.methodTag }}
-          </p>
-          <h2>{{ c.methodTitle }}</h2>
-        </div>
-        <div class="inv-prose">
-          <p>{{ c.method1 }}</p>
-          <p>{{ c.method2 }}</p>
-        </div>
-        <div class="gen-actions">
-          <v-btn
-            :to="localePath('/analytics/genero')"
-            color="primary"
-            variant="flat"
-            prepend-icon="mdi-magnify"
-            class="text-none"
-          >
-            {{ c.explore }}
-          </v-btn>
-          <v-btn
-            :to="localePath('/analytics/genero?rejected=1')"
-            variant="outlined"
-            class="text-none"
-          >
-            {{ c.methodTerms }}
-          </v-btn>
-        </div>
+    <InvSection
+      :eyebrow="c.methodTag"
+      :title="c.methodTitle"
+    >
+      <div class="inv-prose">
+        <p>{{ c.method1 }}</p>
+        <p>{{ c.method2 }}</p>
       </div>
-    </section>
+      <InvActions class="gen-actions">
+        <v-btn
+          :to="localePath('/analytics/genero')"
+          color="primary"
+          variant="flat"
+          prepend-icon="mdi-magnify"
+          class="text-none"
+        >
+          {{ c.explore }}
+        </v-btn>
+        <v-btn
+          :to="localePath('/analytics/genero?rejected=1')"
+          variant="outlined"
+          class="text-none"
+        >
+          {{ c.methodTerms }}
+        </v-btn>
+      </InvActions>
+    </InvSection>
+
+    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
+    <InvSection>
+      <LeakTip
+        :subject="c.title"
+        path="/investigaciones/gasto-en-genero"
+      />
+    </InvSection>
 
     <!-- How to read -->
-    <section class="inv-sec inv-sec--alt">
-      <div class="u-container">
-        <div class="inv-head">
-          <h2>{{ c.discTitle }}</h2>
-        </div>
-        <ul class="gen-disc">
-          <li
-            v-for="(d, i) in c.disc"
-            :key="i"
-          >
-            {{ d }}
-          </li>
-        </ul>
-        <template v-if="topic?.sources?.length">
-          <h3 class="gen-srch">
-            {{ c.srcTitle }}
-          </h3>
-          <ul class="gen-disc gen-disc--src">
-            <li
-              v-for="src in topic.sources"
-              :key="src.url"
-            >
-              <a
-                :href="src.url"
-                target="_blank"
-                rel="noopener"
-              >{{ src.label }}</a>
-            </li>
-          </ul>
-        </template>
-      </div>
-    </section>
-    <!-- Uruguay Leaks: lo que no está en los datos abiertos se manda a quien puede protegerlo. -->
-    <section class="inv-sec">
-      <div class="u-container">
-        <LeakTip
-          :subject="c.title"
-          path="/investigaciones/gasto-en-genero"
-        />
-      </div>
-    </section>
+    <InvSection alt>
+      <InvDisclaimer
+        :title="c.discTitle"
+        :paragraphs="c.disc"
+        :sources-title="topic?.sources?.length ? c.srcTitle : undefined"
+        :sources="topic?.sources"
+      />
+    </InvSection>
   </div>
 </template>
 
@@ -609,134 +496,17 @@ useSeo(() => ({
   max-width: 40ch;
 }
 
-/* Record rows: identity grows, the figure stays put — the .u-splitrow idea. */
-.gen-rows {
-  list-style: none;
-  margin: var(--s-6) 0 0;
-  padding: 0;
-  display: grid;
-  gap: var(--s-3);
-}
-
-.gen-rows li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-2) var(--s-5);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  padding: var(--s-4) var(--s-5);
-}
-
-.inv-sec--alt .gen-rows li { background: var(--bg); }
-
-.gen-rows__id {
-  flex: 1 1 18rem;
-  min-width: 0;
-  display: grid;
-  gap: var(--s-1);
-}
-
-.gen-rows__name {
-  font-weight: 600;
-  font-size: 1.02rem;
-  overflow-wrap: anywhere;
-  color: var(--celeste-deep);
-  text-decoration: none;
-}
-
-/* A plain <span> row (the party rows) is not a link and must not read as one. */
-span.gen-rows__name { color: var(--text); }
-a.gen-rows__name:hover { text-decoration: underline; }
-
-.gen-rows__meta {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.gen-rows__fig {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s-2);
-  margin: 0;
-  white-space: nowrap;
-
-  b {
-    font-size: 1.35rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
-  span {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-  }
-}
-
-.gen-rows__fig--date {
+/* A closing date is a sentence, not a figure: it wraps rather than forcing the
+   row wider. */
+.gen-date {
   font-size: 0.85rem;
   color: var(--text-muted);
   white-space: normal;
 }
 
-.gen-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3);
-  margin-top: var(--s-6);
-
-  /* A Vuetify button keeps its label on one line and simply overflows the
-     viewport; the second label here is a full sentence. Let it wrap and grow. */
-  :deep(.v-btn) {
-    height: auto;
-    min-height: 40px;
-    max-width: 100%;
-    padding-block: var(--s-2);
-  }
-
-  :deep(.v-btn__content) {
-    white-space: normal;
-    text-align: left;
-  }
-}
-
-.gen-disc {
-  margin: 0;
-  padding-left: var(--s-5);
-  max-width: 72ch;
-  display: grid;
-  gap: var(--s-3);
-  font-size: 1rem;
-  color: var(--text-muted);
-}
-
-.gen-disc--src { margin-top: var(--s-4); }
-.gen-disc--src a { color: var(--celeste-deep); }
-
-.gen-srch {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin: var(--s-6) 0 0;
-}
+.gen-actions { margin-top: var(--s-6); }
 
 @media (max-width: 640px) {
-  .gen-rows li {
-    padding: var(--s-3) var(--s-4);
-    /* Stacked: the figure is the row's answer, so it sits under the identity
-       instead of being squeezed to a second line beside it. */
-    align-items: flex-start;
-  }
-
-  .gen-rows__fig { margin-top: var(--s-1); }
   .gen-finding { padding: var(--s-5); }
-
-  /* One column of full-width actions reads better than two ragged blocks. */
-  .gen-actions {
-    display: grid;
-    gap: var(--s-2);
-  }
 }
 </style>
