@@ -68,6 +68,26 @@ export interface SharedBuyers {
   combined: number
 }
 
+/**
+ * Grado de evidencia del vínculo entre dos empresas que se presentaron al mismo llamado.
+ *
+ * No todos los pares valen lo mismo y la página no puede mostrarlos como si sí:
+ *   A — lo declara CADA empresa en su propio sitio (teléfono, domicilio o pertenencia a un grupo).
+ *   B — surge del RUPE, el registro oficial de proveedores del Estado.
+ *   C — lo atribuye un tercero (la ficha de Google Maps). Es el más débil y puede ser un error
+ *       de la fuente; se publica igual, dicho lo que es, porque el lector puede chequearlo.
+ */
+export type EvidenceGrade = 'A' | 'B' | 'C'
+export interface PairEvidence {
+  key: string
+  grade: EvidenceGrade
+  /** Las dos razones sociales, como se leen. */
+  firms: string
+  /** Qué publica cada parte. Una línea por hecho verificable. */
+  facts: string[]
+  sources: { label: string, url: string }[]
+}
+
 export interface SoleCall {
   id: string
   year: number
@@ -108,11 +128,163 @@ export const ARTIFACT_CHECK = [
   { buyer: 'Administración de las Obras Sanitarias del Estado', probed: 250, multi: 158, withLosers: 157, measurable: true },
 ]
 
+/**
+ * Verificación de cada par contra fuentes de fuera de esta base, hecha el 2026-08-13.
+ *
+ * Lo que se chequeó fue lo que cada empresa publica de sí misma. Es lo que convierte el
+ * hallazgo de "nuestra base dice que comparten un teléfono" en "las dos lo publican en su
+ * propio sitio", que es una afirmación que el lector puede verificar en dos clics y que no
+ * depende de que nuestro enriquecimiento de contactos esté bien.
+ */
+export const PAIR_EVIDENCE: PairEvidence[] = [
+  {
+    key: 'electro',
+    grade: 'A',
+    firms: 'Electrosistemas S.A. + Unión Eléctrica S.A. (UESA)',
+    facts: [
+      'Electrosistemas publica el teléfono (598) 2613 8514 y su oficina comercial en Zum Felde 1989, Montevideo.',
+      'Unión Eléctrica publica el mismo teléfono, la misma oficina central (Alberto Zum Felde 1989) y además el mismo depósito y taller (Emancipación 5615).',
+      'Ninguno de los dos sitios menciona al otro ni declara un grupo en común.',
+    ],
+    sources: [
+      { label: 'Electrosistemas S.A. — Contacto', url: 'https://electrosistemas.com.uy/web/contacto/' },
+      { label: 'Unión Eléctrica S.A. (UESA)', url: 'https://unionelectrica.com.uy/' },
+    ],
+  },
+  {
+    key: 'mercoluz',
+    grade: 'A',
+    firms: 'Mercoluz S.A. (Electro Palace) + Fescomel S.A.',
+    facts: [
+      'El sitio de Electro Palace se identifica como “Electro Palace - Mercoluz S.A”, RUT 211454500015 —el mismo RUT con el que Mercoluz aparece adjudicada en el corpus—, en Av. Gral. Flores 2825 y con los teléfonos 2200-0643 y 2209-2747.',
+      'Fescomel publica la misma dirección y los mismos dos teléfonos.',
+      'El sitio de Fescomel dice, textualmente, que “FESCOMEL ES UNA EMPRESA DEL GRUPO”, junto al logo de Electropalace. Es el único par donde la pertenencia a un grupo está declarada por la propia empresa.',
+    ],
+    sources: [
+      { label: 'Electro Palace - Mercoluz S.A.', url: 'http://www.electropalace.com.uy/' },
+      { label: 'Fescomel S.A.', url: 'https://www.fescomel.com.uy/' },
+    ],
+  },
+  {
+    key: 'decostar',
+    grade: 'A',
+    firms: 'Decostar S.A. + FullSystem S.R.L.',
+    facts: [
+      'Decostar publica el teléfono +598 22 000 222 y el domicilio Domingo Aramburu 1634; se presenta como representante exclusivo de Kyocera en Uruguay.',
+      'FullSystem publica el mismo teléfono y el mismo domicilio; se presenta como representante oficial de Xerox.',
+      'Son las dos únicas empresas del padrón de proveedores que declaran ese domicilio, y venden lo mismo: impresión y multifunción.',
+    ],
+    sources: [
+      { label: 'Decostar S.A.', url: 'https://decostar.com.uy/' },
+      { label: 'FullSystem S.R.L.', url: 'http://fullsystem.com.uy/' },
+    ],
+  },
+  {
+    key: 'cromin',
+    grade: 'B',
+    firms: 'Rutas del Sol Ltda. + Cromin S.A.',
+    facts: [
+      'Rutas del Sol, empresa de transporte interdepartamental, publica el teléfono 25066060 en su sitio.',
+      'El RUPE ubica a las dos en el mismo padrón de Juan Jacobo Rousseau: 4405 una, “4405, al 4417” la otra.',
+      'El teléfono de Cromin no sale de un sitio propio sino de su ficha en Google Maps.',
+    ],
+    sources: [
+      { label: 'Rutas del Sol', url: 'http://rutasdelsol.com.uy/' },
+    ],
+  },
+  {
+    key: 'gonzalez',
+    grade: 'B',
+    firms: 'González Moura S.R.L. + Grupo OD S.A.S.',
+    facts: [
+      'Las dos declaran ante el RUPE el mismo domicilio: De la Rosa, Agustín 609.',
+      'Son las dos únicas empresas del padrón que declaran esa dirección.',
+      'Ninguna de las dos publica un sitio propio donde contrastarlo.',
+    ],
+    sources: [],
+  },
+  {
+    key: 'chadre',
+    grade: 'B',
+    firms: 'Chadre S.A. + Agencia Central S.A.',
+    facts: [
+      'Las dos declaran ante el RUPE el mismo domicilio: Bvar. Batlle y Ordóñez 3266.',
+      'Esa dirección la declaran cuatro empresas de transporte, no dos: es la señal más floja de las que se muestran acá, y puede tratarse de una terminal compartida.',
+      'El teléfono que también comparten lo declaran 36 empresas, así que quedó descartado como vínculo.',
+    ],
+    sources: [],
+  },
+  {
+    key: 'sevitec',
+    grade: 'C',
+    firms: 'Sevitec Ltda. + Convi S.A.',
+    facts: [
+      'Sevitec, empresa de seguridad, publica en su sitio el teléfono 2402 4944 y el domicilio Daniel Muñoz 2028.',
+      'A Convi le atribuye ese mismo teléfono la ficha de Google Maps, que además le asigna el sitio web de Sevitec.',
+      'Convi declara ante el RUPE otro domicilio (Cerro Largo 1776) y no publica un sitio propio: el vínculo depende enteramente de la atribución de un tercero.',
+    ],
+    sources: [
+      { label: 'Sevitec Ltda.', url: 'http://sevitec.com.uy/' },
+    ],
+  },
+  {
+    key: 'laflotta',
+    grade: 'C',
+    firms: 'La Flotta Ltda. + Decatur S.R.L.',
+    facts: [
+      'El teléfono 4642 2571 aparece atribuido a las dos únicamente por Google Maps.',
+      'Sus domicilios en el RUPE son distintos y ninguna publica un sitio propio.',
+      'Es el par con la evidencia más débil del conjunto.',
+    ],
+    sources: [],
+  },
+]
+
 /** Llamados alcanzados por los pares, para el titular. */
 export const PAIR_CALLS = PAIRS.reduce((n, p) => n + p.calls.length, 0)
 /** Los que además fueron adjudicados a las dos empresas del par. */
 export const PAIR_CALLS_BOTH_WON = PAIRS.reduce((n, p) => n + p.calls.filter(c => c.wonA && c.wonB).length, 0)
 export const SOLE_SHARE = COVERAGE.sole / COVERAGE.withBlock
+
+/**
+ * Fuentes de fuera de esta base. Consultadas el 2026-08-13.
+ *
+ * Las de empresas viven en PAIR_EVIDENCE, junto al hecho que sostienen; acá van las que
+ * sostienen el marco: qué dice la norma, quién la aplica, y el antecedente uruguayo.
+ */
+export const EXTERNAL_SOURCES = [
+  {
+    key: 'norma',
+    items: [
+      { label: 'Ley 18.159 — Promoción y Defensa de la Competencia (IMPO)', url: 'https://www.impo.com.uy/bases/leyes/18159-2007' },
+      { label: 'Ley 19.833 (2019) — incorpora el artículo 4º BIS (IMPO)', url: 'https://www.impo.com.uy/bases/leyes-originales/19833-2019' },
+      { label: 'Comisión de Promoción y Defensa de la Competencia — MEF', url: 'https://www.gub.uy/ministerio-economia-finanzas/preguntas-frecuentes-competencia' },
+    ],
+  },
+  {
+    key: 'indicador',
+    items: [
+      { label: 'GI-ACE — Red flag indicators in the procurement process', url: 'https://giace.org/redflag/' },
+      { label: 'OCDE — Integrity in public procurement (Outlook 2026)', url: 'https://www.oecd.org/en/publications/anti-corruption-and-integrity-outlook-2026_16708b78-en/full-report/component-14.html' },
+      { label: 'Open Contracting Partnership — Red flags in public procurement (guía, PDF)', url: 'https://www.open-contracting.org/wp-content/uploads/2024/12/OCP2024-RedFlagProcurement-1.pdf' },
+    ],
+  },
+  {
+    key: 'antecedente',
+    items: [
+      { label: 'Brecha — El Tribunal de Cuentas alerta presunta colusión en licitaciones de ANTEL (20/05/2022)', url: 'https://brecha.com.uy/acuerdo-de-precios-el-tribunal-de-cuentas-alerta-presunta-colusion-en-licitaciones-de-antel/' },
+      { label: 'la diaria — Antel analizará presuntos sobrecostos en licitaciones de fibra óptica (11/2021)', url: 'https://ladiaria.com.uy/politica/articulo/2021/11/autoridades-de-antel-analizaran-presuntos-sobrecostos-en-licitaciones-para-la-instalacion-de-fibra-optica/' },
+    ],
+  },
+  {
+    key: 'fichas',
+    items: [
+      { label: 'Ficha con bloque de oferentes — compra 1270831 (Casinos)', url: 'https://www.comprasestatales.gub.uy/consultas/detalle/id/1270831' },
+      { label: 'Ficha donde participantes = adjudicatarios — compra i473855 (IM)', url: 'https://www.comprasestatales.gub.uy/consultas/detalle/id/i473855' },
+      { label: 'RUPE — Registro Único de Proveedores del Estado', url: 'https://www.comprasestatales.gub.uy/rupe/' },
+    ],
+  },
+]
 
 export type Locale = 'es' | 'en'
 
@@ -142,9 +314,39 @@ export const COMPETENCIA_CONTENT = {
       'Sobre eso se pueden hacer dos preguntas que antes no se podían hacer: en cuántos llamados competitivos hubo una sola oferta, y si los que compiten entre sí son realmente independientes.',
     ],
 
+    ctxTag: 'El contexto',
+    ctxTitle: 'La señal que todo el mundo mira primero',
+    ctx: [
+      'De los ocho indicadores de riesgo que el proyecto GI-ACE usa para rastrear corrupción en compras públicas, el primero es también el más simple: cuántos llamados reciben una sola oferta. En un trabajo sobre proyectos financiados por el Banco Mundial entre 1993 y 2007, ese equipo midió que cuando el nivel promedio de oferta única pasa de cero a 19%, la probabilidad de un sobrecosto importante —del 20% o más— sube nueve puntos: de 16% a 25%.',
+      'La OCDE agrega el matiz que hay que hacer siempre: que se presente una sola empresa puede deberse a un mercado chico, a un pliego demasiado específico, a la distancia o a que nadie se enteró; pero también puede indicar favoritismo o una infracción a las normas de competencia. Por eso es una señal para preguntar, no una conclusión.',
+      'Acá el nivel medido es 19,5%. No es comparable con el promedio europeo ni con el de aquel estudio —la muestra es chica y de dos años—, pero es el primer número de este tipo que se puede calcular sobre compras uruguayas.',
+    ],
+    lawText: 'Establecer, concertar o coordinar las ofertas o la abstención en licitaciones, concursos o subastas.',
+    lawCite: 'Ley 18.159, artículo 4º BIS, numeral 4 — incorporado por la Ley 19.833 de 2019. Lo investiga la Comisión de Promoción y Defensa de la Competencia, de oficio o por denuncia; las multas van de 10.000 a 20.000.000 de Unidades Indexadas, o el 10% de la facturación anual del infractor, o el triple del perjuicio causado.',
+
+    precedenteTitle: 'Ya pasó acá, y hace poco',
+    precedente: [
+      'A fines de 2021 ANTEL adjudicó siete licitaciones para instalar fibra óptica en distintas zonas del país. El Tribunal de Cuentas remitió esos siete expedientes a la Comisión de Promoción y Defensa de la Competencia para que analizara si se configuraban prácticas prohibidas. Según la crónica de Brecha, entre las empresas que participaron figuran Saceem, Stiler, Ciemsa, CEI, Gofinal, Montelecnor, Electrosistemas, SIE y Oritecno, y lo que llamó la atención fue que empresas competidoras en un llamado aparecieran consorciadas en otro. En paralelo, un director de ANTEL planteó sobrecostos por unos diez millones de dólares atribuidos al cambio de mecanismo de adjudicación.',
+      'La aclaración va entera, no achicada: remitir un expediente no es una condena, no nos consta que haya habido sanción, y no pudimos leer el documento del Tribunal —nuestra base de resoluciones está vacía—, así que lo anterior se apoya en la prensa citada al pie. Se cuenta porque una de las empresas que aparece más abajo en este trabajo, Electrosistemas S.A., figura en esa lista. Que el nombre aparezca en los dos lados no dice nada sobre los llamados de UTE de 2025 que medimos acá: dice que la pregunta ya se la hizo un organismo de control.',
+    ],
+
+    verifTag: 'Verificación',
+    verifTitle: 'Lo que dicen las propias empresas',
+    verifIntro: 'Un vínculo no vale lo mismo si lo declara la empresa que si lo dedujo un scraper. Fuimos a chequear cada par contra fuentes de fuera de esta base —casi siempre, el sitio de cada empresa— y acá están ordenados por la fuerza de esa evidencia.',
+    gradeA: 'Lo declaran las propias empresas',
+    gradeB: 'Consta en el RUPE, el registro oficial de proveedores',
+    gradeC: 'Lo atribuye un tercero (ficha de Google Maps)',
+    gradeAShort: 'Declarado',
+    gradeBShort: 'Registro',
+    gradeCShort: 'Terceros',
+    verifNote: 'Los pares de grado C se publican igual, dicho lo que son: si la ficha de Google está mal, el vínculo se cae. Preferimos mostrarlos etiquetados antes que esconderlos o darlos por buenos.',
+    verifSourcesLabel: 'Chequeado en',
+
     paresTag: 'Hallazgo 1',
     paresTitle: 'Las que compiten desde la misma puerta',
     paresIntro: 'Cruzamos los oferentes de cada llamado contra el domicilio que cada empresa declara en el RUPE y contra los teléfonos que publica. Ocho pares se presentaron al mismo llamado compartiendo uno de los dos. No es delito y puede tratarse de empresas del mismo grupo: lo que cambia es que ese llamado tuvo menos oferentes independientes de los que la lista aparenta.',
+    paresFindingKicker: '8 pares · 24 llamados · 6 adjudicados a las dos',
+    paresFindingH: 'Aramburu 1634: dos empresas, un teléfono, siete llamados',
     paresLead: 'El caso más repetido: DECOSTAR S.A. y FULLSYSTEM S.R.L. declaran el mismo domicilio (Aramburu Domingo 1634) —son las dos únicas empresas del corpus que lo declaran— y el mismo teléfono. Se presentaron juntas a siete llamados, entre ellos uno de la Dirección General de Casinos y uno del Poder Judicial. En tres, la compra terminó adjudicada a las dos.',
     paresColLink: 'Vínculo',
     paresColCalls: 'Llamados juntas',
@@ -165,6 +367,7 @@ export const COMPETENCIA_CONTENT = {
     grupoTag: 'Hallazgo 1 · segunda capa',
     grupoTitle: 'Y las dos le venden al mismo organismo',
     grupoIntro: 'Competir en el mismo llamado es una foto. La otra pregunta es qué pasa el resto del año: de los ocho pares, los ocho le facturan a por lo menos un organismo en común. Acá el monto adjudicado a cada una desde 2020, en el organismo donde más coinciden.',
+    grupoFindingH: 'UTE le compró 625 millones a dos empresas que atienden en el mismo teléfono',
     grupoLead: 'El caso más grande es UTE: ELECTROSISTEMAS S.A. y UNION ELECTRICA S.A. —que declaran el mismo teléfono— se reparten 625 millones de pesos del mismo organismo, casi mitad y mitad (309 millones en 15 adjudicaciones y 316 en 19). En los dos llamados donde se presentaron juntas, no ganó ninguna de las dos.',
     grupoNote: 'Que un grupo empresarial venda a través de dos sociedades es legal y frecuente. Lo que agrega este cruce es de dónde sale la plata: el mismo comprador, por dos puertas.',
     colPair: 'Empresas',
@@ -204,7 +407,13 @@ export const COMPETENCIA_CONTENT = {
 
     sourcesTag: 'Cómo verificarlo',
     sourcesTitle: 'Todo esto se puede rehacer',
-    sourcesP: 'Cada compra enlaza a su ficha oficial. El bloque "Proveedores participantes" está a mitad de página. Los domicilios salen del RUPE, que es público. El método completo, incluidos los filtros que descartaron 84 de los 92 pares iniciales, está comentado en el módulo de datos.',
+    sourcesP: 'Cada compra enlaza a su ficha oficial, donde el bloque "Proveedores participantes" está a mitad de página. Los domicilios salen del RUPE, que es público. Lo que dicen las empresas de sí mismas está enlazado arriba, empresa por empresa. Y el método completo —incluidos los filtros que descartaron 84 de los 92 pares iniciales— está comentado en el módulo de datos.',
+    liveLink: 'Competencia por organismo, en vivo y actualizado con cada tanda',
+    srcNorma: 'Norma y organismo',
+    srcIndicador: 'El indicador, afuera',
+    srcAntecedente: 'El antecedente uruguayo',
+    srcFichas: 'La compra, ficha por ficha',
+    srcSitio: 'En este sitio',
   },
   en: {
     kicker: 'Own investigation · data, not an accusation',
@@ -231,9 +440,39 @@ export const COMPETENCIA_CONTENT = {
       'That allows two questions nobody could ask before: how many competitive tenders drew a single offer, and whether the firms bidding against each other are actually independent.',
     ],
 
+    ctxTag: 'The context',
+    ctxTitle: 'The signal everyone looks at first',
+    ctx: [
+      'Of the eight risk indicators the GI-ACE project uses to track corruption in public procurement, the first is also the simplest: how many tenders receive a single offer. Studying World Bank-financed projects between 1993 and 2007, that team measured that when average single bidding rises from nil to 19%, the likelihood of a considerable cost overrun — 20% or more — increases by nine percentage points, from 16% to 25%.',
+      'The OECD adds the caveat that always belongs: a single bid can reflect a small market, an over-specific tender document, distance, or simply that nobody heard about it — but it can also indicate favouritism or a breach of competition rules. It is a reason to ask, not a conclusion.',
+      'Here the measured level is 19.5%. It is not comparable to the European average or to that study — our sample is small and spans two years — but it is the first number of its kind that can be computed on Uruguayan procurement.',
+    ],
+    lawText: 'Establecer, concertar o coordinar las ofertas o la abstención en licitaciones, concursos o subastas.',
+    lawCite: 'Law 18,159, article 4 BIS, item 4 — added by Law 19,833 of 2019. It is investigated by the Competition Commission, on its own initiative or on a complaint; fines range from 10,000 to 20,000,000 Indexed Units, or 10% of the offender\'s annual revenue, or three times the harm caused.',
+
+    precedenteTitle: 'It already happened here, recently',
+    precedente: [
+      'In late 2021 the state telecom company ANTEL awarded seven tenders to install fibre optic networks around the country. The Court of Auditors referred those seven files to the Competition Commission to assess whether prohibited practices had occurred. According to Brecha, the firms involved include Saceem, Stiler, Ciemsa, CEI, Gofinal, Montelecnor, Electrosistemas, SIE and Oritecno, and what drew attention was that companies competing in one tender appeared as consortium partners in another. Separately, an ANTEL director raised alleged cost overruns of about ten million dollars attributed to a change in the award mechanism.',
+      'The caveat goes in whole, not trimmed: referring a file is not a conviction, we have no record of any sanction, and we could not read the Court\'s document — our resolutions collection is empty — so the above rests on the press cited below. We report it because one of the companies appearing further down in this piece, Electrosistemas S.A., is on that list. Its name appearing in both places says nothing about the 2025 tenders we measured here: it says an oversight body has already asked the question.',
+    ],
+
+    verifTag: 'Verification',
+    verifTitle: 'What the companies say about themselves',
+    verifIntro: 'A link is not worth the same when the company declares it as when a scraper inferred it. We checked every pair against sources outside this database — almost always each firm\'s own website — and they are ordered here by how strong that evidence is.',
+    gradeA: 'Declared by the companies themselves',
+    gradeB: 'On file at RUPE, the official supplier registry',
+    gradeC: 'Attributed by a third party (Google Maps listing)',
+    gradeAShort: 'Declared',
+    gradeBShort: 'Registry',
+    gradeCShort: 'Third party',
+    verifNote: 'Grade C pairs are published anyway, labelled for what they are: if the Google listing is wrong, the link falls. We would rather show them labelled than hide them or treat them as settled.',
+    verifSourcesLabel: 'Checked against',
+
     paresTag: 'Finding 1',
     paresTitle: 'Competing from the same doorway',
     paresIntro: 'We cross-referenced each tender\'s bidders against the address every firm files in the state supplier registry (RUPE) and the phone numbers they publish. Eight pairs bid on the same tender while sharing one of the two. That is not illegal and they may belong to one corporate group: what changes is that the tender had fewer independent bidders than its list suggests.',
+    paresFindingKicker: '8 pairs · 24 tenders · 6 awarded to both',
+    paresFindingH: 'Aramburu 1634: two companies, one phone, seven tenders',
     paresLead: 'The most frequent case: DECOSTAR S.A. and FULLSYSTEM S.R.L. file the same address (Aramburu Domingo 1634) — the only two firms in the corpus that file it — and the same phone. They bid together on seven tenders, including one from the National Casinos Directorate and one from the Judiciary. In three, the purchase was awarded to both.',
     paresColLink: 'Link',
     paresColCalls: 'Tenders together',
@@ -254,6 +493,7 @@ export const COMPETENCIA_CONTENT = {
     grupoTag: 'Finding 1 · second layer',
     grupoTitle: 'And both sell to the same buyer',
     grupoIntro: 'Bidding on the same tender is a snapshot. The other question is what happens the rest of the year: all eight pairs bill at least one public body in common. Below, what each firm was awarded since 2020 at the body where they overlap most.',
+    grupoFindingH: 'The state power utility bought 625 million from two firms answering the same phone',
     grupoLead: 'The largest case is the state power utility: ELECTROSISTEMAS S.A. and UNION ELECTRICA S.A. — which file the same phone number — split 625 million pesos from the same buyer, almost evenly (309 million across 15 awards and 316 across 19). In the two tenders where they bid together, neither won.',
     grupoNote: 'A corporate group selling through two companies is legal and common. What this cross-reference adds is where the money comes from: one buyer, two doors.',
     colPair: 'Firms',
@@ -293,7 +533,13 @@ export const COMPETENCIA_CONTENT = {
 
     sourcesTag: 'How to check it',
     sourcesTitle: 'All of this can be redone',
-    sourcesP: 'Every purchase links to its official page, where the "Proveedores participantes" block sits halfway down. Addresses come from RUPE, which is public. The full method, including the filters that discarded 84 of the initial 92 pairs, is documented in the data module.',
+    sourcesP: 'Every purchase links to its official page, where the "Proveedores participantes" block sits halfway down. Addresses come from RUPE, which is public. What the companies say about themselves is linked above, firm by firm. And the full method — including the filters that discarded 84 of the initial 92 pairs — is documented in the data module.',
+    liveLink: 'Competition by public body, live and refreshed with every batch',
+    srcNorma: 'The law and the authority',
+    srcIndicador: 'The indicator, abroad',
+    srcAntecedente: 'The Uruguayan precedent',
+    srcFichas: 'The purchase, record by record',
+    srcSitio: 'On this site',
   },
 } as const
 

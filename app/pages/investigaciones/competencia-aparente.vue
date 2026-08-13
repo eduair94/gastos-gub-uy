@@ -13,10 +13,11 @@ import { invContent } from '~/data/investigaciones'
 import {
   ARTIFACT_CHECK,
   COVERAGE,
+  EXTERNAL_SOURCES,
   OUTLIER,
   PAIRS,
+  PAIR_EVIDENCE,
   PAIR_CALLS,
-  PAIR_CALLS_BOTH_WON,
   SHARED_BUYERS,
   SOLE_BY_METHOD,
   SOLE_RATE_BY_METHOD,
@@ -80,6 +81,25 @@ const pairCalls = computed(() => PAIRS
     both: k.wonA && k.wonB,
   })))
   .sort((a, b) => b.uyu - a.uyu))
+
+/**
+ * La verificación externa, ordenada por fuerza de evidencia: primero lo que declara la propia
+ * empresa, último lo que sólo dice una ficha de Google. El grado no es decorativo — es lo que
+ * le dice al lector cuánto pesa cada fila.
+ */
+const GRADE_CLASS: Record<string, string> = { A: 'inv-badge--ok', B: 'inv-badge--co', C: 'inv-badge--nd' }
+const evidence = computed(() => PAIR_EVIDENCE.map(ev => ({
+  ...ev,
+  gradeClass: GRADE_CLASS[ev.grade] ?? 'inv-badge--nd',
+  gradeShort: ev.grade === 'A' ? cx.value.gradeAShort : ev.grade === 'B' ? cx.value.gradeBShort : cx.value.gradeCShort,
+})))
+
+/** La leyenda de grados: se explica una vez, no ocho. */
+const gradeLegend = computed(() => [
+  { cls: 'inv-badge--ok', short: cx.value.gradeAShort, label: cx.value.gradeA },
+  { cls: 'inv-badge--co', short: cx.value.gradeBShort, label: cx.value.gradeB },
+  { cls: 'inv-badge--nd', short: cx.value.gradeCShort, label: cx.value.gradeC },
+])
 
 /** Segunda capa: el organismo donde el par coincide con más plata. */
 const sharedRows = computed(() => SHARED_BUYERS.map(g => ({
@@ -145,22 +165,23 @@ const artifactColumns = computed(() => [
   { key: 'measurable', label: cx.value.artifactVerdict },
 ])
 
-const sourceGroups = [
+/**
+ * Las fuentes de afuera viven en el módulo de datos, junto al hecho que sostienen; acá sólo
+ * se les agrega la única que es de casa: el indicador en vivo, que sí cambia con cada tanda.
+ */
+const SOURCE_TITLE: Record<string, keyof ReturnType<typeof competenciaContent>> = {
+  norma: 'srcNorma',
+  indicador: 'srcIndicador',
+  antecedente: 'srcAntecedente',
+  fichas: 'srcFichas',
+}
+const sourceGroups = computed(() => [
+  ...EXTERNAL_SOURCES.map(g => ({ title: String(cx.value[SOURCE_TITLE[g.key]!]), items: g.items })),
   {
-    title: 'Compras Estatales',
-    items: [
-      { label: 'Ficha con oferentes — compra 1270831 (Casinos)', url: 'https://www.comprasestatales.gub.uy/consultas/detalle/id/1270831' },
-      { label: 'Ficha donde participantes = adjudicatarios (IM)', url: 'https://www.comprasestatales.gub.uy/consultas/detalle/id/i473855' },
-    ],
+    title: cx.value.srcSitio,
+    items: [{ label: cx.value.liveLink, to: localePath('/analytics/competencia') }],
   },
-  {
-    title: 'Registros · sitio',
-    items: [
-      { label: 'RUPE — Registro Único de Proveedores del Estado', url: 'https://www.comprasestatales.gub.uy/rupe/' },
-      { label: 'Competencia por organismo (en vivo)', to: localePath('/analytics/competencia') },
-    ],
-  },
-]
+])
 
 /** Los datos ya publicados que viajan dentro del mensaje a Uruguay Leaks. */
 const leakFacts = computed(() => [
@@ -224,16 +245,40 @@ const leakFacts = computed(() => [
       </div>
     </InvSection>
 
-    <!-- Hallazgo 1 · pares -->
+    <!-- El contexto: qué es esta señal afuera, qué dice la norma acá, y el antecedente -->
     <InvSection
       alt
+      :eyebrow="cx.ctxTag"
+      :title="cx.ctxTitle"
+    >
+      <div class="inv-prose">
+        <p
+          v-for="(p, i) in cx.ctx"
+          :key="i"
+        >
+          {{ p }}
+        </p>
+      </div>
+
+      <InvFinding
+        :title="cx.precedenteTitle"
+        :body="cx.precedente"
+        :law="cx.lawText"
+      />
+      <p class="cmp-cite">
+        {{ cx.lawCite }}
+      </p>
+    </InvSection>
+
+    <!-- Hallazgo 1 · pares -->
+    <InvSection
       :eyebrow="cx.paresTag"
       :title="cx.paresTitle"
       :dek="cx.paresIntro"
     >
       <InvFinding
-        :kicker="`${PAIRS.length} · ${PAIR_CALLS} · ${PAIR_CALLS_BOTH_WON}`"
-        :title="cx.paresTitle"
+        :kicker="cx.paresFindingKicker"
+        :title="cx.paresFindingH"
         :body="cx.paresLead"
       />
 
@@ -307,6 +352,70 @@ const leakFacts = computed(() => [
       </InvLedger>
     </InvSection>
 
+    <!-- Verificación: qué publica cada empresa de sí misma -->
+    <InvSection
+      alt
+      :eyebrow="cx.verifTag"
+      :title="cx.verifTitle"
+      :dek="cx.verifIntro"
+    >
+      <dl class="cmp-ev__legend">
+        <div
+          v-for="g in gradeLegend"
+          :key="g.short"
+        >
+          <dt>
+            <span
+              class="inv-badge"
+              :class="g.cls"
+            >{{ g.short }}</span>
+          </dt>
+          <dd>{{ g.label }}</dd>
+        </div>
+      </dl>
+
+      <div class="cmp-ev">
+        <article
+          v-for="ev in evidence"
+          :key="ev.key"
+          class="cmp-ev__item"
+        >
+          <header class="cmp-ev__head">
+            <span
+              class="inv-badge"
+              :class="ev.gradeClass"
+            >{{ ev.gradeShort }}</span>
+            <h3>{{ ev.firms }}</h3>
+          </header>
+          <ul class="cmp-ev__facts">
+            <li
+              v-for="(f, i) in ev.facts"
+              :key="i"
+            >
+              {{ f }}
+            </li>
+          </ul>
+          <p
+            v-if="ev.sources.length"
+            class="cmp-ev__src"
+          >
+            <span class="u-mono">{{ cx.verifSourcesLabel }}:</span>
+            <a
+              v-for="s in ev.sources"
+              :key="s.url"
+              :href="s.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >{{ s.label }}</a>
+          </p>
+        </article>
+      </div>
+
+      <p class="inv-note cmp-ev__note">
+        {{ cx.verifNote }}
+      </p>
+    </InvSection>
+
     <!-- Hallazgo 1, segunda capa · el mismo comprador por dos puertas -->
     <InvSection
       :eyebrow="cx.grupoTag"
@@ -314,7 +423,7 @@ const leakFacts = computed(() => [
       :dek="cx.grupoIntro"
     >
       <InvFinding
-        :title="cx.grupoTitle"
+        :title="cx.grupoFindingH"
         :body="cx.grupoLead"
       />
 
@@ -505,4 +614,75 @@ const leakFacts = computed(() => [
 }
 
 .cmp-outlier { font-size: 0.82rem; }
+
+/* La cita de la norma va pegada al bloque legal, en el tono de una nota al pie. */
+.cmp-cite {
+  margin: var(--s-3) 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  max-width: 72ch;
+}
+
+/* Verificación: un asiento por par, separados por una regla, como las entradas de un
+   expediente. No son tarjetas: el peso lo lleva la etiqueta de grado, no un contenedor. */
+.cmp-ev__item + .cmp-ev__item {
+  border-top: 1px solid var(--rule);
+  margin-top: var(--s-6);
+  padding-top: var(--s-6);
+}
+
+.cmp-ev__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-3);
+}
+
+.cmp-ev__head h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.3;
+  max-width: 60ch;
+}
+
+/* Los grados se explican una vez, arriba de la lista. */
+.cmp-ev__legend {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-6);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.cmp-ev__legend > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+
+.cmp-ev__legend dt { min-width: 88px; }
+.cmp-ev__legend dd { margin: 0; }
+
+.cmp-ev__facts {
+  margin: var(--s-3) 0 0;
+  padding-left: var(--s-5);
+  display: grid;
+  gap: var(--s-2);
+  font-size: 0.92rem;
+}
+
+.cmp-ev__facts li { max-width: 72ch; }
+
+.cmp-ev__src {
+  margin: var(--s-4) 0 0;
+  font-size: 0.82rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  align-items: baseline;
+}
+
+.cmp-ev__src > span { color: var(--text-muted); }
+
+.cmp-ev__note { margin-top: var(--s-7); }
 </style>
