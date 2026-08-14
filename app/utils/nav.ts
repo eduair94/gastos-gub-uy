@@ -173,6 +173,7 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'invCasinos', to: localePath('/investigaciones/casinos'), icon: 'mdi-slot-machine-outline' },
             { key: 'invCasinosCortesia', to: localePath('/investigaciones/casinos-cortesia'), icon: 'mdi-cards-playing-outline' },
             { key: 'invIm', to: localePath('/investigaciones/intendencia-montevideo'), icon: 'mdi-city-variant-outline' },
+            { key: 'invMonopolios', to: localePath('/investigaciones/monopolios'), icon: 'mdi-bank-outline' },
             { key: 'invEmpresas', to: localePath('/investigaciones/empresas-senaladas'), icon: 'mdi-domain-off' },
             { key: 'invAsse', to: localePath('/investigaciones/asse-ambulancias'), icon: 'mdi-ambulance' },
             { key: 'invSaturno', to: localePath('/investigaciones/frigorifico-saturno'), icon: 'mdi-cow' },
