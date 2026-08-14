@@ -178,6 +178,10 @@ const leakFacts = computed(() => findings.value.map(f => f.copy.title))
   font-size: 1rem;
   line-height: 1.6;
   max-width: 72ch;
+  /* Una ficha cita URLs de expedientes y comandos: un token de 53 caracteres sin espacios
+     empujaba el documento entero de costado a 360px (scrollWidth 433). El texto puede partirse
+     donde haga falta antes que hacer scrollear la página. */
+  overflow-wrap: anywhere;
 }
 
 /* "Qué falta" no puede leerse como una nota al pie: es la condición de honestidad de la
@@ -219,6 +223,6 @@ const leakFacts = computed(() => findings.value.map(f => f.copy.title))
 
 .hz__repro code {
   font-family: inherit;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 </style>

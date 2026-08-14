@@ -226,18 +226,23 @@ async function main(): Promise<void> {
 
   if (CENSO_COMPLETO) {
     console.log(`\n=== censo completo: las ${candidatas.length} candidatas contra la ficha pública ===`);
-    let ampl = 0;
+    const confirmadas: string[] = [];
     let leidas = 0;
     for (const ocid of candidatas) {
       const id = compraIdFromOcid(ocid);
       if (!id) continue;
       try {
         const t = await ficha(id);
-        if (t) { leidas++; if (/Ver Compra Original/i.test(t)) ampl++; }
+        if (t) { leidas++; if (/Ver Compra Original/i.test(t)) confirmadas.push(ocid); }
       } catch { /* la ficha puede haber sido borrada del portal */ }
       await new Promise((r) => setTimeout(r, 1100));
     }
-    console.log(`  ${ampl} de ${leidas} llevan «Ver Compra Original» (${leidas ? ((100 * ampl) / leidas).toFixed(0) : "—"}%)`);
+    console.log(`  ${confirmadas.length} de ${leidas} llevan «Ver Compra Original» (${leidas ? ((100 * confirmadas.length) / leidas).toFixed(0) : "—"}%): son ampliaciones.`);
+    // El número que ordena todo: de las CONFIRMADAS, cuántas traen el procedimiento en el feed.
+    const confirmadasConMetodo = await rel.distinct("ocid", { ocid: { $in: confirmadas }, ...conMetodo });
+    console.log(`  De esas ${confirmadas.length} ampliaciones confirmadas, ${(confirmadasConMetodo as string[]).length} traen el procedimiento en el dato abierto.`);
+    console.log("  El resto llega como una adjudicación suelta: sin procedimiento, sin título, sin método y sin");
+    console.log("  ninguna referencia a la compra original que está ampliando.");
   } else {
     console.log(`\n  (con --census se verifican las ${candidatas.length} candidatas contra la ficha pública, a un pedido cada 1,1 s)`);
   }
