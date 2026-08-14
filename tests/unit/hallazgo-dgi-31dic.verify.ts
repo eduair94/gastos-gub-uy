@@ -337,11 +337,16 @@ async function main(): Promise<void> {
 
   await disconnectFromDatabase();
 
-  /** Baja cada ficha del portal y cuenta el cartel «Ver Compra Original», que marca una ampliación. */
+  /**
+   * Baja cada ficha del portal y cuenta el cartel «Ver Compra Original», que marca una ampliación.
+   * La ficha de una ampliación lleva en su propio título el procedimiento ORIGINAL que prorroga
+   * («Licitación Abreviada 42/2019»), así que del mismo pedido sale qué se está ampliando.
+   */
   async function censar(etiqueta: string, lista: string[]): Promise<void> {
     let ampliacion = 0;
     let leidas = 0;
     let caidas = 0;
+    const procedimientos = new Map<string, number>();
     for (const ocid of lista) {
       const id = compraIdFromOcid(ocid);
       if (!id) continue;
@@ -350,7 +355,16 @@ async function main(): Promise<void> {
         if (!res.ok) { caidas++; continue; }
         const html = await res.text();
         leidas++;
-        if (html.includes("Ver Compra Original")) ampliacion++;
+        if (!html.includes("Ver Compra Original")) continue;
+        ampliacion++;
+        // El portal no sirve todo en UTF-8: los acentos llegan rotos, por eso ningún patrón los exige.
+        const tipo = /(Licitaci.n Abreviada|Licitaci.n P.blica|Compra por Excepci.n|Concurso de Precios|Compra Directa(?: Ampliada)?)/i.exec(
+          html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")
+        )?.[1];
+        if (tipo) {
+          const clave = tipo.replace(/Licitaci.n/i, "Licitación").replace(/P.blica/i, "Pública").replace(/Excepci.n/i, "Excepción");
+          procedimientos.set(clave, (procedimientos.get(clave) ?? 0) + 1);
+        }
       } catch {
         caidas++;
       }
@@ -360,6 +374,10 @@ async function main(): Promise<void> {
       `  [${etiqueta}] ${ampliacion} de ${leidas} fichas leídas llevan «Ver Compra Original» (${leidas ? ((100 * ampliacion) / leidas).toFixed(1) : "—"}%)` +
       `${caidas ? ` · ${caidas} no respondieron o fueron borradas del portal` : ""}`
     );
+    if (procedimientos.size) {
+      console.log(`  [${etiqueta}] qué se está ampliando:`);
+      for (const [k, v] of [...procedimientos.entries()].sort((a, b) => b[1] - a[1])) console.log(`      ${String(v).padStart(4)} · ${k}`);
+    }
   }
 }
 

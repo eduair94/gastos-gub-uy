@@ -246,6 +246,33 @@ async function main(): Promise<void> {
   }
   console.log("  La causal está en la ficha y no en el feed: no hay forma de contar las compras por urgencia sin abrir páginas de a una.");
 
+  console.log("\n=== la distribución de causales, sobre una muestra sorteada de 60 fichas ===");
+  const universo = [...porOcid.keys()].filter((o) => mapa.get(o) === EXCEPCION);
+  const sorteo: string[] = [];
+  for (let i = 0; i < 60 && universo.length; i++) sorteo.push(universo[Math.floor(Math.random() * universo.length)]!);
+  const numerales = new Map<string, number>();
+  let leidas = 0;
+  for (const ocid of sorteo) {
+    const id = ocid.replace(/^ocds-[a-z0-9]+-/i, "");
+    try {
+      const res = await fetch(`https://www.comprasestatales.gub.uy/consultas/detalle/id/${encodeURIComponent(id)}`, { signal: AbortSignal.timeout(30_000) });
+      if (!res.ok) continue;
+      const texto = (await res.text()).replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+      const num = /Art\.?\s*33,?\s*(\d+)\s*:/i.exec(texto)?.[1];
+      leidas++;
+      const clave = num ? `numeral ${num}` : "sin numeral del art. 33 (otra ley)";
+      numerales.set(clave, (numerales.get(clave) ?? 0) + 1);
+    } catch { /* la ficha puede haber sido borrada del portal */ }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  for (const [k, v] of [...numerales.entries()].sort((a, b) => b[1] - a[1])) {
+    console.log(`  ${String(v).padStart(3)} de ${leidas} (${((100 * v) / leidas).toFixed(1).padStart(5)}%) · ${k}`);
+  }
+  console.log("  La muestra es de 60 y varía en cada corrida. El conteo publicado sale de leer 609 fichas una por una;");
+  console.log("  el censo completo son unas 3.750 fichas, alrededor de una hora a un pedido por segundo.");
+  console.log("  El numeral 26 son compras del MSP en cumplimiento de decisiones judiciales; el 33, ANEP manteniendo");
+  console.log("  locales de enseñanza; el 2, la licitación que se hizo y quedó desierta. La urgencia es el numeral 10.");
+
   await disconnectFromDatabase();
 }
 

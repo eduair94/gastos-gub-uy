@@ -92,7 +92,7 @@ async function main(): Promise<void> {
             },
             n: { $sum: 1 },
             monto: { $sum: "$amt" },
-            ancap: { $sum: { $cond: [{ $regexMatch: { input: { $ifNull: ["$comprador", ""] }, regex: "ANCAP|Administraci.n Nacional de Combustibles" } }, "$amt", 0] } },
+            ancap: { $sum: { $cond: [{ $regexMatch: { input: { $ifNull: ["$comprador", ""] }, regex: "ANCAP|Nacional de Combustible" } }, "$amt", 0] } },
           },
         },
         { $sort: { monto: -1 } },
@@ -165,22 +165,35 @@ async function main(): Promise<void> {
   console.log("  El salto de 2015 a 2016 hay que confirmarlo contra el historial de integraciones de ARCE antes de leerlo como un deterioro.");
 
   console.log("\n=== dónde la explicación del mercado internacional deja de alcanzar ===");
+  // NO se publica un monto por etiqueta. El monto vive en el RELEASE y una misma compra de OSE
+  // trae varias de estas etiquetas a la vez, así que atribuirle el total a cada una las infla todas
+  // por igual. Lo que sí es un hecho es cuántas líneas de dinero entran por una etiqueta genérica.
+  const GENERICAS = /RUBROS GLOBALES|NO CATALOGADO|IMPREVISTOS|LL SS|RUBROS UNITARIOS/i;
   const etiquetas = await rel
     .aggregate(
       [
-        { $match: base },
-        { $unwind: "$awards" },
-        { $unwind: "$awards.items" },
-        { $match: { "awards.items.classification.scheme": "x_ODG" } },
-        { $group: { _id: "$awards.items.classification.description", n: { $sum: 1 }, monto: { $sum: { $ifNull: ["$awards.items.unit.value.amount", 0] } } } },
-        { $match: { _id: /RUBROS|NO CATALOGADO|IMPREVISTOS|GLOBALES|LL SS|VARIOS|OTROS/i } },
-        { $sort: { monto: -1 } },
+        { $match: { ...base, "awards.items.classification.description": GENERICAS } },
+        {
+          $project: {
+            ocid: 1,
+            amt: "$amount.primaryAmount",
+            comprador: "$buyer.name",
+            items: { $reduce: { input: { $ifNull: ["$awards", []] }, initialValue: [], in: { $concatArrays: ["$$value", { $ifNull: ["$$this.items", []] }] } } },
+          },
+        },
+        { $unwind: "$items" },
+        { $match: { "items.classification.description": GENERICAS } },
+        { $group: { _id: { d: { $toUpper: "$items.classification.description" }, ocid: "$ocid" }, comprador: { $first: "$comprador" }, lineas: { $sum: 1 } } },
+        { $group: { _id: "$_id.d", compras: { $sum: 1 }, lineas: { $sum: "$lineas" }, comprador: { $first: "$comprador" } } },
+        { $sort: { lineas: -1 } },
         { $limit: 8 },
       ],
       { allowDiskUse: true }
     )
     .toArray();
-  for (const e of etiquetas as any[]) console.log(`  ${String(e.n).padStart(6)} líneas · ${String(e._id ?? "").slice(0, 62)}`);
+  for (const e of etiquetas as any[]) {
+    console.log(`  ${String(e.lineas).padStart(6)} líneas en ${String(e.compras).padStart(5)} compras · ${String(e._id ?? "").slice(0, 40).padEnd(40)} · ${String(e.comprador ?? "").slice(0, 26)}`);
+  }
   console.log("  Ahí no hay explicación de mercado internacional posible: hace falta el pliego de cada uno.");
 
   console.log("\n=== el texto libre no agrupa: no reemplaza a un código ===");
@@ -214,14 +227,18 @@ async function main(): Promise<void> {
     .collection("product_analytics")
     .aggregate(
       [
-        { $match: { $or: [{ canonicalName: /^(OTROS|VARIOS|GENERIC|SIN ESPECIFICAR|NO CATALOGAD)/i }, { description: /^(OTROS|VARIOS|GENERIC|SIN ESPECIFICAR|NO CATALOGAD)/i }] } },
-        { $group: { _id: null, n: { $sum: 1 }, monto: { $sum: { $ifNull: ["$totalValue", 0] } } } },
+        { $match: { $or: [{ canonicalName: /\b(OTROS|VARIOS|GENERICO|SIN ESPECIFICAR|NO CATALOGAD|NO ESPECIFICAD)/i }, { description: /\b(OTROS|VARIOS|GENERICO|SIN ESPECIFICAR|NO CATALOGAD|NO ESPECIFICAD)/i }] } },
+        { $group: { _id: null, n: { $sum: 1 }, monto: { $sum: { $ifNull: ["$totalUYU", 0] } } } },
       ],
       { allowDiskUse: true }
     )
     .toArray();
   const g: any = genericos[0] ?? { n: 0, monto: 0 };
-  console.log(`  Artículos genéricos tipo «otros» o «varios» dentro del catálogo: ${g.n} códigos · $${Math.round(g.monto / 1e6).toLocaleString("es-UY")} millones`);
+  const codificado: any = (titular as any[]).find((t) => t._id === "con código (x_catalogo_arce)");
+  console.log(
+    `  Artículos genéricos tipo «otros» o «varios» dentro del catálogo: ${g.n} códigos · $${Math.round(g.monto / 1e6).toLocaleString("es-UY")} millones · ` +
+    `${((100 * g.monto) / codificado.monto).toFixed(2)}% del gasto codificado`
+  );
   console.log("  El catálogo es específico. Lo que no pasa por él es la mitad del dinero.");
 
   console.log("\n=== 2026 queda fuera: el feed de ese año trae el esquema nulo ===");
