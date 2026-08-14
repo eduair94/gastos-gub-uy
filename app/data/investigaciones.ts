@@ -219,6 +219,16 @@ export const INV_CONTENT = {
           "cinco proveedores concentran"
         ]
       },
+      "cardHallazgos": {
+        "eyebrow": "Hallazgos propios",
+        "title": "Lo que encontramos nosotros",
+        "dek": "Cosas que salieron de medir el registro de compras y que no estaban en ninguna crónica. Cada una dice qué norma pondría en juego, qué falta para poder afirmarlo y quién tiene que responder.",
+        "tags": [
+          "4 hallazgos",
+          "sin cobertura previa",
+          "se vuelven a medir con un comando"
+        ]
+      },
       "cardCompetencia": {
         "eyebrow": "Investigación propia · Oferentes",
         "title": "El llamado parecía competitivo",
@@ -599,6 +609,16 @@ export const INV_CONTENT = {
           "live data",
           "method published",
           "five suppliers concentrate it"
+        ]
+      },
+      "cardHallazgos": {
+        "eyebrow": "Our own findings",
+        "title": "What we found ourselves",
+        "dek": "Things that came out of measuring the procurement record and were in no news story. Each one states which law it would engage, what is missing before it can be asserted, and who has to answer.",
+        "tags": [
+          "4 findings",
+          "no prior coverage",
+          "re-measured with one command"
         ]
       },
       "cardCompetencia": {
