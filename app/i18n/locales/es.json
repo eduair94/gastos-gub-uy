@@ -29,6 +29,8 @@
     "organismos": "Gasto por organismo",
     "mapa": "Bloques del gasto",
     "anticipacion": "Próximos llamados",
+    "agenda": "La agenda del día",
+    "encuestas": "Encuestas de opinión",
     "estadisticas": "Estadísticas",
     "investigaciones": "Investigaciones",
     "invFichas": "Fichas: dónde se discute la plata",
@@ -1504,6 +1506,14 @@
         "anticipacion": {
           "title": "Próximos llamados",
           "dek": "Cuándo es probable que cada organismo publique su próximo llamado, estimado a partir de su propia cadencia de compra. Es una estimación, nunca un anuncio."
+        },
+        "agenda": {
+          "title": "La agenda del día",
+          "dek": "Lo que entró hoy al registro de compras y los indicadores oficiales con su fecha de referencia y su fecha de publicación, que no son la misma."
+        },
+        "encuestas": {
+          "title": "Encuestas de opinión",
+          "dek": "Qué midió cada encuestadora sobre la gestión, con su ficha técnica completa. Sin promedios y sin interpretación nuestra."
         },
         "pauta": {
           "title": "Pauta oficial",

@@ -140,9 +140,15 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
         {
           key: 'tendencias',
           items: [
+            // El tablero del día: lo que entró hoy al registro más los indicadores oficiales con
+            // su fecha. Va primero de la sección porque es la única superficie que cambia a diario.
+            { key: 'agenda', to: localePath('/analytics/agenda'), icon: 'mdi-calendar-today' },
             { key: 'evolucion', to: localePath('/analytics/evolucion-gasto'), icon: 'mdi-chart-timeline-variant' },
             { key: 'estadisticas', to: localePath('/estadisticas'), icon: 'mdi-chart-box-outline' },
             { key: 'anticipacion', to: localePath('/analytics/anticipacion'), icon: 'mdi-crystal-ball' },
+            // Lo único del sitio que no sale del corpus: mediciones de terceros, publicadas con
+            // su ficha técnica. Va última porque es la más lejana al registro de compras.
+            { key: 'encuestas', to: localePath('/analytics/encuestas'), icon: 'mdi-poll' },
           ],
         },
       ],
