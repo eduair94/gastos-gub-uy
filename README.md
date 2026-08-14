@@ -4,9 +4,9 @@
 
 **Every peso the Uruguayan state spends, traceable.**
 
-A transparency platform over Uruguay's public-procurement open data (OCDS): ~2.17M contract records
-since 2002, 42,510 suppliers and 397 buying agencies — ingested, reconciled, cross-referenced,
-automatically screened for price anomalies, and published as a dashboard, a public API and an MCP server.
+A transparency platform over Uruguay's public-procurement open data (OCDS). It covers ~2.17M contract
+records since 2002, 42,510 suppliers and 397 buying agencies. It publishes them as a dashboard, a
+public API and an MCP server.
 
 [**Live site → conlatuya.checkleaked.cc**](https://conlatuya.checkleaked.cc) ·
 [API docs](https://conlatuya.checkleaked.cc/docs) ·
@@ -38,23 +38,23 @@ automatically screened for price anomalies, and published as a dashboard, a publ
 ## What this is
 
 Uruguay publishes its procurement data as [OCDS](https://standard.open-contracting.org/) releases on
-`catalogodatos.gub.uy` and `comprasestatales.gub.uy`. The raw feed is technically open but practically
-unusable: multi-GB yearly ZIPs, amounts that need multi-currency normalisation, corrections that never
-rewrite the record they correct, and no way to ask "is this price normal?".
+`catalogodatos.gub.uy` and `comprasestatales.gub.uy`. The raw feed is open, but you cannot use it as it
+comes. It ships multi-GB yearly ZIPs. Amounts need multi-currency normalisation. Corrections never
+rewrite the record they correct. Nothing answers "is this price normal?".
 
-This repo turns that feed into something a journalist, a supplier or a citizen can actually use:
+This repo turns that feed into a record a journalist, a supplier or a citizen can use:
 
 | | |
 |---|---|
-| **Ingest** | Streams the yearly OCDS ZIPs and the daily RSS feed into MongoDB, normalising every award into a comparable UYU amount (historical BCU rates, UYI, USD). |
-| **Reconcile** | Folds award-amendment releases back into the base award — the government never rewrites the original, so uncorrected totals are wildly inflated. |
-| **Screen** | Flags price outliers per catalogue article + currency + unit against a 36-month robust (log-median) reference, then runs a second-stage LLM triage that separates real overprice signals from data-loading errors. |
-| **Cross-reference** | Joins the SICE article catalogue, the MIEM industrial registry (DEI), governing-party mandates, and documented corruption cases against the same contract IDs. |
-| **Publish** | A Nuxt 3 dashboard, a versioned public REST API with API keys and webhooks, and an MCP server so an LLM can query it directly. |
-| **Alert** | Suppliers subscribe to open tenders by rubro/keyword and get fan-out alerts over email, web push, Telegram and an in-app inbox. |
+| **Ingest** | Streams the yearly OCDS ZIPs and the daily RSS feed into MongoDB. Normalises every award into a comparable UYU amount with historical BCU rates (UYI, USD). |
+| **Reconcile** | Folds award-amendment releases back into the base award. The government never rewrites the original, so uncorrected totals are wildly inflated. |
+| **Screen** | Compares every award line against a 36-month robust (log-median) price reference for the same catalogue article, currency and unit, and flags the outliers. A second-stage LLM triage then separates real overprice signals from data-loading errors. |
+| **Cross-reference** | Joins the SICE article catalogue, the MIEM industrial registry (DEI), governing-party mandates and documented corruption cases against the same contract IDs. |
+| **Publish** | A Nuxt 3 dashboard, a versioned public REST API with API keys and webhooks, and an MCP server, so an LLM can query it directly. |
+| **Alert** | Suppliers subscribe to open tenders by rubro or keyword. Alerts fan out over email, web push, Telegram and an in-app inbox. |
 
-Everything is derived from official open data, and every figure on the site links back to its source
-record on `comprasestatales.gub.uy`.
+Every figure comes from official open data and links back to its source record on
+`comprasestatales.gub.uy`.
 
 ---
 
@@ -62,9 +62,9 @@ record on `comprasestatales.gub.uy`.
 
 ### Search and browse the whole spending record
 
-Contracts, suppliers, buying agencies and products — each with a filterable index and a detail page.
-Amounts use one logarithmic gold bar across the entire site, so magnitudes are comparable at a glance
-without reading digits (see [app/DESIGN.md](app/DESIGN.md)).
+Contracts, suppliers, buying agencies and products each get a filterable index and a detail page. One
+logarithmic gold bar shows every amount site-wide, so you compare magnitudes without reading digits.
+The rule lives in [app/DESIGN.md](app/DESIGN.md).
 
 | Contracts | Contract detail |
 |---|---|
@@ -80,15 +80,13 @@ without reading digits (see [app/DESIGN.md](app/DESIGN.md)).
 
 ### Price-anomaly screening
 
-Every award line is compared against a robust price reference for the same catalogue article, currency
-and unit over the last 36 months. Alerts are **not accusations** — the page says so, explains the method
-inline, and lets you filter by severity, by the LLM triage verdict (`sin explicación`, `a revisar`,
-`con explicación`) and by error type.
+A flag is **not an accusation**. The page says so and explains the method inline. You filter by
+severity, by LLM triage verdict (`sin explicación`, `a revisar`, `con explicación`) and by error type.
 
 ![Anomalies](docs/screenshots/anomalias.png)
 
-A dedicated surface separates *data-loading errors* from real signals, and lets any visitor report a
-record that does not match the official page:
+A dedicated page separates *data-loading errors* from real signals. Any visitor reports a record that
+disagrees with the official page:
 
 ![Load errors](docs/screenshots/errores-carga.png)
 
@@ -98,14 +96,14 @@ record that does not match the official page:
 |---|---|
 | ![Parties](docs/screenshots/partidos.png) | ![Organisms](docs/screenshots/organismos.png) |
 
-Plus a departmental map, an analytics hub, and per-mandate attribution (which president / intendente
-governed an agency in the year the spending was recorded).
+The section also holds a departmental map, an analytics hub and per-mandate attribution: which
+president or intendente governed the agency in the year of the spending.
 
 ### Investigations and documented cases
 
-Long-form investigations built on the same database, and *Curros en evidencia* — cases surfaced by the
-press, audit bodies or the courts, each cross-checked one by one against what the official data shows,
-with sources and legal status.
+Long-form investigations run on the same database. *Curros en evidencia* collects cases from the press,
+audit bodies and the courts. Each case carries its sources and legal status, cross-checked one by one
+against the official data.
 
 | Investigations | Curros |
 |---|---|
@@ -113,25 +111,24 @@ with sources and legal status.
 
 ### Open tenders + bid intelligence (for suppliers)
 
-Active calls with their pliegos, items and deadlines — plus a "how much should I bid to win?" estimate
-built from the unit prices the state historically awarded in the same rubro, unit-matched and expressed
+Active calls show their pliegos, items and deadlines. A bid estimate answers "how much should I bid to
+win?". It uses the unit prices the state awarded before in the same rubro, unit-matched and expressed
 as percentiles.
 
 ![Open call](docs/screenshots/llamado-detalle.png)
 
-Save a call, or subscribe to a rubro/keyword watch and receive alerts over email, web push, Telegram or
-the in-app inbox.
+Save a call, or subscribe to a rubro or keyword watch to receive the alerts.
 
 ### Developer platform
 
-API keys, an OpenAPI spec, interactive Scalar docs, polling `changes` endpoints for no-code tools,
-HMAC-signed webhooks, and an official MCP server.
+Self-service API keys, interactive docs, webhooks and an official MCP server. Details:
+[Public API, webhooks and MCP](#public-api-webhooks-and-mcp).
 
 ![Developers](docs/screenshots/developers.png)
 
 ### Mobile
 
-The whole site is responsive and installable as a PWA.
+The whole site is responsive. You install it as a PWA.
 
 <div align="center">
 <img src="docs/screenshots/mobile-home.png" width="30%" alt="Mobile home">
@@ -139,15 +136,15 @@ The whole site is responsive and installable as a PWA.
 <img src="docs/screenshots/mobile-anomalias.png" width="30%" alt="Mobile anomalies">
 </div>
 
-> Screenshots are captured from the live site. Full set (28 views) in
-> [docs/screenshots/](docs/screenshots/); refresh them with
+> The screenshots come from the live site. The full set (28 views) is in
+> [docs/screenshots/](docs/screenshots/). Refresh it with
 > `node scripts/capture-screenshots.mjs`.
 
 ---
 
 ## Repository map
 
-Two npm projects in one repo: the **root** package (ingestion, jobs, cron server, ops) and **`app/`**
+The repo holds two npm projects: the **root** package (ingestion, jobs, cron server, ops) and **`app/`**
 (the Nuxt dashboard, which also serves the API). They share `shared/` by relative import.
 
 | Path | What lives there | Context file |
@@ -171,9 +168,9 @@ variable, documented inline.
 
 ## Quick start
 
-**Requirements:** Node 18, 20 or 22 — **not 23+** (Nuxt 3.19 builds fail nondeterministically there;
-enforced by [scripts/check-node.mjs](scripts/check-node.mjs), see [`app/.nvmrc`](app/.nvmrc)) — and a
-MongoDB instance.
+**Requirements:** use Node 18, 20 or 22, and a MongoDB instance. Node 23+ breaks the Nuxt 3.19 build
+nondeterministically; [scripts/check-node.mjs](scripts/check-node.mjs) hard-fails on it, and
+[`app/.nvmrc`](app/.nvmrc) pins the version.
 
 ```bash
 git clone https://github.com/eduair94/gastos-gub-uy.git
@@ -191,7 +188,7 @@ cp .env app/.env              # the app reads its own .env
 npm --prefix app run dev
 ```
 
-With an empty database, populate it before the dashboard shows anything:
+Populate an empty database before the dashboard shows anything:
 
 ```bash
 npm run extract                  # discover the yearly OCDS ZIP URLs -> urls.json
@@ -235,14 +232,14 @@ catalogodatos.gub.uy (yearly OCDS ZIPs)     comprasestatales.gub.uy (RSS + HTML)
                                 Nuxt dashboard · /api/v1 · webhooks · MCP
 ```
 
-Enrichment layers joined onto the same records: the **SICE** article catalogue (91k articles, 5-level
-rubro tree), the **MIEM/DEI** industrial registry (joined by RUT), item features scraped from the
-government HTML, **political mandates**, and the documented-case ledger behind `/curros`.
+Five enrichment layers join onto the same records: the **SICE** article catalogue (91k articles,
+5-level rubro tree), the **MIEM/DEI** industrial registry (joined by RUT), item features scraped from
+the government HTML, **political mandates**, and the documented-case ledger behind `/curros`.
 
-Scheduling lives in [`src/cronserver.ts`](src/cronserver.ts) (PM2 app `gastos-gub-cronserver`), which
-staggers ingest, analytics, anomaly detection, weekly reconciliation, open-call sync, deadline
-reminders, digests and webhook dispatch — all in `America/Montevideo`. Details:
-[docs/guides/cronserver.md](docs/guides/cronserver.md).
+[`src/cronserver.ts`](src/cronserver.ts) holds the schedule and runs as PM2 app
+`gastos-gub-cronserver`. It staggers ingest, analytics, anomaly detection, weekly reconciliation,
+open-call sync, deadline reminders, digests and webhook dispatch. Every job runs in
+`America/Montevideo`. Details: [docs/guides/cronserver.md](docs/guides/cronserver.md).
 
 ---
 
@@ -268,15 +265,15 @@ curl -H "x-api-key: gk_live_xxx" \
 
 ## Deployment
 
-Production is a Linux server (referred to as *167* throughout the docs) running two PM2 apps from
+Production is a Linux server, called *167* throughout the docs. It runs two PM2 apps from
 [`ecosystem.config.js`](ecosystem.config.js): the dashboard on port 3600 and the cron server.
 
-Pushing to `master` triggers [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) on a
-**self-hosted runner installed on the prod box** — it dials out to GitHub, so no inbound port is needed.
-The deploy itself is [`scripts/deploy-dashboard.mjs`](scripts/deploy-dashboard.mjs): it builds into a
-staging output, health-checks it, swaps atomically, and **rolls back automatically** if the new build
-fails, so a broken build never takes the live site down. Concurrent deploys are serialised by both a
-GitHub concurrency group and the script's own lockfile.
+A push to `master` triggers [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) on a
+**self-hosted runner installed on the prod box**. The runner dials out to GitHub, so the box needs no
+inbound port. [`scripts/deploy-dashboard.mjs`](scripts/deploy-dashboard.mjs) runs the deploy itself: it
+builds into a staging output, health-checks it, swaps atomically, and **rolls back automatically** if
+the new build fails. A GitHub concurrency group and the script's own lockfile serialise concurrent
+deploys.
 
 Setup notes: [docs/guides/runner-setup-167.md](docs/guides/runner-setup-167.md) ·
 [docs/guides/credenciales.md](docs/guides/credenciales.md).
@@ -285,8 +282,8 @@ Setup notes: [docs/guides/runner-setup-167.md](docs/guides/runner-setup-167.md) 
 
 ## Testing
 
-There is no test runner and no `npm test`. Tests are plain `tsx` scripts that assert and exit non-zero
-on failure — run them directly:
+There is no test framework. Tests are plain `tsx` scripts that assert and exit non-zero on failure.
+`npm test` runs the pure unit set. Run a single script directly:
 
 ```bash
 npx tsx tests/unit/test-lumpsum-artifacts.ts
@@ -314,18 +311,17 @@ database. See [tests/context.md](tests/context.md).
 
 ## For AI agents
 
-This repo is set up to be cheap to work in without reading everything:
+Work in this repo without reading everything:
 
 - **[CLAUDE.md](CLAUDE.md)** / **[AGENTS.md](AGENTS.md)** — root brief: architecture, commands,
   conventions, and the traps that cost a wasted cycle.
-- **`context.md` in every major directory** — a dense map of that directory: what each file does, how to
-  run it, what to change for a given task, and what will bite you. Read the one for the directory you
-  are touching instead of grepping the tree.
+- **`context.md` in every major directory** — read the one for the directory you touch instead of
+  grepping the tree. Each map lists what every file does, how to run it, what to change for a given
+  task, and what will bite you.
 - **[app/public/llms.txt](app/public/llms.txt)** — the public-site equivalent, for crawlers and LLMs.
 
 ---
 
 ## License
 
-MIT. The underlying procurement data is Uruguayan government open data; this project neither owns nor
-alters it, and every derived figure links back to its source record.
+MIT. The procurement data is Uruguayan government open data. This project neither owns nor alters it.
