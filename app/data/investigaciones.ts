@@ -249,6 +249,16 @@ export const INV_CONTENT = {
           "un 93,8 % que no publicamos"
         ]
       },
+      "cardMonopolios": {
+        "eyebrow": "Investigación propia · Monopolios",
+        "title": "Los monopolios estatales, de los dos lados del mostrador",
+        "dek": "Nueve empresas públicas con monopolio legal le facturaron al resto del Estado 32.983 millones de pesos. Comprando, adjudicaron 734.993 millones: veintidós veces más, y ahí sí puede haber competencia.",
+        "tags": [
+          "2,00 % vendiendo",
+          "44,66 % comprando",
+          "69,1 % se lo paga otra empresa pública"
+        ]
+      },
       "cardMensajes": {
         "eyebrow": "Series · Catálogo SICE",
         "title": "Qué compra el Estado cuando compra palabras",
@@ -649,6 +659,16 @@ export const INV_CONTENT = {
           "19.5% single offer",
           "8 linked pairs",
           "a 93.8% we did not publish"
+        ]
+      },
+      "cardMonopolios": {
+        "eyebrow": "Own investigation · Monopolies",
+        "title": "State monopolies, from both sides of the counter",
+        "dek": "Nine state companies with a legal monopoly billed the rest of the state 32,983 million pesos. As buyers they awarded 734,993 million: twenty-two times more, and that is where competition is possible.",
+        "tags": [
+          "2.00% selling",
+          "44.66% buying",
+          "69.1% paid by another state company"
         ]
       },
       "cardMensajes": {
