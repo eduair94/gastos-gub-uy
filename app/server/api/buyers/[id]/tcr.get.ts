@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { connectToDatabase } from '../../../utils/database'
 import { BuyerPatternModel, TcrResolutionModel } from '../../../utils/models'
+import { organismKey } from '../../../../../shared/tcr-resolution'
 
 /**
  * Resoluciones del Tribunal de Cuentas que nombran a este organismo.
@@ -22,15 +23,6 @@ import { BuyerPatternModel, TcrResolutionModel } from '../../../utils/models'
  */
 const MAX_ITEMS = 10
 
-function norm(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, ' ')
-    .trim()
-}
-
 export default defineEventHandler(async (event) => {
   await connectToDatabase()
 
@@ -42,7 +34,10 @@ export default defineEventHandler(async (event) => {
   const name = buyer?.name?.trim()
   if (!name) return { success: true, data: { items: [], total: 0, matchedOn: null } }
 
-  const target = norm(name)
+  // El MISMO normalizador que usa el scraper al escribir `organismKey`. Dos copias
+  // equivalentes hoy pueden divergir mañana, y el panel quedaría mudo sin dar error.
+  const target = organismKey(name)
+  if (!target) return { success: true, data: { items: [], total: 0, matchedOn: null } }
 
   // Consulta EXACTA sobre la clave normalizada, servida por el índice
   // {organismKey, resolvedAt}. La primera versión traía 600 documentos por render y los
