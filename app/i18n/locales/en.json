@@ -1503,6 +1503,30 @@
           "title": "Purchases by party",
           "dek": "Departmental spending alongside the party governing each year. This is record context, not an attribution of the spending."
         },
+        "senalesGestion": {
+          "title": "Management signals",
+          "dek": "Five measurements of how each body buys: who the money concentrates on, whether awards come in bursts, how much is awarded directly, how long anyone had to compete, and how many price flags went unexplained."
+        },
+        "competencia": {
+          "title": "How much competition is there?",
+          "dek": "How many companies actually bid for each public body\u2019s purchases, and how often only one shows up. Until now this could not be measured in Uruguay."
+        },
+        "tribunalCuentas": {
+          "title": "What the Court of Accounts said",
+          "dek": "The State\u2019s own auditor rules on specific purchases and its archive is public, but it lives outside open procurement data. Here each ruling sits next to the purchase it names."
+        },
+        "omisos": {
+          "title": "Officials declared delinquent",
+          "dek": "JUTEP\u2019s published roster of public officials formally declared delinquent in their duty to file the sworn declaration of assets and income."
+        },
+        "sanciones": {
+          "title": "Suppliers sanctioned by consumer protection",
+          "dek": "Companies fined or cautioned by the Consumer Protection Unit that also sell to the State, cross-referenced by tax ID against public procurement."
+        },
+        "genero": {
+          "title": "Spending on gender and diversity",
+          "dek": "How much the State spends on gender and diversity policy, which body buys it and which supplier receives it. The feed carries no topic label: it is rebuilt from each purchase\u2019s text."
+        },
         "anticipacion": {
           "title": "Upcoming tenders",
           "dek": "When each agency is likely to publish its next tender, estimated from its own purchasing cadence. An estimate, never an announcement."
@@ -2930,7 +2954,7 @@
     "colScopes": "Permissions",
     "colCreated": "Created",
     "colLastUsed": "Last used",
-    "colActions": "",
+    "colActions": "Actions",
     "never": "Never",
     "revoke": "Revoke",
     "revokeConfirm": "Revoke this API key? Integrations using it will stop working.",
