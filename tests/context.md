@@ -1,21 +1,31 @@
-# tests/ — assertion scripts (no runner)
+# tests/ — assertion scripts (no framework)
 
-The entire automated-test surface of gastos-gub: 41 files in [unit/](unit/), 7 in [integration/](integration/), 2 in [performance/](performance/), 2 HTML/XML [fixtures/](fixtures/). There is **no test runner, no `npm test`, and no CI test step** — every file is a standalone `tsx` program that either throws (`node:assert`) or counts failures and calls `process.exit(1)`. A pass is exit code 0. You discover tests by listing the directory, not by running a suite.
+This is the whole automated-test surface of gastos-gub: 137 files in [unit/](unit/), 7 in
+[integration/](integration/), 2 in [performance/](performance/), 7 in [fixtures/](fixtures/)
+(4 acta `.txt`, 1 BCU `.xml`, 2 gov `.html`). Every file is a standalone `tsx` program. A file fails
+by throwing (`node:assert`) or by counting failures and calling `process.exit(1)`. Exit code 0 is a
+pass.
+
+`npm test` runs [../scripts/run-tests.mjs](../scripts/run-tests.mjs) over `tests/unit`. That runner
+is a `spawnSync` loop over the files, not a framework. It skips every `*.verify.ts` and three
+credentialed files, so it never covers the whole tree. Discover the rest by listing the directory.
 
 ## Map
 
+The table covers the load-bearing files. It does not list all 137 files in `unit/`.
+
 | Path | Purpose |
 |---|---|
-| [README.md](README.md) | **STALE.** Lists ~14 tests; the tree has 50. Predates `fixtures/` and every `*.test.ts`. Do not use as an index. |
+| [README.md](README.md) | **STALE.** Lists ~14 tests; the tree has 146. Predates `fixtures/` and every `*.test.ts`. Do not use as an index. |
 | [fixtures/bcu-cotizaciones-2005-06-28.xml](fixtures/bcu-cotizaciones-2005-06-28.xml) | BCU SOAP cotizaciones response; read by `test-bcu-historical-rates.ts:14`. |
 | [fixtures/comprasestatales-53193.html](fixtures/comprasestatales-53193.html) | Gov contract detail page (the SURYPARK lump-sum case); read by `test-comprasestatales-total.ts:31`. |
 | **unit/ — pure logic** | |
 | [unit/test-anomaly-stats.ts](unit/test-anomaly-stats.ts) | Largest test (481 L). `src/jobs/anomaly-stats`: computeBaselineStats, modifiedZScore, weightedPercentile, confidenceFromZ, scoreUnitPrice, severityRankFromAbsZ + tuning constants, and the `ScoringContext.officialPrices` gate. |
 | [unit/test-integrity-signals.ts](unit/test-integrity-signals.ts) | `shared/integrity-signals`: percentile helpers, eligibility (null ≠ zero), the absolute floors overriding a high percentile, `deriveCutoffs` excluding unmeasurable organisms, and `signalWeight`. |
-| [unit/test-acta-bidders.ts](unit/test-acta-bidders.ts) | `shared/acta-bidders` against REAL acta text in `fixtures/acta-*.txt` — comma list, bullet list and numbered list, all with the generator's mid-word wrapping — plus the fail-closed cases, the prose guard and the mojibake guard. |
+| [unit/test-acta-bidders.ts](unit/test-acta-bidders.ts) | `shared/acta-bidders` against REAL acta text in `fixtures/acta-*.txt`: comma list, bullet list and numbered list, all with the generator's mid-word wrapping. Also covers the fail-closed cases, the prose guard and the mojibake guard. |
 | [unit/test-udeco-crossref.ts](unit/test-udeco-crossref.ts) | `rutFromSupplierId`: the four id shapes the corpus stores the same RUT in, and the cédula/foreign ids that must NOT collide with one. |
 | [unit/test-jutep-incisos.ts](unit/test-jutep-incisos.ts) | `shared/jutep-incisos`: normalisation, the 19 departments, the published typos, the never-guesses contract and `maskDocument`. |
-| [unit/test-timbre-values.ts](unit/test-timbre-values.ts) | `shared/timbre-values`: table integrity, source anchors, the −2/+1 semester window, the doorbell denylist, and the scorer gate. **Ends in a freshness guard that reads the real clock** and fails once the current semester is missing from the table — that is the forcing function for the twice-yearly DGI update, not a flake. |
+| [unit/test-timbre-values.ts](unit/test-timbre-values.ts) | `shared/timbre-values`: table integrity, source anchors, the −2/+1 semester window, the doorbell denylist, and the scorer gate. **It ends in a freshness guard that reads the real clock.** The guard fails once the current semester is missing from the table. That is the forcing function for the twice-yearly DGI update, not a flake. |
 | [unit/test-anomaly-content-version.ts](unit/test-anomaly-content-version.ts) | `anomalyContentVersion` exported from `src/jobs/detect-anomalies` — the content-hash `dataVersion` that stops nightly AI re-triage. |
 | [unit/test-target-item-match.ts](unit/test-target-item-match.ts) | `findTargetItemIndex` from `src/jobs/score-anomalies-ai` (case-insensitive canonical-unit match). |
 | [unit/test-verdict-normalize.ts](unit/test-verdict-normalize.ts) | `normalizeVerdict` from `src/jobs/score-anomalies-ai` (explainable ⇔ category invariant). |
@@ -61,12 +71,12 @@ The entire automated-test surface of gastos-gub: 41 files in [unit/](unit/), 7 i
 | [unit/test-rss-fetcher.ts](unit/test-rss-fetcher.ts) | `src/services/release-rss-fetcher` against comprasestatales.gub.uy → **live HTTP**. |
 | [unit/test-url-structure.ts](unit/test-url-structure.ts) | Raw `axios` GET/HEAD probes of gov URLs → **live HTTP**. |
 | [unit/focus-item.verify.ts](unit/focus-item.verify.ts) | **Not a unit test.** Connects to Mongo (mongoose direct) and verifies the focusItem projection. Requires `MONGODB_URI`; exits 1 without it (:8). |
-| [unit/red-flag-feasibility.verify.ts](unit/red-flag-feasibility.verify.ts) | **Not a unit test.** Which procurement red-flag indicators the corpus can support. Records the feed gaps: award releases carry no `tender` (0%), the method resolves for 26.7% of awards via the ocid sibling, `tenderers`/`numberOfTenderers` are 0%.
-| [unit/integrity-signals-feasibility.verify.ts](unit/integrity-signals-feasibility.verify.ts) | **Not a unit test.** Bidding-window length per method and the buyer population behind `integrity_signals`.
-| [unit/home-anomalies.verify.ts](unit/home-anomalies.verify.ts) | **Not a unit test.** What the home anomaly panel actually shows, and the AI-verdict composition of recent criticals.
-| [unit/acta-bidders-feasibility.verify.ts](unit/acta-bidders-feasibility.verify.ts) | **Not a unit test.** Whether the offers received can be recovered at all. Records the dead ends (OCDS record/release endpoints, gov HTML) and the measured enumeration rate. Hits the gov site — sample small.
-| [unit/acta-bidders-parser.verify.ts](unit/acta-bidders-parser.verify.ts) | **Not a unit test.** Runs the parser over real actas and prints what it would publish. Precision matters more than recall here: a fabricated bidder is worse than a missing one.
-| [unit/acta-bidders-hygiene.verify.ts](unit/acta-bidders-hygiene.verify.ts) | **Not a unit test.** Sweeps stored `acta_bidders` rows for names the CURRENT parser would reject (the parser tightened twice mid-run). `--fix` clears the parse but keeps `probedAt`, so the job does not re-fetch.
+| [unit/red-flag-feasibility.verify.ts](unit/red-flag-feasibility.verify.ts) | **Not a unit test.** Which procurement red-flag indicators the corpus can support. Records the feed gaps: award releases carry no `tender` (0%), the method resolves for 26.7% of awards via the ocid sibling, `tenderers`/`numberOfTenderers` are 0%. |
+| [unit/integrity-signals-feasibility.verify.ts](unit/integrity-signals-feasibility.verify.ts) | **Not a unit test.** Bidding-window length per method and the buyer population behind `integrity_signals`. |
+| [unit/home-anomalies.verify.ts](unit/home-anomalies.verify.ts) | **Not a unit test.** What the home anomaly panel actually shows, and the AI-verdict composition of recent criticals. |
+| [unit/acta-bidders-feasibility.verify.ts](unit/acta-bidders-feasibility.verify.ts) | **Not a unit test.** Whether the offers received can be recovered at all. Records the dead ends (OCDS record/release endpoints, gov HTML) and the measured enumeration rate. It makes live HTTP calls to the gov site, so keep the sample small. |
+| [unit/acta-bidders-parser.verify.ts](unit/acta-bidders-parser.verify.ts) | **Not a unit test.** Runs the parser over real actas and prints what it would publish. Precision matters more than recall here: a fabricated bidder is worse than a missing one. |
+| [unit/acta-bidders-hygiene.verify.ts](unit/acta-bidders-hygiene.verify.ts) | **Not a unit test.** Sweeps stored `acta_bidders` rows for names the CURRENT parser would reject (the parser tightened twice mid-run). `--fix` clears the parse but keeps `probedAt`, so the job does not re-fetch. |
 | [unit/timbre-rescore-impact.verify.ts](unit/timbre-rescore-impact.verify.ts) | **Not a unit test.** Live-DB blast radius of `detect-anomalies --classification=10233`: anomalies in scope, breakdown by code/year, and which `10233` findings the official DGI schedule retires. Run it before and after the rescore. |
 | [unit/test-amount-calculation.ts](unit/test-amount-calculation.ts) | Zero imports — inline mock release + reimplemented logic. Documentation-grade, does not exercise the real calculator. |
 | **integration/ — all require a live Mongo** | |
@@ -84,11 +94,16 @@ The entire automated-test surface of gastos-gub: 41 files in [unit/](unit/), 7 i
 ## Entry points / how to run
 
 ```bash
+npm test
+node scripts/run-tests.mjs unit --only lumpsum
+node scripts/run-tests.mjs integration   # needs a live MONGODB_URI
+node scripts/run-tests.mjs performance   # needs a live MONGODB_URI, slow
+
 # one test; 0 = pass
 npx tsx tests/unit/test-anomaly-stats.ts; echo $?
 npx tsx tests/unit/webhook.test.ts
 
-# the whole pure-unit surface (bash)
+# manual sweep (bash) — WARNING: this one does NOT skip *.verify.ts, so it hits the live DB
 for f in tests/unit/*.ts; do echo "== $f"; npx tsx "$f" >/dev/null || echo "FAIL $f"; done
 
 # DB-touching (see gotchas — .env overrides these inline vars for most files)
@@ -97,15 +112,16 @@ MONGODB_URI=... FOCUS_CODE=26392 npx tsx tests/unit/focus-item.verify.ts
 npx tsx tests/performance/test-supplier-id-performance.ts
 ```
 
-There is no `npm test`, no `--watch`, no filter flag. `npm run lint` covers `src` only.
+The runner has no `--watch`. Its only filter is `--only <substring>`. `npm run lint` is
+`eslint src --ext .ts`, so it never lints `tests/`.
 
 ## Conventions
 
 | Rule | Cite |
 |---|---|
-| Two failure styles, both accepted. (a) bare `import assert from 'node:assert'` / `'node:assert/strict'`, throw to fail, no exit call — 27 files. (b) local `ok(name, cond)` counter with ✓/✗ output and a terminal `process.exit(failed === 0 ? 0 : 1)` — 15 files. Pick (a) for short tests, (b) when you want per-assertion output. | [unit/webhook.test.ts:1](unit/webhook.test.ts) vs [unit/test-matcher.ts:9-14](unit/test-matcher.ts) and its last line |
+| Two failure styles, both accepted. (a) bare `import assert from 'node:assert'` / `'node:assert/strict'`, throw to fail, no exit call — 65 files import `node:assert`. (b) local `ok(name, cond)` counter with ✓/✗ output and a terminal `process.exit(failed === 0 ? 0 : 1)` — 15 files. Pick (a) for short tests, (b) when you want per-assertion output. | [unit/webhook.test.ts:1](unit/webhook.test.ts) vs [unit/test-matcher.ts:9-14](unit/test-matcher.ts) and its last line |
 | Naming: newer files are `<subject>.test.ts`, legacy bulk is `test-<subject>.ts`. Both live in `unit/`. Do not normalise one to the other. | [unit/variants-rollup.test.ts](unit/variants-rollup.test.ts) vs [unit/test-sice.ts](unit/test-sice.ts) |
-| Every test carries a runnable command in its own header comment — that is the only discovery mechanism. Add one. | [unit/test-matcher.ts:2-3](unit/test-matcher.ts), [integration/test-open-calls-sync.ts:6](integration/test-open-calls-sync.ts) |
+| Every test carries a runnable command in its own header comment. Add one. | [unit/test-matcher.ts:2-3](unit/test-matcher.ts), [integration/test-open-calls-sync.ts:6](integration/test-open-calls-sync.ts) |
 | To test a job, **export the pure function out of the job module** and import it directly. Job modules do not execute on import (they guard with `require.main === module`). | `anomalyContentVersion` ← [unit/test-anomaly-content-version.ts:11](unit/test-anomaly-content-version.ts); `warmupCap`/`makeToken` ← [unit/test-campaign-send-helpers.ts:2](unit/test-campaign-send-helpers.ts) |
 | Purity comes from hand-rolled dependency injection, never a mocking library. There is no jest/vitest/sinon in this repo — do not add one. | `fakeDb()` at [unit/test-contact-resolvers.ts:9](unit/test-contact-resolvers.ts); fake transport in [unit/test-cold-mailer.ts](unit/test-cold-mailer.ts); injected closures in [unit/test-campaign-unsubscribe.ts](unit/test-campaign-unsubscribe.ts) |
 | Mongoose models are tested with **no connection**: `new Model({...}).validateSync() === undefined` plus `doc.collection.name` to pin the collection. | [unit/test-campaign-models.ts:7-8](unit/test-campaign-models.ts) |
@@ -114,23 +130,61 @@ There is no `npm test`, no `--watch`, no filter flag. `npm run lint` covers `src
 
 ## Gotchas
 
-- **No CI runs any of this.** `package.json` has no `test` script, and `.github/workflows/deploy.yml` only writes `app/.env`, runs `npm --prefix app ci`, and `node scripts/deploy-dashboard.mjs`. Nothing catches a broken test but you.
-- **`.env` overrides your inline env var.** `shared/config.ts:8` calls `config({ override: true })`. Any test that transitively imports `shared/config` (i.e. all of `shared/models`, `shared/connection/database`, `src/services/*`) ignores `MONGODB_URI=... npx tsx ...` and uses the `.env` value instead — including [integration/test-open-calls-sync.ts](integration/test-open-calls-sync.ts), whose own header (:6) claims otherwise. Only [unit/focus-item.verify.ts](unit/focus-item.verify.ts) (mongoose-only, no `shared/config`) truly honours the inline var.
-- **…and the root `.env` currently points at production Mongo** (`167.148.41.10:27017/gastos_gub`). Combined with the override above, running [integration/test-open-calls-sync.ts](integration/test-open-calls-sync.ts) or [integration/test-single-upload.ts](integration/test-single-upload.ts) **writes to the live DB** (`open_calls` / `releases`). Edit `.env` or do not run them.
-- **Nothing here is typechecked.** Root `tsconfig.json` `include` is only `src/**/*` + `shared/**/*`, and `exclude` lists `**/*.test.ts`. `npm run build` (tsc) sees no test file. A type error surfaces only when you run the file with `tsx`.
-- **[README.md](README.md) is stale** — lists ~14 tests against 50 on disk, and predates `fixtures/` and the `*.test.ts` family entirely.
-- **Seven files under `unit/` are a staged-but-uncommitted move** from a former top-level `test/` directory: `git ls-tree -r HEAD --name-only | grep '^test/'` still shows `test/api-key.test.ts`, `cursor.test.ts`, `focus-item.verify.ts`, `item-features.test.ts`, `openapi.test.ts`, `variants-rollup.test.ts`, `webhook.test.ts`, while `git status --porcelain tests` shows them as `A`/`AM` under `tests/unit/`. Multiple agent sessions share ONE working tree — switching branches can move them under you. Their headers still cite the old `test/` path ([unit/focus-item.verify.ts:5](unit/focus-item.verify.ts)).
-- **Six files in `unit/` are not unit tests and fail offline**: [test-amount-calculator.ts](unit/test-amount-calculator.ts):38-39, [test-script-consistency.ts](unit/test-script-consistency.ts):16-17 and [test-uploader-structure.ts](unit/test-uploader-structure.ts):31-32 all call `fetchCurrencyRates()`/`fetchUYIRate()`; [test-rss-fetcher.ts](unit/test-rss-fetcher.ts) and [test-url-structure.ts](unit/test-url-structure.ts) hit comprasestatales.gub.uy; [focus-item.verify.ts](unit/focus-item.verify.ts) connects to Mongo.
-- **[unit/test-amount-calculation.ts](unit/test-amount-calculation.ts) imports nothing** — it reimplements the amount logic inline. It cannot detect a regression in `src/utils/amount-calculator.ts`. Do not trust it as coverage.
-- **[integration/test-dashboard.ts](integration/test-dashboard.ts) is 0 bytes** and exits 0. So does anything that reads it as "passing".
-- Four of the seven integration files ([test-autocomplete-api](integration/test-autocomplete-api.ts), [test-supplier-ids](integration/test-supplier-ids.ts), [test-supplier-patterns](integration/test-supplier-patterns.ts)) are print-and-eyeball diagnostics with **no `process.exit`** — they exit 0 no matter what they find. Only [test-open-calls-sync.ts](integration/test-open-calls-sync.ts), [test-single-upload.ts](integration/test-single-upload.ts) and [test-anomalies.ts](integration/test-anomalies.ts) signal failure.
-- **Two Mongo connectors coexist.** [integration/test-autocomplete-api.ts:1](integration/test-autocomplete-api.ts), [test-supplier-ids.ts:1](integration/test-supplier-ids.ts) and [test-supplier-patterns.ts:1](integration/test-supplier-patterns.ts) import `connectToDatabase` from `app/server/utils/database` (the Nuxt-side re-export); everything else uses `shared/connection/database`.
-- If a `src/jobs/*` or `shared/*` signature changes, the matching file here is the **single** place that breaks — nothing else enforces those contracts. `unit/` is also the only automated check the `app/server/utils/{api-key,cursor,openapi}` developer-platform code has; `cd app && npm run type-check` does not run these.
+- **No CI runs any of this.** `.github/workflows/deploy.yml` only writes `app/.env`, runs
+  `npm --prefix app ci`, and `node scripts/deploy-dashboard.mjs`. It has no test step. Nothing
+  catches a broken test but you.
+- **`.env` overrides your inline env var.** `shared/config.ts:8` calls `config({ override: true })`.
+  Any test that transitively imports `shared/config` ignores `MONGODB_URI=... npx tsx ...` and uses
+  the `.env` value. That covers all of `shared/models`, `shared/connection/database` and
+  `src/services/*` — including [integration/test-open-calls-sync.ts](integration/test-open-calls-sync.ts),
+  whose own header (:6) claims otherwise. Only [unit/focus-item.verify.ts](unit/focus-item.verify.ts)
+  (mongoose-only, no `shared/config`) honours the inline var.
+- **Edit `.env` before you run either integration writer.** The root `.env` points at production
+  Mongo (`167.148.41.10:27017/gastos_gub`). With the override above,
+  [integration/test-open-calls-sync.ts](integration/test-open-calls-sync.ts) and
+  [integration/test-single-upload.ts](integration/test-single-upload.ts) **write to the live DB**
+  (`open_calls` / `releases`).
+- **`npm test` fails offline.** Six files under `unit/` are not pure. Five make live HTTP calls; see
+  the `unit/ — NOT pure (network or DB)` rows in the [Map](#map). The sixth, `focus-item.verify.ts`,
+  connects to Mongo. The runner skips that one plus `*.verify.ts`, `test-places-enrichment.ts` and
+  `test-contact-resolvers.ts`, so the five live-HTTP files still run.
+- **Nothing here is typechecked.** Root `tsconfig.json` `include` is only `src/**/*` +
+  `shared/**/*`, and `exclude` lists `**/*.test.ts`. `npm run build` (tsc) sees no test file. A type
+  error surfaces only when you run the file with `tsx`.
+- **Do not copy a run command out of a test header verbatim.** Several headers still cite the old
+  top-level `test/` path — [unit/focus-item.verify.ts:5](unit/focus-item.verify.ts) says
+  `npx tsx test/focus-item.verify.ts`. The path is `tests/unit/`. The move itself is committed:
+  `git ls-tree -r HEAD --name-only | grep '^test/'` returns nothing.
+- **[unit/test-amount-calculation.ts](unit/test-amount-calculation.ts) imports nothing** — it
+  reimplements the amount logic inline. It cannot detect a regression in
+  `src/utils/amount-calculator.ts`. Do not trust it as coverage.
+- Four of the seven integration files are print-and-eyeball diagnostics with **no `process.exit`** —
+  they exit 0 no matter what they find: [test-autocomplete-api](integration/test-autocomplete-api.ts),
+  [test-supplier-ids](integration/test-supplier-ids.ts),
+  [test-supplier-patterns](integration/test-supplier-patterns.ts) and the 0-byte
+  [test-dashboard](integration/test-dashboard.ts). Only
+  [test-open-calls-sync.ts](integration/test-open-calls-sync.ts),
+  [test-single-upload.ts](integration/test-single-upload.ts) and
+  [test-anomalies.ts](integration/test-anomalies.ts) signal failure.
+- **Two Mongo connectors coexist.** [integration/test-autocomplete-api.ts:1](integration/test-autocomplete-api.ts),
+  [test-supplier-ids.ts:1](integration/test-supplier-ids.ts) and
+  [test-supplier-patterns.ts:1](integration/test-supplier-patterns.ts) import `connectToDatabase`
+  from `app/server/utils/database` (the Nuxt-side re-export). Everything else uses
+  `shared/connection/database`.
+- If a `src/jobs/*` or `shared/*` signature changes, the matching file here is the **single** place
+  that breaks. `unit/` is also the only automated check the `app/server/utils/{api-key,cursor,openapi}`
+  developer-platform code has; `cd app && npm run type-check` does not run these.
 
 ## Related
 
 - Root [CLAUDE.md](../CLAUDE.md) — repo-wide instructions.
-- [../scripts/context.md](../scripts/context.md) — operational CLI drawer (index migrations, deploy, asset builders); recurring jobs do **not** live there.
-- [../src/context.md](../src/context.md) — ingestion + uploaders; [../src/jobs/context.md](../src/jobs/context.md) — the batch/analytics jobs whose exported pure functions most of `unit/` imports.
-- [../shared/context.md](../shared/context.md) — models, matcher, text/unit normalization, verified-override; the other half of what `unit/` tests.
-- [../app/context.md](../app/context.md) — Nuxt frontend; [../app/server/context.md](../app/server/context.md) — Nitro API (`utils/api-key`, `utils/cursor`, `utils/openapi` are covered here).
+- [../scripts/context.md](../scripts/context.md) — operational CLI drawer (index migrations, deploy,
+  asset builders); recurring jobs do **not** live there.
+- [../src/context.md](../src/context.md) — ingestion + uploaders;
+  [../src/jobs/context.md](../src/jobs/context.md) — the batch/analytics jobs whose exported pure
+  functions most of `unit/` imports.
+- [../shared/context.md](../shared/context.md) — models, matcher, text/unit normalization,
+  verified-override; the other half of what `unit/` tests.
+- [../app/context.md](../app/context.md) — Nuxt frontend;
+  [../app/server/context.md](../app/server/context.md) — Nitro API (`utils/api-key`, `utils/cursor`,
+  `utils/openapi` are covered here).

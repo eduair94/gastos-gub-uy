@@ -1,14 +1,14 @@
 # Component handbook
 
 This is the implementation companion to `DESIGN.md`. It documents the supported
-Vuetify 4 foundation and the custom primitives that define the product.
+Vuetify 4 foundation and the custom primitives.
 
 ## Runtime contract
 
 - Nuxt 3 and Vue 3 render public pages SSR-first.
 - Vuetify 4 components are auto-resolved by `vite-plugin-vuetify`.
 - Do not add `import * as components from 'vuetify/components'`.
-- Directives remain eagerly registered because templates reference them by name.
+- Directives stay eagerly registered because templates reference them by name.
 - Global themes and defaults live in `plugins/vuetify.ts`.
 - Component CSS uses variables from `assets/scss/_tokens.scss`; no component hex.
 - User-facing strings come from both locale files in identical key order.
@@ -28,16 +28,16 @@ Vuetify 4 foundation and the custom primitives that define the product.
 | `VTooltip` | Icon action clarification | top |
 | `VProgressCircular` | In-place asynchronous wait | include adjacent readable label |
 
-Use semantic HTML inside Vuetify shells. A dialog record remains a `<section>`
-with headings, lists and definition lists; Vuetify provides focus, overlay and
+Use semantic HTML inside Vuetify shells. A dialog record stays a `<section>`
+with headings, lists and definition lists. Vuetify provides focus, overlay and
 interaction behavior.
 
 ## Custom primitives
 
 ### MoneyAmount
 
-Required for every amount. It formats value/currency and draws the shared,
-fixed-domain magnitude rule.
+Required for every amount. It formats the value and currency, and draws the
+shared fixed-domain magnitude rule.
 
 ```vue
 <MoneyAmount :amount="total" currency="UYU" size="xl" align="start" />
@@ -58,11 +58,11 @@ interpretations in chips.
 
 ### StatePanel and SkeletonList
 
-The two things every list renders before — or instead of — its rows. Do not
-hand-roll either; both were hand-rolled across twenty-one files and both had
-already drifted into four variants, and in `contactos/index.vue` both were used
-with the class names but **no CSS at all**, so its loading state was a column of
-invisible divs and its error state was unstyled flush text.
+Do not hand-roll either one. They are the two components every list renders
+before — or instead of — its rows. Twenty-one files hand-rolled them, and they
+drifted into four variants. In `contactos/index.vue` both carried the class
+names but **no CSS at all**: its loading state was a column of invisible divs,
+and its error state was unstyled flush text.
 
 ```vue
 <SkeletonList v-if="pending && !rows.length" :rows="8" />
@@ -84,25 +84,27 @@ invisible divs and its error state was unstyled flush text.
 />
 ```
 
-`StatePanel`'s `level` is a prop because the panel plays two roles: on a detail
-route that resolved to nothing it IS the page's `h1` (and that page must also
-pass `noindex` to `useSeo()`); inside a section that already has one it is an
-`h2`; a soft "no rows match this filter" is a `p`. `variant` is `card` in a
-list, `bare` inside a panel that already draws a border, `inline` for the
-one-line note that replaces a table. Pass `actionLabel` conditionally rather
-than putting a button in the slot — an `undefined` label renders no action.
+`StatePanel` takes `level` because the panel plays several roles. On a detail
+route that resolved to nothing it IS the page's `h1`, and that page must also
+pass `noindex` to `useSeo()`. Inside a section that already has a heading it is
+an `h2`. A soft "no rows match this filter" is a `p`.
 
-`SkeletonList` is `aria-hidden`: it is a picture of content that is not there,
-and it holds still under `prefers-reduced-motion` because a loop the reader
-cannot dismiss is the one animation they cannot escape.
+`variant` is `card` in a list, `bare` inside a panel that already draws a
+border, and `inline` for the one-line note that replaces a table. Pass
+`actionLabel` conditionally instead of putting a button in the slot: an
+`undefined` label renders no action.
+
+`SkeletonList` is `aria-hidden`, because it pictures content that is not there.
+It holds still under `prefers-reduced-motion`, because the reader cannot dismiss
+a loop.
 
 ### The investigation chrome: RecordHero, SourceList, ContractLedger, RelatedRail, NotFoundPanel
 
-The five pieces every investigation surface repeats. They were hand-rolled once
-per page across `curros`, `recopilatorios` and `investigaciones/casos`, and had
-already drifted — two hero tints, three title measures, a `<h3>` heading where
-the siblings used `<h2>`. Build a new investigation surface out of these rather
-than copying the markup again.
+The five components every investigation surface repeats. Each page hand-rolled
+them across `curros`, `recopilatorios` and `investigaciones/casos`, and they had
+already drifted: two hero tints, three title measures, and an `<h3>` heading
+where the siblings used `<h2>`. Build a new investigation surface out of these.
+Do not copy the markup again.
 
 ```vue
 <RecordHero
@@ -119,26 +121,26 @@ than copying the markup again.
 </RecordHero>
 ```
 
-`RecordHero` sits on `--ink`, which does **not** flip in dark mode: anything
-placed in its slots uses the fixed `--ink-fg` / `--ink-fg-dim` pair, and a chip
-inside it needs `on="ink"`. `tone` tints only the corner glow — `alerta` for the
-surfaces about wrongdoing under investigation, `celeste` for a neutral record.
+`RecordHero` sits on `--ink`, which does **not** flip in dark mode. Anything in
+its slots uses the fixed `--ink-fg` / `--ink-fg-dim` pair, and a chip inside it
+needs `on="ink"`. `tone` tints only the corner glow: `alerta` for the surfaces
+about wrongdoing under investigation, `celeste` for a neutral record.
 
-`SourceList` is the citation panel the evidence contract rests on; its links
-always open in a new tab so the reader does not lose the argument they are in
-the middle of. `ContractLedger` is the `<ol>` of contracts — the order is the
-finding — and it puts every amount through `<MoneyAmount>`. `RelatedRail` is the
-"read next" pill row, where only the label may shrink so a 200-character
-Spanish title clips instead of widening the document. `NotFoundPanel` is the
-soft-404 body; the page that renders it must also pass `noindex` to `useSeo()`.
+`SourceList` is the citation panel the evidence contract rests on. Its links
+always open in a new tab, so the reader keeps the argument they are reading.
+`ContractLedger` is the `<ol>` of contracts, where the order is the finding, and
+it puts every amount through `<MoneyAmount>`. `RelatedRail` is the "read next"
+pill row; only the label may shrink, so a 200-character Spanish title clips
+instead of widening the document. `NotFoundPanel` is the soft-404 body, and the
+page that renders it must also pass `noindex` to `useSeo()`.
 
 ### The long-form investigation grammar: InvCover, InvSection and the rest
 
 `pages/investigaciones/*` are twelve pages that argue the same way, and they
 used to say so twelve times: 157 hand-written `<section class="inv-sec">`, 68
 heads, 40 stat tiles, 11 covers, 9 identical disclaimers, and the same ledger
-table copy-pasted with ~120 lines of scoped CSS into four files. Build a
-long-form piece out of these; do not copy a page.
+table copy-pasted into four files with ~120 lines of scoped CSS. Build a
+long-form piece out of these. Do not copy a page.
 
 | Component | What it is | Notes |
 | --- | --- | --- |
@@ -164,22 +166,22 @@ long-form piece out of these; do not copy a page.
 </InvSection>
 ```
 
-**Do not give a block its own top margin.** The rhythm between blocks inside a
-section is one rule in `_investigaciones.scss`
-(`:where(.inv-sec > .u-container) > * + *`), at zero specificity so anything
-that needs a bigger beat still wins by having a class. Per-block margins are
-what welded an ink panel to the ledger under it on a phone: each of the two
+**Do not give a block its own top margin.** One rule in `_investigaciones.scss`
+sets the rhythm between blocks inside a section
+(`:where(.inv-sec > .u-container) > * + *`). It sits at zero specificity, so
+anything that needs a bigger beat still wins by having a class. Per-block
+margins welded an ink panel to the ledger under it on a phone: each of the two
 expected the other to bring the space.
 
-Charts inside an investigation are `<ChartBlock framed>` like everywhere else —
-the old `.inv-cardc` / `.inv-cardsub` / `.inv-scroll` trio was a second, weaker
+Charts inside an investigation are `<ChartBlock framed>`, like everywhere else.
+The old `.inv-cardc` / `.inv-cardsub` / `.inv-scroll` trio was a second, weaker
 copy of that box, and each page wired its own scroller. `ChartBlock`'s `title`
 is optional for the case where the section head already names the chart.
 
 `InvSources` gives each source link a 24px hit area: one link per row IS the
 control, and a one-line source title was a 19px target (WCAG 2.2 SC 2.5.8). Do
-the same for any standalone link you add — `min-height` plus `inline-flex`
-grows the box without moving the type. A link inside a sentence is exempt.
+the same for any standalone link you add. `min-height` plus `inline-flex` grows
+the box without moving the type. A link inside a sentence is exempt.
 
 ### DataTable, PaginatedList and DataPager
 
@@ -188,12 +190,12 @@ desktop and reflows records on narrow screens. `PaginatedList` owns both pagers
 and scroll restoration.
 
 `DataPager` is the only pager. `<v-pagination>` renders one 48px button per
-visible page — seven pages plus prev/next need 432px and push the document
-sideways on any phone — and it does not move the viewport on a page change, so
+visible page, so seven pages plus prev/next need 432px and push the document
+sideways on any phone. It also does not move the viewport on a page change, so
 the reader lands at the bottom of a page they never saw the top of. Pass
 `scroll-target-id` so paging returns to the top of the list.
 
-A `#cell:` slot that renders more than one element must wrap them: two sibling
+A `#cell:` slot that renders more than one element must wrap them. Two sibling
 tags have **no** whitespace between them, because Vue compiles the newline away
 (`whitespace: 'condense'`). `<span>{{ name }}</span><MandateChip/>` renders as
 `Intendencia de MontevideoFA 2020–2025`, and there is no text node left to space
@@ -220,8 +222,8 @@ side-effects: selecting a marker opens the supplier dialog in place.
 
 ### SupplierBusinessDialog
 
-The complete supplier overlay. Its input is a selected map point plus a detail
-record. It opens immediately, displays a stable loading skeleton and then
+The complete supplier overlay. It takes a selected map point plus a detail
+record. It opens immediately, shows a stable loading skeleton, and then
 organizes all available evidence:
 
 - identity and registry state;
@@ -237,10 +239,10 @@ map-detail API.
 
 ### ContactChannelList and ContactLocationDialog
 
-`ContactChannelList` is still the compact list/table renderer for sourced
-contact values. `ContactLocationDialog` remains the narrow location-only
-overlay used by the table. The map uses `SupplierBusinessDialog` because its
-selection needs the complete record, not a second drill-in.
+`ContactChannelList` is the compact list/table renderer for sourced contact
+values. `ContactLocationDialog` is the narrow location-only overlay used by the
+table. The map uses `SupplierBusinessDialog`, because its selection needs the
+complete record, not a second drill-in.
 
 ## Composition patterns
 
