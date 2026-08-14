@@ -44,6 +44,7 @@ export const CORPUS_SEARCH = [
   { key: 'pdlc', hits: 0 },
   { key: 'ruta101', hits: 0 },
   { key: 'llamados', hits: 0 },
+  { key: 'ute', hits: 0 },
 ]
 
 /** Lo que el Estado sí gasta en alojar sus propios servidores. Medido el 2026-08-14. */
@@ -108,6 +109,7 @@ export const DC_CONTENT = {
     buscamos: [
       'Un datacenter de esta escala mueve obra civil, energía, agua, caminos y permisos. Si algo de eso lo hubiera comprado el Estado, tendría que estar en el registro de compras públicas. Buscamos por el nombre de la empresa que figura en el expediente ambiental —Eleanor Applications S.R.L., no "Google"—, por el nombre del parque, por la ruta y el kilómetro, y por los llamados que mencionaran un centro de datos en ese lugar.',
       'No hay nada. Cero como proveedor, cero como comprador, cero llamados. Y el cero es correcto: no es una obra pública. Es una inversión privada dentro de una zona franca, así que el Estado no la paga. Lo que hace es otra cosa: la exonera de impuestos, le autoriza el uso del suelo, le aprueba el impacto ambiental y le vende la electricidad.',
+      'La pregunta obvia que sigue es la infraestructura: alguien tiene que llevarle la electricidad. Buscamos también eso. UTE tiene adjudicaciones de subestaciones en el período —la mayor, de 141 millones de pesos a Montelecnor en enero de 2026—, pero ninguna menciona Ciudad de la Costa, Nicolich, Pando ni la ruta 101, así que no podemos atribuirle ninguna al proyecto. Y la propia ficha oficial lo explica: la subestación eléctrica la construye el emprendimiento, no el Estado.',
       'Por eso esta investigación no busca una compra. Busca las decisiones públicas que la hicieron posible, que están todas publicadas y casi nunca se leen juntas.',
     ],
     colBuscado: 'Qué buscamos',
@@ -117,6 +119,7 @@ export const DC_CONTENT = {
       pdlc: '"Parque de las Ciencias" en proveedores, compradores o ítems',
       ruta101: '"Ruta 101" o "Ciudad de la Costa" en ítems y llamados',
       llamados: 'Llamados que mencionen un centro de datos en esa ubicación',
+      ute: 'Obras de UTE (subestaciones, líneas) que mencionen esa zona',
     },
 
     rastroTag: 'El rastro que sí existe',
@@ -200,6 +203,7 @@ export const DC_CONTENT = {
     buscamos: [
       'A data center this size moves civil works, power, water, roads and permits. If the State had bought any of it, it would be in the procurement record. We searched by the company named in the environmental file — Eleanor Applications S.R.L., not "Google" — by the park\'s name, by the road and kilometre, and by tenders mentioning a data center at that location.',
       'There is nothing. Zero as supplier, zero as buyer, zero tenders. And the zero is correct: this is not public works. It is a private investment inside a free zone, so the State does not pay for it. It does something else: it exempts it from taxes, authorises the land use, approves the environmental impact and sells it electricity.',
+      'The obvious next question is infrastructure: someone has to bring the electricity. We searched for that too. The power utility does have substation awards in the period — the largest, 141 million pesos to Montelecnor in January 2026 — but none mentions Ciudad de la Costa, Nicolich, Pando or Route 101, so we cannot attribute any of them to the project. And the official summary explains it: the electrical substation is built by the project, not by the State.',
       'So this investigation is not looking for a purchase. It looks for the public decisions that made it possible, all of them published and almost never read together.',
     ],
     colBuscado: 'What we searched',
@@ -209,6 +213,7 @@ export const DC_CONTENT = {
       pdlc: '"Parque de las Ciencias" in suppliers, buyers or line items',
       ruta101: '"Ruta 101" or "Ciudad de la Costa" in items and tenders',
       llamados: 'Tenders mentioning a data center at that location',
+      ute: 'Power-utility works (substations, lines) mentioning that area',
     },
 
     rastroTag: 'The trail that does exist',
