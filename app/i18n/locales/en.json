@@ -29,6 +29,8 @@
     "organismos": "Spending by agency",
     "mapa": "Spending blocks",
     "anticipacion": "Upcoming tenders",
+    "agenda": "Today's agenda",
+    "encuestas": "Opinion polls",
     "estadisticas": "Statistics",
     "investigaciones": "Investigations",
     "invFichas": "Files: where the money is argued over",
@@ -1503,6 +1505,14 @@
         "anticipacion": {
           "title": "Upcoming tenders",
           "dek": "When each agency is likely to publish its next tender, estimated from its own purchasing cadence. An estimate, never an announcement."
+        },
+        "agenda": {
+          "title": "Today's agenda",
+          "dek": "What entered the procurement record today, and the official indicators with their reference date and their publication date, which are not the same."
+        },
+        "encuestas": {
+          "title": "Opinion polls",
+          "dek": "What each polling firm measured about the government, with its full technical note. No averaging and no interpretation of ours."
         },
         "pauta": {
           "title": "State advertising",
