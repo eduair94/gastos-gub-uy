@@ -195,6 +195,14 @@ sideways on any phone. It also does not move the viewport on a page change, so
 the reader lands at the bottom of a page they never saw the top of. Pass
 `scroll-target-id` so paging returns to the top of the list.
 
+`DataPager` measures that anchor BEFORE the page changes, and holds the
+coordinate while the new rows load. Both steps are load-bearing. A list that
+swaps its results for a loading indicator unmounts the anchor, so a lookup after
+the change finds nothing and throws the reader to the top of the document. The
+same swap shortens the document, so the browser clamps the scroll short of the
+list. The pager also clears the sticky header itself, so an anchor without
+`scroll-margin-top` still lands on the first row.
+
 A `#cell:` slot that renders more than one element must wrap them. Two sibling
 tags have **no** whitespace between them, because Vue compiles the newline away
 (`whitespace: 'condense'`). `<span>{{ name }}</span><MandateChip/>` renders as
