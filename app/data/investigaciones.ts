@@ -219,6 +219,16 @@ export const INV_CONTENT = {
           "cinco proveedores concentran"
         ]
       },
+      "cardDatacenter": {
+        "eyebrow": "Investigación propia · Registros públicos",
+        "title": "El datacenter que no está en las compras del Estado",
+        "dek": "Buscamos la obra más grande que se construye en Canelones en los 2,18 millones de registros de compras. No aparece: ni la empresa, ni el parque, ni la ruta. El rastro está en el Diario Oficial y en el expediente ambiental.",
+        "tags": [
+          "Resolución 65/024",
+          "padrones 47.827-47.832",
+          "cero en compras"
+        ]
+      },
       "cardHallazgos": {
         "eyebrow": "Hallazgos propios",
         "title": "Lo que encontramos nosotros",
@@ -609,6 +619,16 @@ export const INV_CONTENT = {
           "live data",
           "method published",
           "five suppliers concentrate it"
+        ]
+      },
+      "cardDatacenter": {
+        "eyebrow": "Own investigation · Public records",
+        "title": "The data center that is not in state procurement",
+        "dek": "We searched for the largest construction under way in Canelones across 2.18 million procurement records. It is not there: not the company, not the park, not the road. The trail is in the Official Gazette and the environmental file.",
+        "tags": [
+          "Resolution 65/024",
+          "plots 47,827-47,832",
+          "zero in procurement"
         ]
       },
       "cardHallazgos": {
