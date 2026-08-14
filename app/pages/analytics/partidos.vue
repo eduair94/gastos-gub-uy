@@ -589,7 +589,7 @@ useSeo(() => ({
 
 <style scoped>
 .pty { padding-bottom: var(--s-8); }
-.hero { background: var(--ink) !important; color: #eaf1f6; padding-block: var(--s-7) var(--s-6); }
+.hero { background: var(--ink) !important; color: var(--ink-fg); padding-block: var(--s-7) var(--s-6); }
 .hero__in { max-width: 76ch; }
 .hero__eyebrow { margin: 0 0 var(--s-3); font-size: var(--t-xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--sol); }
 .hero__title { margin: 0 0 var(--s-3); font-family: var(--font-display); font-size: clamp(28px, 5vw, var(--t-3xl)); line-height: 1.05; color: #fff; }

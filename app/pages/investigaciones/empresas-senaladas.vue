@@ -305,9 +305,25 @@ const META_LABELS = {
 }
 .emp-src { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: var(--t-xs); }
 .emp-src__lbl { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
-.emp-src__a { color: var(--celeste-deep); text-decoration: none; }
+/* A row of outlet names is a row of controls, and some outlet names are two
+   words wide: WCAG 2.2 SC 2.5.8 wants 24px of height under each. */
+.emp-src__a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--celeste-deep);
+  text-decoration: none;
+}
 .emp-src__a:hover { text-decoration: underline; }
-.emp-profile { color: var(--celeste-deep); text-decoration: none; font-size: var(--t-xs); white-space: nowrap; }
+.emp-profile {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--celeste-deep);
+  text-decoration: none;
+  font-size: var(--t-xs);
+  white-space: nowrap;
+}
 .emp-profile:hover { text-decoration: underline; }
 
 @media (max-width: 560px) {

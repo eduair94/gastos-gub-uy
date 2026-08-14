@@ -721,7 +721,7 @@ useSeo(() => ({
   line-height: 1;
   padding: 3px 6px;
   border-radius: 999px;
-  border: 1px solid var(--stroke, rgba(255, 255, 255, 0.14));
+  border: 1px solid var(--stroke, var(--ink-rule-soft));
   white-space: nowrap;
   opacity: 0.92;
 }

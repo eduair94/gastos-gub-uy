@@ -124,7 +124,7 @@ useSeo(() => ({
   background:
     radial-gradient(1000px 340px at 88% -20%, color-mix(in srgb, var(--sol) 15%, transparent), transparent 70%),
     var(--ink);
-  color: #eaf1f6;
+  color: var(--ink-fg);
   border-bottom: 1px solid var(--rule);
 }
 

@@ -730,7 +730,7 @@ useSeo(() => ({
   line-height: 1;
   padding: 3px 7px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid var(--ink-rule-soft);
   white-space: nowrap;
 }
 .srcbadge.is-dei { color: #7ee0a6; border-color: rgba(126, 224, 166, 0.4); }
