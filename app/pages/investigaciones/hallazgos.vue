@@ -8,7 +8,7 @@
  * se cae de la página, la página pasa a decir algo que no podemos sostener.
  */
 import { invContent } from '~/data/investigaciones'
-import { FINDINGS, HALLAZGOS_SOURCES, hallazgosContent } from '~/data/investigaciones-hallazgos'
+import { FINDINGS, HALLAZGOS_SOURCES, findingText, hallazgosContent } from '~/data/investigaciones-hallazgos'
 
 const { locale, t } = useI18n()
 const localePath = useLocalePath()
@@ -41,8 +41,8 @@ useSeo(() => ({
   ],
 }))
 
-type FindingKey = keyof typeof cx.value.items
-const findings = computed(() => FINDINGS.map(f => ({ ...f, copy: cx.value.items[f.key as FindingKey] })))
+/** Cada ficha trae sus dos idiomas adentro, así que sumar una tanda es un append al array. */
+const findings = computed(() => FINDINGS.map(f => ({ ...f, copy: findingText(f, locale.value) })))
 
 const sourceGroups = computed(() => HALLAZGOS_SOURCES.map(g => ({
   title: g.key === 'norma' ? cx.value.srcNorma : cx.value.srcDonde,
@@ -57,7 +57,7 @@ const leakFacts = computed(() => findings.value.map(f => f.copy.title))
     <InvCover
       tone="celeste"
       :fields="[
-        { label: t('inv.file.alcance'), value: cx.fileScope },
+        { label: t('inv.file.alcance'), value: cx.fileScope.replace('{n}', String(FINDINGS.length)) },
         { label: t('inv.file.periodo'), value: cx.filePeriod },
         { value: cx.fileSource },
       ]"
@@ -124,7 +124,7 @@ const leakFacts = computed(() => findings.value.map(f => f.copy.title))
         >
           {{ cx.readMore }} →
         </NuxtLink>
-        <span class="hz__repro u-mono">{{ cx.reproduceLabel }}: <code>{{ f.reproduce }}</code></span>
+        <span class="hz__repro u-mono">{{ cx.measuredOnLabel }} {{ f.measuredOn }} · {{ cx.reproduceLabel }}: <code>{{ f.reproduce }}</code></span>
       </p>
     </InvSection>
 
