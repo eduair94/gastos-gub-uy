@@ -150,35 +150,48 @@ function escapeRe(s: string): string {
  * sólo entran nombres que la prensa usa de verdad, y el match es por palabra completa.
  *
  * La clave se compara normalizada (sin tildes, mayúsculas) contra el nombre del organismo.
+ *
+ * TODOS LOS PATRONES VAN ANCLADOS AL INICIO DEL NOMBRE, y eso no es estilo: sin anclar,
+ * un patrón alcanza a varios organismos y les cuelga las noticias del otro. Medido en
+ * producción con tests/unit/news-alias-overreach.verify.ts — 7 patrones sobre-alcanzaban:
+ *
+ *   /NACIONAL DE TELECOMUNICACIONES/ → ANTEL **y** Dirección Nacional de
+ *     Telecomunicaciones (DINATEL, que es otro organismo). La ficha de DINATEL mostraba
+ *     "el gobierno rompió el monopolio de Antel en internet".
+ *   /PRIMARIA/ → el Consejo de Educación Inicial y Primaria **y las 19 "Red de Atención
+ *     Primaria de X"**, que son centros de salud. 19 organismos con noticias de educación.
+ *   /VIVIENDA/, /DESARROLLO SOCIAL/, /ECONOMIA Y FINANZAS/ → el ministerio y sus
+ *     direcciones dependientes, que son compradores distintos.
+ *
+ * Regla: un patrón que alcanza a dos organismos distintos es un defecto. El verify de
+ * arriba lo comprueba contra los nombres reales y falla si vuelve a pasar.
  */
 const KNOWN_ALIASES: Array<{ match: RegExp, aliases: string[] }> = [
-  { match: /USINAS Y TRASMISIONES|USINAS Y TRANSMISIONES/, aliases: ['UTE'] },
-  { match: /OBRAS SANITARIAS DEL ESTADO/, aliases: ['OSE'] },
-  { match: /NACIONAL DE TELECOMUNICACIONES/, aliases: ['ANTEL'] },
-  { match: /COMBUSTIBLE, ?ALCOHOL Y PORTLAND|COMBUSTIBLE ALCOHOL Y PORTLAND/, aliases: ['ANCAP'] },
-  { match: /NACIONAL DE PUERTOS/, aliases: ['ANP'] },
-  { match: /SERVICIOS DE SALUD DEL ESTADO/, aliases: ['ASSE'] },
-  { match: /BANCO DE PREVISION SOCIAL/, aliases: ['BPS'] },
-  { match: /BANCO DE LA REPUBLICA ORIENTAL/, aliases: ['BROU'] },
-  { match: /BANCO DE SEGUROS DEL ESTADO/, aliases: ['BSE'] },
-  { match: /CORREOS/, aliases: ['Correo Uruguayo'] },
-  { match: /TRANSPORTE Y OBRAS PUBLICAS/, aliases: ['MTOP'] },
-  { match: /MINISTERIO DE SALUD PUBLICA/, aliases: ['MSP'] },
-  { match: /ECONOMIA Y FINANZAS/, aliases: ['MEF'] },
-  { match: /DESARROLLO SOCIAL/, aliases: ['MIDES'] },
-  { match: /GANADERIA, ?AGRICULTURA Y PESCA|GANADERIA AGRICULTURA Y PESCA/, aliases: ['MGAP'] },
-  { match: /VIVIENDA/, aliases: ['MVOT', 'MVOTMA'] },
-  { match: /INDUSTRIA, ?ENERGIA Y MINERIA|INDUSTRIA ENERGIA Y MINERIA/, aliases: ['MIEM'] },
-  { match: /EDUCACION Y CULTURA/, aliases: ['MEC'] },
-  { match: /DEFENSA NACIONAL/, aliases: ['MDN'] },
-  { match: /^MINISTERIO DEL INTERIOR/, aliases: ['Ministerio del Interior'] },
-  { match: /CONSEJO DIRECTIVO CENTRAL|ADMINISTRACION NACIONAL DE EDUCACION PUBLICA/, aliases: ['ANEP', 'Codicen'] },
-  { match: /UNIVERSIDAD DE LA REPUBLICA/, aliases: ['Udelar'] },
-  { match: /INSTITUTO DEL NINO Y ADOLESCENTE/, aliases: ['INAU'] },
-  { match: /AGENCIA DE GOBIERNO ELECTRONICO|AGESIC/, aliases: ['Agesic'] },
-  { match: /INSTITUTO NACIONAL DE COLONIZACION/, aliases: ['INC'] },
-  { match: /ADMINISTRACION DE FERROCARRILES/, aliases: ['AFE'] },
-  { match: /PRIMARIA/, aliases: ['Primaria'] },
+  { match: /^ADMINISTRACION NACIONAL DE USINAS/, aliases: ['UTE'] },
+  { match: /^ADMINISTRACION DE LAS OBRAS SANITARIAS DEL ESTADO/, aliases: ['OSE'] },
+  { match: /^ADMINISTRACION NACIONAL DE TELECOMUNICACIONES/, aliases: ['ANTEL'] },
+  { match: /^ADMINISTRACION NACIONAL DE COMBUSTIBLE/, aliases: ['ANCAP'] },
+  { match: /^ADMINISTRACION NACIONAL DE PUERTOS/, aliases: ['ANP'] },
+  { match: /^ADMINISTRACION DE (LOS )?SERVICIOS DE SALUD DEL ESTADO/, aliases: ['ASSE'] },
+  { match: /^BANCO DE PREVISION SOCIAL/, aliases: ['BPS'] },
+  { match: /^BANCO DE LA REPUBLICA ORIENTAL/, aliases: ['BROU'] },
+  { match: /^BANCO DE SEGUROS DEL ESTADO/, aliases: ['BSE'] },
+  { match: /^MINISTERIO DE TRANSPORTE Y OBRAS PUBLICAS/, aliases: ['MTOP'] },
+  { match: /^MINISTERIO DE SALUD PUBLICA/, aliases: ['MSP'] },
+  { match: /^MINISTERIO DE ECONOMIA Y FINANZAS/, aliases: ['MEF'] },
+  { match: /^MINISTERIO DE DESARROLLO SOCIAL/, aliases: ['MIDES'] },
+  { match: /^MINISTERIO DE GANADERIA/, aliases: ['MGAP'] },
+  { match: /^MINISTERIO DE VIVIENDA/, aliases: ['MVOT', 'MVOTMA'] },
+  { match: /^MINISTERIO DE INDUSTRIA/, aliases: ['MIEM'] },
+  { match: /^MINISTERIO DE EDUCACION Y CULTURA/, aliases: ['MEC'] },
+  { match: /^MINISTERIO DE DEFENSA NACIONAL/, aliases: ['MDN'] },
+  { match: /^CONSEJO DIRECTIVO CENTRAL|^ADMINISTRACION NACIONAL DE EDUCACION PUBLICA/, aliases: ['ANEP', 'Codicen'] },
+  { match: /^UNIVERSIDAD DE LA REPUBLICA/, aliases: ['Udelar'] },
+  { match: /^INSTITUTO DEL NINO Y ADOLESCENTE/, aliases: ['INAU'] },
+  { match: /^AGESIC|^AGENCIA DE GOBIERNO ELECTRONICO/, aliases: ['Agesic'] },
+  { match: /^INSTITUTO NACIONAL DE COLONIZACION/, aliases: ['INC'] },
+  { match: /^ADMINISTRACION DE FERROCARRILES/, aliases: ['AFE'] },
+  { match: /^CONSEJO DE EDUCACION INICIAL Y PRIMARIA/, aliases: ['Primaria'] },
 ]
 
 /**

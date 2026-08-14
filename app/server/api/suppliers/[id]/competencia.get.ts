@@ -42,12 +42,23 @@ export default defineEventHandler(async (event) => {
 
   // ¿Cuáles ganó? El ganador está en el release de adjudicación, no en el bloque de
   // oferentes, así que hay que preguntarle al corpus por esos ocids.
+  //
+  // El id del adjudicatario NO se compara con un regex: `{ $regex: rut }` no está anclado,
+  // así que un id que apenas CONTENGA esos 12 dígitos (p. ej. uno de 13) contaría como
+  // victoria de otra empresa. Se traen los ids y se comparan con la misma normalización a
+  // 12 dígitos que usa el resto del cruce — exacta, y sin depender de un regex sobre un
+  // campo multikey.
   const ocids = calls.map(c => c.ocid)
-  const won = await ReleaseModel.find(
-    { 'ocid': { $in: ocids }, 'awards.suppliers.id': { $regex: rut } },
-    { _id: 0, ocid: 1 },
+  const awarded = await ReleaseModel.find(
+    { ocid: { $in: ocids } },
+    { '_id': 0, 'ocid': 1, 'awards.suppliers.id': 1 },
   ).lean()
-  const wonSet = new Set(won.map(w => w.ocid))
+
+  const wonSet = new Set<string>()
+  for (const r of awarded as Array<Record<string, any>>) {
+    const ids: string[] = (r.awards ?? []).flatMap((a: any) => (a.suppliers ?? []).map((s: any) => String(s?.id ?? '')))
+    if (ids.some(id => id.replace(/\D/g, '') === rut)) wonSet.add(r.ocid)
+  }
 
   // Contra quién compite. Sólo los rivales, y ordenados por cuántas veces coincidieron:
   // es el mapa de quién se presenta siempre a los mismos llamados.
