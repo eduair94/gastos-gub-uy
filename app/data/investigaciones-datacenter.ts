@@ -77,6 +77,7 @@ export const DC_SOURCES = [
       { label: 'Montevideo Portal — las siete condiciones de la autorización (25/07/2024)', url: 'https://www.montevideo.com.uy/Noticias/Las-siete-condiciones-que-le-puso-el-gobierno-a-Google-para-autorizar-el-data-center-uc895100' },
       { label: 'Infobae — autorización y empleo previsto (25/07/2024)', url: 'https://www.infobae.com/america/america-latina/2024/07/25/uruguay-autorizo-la-construccion-de-un-data-center-de-google-que-empleara-hasta-800-personas/' },
       { label: 'Intendencia de Canelones — inicio de la construcción', url: 'https://www.imcanelones.gub.uy/noticias/google-inicia-construccion-su-centro-datos-parque-las-ciencias-canelones' },
+      { label: 'Montevideo Portal — cifras del Data Center de ANTEL en Pando (16/05/2016)', url: 'https://www.montevideo.com.uy/Noticias/El-nuevo-Data-Center-Internacional-de-Antel-sera-el-gran-disco-duro-de-Uruguay--uc308478' },
     ],
   },
 ]
@@ -140,11 +141,26 @@ export const DC_CONTENT = {
       'No decimos que esté escondida: puede estar en las 104 páginas del informe completo, cuyo PDF tiene la codificación rota y no pudimos leer. Decimos que el documento hecho para que la ciudadanía entienda el proyecto omite el número que define su impacto.',
     ],
 
+    condicionesTag: 'La letra chica',
+    condicionesTitle: 'Las siete condiciones de la autorización',
+    condicionesIntro: 'La autorización ambiental no fue un permiso liso. La prensa que leyó la resolución detalló cinco de las siete condiciones; las otras dos las resumió. Las listamos como están publicadas, señalando cuáles quedaron sin detalle.',
+    condiciones: [
+      'Plazo máximo de dos años: la autorización caduca si la obra no empieza en ese lapso.',
+      'Prohibición de usar el camino Gonzalo "Gonchi" Rodríguez durante la construcción.',
+      'Actualizar el Plan de Gestión Ambiental con los programas de residuos de obra, manejo del tránsito, relacionamiento comunitario y gestión de efluentes.',
+      'Ejecutar la obra estrictamente según lo presentado y aprobado, sin apartarse de la resolución.',
+      'Presentar análisis de monitoreo, proyecto ejecutivo y cronograma dentro de los 45 días del inicio de las obras.',
+      'Poner información a disposición de la Dirección Nacional de Calidad Ambiental (sin más detalle en la crónica).',
+      'Elaborar planes de mitigación ante los riesgos ambientales detectados (sin más detalle en la crónica).',
+    ],
+    condicionesNota: 'No pudimos contrastar esta lista contra el texto de la resolución: el PDF que publica el Ministerio está escaneado y no tiene capa de texto legible. Por eso van atribuidas a la crónica y no al documento.',
+
     contrasteTag: 'El contraste',
     contrasteTitle: 'Lo que el Estado sí paga por alojar sus servidores',
     contraste: [
       'Mientras el datacenter más grande del país se construye sin pagar impuestos, el Estado le paga a otro por guardar sus propios datos. En el corpus hay 16 adjudicaciones cuyo objeto es alojamiento en centro de datos, por 102,5 millones de pesos, de once organismos: Presidencia, la Fiscalía General, la DGI, Casinos, el MIDES, OSE, UTE, la UTEC, la Intendencia de Colonia.',
-      'Casi todo eso lo cobra ANTEL —75,8 millones—, que es una empresa del propio Estado y tiene su datacenter en el mismo Parque de las Ciencias, a metros de la obra de Google. Sumando todos sus rubros, ANTEL le facturó al Estado 4.614 millones de pesos en 1.138 contratos con 99 organismos.',
+      'Casi todo eso lo cobra ANTEL —75,8 millones—, que es una empresa del propio Estado y tiene su propio centro de datos, el Ing. José Luis Massera, en el Polo Tecnológico Industrial de Pando: mismo departamento y misma ruta 101 que el de Google, a unos kilómetros. Sumando todos sus rubros, ANTEL le facturó al Estado 4.614 millones de pesos en 1.138 contratos con 99 organismos.',
+      'La comparación entre los dos edificios ordena la escala del asunto. El del Estado se inauguró en 2016 por unos 50 millones de dólares: 12.000 metros cuadrados, mil racks y 12 megavatios, que en su momento se explicaron como el consumo de una ciudad de 14.000 habitantes. El de Google se anuncia en más de 850 millones y la prensa le atribuye una demanda de unos 48 megavatios: cuatro veces la potencia del datacenter soberano del país, en manos privadas y sin pagar impuestos.',
       'No hay nada irregular en eso: es el Estado comprándose a sí mismo un servicio que necesita. Lo que muestra el contraste es dónde queda cada uno en el mismo terreno: uno paga por alojar sus datos, el otro se instala exonerado a alojar los del mundo.',
     ],
 
@@ -217,11 +233,26 @@ export const DC_CONTENT = {
       'We are not saying it is hidden: it may well be in the 104 pages of the full report, whose PDF has broken encoding and which we could not read. We are saying the document written for citizens to understand the project omits the number that defines its impact.',
     ],
 
+    condicionesTag: 'The fine print',
+    condicionesTitle: 'The seven conditions of the authorisation',
+    condicionesIntro: 'The environmental authorisation was not a plain permit. The press that read the resolution detailed five of the seven conditions and summarised the other two. We list them as published, flagging which ones were left without detail.',
+    condiciones: [
+      'A two-year deadline: the authorisation lapses if works do not start within it.',
+      'A ban on using the Gonzalo "Gonchi" Rodríguez road during construction.',
+      'Updating the Environmental Management Plan with programmes for construction waste, traffic management, community relations and effluent management.',
+      'Executing the works strictly as submitted and approved, without departing from the resolution.',
+      'Filing monitoring analyses, the executive project and a schedule within 45 days of the start of works.',
+      'Making information available to the National Environmental Quality Directorate (no further detail in the report).',
+      'Drawing up mitigation plans for the environmental risks identified (no further detail in the report).',
+    ],
+    condicionesNota: 'We could not check this list against the text of the resolution: the PDF the Ministry publishes is scanned and has no readable text layer. That is why it is attributed to the news report and not to the document.',
+
     contrasteTag: 'The contrast',
     contrasteTitle: 'What the State does pay to host its own servers',
     contraste: [
       'While the country\'s largest data center is built tax-free, the State pays someone else to keep its own data. The corpus holds 16 awards for data-center hosting, worth 102.5 million pesos, from eleven public bodies: the Presidency, the Prosecutor General, the tax office, the casinos directorate, the social development ministry, the water utility, the power utility, the technological university, the Colonia city government.',
-      'Almost all of it is billed by ANTEL — 75.8 million — a state-owned company whose own data center sits in the very same Parque de las Ciencias, metres from Google\'s construction site. Across all its lines, ANTEL billed the State 4,614 million pesos in 1,138 contracts with 99 public bodies.',
+      'Almost all of it is billed by ANTEL — 75.8 million — a state-owned company with its own data center, the Ing. José Luis Massera, in the Pando Technological Industrial Park: same department and same Route 101 as Google\'s, a few kilometres away. Across all its lines, ANTEL billed the State 4,614 million pesos in 1,138 contracts with 99 public bodies.',
+      'Comparing the two buildings sets the scale. The State\'s was built for about 50 million dollars, has 12,000 square metres and 12 megawatts. Google\'s is announced at over 850 million and the press attributes to it a demand of about 48 megawatts: four times the power of the country\'s sovereign data center, in private hands and tax-free.',
       'There is nothing irregular in that: it is the State buying itself a service it needs. What the contrast shows is where each one stands on the same ground: one pays to host its data, the other settles in tax-exempt to host the world\'s.',
     ],
 
