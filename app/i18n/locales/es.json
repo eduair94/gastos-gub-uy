@@ -773,7 +773,6 @@
     "resultsSummary": "{count} proveedores",
     "table": {
       "name": "Proveedor",
-      "rupeStatus": "Estado RUPE",
       "contracts": "Contratos",
       "buyers": "Organismos",
       "total": "Total cobrado",
@@ -1503,6 +1502,30 @@
         "partidos": {
           "title": "Compras por partido",
           "dek": "Gasto departamental cruzado con el partido que gobernaba cada año. Es contexto temporal del registro, no una atribución del gasto."
+        },
+        "senalesGestion": {
+          "title": "Se\u00f1ales de gesti\u00f3n",
+          "dek": "Cinco medidas sobre c\u00f3mo compra cada organismo: en qui\u00e9n concentra la plata, si adjudica en tandas, cu\u00e1nto adjudica en forma directa, cu\u00e1nto tiempo deja para competir y cu\u00e1ntos sobreprecios quedaron sin explicar."
+        },
+        "competencia": {
+          "title": "\u00bfCu\u00e1nta competencia hay?",
+          "dek": "Cu\u00e1ntas empresas se presentan realmente a las compras de cada organismo, y con qu\u00e9 frecuencia se presenta una sola. Hasta ahora en Uruguay no se pod\u00eda medir."
+        },
+        "tribunalCuentas": {
+          "title": "Lo que dijo el Tribunal de Cuentas",
+          "dek": "El auditor del propio Estado se pronuncia sobre compras concretas, y su archivo es p\u00fablico, pero vive fuera de los datos abiertos. Ac\u00e1 cada resoluci\u00f3n aparece junto a la compra que nombra."
+        },
+        "omisos": {
+          "title": "Funcionarios declarados omisos",
+          "dek": "La n\u00f3mina que publica la JUTEP de funcionarios p\u00fablicos declarados omisos en su obligaci\u00f3n de presentar la declaraci\u00f3n jurada de bienes e ingresos."
+        },
+        "sanciones": {
+          "title": "Proveedores sancionados por Defensa del Consumidor",
+          "dek": "Empresas multadas o apercibidas por la Unidad de Defensa del Consumidor que adem\u00e1s le venden al Estado, cruzadas por RUT contra las compras p\u00fablicas."
+        },
+        "genero": {
+          "title": "Gasto en g\u00e9nero y diversidad",
+          "dek": "Cu\u00e1nto gasta el Estado en pol\u00edticas de g\u00e9nero y diversidad, qu\u00e9 organismo lo compra y a qu\u00e9 proveedor va. El feed no trae etiqueta de tema: se reconstruye desde el texto de cada compra."
         },
         "anticipacion": {
           "title": "Próximos llamados",
@@ -2931,7 +2954,7 @@
     "colScopes": "Permisos",
     "colCreated": "Creada",
     "colLastUsed": "Último uso",
-    "colActions": "",
+    "colActions": "Acciones",
     "never": "Nunca",
     "revoke": "Revocar",
     "revokeConfirm": "¿Revocar esta API key? Las integraciones que la usen dejarán de funcionar.",
