@@ -79,6 +79,27 @@ assert.deepEqual(organismAliases("Administración de las Obras Sanitarias del Es
 assert.deepEqual(organismAliases("Administración Nacional de Telecomunicaciones"), ["ANTEL"])
 assert.deepEqual(organismAliases("Intendencia de Flores"), [], "sin sigla conocida no se inventa una")
 
+// SOBRE-ALCANCE: un patrón sin anclar toca dos organismos y les cuelga las noticias del
+// otro. Los tres casos son REALES y llegaron a producción.
+assert.deepEqual(
+  organismAliases("Dirección Nacional de Telecomunicaciones"),
+  [],
+  "DINATEL no es ANTEL — su ficha mostraba «el gobierno rompió el monopolio de Antel»",
+)
+assert.deepEqual(
+  organismAliases("Red de Atención Primaria de Flores"),
+  [],
+  "las 19 Redes de Atención Primaria son centros de salud, no el Consejo de Educación",
+)
+assert.deepEqual(organismAliases("Consejo de Educación Inicial y Primaria"), ["Primaria"])
+assert.deepEqual(
+  organismAliases("Dirección Nacional de Vivienda"),
+  [],
+  "una dirección dependiente no hereda la sigla del ministerio",
+)
+assert.deepEqual(organismAliases("Dir. Gral. Secretaría del  Mrio. de Economía y Finanzas"), [])
+assert.deepEqual(organismAliases("Ministerio de Economía y Finanzas"), ["MEF"])
+
 // Palabra completa, no substring: con la sigla derivada vieja ("ANT") esto matcheaba.
 const falsePositive: NewsItem[] = [
   { title: "Antes de la licitación, el gobierno anunció cambios", link: "https://a.uy/x", source: "El Observador", publishedAt: null },
