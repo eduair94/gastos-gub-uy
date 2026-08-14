@@ -1,16 +1,18 @@
 # CLAUDE.md — gastos-gub
 
-Root brief for AI agents. Read this first, then the `context.md` in whichever directory you are
-touching. Every major directory has one — they are the map; do not grep the whole tree instead.
+Root brief for AI agents. Read this first. Then read the `context.md` of the directory you touch.
+Every major directory has one. Do not grep the whole tree instead.
 
 ## What this repo is
 
 **Con la tuya, contribuyente** (live: [conlatuya.checkleaked.cc](https://conlatuya.checkleaked.cc),
-canonical `gastos.gub.uy`) — a transparency platform over Uruguay's public-procurement open data (OCDS).
-It ingests ~2.17M contract records since 2002 into MongoDB, normalises amounts across currencies,
-reconciles government corrections, screens for price anomalies (statistics + an LLM second stage),
-cross-references several external registries, and publishes a Nuxt dashboard, a public API, webhooks and
-an MCP server.
+canonical `gastos.gub.uy`) is a transparency platform over Uruguay's public-procurement open data (OCDS).
+
+It ingests ~2.17M contract records since 2002 into MongoDB. It normalises amounts across currencies.
+It reconciles government corrections. It screens for price anomalies with statistics plus an LLM
+second stage. It cross-references several external registries.
+
+It publishes a Nuxt dashboard, a public API, webhooks and an MCP server.
 
 ## Two projects, one repo
 
@@ -21,8 +23,8 @@ an MCP server.
 | Runtime | `tsx`/`node`, CommonJS | Nuxt 3.19.3, ESM |
 | Runs on prod as | PM2 app `gastos-gub-cronserver` | PM2 app `gastos-gub-dashboard` (port 3600) |
 
-Both import [`shared/`](shared/) — the Mongo models + pure cross-layer helpers. `app/server` imports it
-by **relative path**; `app/` client code uses the `#shared/*` alias.
+Both import [`shared/`](shared/) — the Mongo models + pure cross-layer helpers. `app/server` imports
+it by **relative path**. `app/` client code uses the `#shared/*` alias.
 
 ```
 OCDS feed ──► src/ (ingest) ──► MongoDB `releases` ──► src/jobs/ (rollups + anomalies + AI triage)
@@ -106,30 +108,30 @@ is edited for whoever maintains the code, and that reader wants it shorter.
 
 ## Conventions (repo-wide)
 
-- **Money:** every amount is `amount.primaryAmount` (UYU-normalised, `AMOUNT_CALCULATION_VERSION`). Never
-  re-sum `awards.items.unit.value.amount` raw — that is the pre-normalisation number and the bug behind
-  the legacy `precalculate-dashboard`/`populate-analytics` path. Cross-currency/cross-year comparisons
-  go through [shared/utils/real-value.ts](shared/utils/real-value.ts).
-- **Gov links** are always derived from `ocid` via [shared/utils/ocid.ts](shared/utils/ocid.ts), never
-  from a release `id` (ids diverge on aclaración/ajuste records).
-- **New Mongoose models** use the guarded form (`mongoose.models.X || mongoose.model('X', S)`), an
-  explicit `{ collection }`, and add every field to **both** the interface and the Schema.
+- **Money:** every amount is `amount.primaryAmount` (UYU-normalised, `AMOUNT_CALCULATION_VERSION`).
+  Never re-sum `awards.items.unit.value.amount` raw — that is the pre-normalisation number, and the
+  bug behind the legacy `precalculate-dashboard`/`populate-analytics` path. Cross-currency and
+  cross-year comparisons go through [shared/utils/real-value.ts](shared/utils/real-value.ts).
+- **Gov links** always come from `ocid` via [shared/utils/ocid.ts](shared/utils/ocid.ts), never from
+  a release `id` (ids diverge on aclaración/ajuste records).
+- **New Mongoose models** use the guarded form (`mongoose.models.X || mongoose.model('X', S)`) and an
+  explicit `{ collection }`. Add every field to **both** the interface and the Schema.
 - **Indexes** exist only if [scripts/ensure-indexes.ts](scripts/ensure-indexes.ts) builds them —
   `autoIndex` is off. A `Schema.index()` alone does nothing.
 - **Optional TS props** are written `?: T | undefined` (root tsconfig sets `exactOptionalPropertyTypes`).
-- **UI:** gold = money, one logarithmic magnitude scale site-wide, es/en via i18n. The full contract is
-  [app/DESIGN.md](app/DESIGN.md) — binding, not advisory. Mobile layout is part of that contract, and
-  `npm run check:layout` enforces the four rules that have actually shipped broken (see below).
+- **UI:** gold = money, one logarithmic magnitude scale site-wide, es/en via i18n.
+  [app/DESIGN.md](app/DESIGN.md) holds the full contract and is binding. Mobile layout is part of that
+  contract. `npm run check:layout` enforces the four rules that have shipped broken (see below).
 - **File references in Markdown** use relative links so they stay clickable.
 
 ## Traps that cost a cycle
 
-- **Concurrent sessions share one working tree.** Branches switch under you; a broad `git add` sweeps
+- **Concurrent sessions share one working tree.** Branches switch under you. A broad `git add` sweeps
   another session's uncommitted files. Check the branch, stage explicit paths, never `git add -A`.
 - **Node 23+ breaks the Nuxt build** nondeterministically. Use 18/20/22 (`app/.nvmrc`);
   [scripts/check-node.mjs](scripts/check-node.mjs) hard-fails otherwise.
-- **`.env` wins over shell env** — importing any model runs `dotenv config({ override: true })`. A stale
-  shell var will not override `.env`; edit `.env`.
+- **`.env` wins over shell env** — importing any model runs `dotenv config({ override: true })`. A
+  stale shell var will not override `.env`; edit `.env`.
 - **Long jobs must raise `MONGO_SOCKET_TIMEOUT_MS` before `connectToDatabase()`** or the 45s default
   kills the aggregation mid-flight.
 - **Anomalies:** sort on `severityRank`, not the `severity` string; "recent" means `firstDetectedAt`,
@@ -137,16 +139,19 @@ is edited for whoever maintains the code, and that reader wants it shorter.
 - **Never restore an inflated lump-sum total:** any job writing `release.amount` must check
   `hasVerifiedOverride()` and skip. See [line-total artifact](docs/superpowers/specs/).
 - **Mobile layout breaks silently — nothing in the build sees it.** Four defects have shipped to
-  production this way, all invisible above ~640px: (1) a `padding` shorthand on an element that also
-  carries `.u-container` outranks the container's `padding-inline`, so a `0` in the inline slot flushes
-  the entire page against the phone's edge; (2) `var(--s-10)`+ is off a scale that stops at `--s-9`, so
-  the whole declaration is invalid and gets dropped; (3) two sibling tags have no whitespace between
-  them (Vue condenses the newline), so a chip after a name renders welded to it — wrap them in
-  `.chip-row`; (4) `<v-pagination>` needs 432px and pushes the document sideways — use `<DataPager>`.
+  production this way, all invisible above ~640px:
+  1. A `padding` shorthand on an element that also carries `.u-container` outranks the container's
+     `padding-inline`. A `0` in the inline slot flushes the page against the phone's edge.
+  2. `var(--s-10)`+ is off a scale that stops at `--s-9`. The browser drops the whole declaration as
+     invalid.
+  3. Vue condenses the newline between two sibling tags, so a chip welds to the name. Wrap them in
+     `.chip-row`.
+  4. `<v-pagination>` needs 432px and pushes the document sideways — use `<DataPager>`.
+
   `npm run check:layout` ([scripts/check-layout-guards.mjs](scripts/check-layout-guards.mjs)) fails on
-  all four and runs in `app`'s `prebuild`, so a regression fails the deploy build. It is a text scan:
-  for anything subtler, load the route at 360px and assert `scrollWidth <= innerWidth`.
-- **No `npm test` framework.** Tests are standalone `tsx` scripts; discover them by listing `tests/`.
+  all four. It runs in `app`'s `prebuild`, so a regression fails the deploy build. It is a text scan.
+  For anything subtler use the 360px check in [Verifying work](#verifying-work-in-a-test-less-repo).
+- **No `npm test` framework.** List `tests/` to discover the standalone `tsx` scripts.
 - The Express API under `src/api/**` and the `precalculate-dashboard`/`populate-analytics` scripts are
   **legacy/dead** — the live API is `app/server/api/**` and the live rollups are `src/jobs/refresh-*`.
 - Contact-directory exports deliberately use Mongo cursors, 250-row serializers and one shared heavy
@@ -155,10 +160,10 @@ is edited for whoever maintains the code, and that reader wants it shorter.
 
 ## Deploy
 
-Push to `master` → GitHub Actions on a self-hosted runner **on the prod box** →
-[scripts/deploy-dashboard.mjs](scripts/deploy-dashboard.mjs) builds to staging, health-checks, swaps
-atomically, rolling-reloads two pm2 workers, and auto-rolls-back on failure. Full story: [docs/context.md](docs/context.md) and
-[docs/guides/](docs/guides/).
+Push to `master`. GitHub Actions then runs on a self-hosted runner **on the prod box**.
+[scripts/deploy-dashboard.mjs](scripts/deploy-dashboard.mjs) builds to staging, health-checks, and
+swaps atomically. It rolling-reloads two pm2 workers. It auto-rolls-back on failure. Full story:
+[docs/context.md](docs/context.md) and [docs/guides/](docs/guides/).
 
 ## Verifying work in a test-less repo
 
@@ -166,5 +171,5 @@ atomically, rolling-reloads two pm2 workers, and auto-rolls-back on failure. Ful
 - Lint the non-Nuxt half: `npx eslint src shared scripts tests` (config at `eslint.config.mjs`).
 - Behaviour: add/run a `tsx` assertion script under `tests/unit/`.
 - Live checks: `curl` the dev server on `:3600` (typecheck/build env can be broken while the server runs).
-- UI: `npm run check:layout`, then load the changed route in a browser at **360px**; a page is only
+- UI: `npm run check:layout`, then load the changed route in a browser at **360px**. The page is
   verified once `document.documentElement.scrollWidth <= innerWidth` and no content box sits at `x = 0`.
