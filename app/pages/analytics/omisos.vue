@@ -11,6 +11,8 @@
  * It sits beside the procurement signals because it answers the same question from the other side:
  * the señales page measures how a body BUYS, this one records who inside it did not declare.
  */
+import type { DataColumn } from '~/components/DataTable.vue'
+
 const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
@@ -52,6 +54,14 @@ const peakYear = computed(() => {
   for (const y of byYear.value) if (!best || y.count > best.count) best = y
   return best
 })
+
+// The person is the record, so it heads the card on a phone.
+const cols = computed<DataColumn[]>(() => [
+  { key: 'displayName', label: t('omisos.col.name'), primary: true },
+  { key: 'cargo', label: t('omisos.col.cargo') },
+  { key: 'organismo', label: t('omisos.col.organismo') },
+  { key: 'fechaOmision', label: t('omisos.col.fecha'), mono: true, width: '11rem' },
+])
 
 function formatDate(value?: string | Date | null): string {
   if (!value) return '—'
@@ -165,67 +175,53 @@ useSeo(() => ({
         </v-chip>
       </div>
 
-      <v-progress-linear
-        v-if="pending"
-        indeterminate
-        color="accent"
-      />
-
-      <div
-        v-else
-        id="omisos-rows"
-        class="tablewrap"
-      >
-        <table class="rows">
-          <thead>
-            <tr>
-              <th>{{ t('omisos.col.name') }}</th>
-              <th>{{ t('omisos.col.cargo') }}</th>
-              <th>{{ t('omisos.col.organismo') }}</th>
-              <th>{{ t('omisos.col.fecha') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(o, i) in omisos"
-              :key="`${o.displayName}-${i}`"
-            >
-              <td>
-                <span class="rows__name">{{ o.displayName }}</span>
-                <span
-                  v-if="o.documentoMasked"
-                  class="rows__doc u-mono"
-                >{{ o.documentoMasked }}</span>
-              </td>
-              <td class="rows__cargo">
-                {{ o.cargo ?? '—' }}
-              </td>
-              <td>
-                <NuxtLink
-                  v-if="o.incisoCode"
-                  :to="localePath(`/analytics/senales`)"
-                  class="rows__org"
-                >{{ o.organismo ?? '—' }}</NuxtLink>
-                <span v-else>{{ o.organismo ?? '—' }}</span>
-              </td>
-              <td class="u-mono">
-                {{ formatDate(o.fechaOmision) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- `<DataPager>`, not `<v-pagination>`: seven 48px number buttons plus
-           prev/next need 432px, so the raw pager pushed the whole page 37px
-           sideways on a 390px phone. -->
-      <DataPager
-        v-if="totalPages > 1"
+      <!-- `<PaginatedList>` + `<DataTable>`, not a hand-rolled table and pager:
+           the roster is a record directory, so it reflows to one card per person
+           on a phone, and both pagers plus the return-to-results anchor come from
+           the shared component. -->
+      <PaginatedList
         v-model:page="page"
         :total-pages="totalPages"
-        scroll-target-id="omisos-rows"
-        class="pager"
-      />
+      >
+        <v-progress-linear
+          v-if="pending"
+          indeterminate
+          color="accent"
+        />
+
+        <DataTable
+          v-else
+          :columns="cols"
+          :rows="omisos"
+          :row-key="(o: any, i: number) => `${o.displayName}-${i}`"
+          min-width="560px"
+        >
+          <template #cell:displayName="{ row }">
+            <span class="rows__name">{{ row.displayName }}</span>
+            <span
+              v-if="row.documentoMasked"
+              class="rows__doc u-mono"
+            >{{ row.documentoMasked }}</span>
+          </template>
+
+          <template #cell:cargo="{ row }">
+            <span class="rows__cargo">{{ row.cargo ?? '—' }}</span>
+          </template>
+
+          <template #cell:organismo="{ row }">
+            <NuxtLink
+              v-if="row.incisoCode"
+              :to="localePath(`/analytics/senales`)"
+              class="rows__org"
+            >{{ row.organismo ?? '—' }}</NuxtLink>
+            <span v-else>{{ row.organismo ?? '—' }}</span>
+          </template>
+
+          <template #cell:fechaOmision="{ row }">
+            {{ formatDate(row.fechaOmision) }}
+          </template>
+        </DataTable>
+      </PaginatedList>
 
       <p
         v-if="meta"
@@ -314,18 +310,12 @@ useSeo(() => ({
 .filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); }
 .filters > :first-child { flex: 1 1 20rem; }
 
-/* Wide content owns its own scroll container; the body never scrolls sideways (DESIGN.md). */
-.tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: var(--r-lg); }
-
-.rows { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
-.rows th, .rows td { padding: var(--s-2) var(--s-3); text-align: left; vertical-align: top; }
-.rows thead th { background: var(--surface-sunken); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.04em; }
-.rows tbody tr + tr td { border-top: 1px solid var(--rule); }
+/* `<DataTable>` owns the frame, the scroll box and the card reflow. Only the
+   cell contents are styled here. */
 .rows__name { display: block; font-weight: 600; }
 .rows__doc { display: block; font-size: var(--t-xs); color: var(--text-muted); }
 .rows__cargo { color: var(--text-muted); }
 .rows__org { color: inherit; }
 
-.pager { margin-top: var(--s-5); }
 .source { margin-top: var(--s-5); font-size: var(--t-xs); color: var(--text-muted); }
 </style>

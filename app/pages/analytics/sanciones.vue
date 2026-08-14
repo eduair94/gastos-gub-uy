@@ -10,12 +10,23 @@
  * not be read as alleging that. What it shows is narrower and entirely factual — the State's own
  * consumer agency fined this firm, and the State keeps buying from it.
  */
+import type { DataColumn } from '~/components/DataTable.vue'
+
 const { t } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
 
 const NuxtLinkComponent = resolveComponent('NuxtLink')
+
+// The primary column must be declared first: `<DataTable>` always renders it as
+// the first cell, so a later declaration misaligns the desktop header.
+const actCols = computed<DataColumn[]>(() => [
+  { key: 'fecha', label: t('sanciones.col.fecha'), primary: true, mono: true, width: '9rem' },
+  { key: 'tipo', label: t('sanciones.col.tipo'), width: '9rem' },
+  { key: 'motivo', label: t('sanciones.col.motivo') },
+  { key: 'montoUr', label: t('sanciones.col.monto'), align: 'end', mono: true, width: '7rem' },
+])
 
 const sort = ref((route.query.sort as string) ?? 'fines')
 const search = ref((route.query.search as string) ?? '')
@@ -224,42 +235,36 @@ useSeo(() => ({
                 ? t('sanciones.detailToggleOne')
                 : t('sanciones.detailToggle', { n: f.detail.length }) }}
             </summary>
-            <div class="tablewrap">
-              <table class="acts__table">
-                <thead>
-                  <tr>
-                    <th>{{ t('sanciones.col.fecha') }}</th>
-                    <th>{{ t('sanciones.col.tipo') }}</th>
-                    <th>{{ t('sanciones.col.motivo') }}</th>
-                    <th class="acts__num">
-                      {{ t('sanciones.col.monto') }}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(s, i) in f.detail"
-                    :key="`${f.rut}-${i}`"
-                  >
-                    <td class="u-mono">
-                      {{ formatDate(s.fecha) }}
-                    </td>
-                    <td>
-                      <!-- A fine and a caution are different acts; naming the type is the whole
-                           point of listing them separately. -->
-                      <span
-                        class="acts__tipo"
-                        :class="{ 'acts__tipo--multa': s.tipo === 'Multa' }"
-                      >{{ s.tipo ?? '—' }}</span>
-                    </td>
-                    <td>{{ s.motivo ?? '—' }}</td>
-                    <td class="acts__num u-mono">
-                      {{ s.montoUr > 0 ? `${Math.round(s.montoUr)} UR` : '—' }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <!-- `<DataTable>`, not a raw table: four columns of act detail only
+                 fit a phone as one card per act. -->
+            <DataTable
+              class="acts__table"
+              :columns="actCols"
+              :rows="f.detail"
+              :row-key="(_s: any, i: number) => `${f.rut}-${i}`"
+              min-width="520px"
+            >
+              <template #cell:fecha="{ row }">
+                {{ formatDate(row.fecha) }}
+              </template>
+
+              <template #cell:tipo="{ row }">
+                <!-- A fine and a caution are different acts; naming the type is the whole
+                     point of listing them separately. -->
+                <span
+                  class="acts__tipo"
+                  :class="{ 'acts__tipo--multa': row.tipo === 'Multa' }"
+                >{{ row.tipo ?? '—' }}</span>
+              </template>
+
+              <template #cell:motivo="{ row }">
+                {{ row.motivo ?? '—' }}
+              </template>
+
+              <template #cell:montoUr="{ row }">
+                {{ row.montoUr > 0 ? `${Math.round(row.montoUr)} UR` : '—' }}
+              </template>
+            </DataTable>
           </details>
 
           <!-- Fallback for a firm whose individual acts did not load: the motives are still real. -->
@@ -359,14 +364,8 @@ a.firms__name:hover { text-decoration: underline; }
   color: var(--celeste-deep);
 }
 
-/* Wide content owns its own scroll container; the body never scrolls sideways (DESIGN.md). */
-.tablewrap { overflow-x: auto; margin-top: var(--s-2); border: 1px solid var(--rule); border-radius: var(--r-md); }
-
-.acts__table { width: 100%; border-collapse: collapse; font-size: var(--t-xs); }
-.acts__table th, .acts__table td { padding: var(--s-2) var(--s-3); text-align: left; vertical-align: top; }
-.acts__table thead th { background: var(--surface-sunken); text-transform: uppercase; letter-spacing: 0.04em; }
-.acts__table tbody tr + tr td { border-top: 1px solid var(--rule); }
-.acts__num { text-align: right; white-space: nowrap; }
+/* `<DataTable>` owns the frame, the scroll box and the card reflow. */
+.acts__table { margin-top: var(--s-2); }
 
 /* A fine is marked by the WORD plus weight — never by colour alone. */
 .acts__tipo { color: var(--text-muted); }
