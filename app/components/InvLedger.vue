@@ -220,6 +220,14 @@ function cellClass(c: InvLedgerColumn) {
 
   .ilg tbody tr:hover { background: var(--surface); }
 
+  /* En escritorio los enlaces no envuelven porque la tabla scrollea en su propia caja; en modo
+     tarjeta no hay tal caja, y un enlace largo —"Centro de Rehabilitación Médico Ocupacional y
+     Sicosocial"— empujaba el DOCUMENTO entero 11px a 360px. Medido en /analytics/agenda. */
+  .ilg :deep(a) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .ilg tbody tr.rowflag {
     border-color: var(--alerta);
     background: var(--alerta-wash);
