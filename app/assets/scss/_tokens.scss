@@ -47,9 +47,12 @@
   // 5.27 on paper, 5.98 on surface, 4.80 on sunken. Dark theme is unaffected
   // (--text-muted there already runs 6.06-7.07).
   --grafito: #536672;      // secondary text
-  // 4.28:1 on paper at #3f7d62 — under 4.5:1 AA (flagged on the "activo" tag,
-  // whose 12%-tint fill sits close to paper). Darkened to 4.57:1.
-  --verde: #3c7860;        // completed / active status
+  // Ink for "se licita / activo". Darkened twice, both times for the same
+  // reason: it labels tinted surfaces, not paper. #3f7d62 was 4.28:1 on the
+  // "activo" tag; #3c7860 was still 4.16:1 on a sunken band and 4.44:1 inside
+  // a tonal chip. At #37705a it clears AA on all of them (4.64 / 4.91), and
+  // the fill uses are unaffected — they answer to the 3:1 non-text floor.
+  --verde: #37705a;        // completed / active status
 
   // --- Semantic ------------------------------------------
   --bg: var(--paper);

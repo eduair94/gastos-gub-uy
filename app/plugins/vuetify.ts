@@ -13,11 +13,11 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi'
 // of truth for anything CSS can reach.
 const light = {
   'primary': '#37658f', // celeste-deep — clears AA on paper AND on every tint
-  'secondary': '#64757f', // grafito
+  'secondary': '#536672', // grafito — was #64757f, three percent off the token
   'accent': '#8a6318', // sol-deep. Reserved for money.
   'error': '#b2423b', // alerta
   'info': '#5e93c4', // celeste
-  'success': '#3f7d62', // verde
+  'success': '#37705a', // verde — clears AA as a tonal chip label too
   'warning': '#8a6318',
   'background': '#eef1f2', // paper
   'surface': '#ffffff',
@@ -40,7 +40,7 @@ const dark = {
   'accent': '#e8bc63',
   'error': '#e0736a',
   'info': '#7fb3dd',
-  'success': '#5fa584',
+  'success': '#6bb090', // verde (dark) — the token was brightened here in 2026-07; this mirror had not moved
   'warning': '#e8bc63',
   'background': '#0b1a27',
   'surface': '#12283a',
