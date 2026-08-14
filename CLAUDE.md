@@ -76,6 +76,34 @@ npm run test:integration            # needs a live MONGODB_URI
 npm run screenshots
 ```
 
+## How to write (repo-wide, binding)
+
+Write every prose artifact in **ASD-STE100 applied to Spanish** — Simplified Technical Spanish. This
+covers code comments, docblocks, `context.md` files, commit messages, PR bodies, specs, memory files
+and agent prompts. The goal is one thing: **no redundant text**. A sentence that repeats what the
+previous one said is a defect, the same as dead code.
+
+The rules, in order of how often they are broken here:
+
+1. **One idea per sentence.** Split anything with two clauses joined by "y" that could stand alone.
+2. **Short sentences.** Max 20 words when you instruct, max 25 when you describe.
+3. **Short paragraphs.** Max 6 sentences when you instruct, max 5 when you describe.
+4. **One term per concept, always the same term.** Never rotate synonyms for variety. If it is
+   `adjudicación` in line 1, it is `adjudicación` in line 40 — not `compra`, not `contrato`.
+5. **Active voice, present tense.** `El job escribe X`, not `X es escrito por el job`.
+6. **Say what to do.** Reserve the negative form for warnings and traps, where it is the point.
+7. **Cut empty verbs.** `Corré el job`, not `procedé a llevar a cabo la ejecución del job`.
+8. **No noun stacks over three words.** Break them with prepositions.
+9. **No gerund chains.** One gerund per sentence at most.
+10. **Warnings first, as an order.** The trap goes before the explanation, not after it.
+
+**The one carve-out, and it is deliberate.** The site's published copy — investigation prose, page
+deks, disclaimers — keeps the voice [PRODUCT.md](PRODUCT.md) defines: "plain, precise and
+occasionally wry". Rules 1, 4, 5, 7 and 10 apply there too and improve it. Rules 2, 3 and 6 do not:
+a piece that explains why a figure cannot be published needs a sentence long enough to hold the
+reason. Published prose is edited for a reader, not for a technician. Everything else on this list
+is edited for whoever maintains the code, and that reader wants it shorter.
+
 ## Conventions (repo-wide)
 
 - **Money:** every amount is `amount.primaryAmount` (UYU-normalised, `AMOUNT_CALCULATION_VERSION`). Never
