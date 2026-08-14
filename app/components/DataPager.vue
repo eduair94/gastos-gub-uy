@@ -9,7 +9,10 @@
  *
  * This owns that behaviour in one place: changing the page scrolls back
  * to the top of the results (the `scrollTargetId` anchor, or the window
- * top as a fallback), respecting reduced-motion. The same component,
+ * top as a fallback), respecting reduced-motion. It scrolls to a
+ * coordinate measured before the page changes, and holds that coordinate
+ * while the new rows load — the anchor itself is usually unmounted in
+ * between, and the shrunken document clamps the scroll. The same component,
  * passed `sticky`, renders a compact bar that pins under the app header
  * so the reader can page without hunting for the control at the foot of a
  * long list.
@@ -31,6 +34,9 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ 'update:page': [value: number] }>()
 
+/** A reader gesture cancels the pending landing. */
+const GESTURES = ['wheel', 'touchstart', 'keydown'] as const
+
 const { t } = useI18n()
 const { track } = useAnalytics()
 const route = useRoute()
@@ -46,20 +52,80 @@ function go(to: number) {
     page: next,
     direction: next > props.page ? 'next' : 'prev',
   })
+  // Measure BEFORE the emit. Most pages swap the results block for a loading
+  // indicator on a page change, so the anchor is gone by the time the emit has
+  // propagated: a lookup after it finds nothing and the reader is thrown to the
+  // top of the DOCUMENT instead of the top of the list. A coordinate survives
+  // the swap; an element reference does not.
+  const y = anchorTop()
   emit('update:page', next)
-  // Wait for the page value to propagate before moving the viewport; the
-  // anchor sits above the list so its position is stable even before the
-  // new rows have loaded.
-  nextTick(scrollToTop)
+  nextTick(() => land(y))
 }
 
-function scrollToTop() {
+/**
+ * Document Y of the results anchor, already clear of the sticky header.
+ * `null` when there is no anchor — the caller then falls back to the page top.
+ */
+function anchorTop(): number | null {
+  if (typeof window === 'undefined') return null
+  const el = props.scrollTargetId ? document.getElementById(props.scrollTargetId) : null
+  if (!el) return null
+  // Honour the anchor's own scroll-margin when it sets one (PaginatedList does).
+  // Otherwise clear the header here, so a page that only passes an id still
+  // lands on the first row instead of under the bar.
+  const own = Number.parseFloat(getComputedStyle(el).scrollMarginTop) || 0
+  const offset = own || headerClearance()
+  return Math.max(0, el.getBoundingClientRect().top + window.scrollY - offset)
+}
+
+function headerClearance(): number {
+  const root = getComputedStyle(document.documentElement)
+  const h = Number.parseFloat(root.getPropertyValue('--header-h')) || 0
+  const gap = Number.parseFloat(root.getPropertyValue('--s-3')) || 12
+  return h + gap
+}
+
+function maxScroll(): number {
+  return Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
+}
+
+/** Bring `y` to the top of the viewport, and hold it while the rows load. */
+function land(y: number | null) {
   if (typeof window === 'undefined') return
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-  const behavior: ScrollBehavior = reduce ? 'auto' : 'smooth'
-  const el = props.scrollTargetId ? document.getElementById(props.scrollTargetId) : null
-  if (el) el.scrollIntoView({ behavior, block: 'start' })
-  else window.scrollTo({ top: 0, behavior })
+  const target = y ?? 0
+  window.scrollTo({ top: target, behavior: reduce ? 'auto' : 'smooth' })
+  if (target === 0) return
+
+  // While the rows load, the document can be shorter than `target` — a 50-row
+  // table becomes a 4px progress bar. The browser clamps the scroll and the
+  // reader still lands above the list. So keep the target until the new rows
+  // restore the height, then close the gap. Any touch, wheel or key hands
+  // control back to the reader at once.
+  const deadline = performance.now() + 1500
+  let raf = 0
+  let last = -1
+  let still = 0
+
+  const stop = () => {
+    cancelAnimationFrame(raf)
+    for (const ev of GESTURES) window.removeEventListener(ev, stop)
+  }
+
+  const step = (now: number) => {
+    if (now > deadline) return stop()
+    const at = Math.round(window.scrollY)
+    still = at === last ? still + 1 : 0
+    last = at
+    // Two identical frames mean the smooth scroll ended or hit the clamp.
+    if (still >= 2 && Math.abs(at - target) > 2 && maxScroll() >= target - 1) {
+      window.scrollTo({ top: target, behavior: 'auto' })
+    }
+    raf = requestAnimationFrame(step)
+  }
+
+  for (const ev of GESTURES) window.addEventListener(ev, stop, { passive: true })
+  raf = requestAnimationFrame(step)
 }
 </script>
 
