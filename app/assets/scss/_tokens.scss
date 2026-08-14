@@ -47,9 +47,12 @@
   // 5.27 on paper, 5.98 on surface, 4.80 on sunken. Dark theme is unaffected
   // (--text-muted there already runs 6.06-7.07).
   --grafito: #536672;      // secondary text
-  // 4.28:1 on paper at #3f7d62 — under 4.5:1 AA (flagged on the "activo" tag,
-  // whose 12%-tint fill sits close to paper). Darkened to 4.57:1.
-  --verde: #3c7860;        // completed / active status
+  // Ink for "se licita / activo". Darkened twice, both times for the same
+  // reason: it labels tinted surfaces, not paper. #3f7d62 was 4.28:1 on the
+  // "activo" tag; #3c7860 was still 4.16:1 on a sunken band and 4.44:1 inside
+  // a tonal chip. At #37705a it clears AA on all of them (4.64 / 4.91), and
+  // the fill uses are unaffected — they answer to the 3:1 non-text floor.
+  --verde: #37705a;        // completed / active status
 
   // --- Semantic ------------------------------------------
   --bg: var(--paper);
@@ -78,12 +81,23 @@
   // five are declared once here and never overridden. Pages were
   // hardcoding #eaf1f6 / #b9c8d4 and a phantom `var(--danger, #c0392b)`;
   // that fallback is now a real token that reads the same in both themes.
+  // The full ink scale, measured against `--ink`:
+  //   strong 16.2:1 · fg 14.2:1 · dim 9.5:1 · faint 6.7:1 · link 7.1:1
+  // Every one of these existed as a hardcoded hex in twenty-odd files
+  // (#e9f0f6 / #e7eef4 / #eaf1f6 were three spellings of the same tone, and
+  // #89a0b5 / #87a0b5 / #9fb2c4 three of the next one down).
+  --ink-fg-strong: #ffffff;
   --ink-fg: #eaf1f6;
   --ink-fg-dim: #b9c8d4;
+  --ink-fg-faint: #93aabd;
   --ink-rule: rgb(255 255 255 / 22%);
+  --ink-rule-soft: rgb(255 255 255 / 13%);
+  --ink-fill: rgb(255 255 255 / 5%);
   // A link ON the ink surface. `--celeste-deep` cannot serve here: it flips
   // per theme while the surface under it does not. 7.1:1 on `--ink`.
   --ink-link: #7fb0dd;
+  // `--alerta` as TEXT on ink (6.5:1). `--ink-alerta` below is the FILL.
+  --ink-flag: #e78a83;
   --ink-alerta: #c0392b;
   --ink-alerta-fg: #ffffff;
 

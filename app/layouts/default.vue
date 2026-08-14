@@ -1402,7 +1402,13 @@ watch([locale, user], () => nextTick(scheduleRecompute))
   margin-left: auto;
 }
 
+/* WCAG 2.2 SC 2.5.8: a standalone link is a control, and a control needs a
+   24×24 hit area. These rows were 17–20px tall — reachable with a mouse,
+   fiddly with a thumb. The box grows; the type does not move. */
 .foot__links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   font-size: var(--t-sm);
   color: var(--celeste-deep);
   text-decoration: none;
@@ -1423,6 +1429,9 @@ watch([locale, user], () => nextTick(scheduleRecompute))
 }
 
 .foot__legal a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   font-size: var(--t-xs);
   color: var(--text-muted);
   text-decoration: none;
@@ -1433,6 +1442,7 @@ watch([locale, user], () => nextTick(scheduleRecompute))
 .foot__gh {
   display: inline-flex;
   align-items: center;
+  min-height: 24px;
   gap: 5px;
 }
 

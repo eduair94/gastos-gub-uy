@@ -958,7 +958,7 @@ useSeo(() => ({
 /* ---- Ink hero ---- */
 .hero {
   background: var(--ink) !important;
-  color: #eaf1f6;
+  color: var(--ink-fg);
   padding-block: var(--s-7) var(--s-6);
 }
 .hero__in { max-width: 72ch; }

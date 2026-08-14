@@ -176,6 +176,11 @@ the old `.inv-cardc` / `.inv-cardsub` / `.inv-scroll` trio was a second, weaker
 copy of that box, and each page wired its own scroller. `ChartBlock`'s `title`
 is optional for the case where the section head already names the chart.
 
+`InvSources` gives each source link a 24px hit area: one link per row IS the
+control, and a one-line source title was a 19px target (WCAG 2.2 SC 2.5.8). Do
+the same for any standalone link you add — `min-height` plus `inline-flex`
+grows the box without moving the type. A link inside a sentence is exempt.
+
 ### DataTable, PaginatedList and DataPager
 
 Use this trio for directory results. `DataTable` preserves table semantics on

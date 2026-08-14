@@ -122,9 +122,16 @@ withDefaults(defineProps<{
 
 /* Institutional source strings carry bare URLs with no break opportunity;
    without this the line box runs past the viewport and the whole page scrolls
-   sideways at 360px. */
+   sideways at 360px.
+   `min-height` is WCAG 2.2 SC 2.5.8: one link per row IS the control here, and
+   a one-line source title was a 19px target. */
 .inv-srclist a,
-.inv-srclist :deep(a) { overflow-wrap: anywhere; }
+.inv-srclist :deep(a) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  overflow-wrap: anywhere;
+}
 
 @media (max-width: 900px) {
   .inv-srclist--split { columns: 1; }

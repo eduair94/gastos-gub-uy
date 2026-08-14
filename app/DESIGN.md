@@ -96,8 +96,32 @@ Filled custom CTAs pair `--cta-fill` with `--cta-fg`; filled alert actions pair
 `--alerta` with `--alerta-fg`. These pairs invert safely in dark mode.
 
 The dark theme is “the expediente under a desk lamp”: paper becomes ink while
-money remains gold. Content placed on the permanent `--ink` surface uses
-`--ink-fg`, `--ink-fg-dim`, `--ink-rule` and `--ink-alerta`.
+money remains gold. `--ink` is a dark surface in BOTH themes, so content placed
+on it never uses the paper tokens — they invert underneath it. The ink scale is
+complete and closed; nothing on that surface needs a hex:
+
+| Token | Against `--ink` | Use |
+| --- | --- | --- |
+| `--ink-fg-strong` | 16.2:1 | Headlines and the emphasised word |
+| `--ink-fg` | 14.2:1 | Body on ink |
+| `--ink-fg-dim` | 9.5:1 | Deks, secondary lines |
+| `--ink-fg-faint` | 6.7:1 | The file line, mono meta |
+| `--ink-link` | 7.1:1 | Links (`--celeste-deep` flips; this surface does not) |
+| `--ink-flag` | 6.5:1 | `--alerta` **as text**; `--ink-alerta` is the fill |
+| `--ink-rule` / `--ink-rule-soft` / `--ink-fill` | — | Edges and raised cells |
+
+Every ink panel carries a `--ink-rule` hairline: in dark mode `--ink` and
+`--surface` sit at 1.07:1, so without it the panel’s edge dissolves and only
+the shadow survives.
+
+**An accent is not an ink.** `--celeste` and `--alerta` are fills sized for a
+marker or a border; as small text they land between 2.6:1 and 4.2:1. Text uses
+`--celeste-deep` / `--text`; the accent moves to the dot, rule or icon, where
+the 3:1 non-text floor applies.
+
+**Targets.** A standalone link is a control and needs a 24×24px hit area
+(WCAG 2.2 SC 2.5.8) — grow the box with `min-height` and `inline-flex`, not the
+type. Links inside a sentence are exempt.
 
 ## Typography
 

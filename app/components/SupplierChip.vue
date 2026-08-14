@@ -14,9 +14,13 @@ const { t } = useI18n()
 const MEDIA = new Set(['medio-tv', 'medio-radio', 'medio-prensa', 'medio-digital', 'medio-via-publica'])
 const VERDE = new Set(['agencia-publicidad', 'productora'])
 
+// `primary` (celeste-deep), not `info` (celeste): Vuetify paints a chip's label
+// in its own colour, and the bright celeste measured 3.3:1 as 11px uppercase
+// text on the chip's tonal wash. `info` stays what it is — a fill for icons and
+// timeline dots, where the 3:1 non-text floor applies.
 const color = computed(() => {
   const c = props.category ?? ''
-  if (MEDIA.has(c)) return 'info'
+  if (MEDIA.has(c)) return 'primary'
   if (VERDE.has(c)) return 'success'
   return undefined
 })
