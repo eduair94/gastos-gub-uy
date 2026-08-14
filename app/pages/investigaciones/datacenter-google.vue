@@ -178,9 +178,28 @@ const leakFacts = computed(() => [
       </div>
     </InvSection>
 
-    <!-- El contraste con lo que sí paga el Estado -->
+    <!-- La letra chica de la autorización -->
     <InvSection
       alt
+      :eyebrow="cx.condicionesTag"
+      :title="cx.condicionesTitle"
+      :dek="cx.condicionesIntro"
+    >
+      <ol class="dc-cond">
+        <li
+          v-for="(cond, i) in cx.condiciones"
+          :key="i"
+        >
+          {{ cond }}
+        </li>
+      </ol>
+      <p class="inv-note">
+        {{ cx.condicionesNota }}
+      </p>
+    </InvSection>
+
+    <!-- El contraste con lo que sí paga el Estado -->
+    <InvSection
       :eyebrow="cx.contrasteTag"
       :title="cx.contrasteTitle"
     >
@@ -209,6 +228,7 @@ const leakFacts = computed(() => [
 
     <!-- Los límites, con el mismo peso que los hallazgos -->
     <InvSection
+      alt
       :eyebrow="c.common.method ?? 'Método'"
       :title="cx.limitesTitle"
     >
@@ -222,7 +242,7 @@ const leakFacts = computed(() => [
       </ul>
     </InvSection>
 
-    <InvSection alt>
+    <InvSection>
       <LeakTip
         :subject="cx.title"
         path="/investigaciones/datacenter-google"
@@ -231,6 +251,7 @@ const leakFacts = computed(() => [
     </InvSection>
 
     <InvSection
+      alt
       :eyebrow="cx.sourcesTag"
       :title="cx.sourcesTitle"
       :dek="cx.sourcesP"
@@ -238,7 +259,7 @@ const leakFacts = computed(() => [
       <InvSources :groups="sourceGroups" />
     </InvSection>
 
-    <InvSection alt>
+    <InvSection>
       <InvDisclaimer
         :title="c.common.disclaimerTitle"
         :paragraphs="c.common.disclaimer"
@@ -291,6 +312,15 @@ const leakFacts = computed(() => [
   margin: 0;
   max-width: 72ch;
   line-height: 1.6;
+}
+
+.dc-cond {
+  margin: 0;
+  padding-left: var(--s-5);
+  display: grid;
+  gap: var(--s-3);
+  max-width: 74ch;
+  line-height: 1.55;
 }
 
 .dc-limits {
