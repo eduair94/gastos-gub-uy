@@ -55,6 +55,23 @@ Una expresión regular alcanza.
 capa de texto ronda un tercio. El trabajo debe medir la cobertura real y publicar
 el motivo sólo cuando lo leyó.
 
+**Segunda trampa, y costó una corrida.** El `.doc` viejo de Word es un OLE binario.
+Leerlo como latin1 y sacarle los bytes de control devuelve 110.000 caracteres de
+basura —el JPEG que el documento lleva incrustado— y esa basura pasaba por texto.
+Hay que abrirlo con `word-extractor`, que ya es dependencia del repo, y además
+exigir que el resultado parezca prosa: más del 80% letras y espacios.
+
+**Tercera trampa: la cláusula tiene nueve redacciones, no una.** Una muestra de un
+documento por año las midió. La de las intendencias —«observa el gasto al programa
+203, rubro 1.9.3 … no cumple con Art. 15° del T.O.C.A.F»— no se parece a la de UTE.
+Un solo patrón lee una época y pierde las otras. La detección va en capas: primero
+confirma que hay observación, después intenta el motivo. Un documento puede quedar
+observado y sin motivo, y eso es correcto.
+
+**Y el artículo 114 no es la norma incumplida.** Es la facultad de reiterar.
+Contarlo entre los artículos incumplidos diría que el organismo violó la norma que
+lo habilita.
+
 **Vía descartada:** los PDF del propio Tribunal de Cuentas (`tcr.gub.uy`) son
 escaneados sin excepción en la muestra. Leer el fallo exigiría OCR. Queda fuera.
 
@@ -82,6 +99,17 @@ Cuatro granos, en este orden de prioridad:
 
 Familias de indicador aplicadas a cada entidad que supera un umbral. Cada familia
 se diseña una vez. Cada instancia lleva su `tests/unit/hallazgo-*.verify.ts`.
+
+### Carril D — El Tribunal de Cuentas, compra por compra (+335)
+
+No estaba en el plan original. Salió de medir: `tcr_resolutions` ya tiene 452
+resoluciones atadas a una compra, y las 452 traen VISTO. Da 307 fichas por compra
+y 28 por organismo, con la misma infraestructura de los carriles B y C.
+
+**El verbo manda.** El archivo público del Tribunal trae sólo el VISTO. El fallo
+está únicamente en el PDF, y ese PDF es un escaneo. La ficha dice «se pronunció» y
+nunca «observó». `scripts/verify-derived-casos.ts` rechaza la ficha que lo diga, y
+mira sólo el texto propio, no el VISTO citado.
 
 ## Almacenamiento y recursos
 
