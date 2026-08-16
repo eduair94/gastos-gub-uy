@@ -267,6 +267,14 @@ export function buildContractFilters(query: Record<string, unknown>): ContractFi
     and.push({ 'awards.documents.documentType': 'reiteracionGasto' })
   }
 
+  // --- OCID exacto ----------------------------------------------------------
+  // Para cuando una ficha habla de UNA compra concreta. `search` no sirve: el buscador
+  // re-chequea la frase completa contra títulos, objetos y nombres, y el id de la compra no
+  // vive en ninguno de esos campos, así que devuelve cero. `ocid` sí tiene índice propio
+  // (`ocid_1`), y una consulta exacta resuelve en unos 175ms.
+  const ocids = toArray(query.ocids)
+  if (ocids.length) and.push({ ocid: { $in: ocids } })
+
   return {
     and,
     text,

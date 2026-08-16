@@ -107,6 +107,13 @@ export interface CasoQuery {
    * del organismo — su contabilidad, no el caso. Es la regla 3 de verify-casos.
    */
   hasReiteracion?: boolean | undefined
+  /**
+   * OCID exactos, para la ficha que habla de UNA compra.
+   *
+   * `search` no sirve para esto: el buscador re-chequea la frase contra títulos, objetos y
+   * nombres, y el id de la compra no está en ninguno de esos campos. Devolvía cero.
+   */
+  ocids?: string[] | undefined
 }
 
 export interface CasoSource {

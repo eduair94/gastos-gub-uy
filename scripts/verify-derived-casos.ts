@@ -94,10 +94,15 @@ async function main() {
     console.log(`→ resolviendo ${withQuery.length} cruces…`)
     for (const c of withQuery) {
       const match = toMatchDocument(buildContractFilters(casoToQueryParams(c.query!)))
+      // El piso de dos contratos existe para que una coincidencia de palabra no pase por
+      // conjunto. Una consulta por OCID exacto no puede coincidir por azar: es un
+      // identificador. Ahí un contrato es el resultado correcto, y exigir dos borraría toda
+      // la ficha por compra.
+      const floor = c.query?.ocids?.length ? 1 : MIN_CONTRACTS
       try {
         const n = await ReleaseModel.countDocuments(match).maxTimeMS(QUERY_TIMEOUT_MS)
-        if (n < MIN_CONTRACTS) {
-          errors.push(`${c.slug}: el cruce devuelve ${n} contrato(s), por debajo de ${MIN_CONTRACTS}`)
+        if (n < floor) {
+          errors.push(`${c.slug}: el cruce devuelve ${n} contrato(s), por debajo de ${floor}`)
         }
       }
       catch (e) {

@@ -314,7 +314,9 @@ function buildCompra(r: Row): CasoDef {
     organisms: [comprador],
     suppliersNamed: prov ? [prov] : [],
     feedCoverage: 'likely',
-    query: { search: cid },
+    // Por OCID exacto, no por `search`: el buscador re-chequea la frase contra títulos y
+    // nombres, y el id de la compra no vive ahí. Con `search` el cruce daba cero.
+    query: { ocids: [r.ocid] },
     sources: sourcesFrom([r]),
     es,
     en,

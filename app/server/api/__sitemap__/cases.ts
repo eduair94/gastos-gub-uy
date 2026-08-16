@@ -1,9 +1,14 @@
-import { CASO_THEMES, listCasoDefs } from '../../utils/casos'
+import { CASO_THEMES, listAllCasoDefs } from '../../utils/casos'
 import { listCurroDefs } from '../../utils/curros'
 import { listRecopDefs } from '../../utils/recopilatorios'
 
-/** Curros + recopilatorios + casos — static case defs, no DB needed. See buyers.ts for why this is its own source. */
-export default defineSitemapEventHandler(() => {
+/**
+ * Curros + recopilatorios + casos. See buyers.ts for why this is its own source.
+ *
+ * Casos are no longer purely static: the `gasto-observado` theme is built into Mongo, so this
+ * handler awaits. A derived file that is absent from the sitemap is a page no crawler finds.
+ */
+export default defineSitemapEventHandler(async () => {
   const urls: unknown[] = []
   for (const def of listCurroDefs()) {
     urls.push({ loc: `/curros/${def.slug}`, changefreq: 'monthly' as const, priority: 0.8 })
@@ -17,7 +22,7 @@ export default defineSitemapEventHandler(() => {
   for (const theme of CASO_THEMES) {
     urls.push({ loc: `/investigaciones/temas/${theme.key}`, changefreq: 'monthly' as const, priority: 0.8 })
   }
-  for (const def of listCasoDefs()) {
+  for (const def of await listAllCasoDefs()) {
     urls.push({ loc: `/investigaciones/casos/${def.slug}`, changefreq: 'monthly' as const, priority: 0.7 })
   }
   return urls

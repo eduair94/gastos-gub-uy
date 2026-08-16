@@ -101,6 +101,7 @@ export function casoToQueryParams(q: CasoQuery): Record<string, unknown> {
   if (q.yearFrom != null) params.yearFrom = q.yearFrom
   if (q.yearTo != null) params.yearTo = q.yearTo
   if (q.hasReiteracion) params.hasReiteracion = true
+  if (q.ocids?.length) params.ocids = q.ocids
   return params
 }
 
