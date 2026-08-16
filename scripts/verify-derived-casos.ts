@@ -99,10 +99,23 @@ async function main() {
       // identificador. Ahí un contrato es el resultado correcto, y exigir dos borraría toda
       // la ficha por compra.
       const floor = c.query?.ocids?.length ? 1 : MIN_CONTRACTS
+      // `buyerIds` sin nada que lo acote es la regla 1 de verify-casos: `buyer.id` no tiene
+      // índice y una consulta que lo lidera tarda más que el presupuesto del endpoint. Con
+      // `hasReiteracion` la consulta la lidera `reiteracion_partial`, que deja 5.825
+      // candidatos, y el filtro por id se resuelve sobre eso. Medido: 793ms.
+      if (c.query?.buyerIds?.length && !c.query.hasReiteracion) {
+        errors.push(`${c.slug}: usa buyerIds sin acotar — buyer.id no tiene índice (regla 1)`)
+      }
+      const t = Date.now()
       try {
         const n = await ReleaseModel.countDocuments(match).maxTimeMS(QUERY_TIMEOUT_MS)
+        const ms = Date.now() - t
         if (n < floor) {
           errors.push(`${c.slug}: el cruce devuelve ${n} contrato(s), por debajo de ${floor}`)
+        }
+        // El presupuesto real del endpoint. Más lento que esto y la página renderiza vacía.
+        else if (ms > 9000) {
+          errors.push(`${c.slug}: el cruce tardó ${ms}ms, por encima del presupuesto de 9s`)
         }
       }
       catch (e) {

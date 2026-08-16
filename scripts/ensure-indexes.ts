@@ -492,6 +492,28 @@ async function main(): Promise<void> {
       await derivedCasos.createIndex({ 'def.theme': 1, rank: 1 }, { background: true })
       console.log('✅ derived_casos indexes ensured (slug unique, origin+rank, def.theme+rank)')
 
+      // releases: el filtro `hasReiteracion` del explorador y de toda ficha del tema
+      // «gasto observado».
+      //
+      // POR QUÉ ES PARCIAL. `awards.documents` es un array grande: indexarlo entero mete más
+      // de dos millones de entradas, casi todas `awardNotice`, que a nadie le sirven. El
+      // filtro parcial deja SÓLO las 5.825 compras con documento de reiteración. El índice
+      // queda chico y la consulta pasa a ser un acierto directo.
+      //
+      // SIN ESTO LA PÁGINA TIRA 500. Sin índice, el planificador de Mongo no llega a elegir
+      // plan y devuelve «multiplanner encountered a failure while selecting best plan»
+      // después de nueve segundos, que es justo el presupuesto del endpoint.
+      const releasesCol = client.db(DB_NAME).collection('releases')
+      await releasesCol.createIndex(
+        { 'awards.documents.documentType': 1 },
+        {
+          name: 'reiteracion_partial',
+          background: true,
+          partialFilterExpression: { 'awards.documents.documentType': 'reiteracionGasto' },
+        },
+      )
+      console.log('✅ releases.reiteracion_partial ensured (parcial: sólo reiteracionGasto)')
+
       // organism_news: press coverage of each organism procurement, written by
       // src/jobs/refresh-organism-news.ts. buyerId unique is the upsert key and the
       // panel lookup; fetchedAt ascending drives "refresh the stalest first".

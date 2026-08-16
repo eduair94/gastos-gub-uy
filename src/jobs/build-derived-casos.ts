@@ -148,15 +148,23 @@ function articlesLine(rows: Row[]): { es: string, en: string } {
 
 // ── Los cuatro granos ───────────────────────────────────────────────────────
 
-function buildOrganismo(buyerName: string, rows: Row[]): CasoDef {
+function buildOrganismo(buyerId: string, buyerName: string, rows: Row[], nameIsShared: boolean): CasoDef {
   const total = totalOf(rows)
   const per = period(rows.map(r => r.sourceYear))
   const reason = reasonLine(rows)
   const arts = articlesLine(rows)
+  // Varias unidades ejecutoras comparten nombre entre ministerios. Cuando pasa, la ficha dice
+  // de cuál habla, porque el nombre solo no alcanza para identificarla.
+  const desambigua = nameIsShared
+    ? ` Ese nombre lo usan varias unidades ejecutoras del Estado: esta ficha es la del identificador ${buyerId}, y no incluye el gasto de las otras.`
+    : ''
+  const desambiguaEn = nameIsShared
+    ? ` Several executing units share that name: this file covers identifier ${buyerId} only, and excludes the others' spending.`
+    : ''
   const es: CasoText = {
     title: `${buyerName}: ${rows.length} compras observadas y pagadas igual`,
     dek: `El Tribunal de Cuentas observó ${rows.length} compras de este organismo. El organismo las reiteró y las pagó.`,
-    contexto: `Cuando el Tribunal de Cuentas observa un gasto, el organismo puede reiterarlo y ejecutarlo bajo su responsabilidad. Cada reiteración deja un documento en el portal de Compras Estatales. En este corpus, ${buyerName} tiene ${rows.length} compras con ese documento, entre ${per}.`,
+    contexto: `Cuando el Tribunal de Cuentas observa un gasto, el organismo puede reiterarlo y ejecutarlo bajo su responsabilidad. Cada reiteración deja un documento en el portal de Compras Estatales. En este corpus, ${buyerName} tiene ${rows.length} compras con ese documento, entre ${per}.${desambigua}`,
     hallazgo: `Las ${rows.length} compras suman ${money(total)} en valores normalizados a pesos uruguayos. ${reason.es}${arts.es}`,
     statusNote: `Cifra medida sobre el corpus el día que corrió el armador. El documento de cada compra se enlaza en las fuentes.`,
     porQueImporta: `Una observación del Tribunal de Cuentas es el aviso del auditor del propio Estado. Reiterar el gasto es la decisión de gastar igual. Con qué frecuencia un organismo toma esa decisión dice algo sobre cómo administra.`,
@@ -165,14 +173,18 @@ function buildOrganismo(buyerName: string, rows: Row[]): CasoDef {
   const en: CasoText = {
     title: `${buyerName}: ${rows.length} purchases objected to and paid anyway`,
     dek: `The Court of Auditors objected to ${rows.length} of this body's purchases. The body overrode the objection and paid.`,
-    contexto: `When the Court of Auditors objects to a spending commitment, the body may reiterate it and execute it under its own responsibility. Each override leaves a document on the state procurement portal. In this corpus, ${buyerName} has ${rows.length} purchases carrying that document, between ${per}.`,
+    contexto: `When the Court of Auditors objects to a spending commitment, the body may reiterate it and execute it under its own responsibility. Each override leaves a document on the state procurement portal. In this corpus, ${buyerName} has ${rows.length} purchases carrying that document, between ${per}.${desambiguaEn}`,
     hallazgo: `The ${rows.length} purchases add up to ${moneyEn(total)} in Uruguayan pesos, normalised. ${reason.en}${arts.en}`,
     statusNote: `Figure measured against the corpus on the day the builder ran. Each purchase's document is linked in the sources.`,
     porQueImporta: `An objection from the Court of Auditors is a warning from the state's own auditor. Overriding it is a decision to spend regardless. How often a body takes that decision says something about how it is run.`,
     caveat: `${TOCAF_EN} This file counts how often it happened and the stated reason. The total adds up each purchase's normalised amount, not the objected amount, which the document does not always give.`,
   }
   return {
-    slug: `reiteraciones-${slugify(buyerName)}`,
+    // Cuando el nombre lo comparten varias unidades ejecutoras, el id entra en el slug. Sin
+    // eso, tres ministerios distintos colapsarían en una ficha sola.
+    slug: nameIsShared
+      ? `reiteraciones-${slugify(buyerName)}-${slugify(buyerId)}`
+      : `reiteraciones-${slugify(buyerName)}`,
     emoji: '\u{1F9FE}',
     theme: 'gasto-observado',
     period: per,
@@ -181,8 +193,14 @@ function buildOrganismo(buyerName: string, rows: Row[]): CasoDef {
     amountReported: `${money(total)} en ${rows.length} compras con gasto reiterado (medido sobre este corpus, ${per})`,
     organisms: [buyerName],
     feedCoverage: 'likely',
-    // Comprador + reiteración. Sólo por comprador sería el padrón entero del organismo.
-    query: { buyers: [buyerName], hasReiteracion: true },
+    // Por id de comprador, no por nombre: «Dirección General de Secretaría» es el nombre de
+    // una unidad que existe en varios ministerios a la vez, y filtrar por nombre mezcla el
+    // gasto de tres organismos en una ficha.
+    //
+    // La regla 1 de verify-casos prohíbe `buyerIds` porque `buyer.id` no tiene índice. Acá no
+    // lidera la consulta: la lidera `reiteracion_partial`, que deja 5.825 candidatos. Medido,
+    // 793ms.
+    query: { buyerIds: [buyerId], hasReiteracion: true },
     sources: sourcesFrom(rows),
     es,
     en,
@@ -347,16 +365,26 @@ async function main() {
 
   const defs: CasoDef[] = []
 
-  // Grano 1 — por organismo.
+  // Grano 1 — por organismo, agrupado por ID y NO por nombre.
+  //
+  // «Dirección General de Secretaría» es el nombre de una unidad que existe en tres
+  // ministerios a la vez (11-1, 9-1, 7-1). Agrupar por nombre publicaba una ficha que le
+  // atribuía a un organismo el gasto de los otros dos.
   const porOrganismo = new Map<string, Row[]>()
+  const nombrePorId = new Map<string, string>()
+  const idsPorNombre = new Map<string, Set<string>>()
   for (const r of rows) {
-    if (!r.buyerName) continue
-    porOrganismo.set(r.buyerName, [...(porOrganismo.get(r.buyerName) ?? []), r])
+    if (!r.buyerName || !r.buyerId) continue
+    porOrganismo.set(r.buyerId, [...(porOrganismo.get(r.buyerId) ?? []), r])
+    nombrePorId.set(r.buyerId, r.buyerName)
+    idsPorNombre.set(r.buyerName, (idsPorNombre.get(r.buyerName) ?? new Set()).add(r.buyerId))
   }
   let nOrg = 0
-  for (const [buyerName, group] of porOrganismo) {
+  for (const [buyerId, group] of porOrganismo) {
     if (group.length < MIN_POR_ORGANISMO) continue
-    defs.push(buildOrganismo(buyerName, group))
+    const buyerName = nombrePorId.get(buyerId)!
+    const shared = (idsPorNombre.get(buyerName)?.size ?? 1) > 1
+    defs.push(buildOrganismo(buyerId, buyerName, group, shared))
     nOrg++
   }
   console.log(`  grano organismo: ${nOrg} fichas`)
