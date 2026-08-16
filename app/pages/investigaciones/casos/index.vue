@@ -25,6 +25,22 @@ const PER_PAGE = 24
 const page = ref(1)
 const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
 
+const KINDS = ['judicial', 'auditoria', 'gestion', 'debate'] as const
+
+// Filters live in the URL so a filtered view is a shareable link.
+//
+// ORDEN: estos tres se declaran ANTES del useFetch y no después. `useFetch` evalúa su `query`
+// en el acto para armar el pedido, así que si lee `theme` antes de esta línea el setup muere
+// con «Cannot access before initialization» y la página entera devuelve 500.
+const theme = computed({
+  get: () => (typeof route.query.tema === 'string' ? route.query.tema : ''),
+  set: (v: string) => setQuery({ tema: v || undefined }),
+})
+const kind = computed({
+  get: () => (typeof route.query.tipo === 'string' ? route.query.tipo : ''),
+  set: (v: string) => setQuery({ tipo: v || undefined }),
+})
+
 // El servidor filtra y pagina. Traer las mil fichas para filtrarlas en memoria pondría más de
 // 2MB en el payload de SSR, y un filtro que corre sobre una sola página daría un contador
 // falso.
@@ -51,17 +67,6 @@ function themeText(th: any) {
 const themeById = computed<Record<string, any>>(() =>
   Object.fromEntries(themes.value.map((th: any) => [th.key, th])))
 
-const KINDS = ['judicial', 'auditoria', 'gestion', 'debate'] as const
-
-// Filters live in the URL so a filtered view is a shareable link.
-const theme = computed({
-  get: () => (typeof route.query.tema === 'string' ? route.query.tema : ''),
-  set: (v: string) => setQuery({ tema: v || undefined }),
-})
-const kind = computed({
-  get: () => (typeof route.query.tipo === 'string' ? route.query.tipo : ''),
-  set: (v: string) => setQuery({ tipo: v || undefined }),
-})
 function setQuery(patch: Record<string, string | undefined>) {
   // Rebuilt rather than mutated: an empty value must LEAVE the address bar, not
   // sit there as `?tema=`, and a filtered URL is the thing a reader shares.
