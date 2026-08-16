@@ -21,6 +21,8 @@
  *   npm run seed:dev -- --seed=42       # different pseudo-random fixture
  */
 import { execFileSync } from 'child_process'
+import { existsSync, readFileSync } from 'fs'
+import { join } from 'path'
 import { connectToDatabase, disconnectFromDatabase, maskMongoUri } from '../shared/connection/database'
 import { ReleaseModel, SupplierContactModel } from '../shared/models'
 import { mongoUri } from '../shared/config'
@@ -210,6 +212,10 @@ function buildAwardRelease(buyerId: string, buyerName: string, year: number) {
   const total = items.reduce((s, it) => s + it._lineTotal, 0)
   const methodDetails = weightedMethod()
   for (const it of items) trackSupplierClass(supplier.id, it.classification.id, it.description)
+  // The real uploader stamps this on ingest, a few days after the release's own
+  // `date` — see src/uploaders/release-uploader-new.ts:452. Feeds the "Origen
+  // del registro" panel's "Importado el" row.
+  const webFetchDate = new Date(date.getTime() + int(0, 3) * 86_400_000)
 
   return {
     id, ocid,
@@ -217,6 +223,10 @@ function buildAwardRelease(buyerId: string, buyerName: string, year: number) {
     tag: ['award'],
     date,
     sourceYear: year,
+    webFetchDate,
+    // Same fallback shape the real uploader uses when a release carries no RSS
+    // <link> of its own (release-uploader-new.ts:738) — feeds "Enlace del origen".
+    rssLink: `https://www.comprasestatales.gub.uy/ocds/release/${id}`,
     parties: [
       { id: buyerId, roles: ['buyer', 'procuringEntity'], name: buyerName, contactPoint: buyerContactPoint(buyerName) },
       { id: supplier.id, roles: ['supplier'], name: supplier.name },
@@ -256,6 +266,13 @@ function buildAwardRelease(buyerId: string, buyerName: string, year: number) {
       hasAmounts: true,
       primaryAmount: total,
       primaryCurrency: 'UYU',
+      // Every item here is priced in UYU already (see ITEM_CATALOG), so the
+      // "original" peso amount is just the total and no conversion happened —
+      // still stamped with a rate-check date, matching how the real pipeline
+      // records it even for peso-only releases. Feeds "Detalle del monto".
+      originalUYUAmount: total,
+      hasConvertedAmounts: false,
+      exchangeRateDate: date,
     },
   }
 }
@@ -295,6 +312,51 @@ function buildTenderOnlyRelease(buyerId: string, buyerName: string, year: number
   }
 }
 
+/**
+ * Real award releases captured from the public API (scripts/fetch-real-fixture.mjs).
+ *
+ * The synthetic generator above draws every item from a 10-entry catalogue, so
+ * its records are too uniform to exercise what real data does: packed
+ * `submissionMethodDetails`, `bidders`/`callBidders`, `tcr`, scraped
+ * características, and — the reason this fixture exists — several award lines
+ * sharing one `classification.id` at DIFFERENT unit prices. The contract page
+ * compares prices per LINE because of that case; only real records prove it.
+ *
+ * Absent or unreadable, the seed still works: it just loses those shapes.
+ */
+function loadRealReleases(): any[] {
+  const path = join(__dirname, 'fixtures', 'real-releases.json')
+  if (!existsSync(path)) {
+    console.warn('[seed-dev-db] no real-releases fixture — synthetic records only.')
+    console.warn('[seed-dev-db] regenerate it with: node scripts/fetch-real-fixture.mjs')
+    return []
+  }
+  try {
+    const docs = JSON.parse(readFileSync(path, 'utf8')) as any[]
+    // JSON has no date type, so every timestamp arrived as an ISO string. Left
+    // that way, `date` sorts lexically, date-range filters miss entirely and
+    // formatDate renders "Invalid Date" — revive them into real Dates.
+    return docs.map(d => reviveDates(d))
+  }
+  catch (err) {
+    console.warn(`[seed-dev-db] real-releases fixture unreadable, skipping: ${(err as Error).message}`)
+    return []
+  }
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T[\d:.]+(?:Z|[+-]\d{2}:\d{2})$/
+
+function reviveDates(value: any): any {
+  if (typeof value === 'string') return ISO_DATE.test(value) ? new Date(value) : value
+  if (Array.isArray(value)) return value.map(reviveDates)
+  if (value && typeof value === 'object') {
+    const out: Record<string, any> = {}
+    for (const [k, v] of Object.entries(value)) out[k] = reviveDates(v)
+    return out
+  }
+  return value
+}
+
 async function seedReleases() {
   console.log(`[seed-dev-db] generating fixture releases (seed=${SEED})…`)
   const docs: any[] = []
@@ -313,17 +375,20 @@ async function seedReleases() {
     for (let i = 0; i < int(2, 4); i++) docs.push(buildTenderOnlyRelease(buyerId, buyerName, CURRENT_YEAR, true))
   }
 
+  const real = loadRealReleases()
+  const all = [...docs, ...real]
+
   await connectToDatabase()
   console.log(`[seed-dev-db] wiping existing releases…`)
   await ReleaseModel.collection.deleteMany({})
-  console.log(`[seed-dev-db] inserting ${docs.length} synthetic releases…`)
+  console.log(`[seed-dev-db] inserting ${docs.length} synthetic + ${real.length} real releases…`)
   // Raw driver, not Mongoose .create()/.insertMany() validation — mirrors how the
   // live uploader writes, and lets unknown-method/unpriced docs through untouched.
   const BATCH = 1000
-  for (let i = 0; i < docs.length; i += BATCH) {
-    await ReleaseModel.collection.insertMany(docs.slice(i, i + BATCH))
+  for (let i = 0; i < all.length; i += BATCH) {
+    await ReleaseModel.collection.insertMany(all.slice(i, i + BATCH))
   }
-  console.log(`[seed-dev-db] done: ${docs.length} releases across ${BUYERS.length} buyers × ${YEARS.length} years.`)
+  console.log(`[seed-dev-db] done: ${all.length} releases (${docs.length} synthetic across ${BUYERS.length} buyers × ${YEARS.length} years, ${real.length} real from the public API).`)
 }
 
 // supplier_contacts (behind /proveedores/contactos + the supplier detail contact
