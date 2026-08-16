@@ -483,6 +483,15 @@ async function main(): Promise<void> {
       await reiteracionDocs.createIndex({ buyerId: 1 }, { background: true })
       console.log('✅ reiteracion_docs indexes ensured (ocid unique, observed+reason, buyerId)')
 
+      // derived_casos: fichas armadas por src/jobs/build-derived-casos.ts. `slug` único es la
+      // clave del upsert y la de la página de detalle; los otros dos ordenan el índice y la
+      // página de tema sin traer el `def` entero.
+      const derivedCasos = client.db(DB_NAME).collection('derived_casos')
+      await derivedCasos.createIndex({ slug: 1 }, { unique: true, background: true })
+      await derivedCasos.createIndex({ origin: 1, rank: 1 }, { background: true })
+      await derivedCasos.createIndex({ 'def.theme': 1, rank: 1 }, { background: true })
+      console.log('✅ derived_casos indexes ensured (slug unique, origin+rank, def.theme+rank)')
+
       // organism_news: press coverage of each organism procurement, written by
       // src/jobs/refresh-organism-news.ts. buyerId unique is the upsert key and the
       // panel lookup; fetchedAt ascending drives "refresh the stalest first".

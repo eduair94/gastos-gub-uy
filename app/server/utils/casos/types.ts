@@ -174,6 +174,7 @@ export type CasoThemeKey
     | 'estado-y-fondos'
     | 'ambiente'
     | 'deporte-y-cultura'
+    | 'gasto-observado'
 
 export interface CasoThemeDef {
   key: CasoThemeKey
@@ -270,6 +271,21 @@ export const CASO_THEMES: CasoThemeDef[] = [
     emoji: '🎭',
     es: { label: 'Deporte y cultura', dek: 'El Centenario rumbo al Mundial 2030, los fondos concursables y los cachés que paga el Estado.' },
     en: { label: 'Sport and culture', dek: 'The Centenario stadium heading to the 2030 World Cup, arts funds, and the fees the state pays performers.' },
+  },
+  // El único tema que NO se escribe a mano. Sus fichas las arma
+  // src/jobs/build-derived-casos.ts a partir del documento oficial de reiteración, y viven en
+  // la colección `derived_casos`. Va último para no correr el orden de las catorce curadas.
+  {
+    key: 'gasto-observado',
+    emoji: '🧾',
+    es: {
+      label: 'Gasto observado y reiterado',
+      dek: 'Compras que el Tribunal de Cuentas observó y que el organismo pagó igual, amparado en el artículo 114 del TOCAF.',
+    },
+    en: {
+      label: 'Observed and overridden spending',
+      dek: 'Purchases the Court of Auditors objected to and the body paid anyway, under article 114 of the TOCAF.',
+    },
   },
 ]
 
