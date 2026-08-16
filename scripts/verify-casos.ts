@@ -103,8 +103,11 @@ const MIN_CONTRACTS = 2
 async function checkQuery(slug: string, query: Record<string, unknown>) {
   const filters = buildContractFilters(casoToQueryParams(query as never))
   const match = toMatchDocument(filters)
-  const q = query as { search?: string, suppliers?: string[], supplierIds?: string[] }
-  const organismOnly = !q.search && !q.suppliers?.length && !q.supplierIds?.length
+  const q = query as { search?: string, suppliers?: string[], supplierIds?: string[], hasReiteracion?: boolean }
+  // `hasReiteracion` acota tanto como un proveedor o una frase: deja las compras que el
+  // Tribunal de Cuentas observó, que son una fracción chica del padrón de cualquier
+  // organismo. Una consulta que lo lleva NO es una consulta sólo-organismo.
+  const organismOnly = !q.search && !q.suppliers?.length && !q.supplierIds?.length && !q.hasReiteracion
   const t = Date.now()
   try {
     const count = await ReleaseModel.countDocuments(match).maxTimeMS(QUERY_TIMEOUT_MS)

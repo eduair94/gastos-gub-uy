@@ -98,6 +98,15 @@ export interface CasoQuery {
   procurementMethodDetails?: string[] | undefined
   yearFrom?: number | undefined
   yearTo?: number | undefined
+  /**
+   * Sólo compras con documento de reiteración del gasto: las que el Tribunal de Cuentas
+   * observó y el organismo pagó igual.
+   *
+   * Existe para que una ficha por organismo tenga un cruce ACOTADO. Sin esto la consulta
+   * sería sólo por comprador, y una consulta sólo por comprador devuelve el padrón entero
+   * del organismo — su contabilidad, no el caso. Es la regla 3 de verify-casos.
+   */
+  hasReiteracion?: boolean | undefined
 }
 
 export interface CasoSource {
