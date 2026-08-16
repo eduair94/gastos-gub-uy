@@ -20,16 +20,21 @@ check(
   `la colección es "${DerivedCasoModel.collection.name}"`,
 )
 
-const observado = CASO_THEMES.find(t => t.key === 'gasto-observado')
-check(Boolean(observado), 'falta el tema "gasto-observado"')
-// Va último a propósito: las catorce temáticas curadas abren la lista, y el carril armado la
-// cierra. Meterlo en el medio correría el orden editorial de todo el sitio.
+// Los temas ARMADOS van al final, después de los catorce curados. El orden es editorial:
+// primero lo que escribió una persona, después lo que armó un trabajo por lotes. Meter uno en
+// el medio correría el orden de todo el sitio.
+const DERIVED = ['gasto-observado', 'tribunal-de-cuentas']
+const cola = CASO_THEMES.slice(-DERIVED.length).map(t => t.key)
 check(
-  CASO_THEMES[CASO_THEMES.length - 1]?.key === 'gasto-observado',
-  'el tema "gasto-observado" tiene que ir último',
+  DERIVED.every(k => cola.includes(k)),
+  `los temas armados tienen que ir últimos; la cola es ${JSON.stringify(cola)}`,
 )
-check(Boolean(observado?.en.label), 'el tema necesita sus dos idiomas')
-check(Boolean(observado?.emoji), 'el tema necesita emoji')
+for (const key of DERIVED) {
+  const th = CASO_THEMES.find(t => t.key === key)
+  check(Boolean(th), `falta el tema "${key}"`)
+  check(Boolean(th?.en.label), `el tema "${key}" necesita sus dos idiomas`)
+  check(Boolean(th?.emoji), `el tema "${key}" necesita emoji`)
+}
 
 // Las claves de tema no se repiten: el índice agrupa por ellas.
 const keys = CASO_THEMES.map(t => t.key)

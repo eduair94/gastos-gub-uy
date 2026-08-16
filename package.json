@@ -91,6 +91,7 @@
     "verify:casos": "tsx scripts/verify-casos.ts",
     "fetch-reiteracion-docs": "tsx src/jobs/fetch-reiteracion-docs.ts",
     "build-derived-casos": "tsx src/jobs/build-derived-casos.ts",
+    "build-tcr-casos": "tsx src/jobs/build-tcr-casos.ts",
     "verify:casos:derived": "tsx scripts/verify-derived-casos.ts"
   },
   "keywords": [

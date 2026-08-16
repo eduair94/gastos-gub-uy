@@ -114,6 +114,20 @@ export interface CasoQuery {
    * nombres, y el id de la compra no está en ninguno de esos campos. Devolvía cero.
    */
   ocids?: string[] | undefined
+  /**
+   * Muestra TODAS las etapas del expediente, sin filtrar por `tag`.
+   *
+   * Por omisión el cruce se limita a `award`, que es la etapa que lleva la plata. Eso está
+   * bien cuando la ficha habla de una adjudicación, y está mal cuando habla de una COMPRA
+   * identificada por su ocid: el ocid es la compra entera, y sus etapas son `tender`,
+   * `award`, `tenderUpdate`, `tenderCancellation` o `awardCancellation`.
+   *
+   * MEDIDO: forzando `award`, 96 de las 307 fichas del Tribunal de Cuentas cruzaban cero,
+   * porque la resolución nombra el LLAMADO y el título del llamado vive en el release
+   * `tender`. Enumerar etapas tampoco alcanzó: una de esas compras existe sólo como
+   * `tenderCancellation`, y una lista siempre se olvida de un valor.
+   */
+  allStages?: boolean | undefined
 }
 
 export interface CasoSource {
@@ -191,6 +205,7 @@ export type CasoThemeKey
     | 'ambiente'
     | 'deporte-y-cultura'
     | 'gasto-observado'
+    | 'tribunal-de-cuentas'
 
 export interface CasoThemeDef {
   key: CasoThemeKey
@@ -301,6 +316,24 @@ export const CASO_THEMES: CasoThemeDef[] = [
     en: {
       label: 'Observed and overridden spending',
       dek: 'Purchases the Court of Auditors objected to and the body paid anyway, under article 114 of the TOCAF.',
+    },
+  },
+  // También armado. Sale de `tcr_resolutions` y lo escribe el mismo trabajo.
+  //
+  // CUIDADO CON EL VERBO. La ficha del archivo del Tribunal publica sólo el VISTO, que dice
+  // qué expediente se miró. Si el gasto fue observado, por cuánto y con qué fundamento está
+  // únicamente en el PDF, que es un escaneo. Por eso este tema dice «se pronunció» y NUNCA
+  // «observó»: decir observó sería inventar el fallo.
+  {
+    key: 'tribunal-de-cuentas',
+    emoji: '⚖️',
+    es: {
+      label: 'El Tribunal de Cuentas, compra por compra',
+      dek: 'Las compras sobre las que se pronunció el auditor del propio Estado, atadas al contrato que nombran.',
+    },
+    en: {
+      label: 'The Court of Auditors, purchase by purchase',
+      dek: 'The purchases the state’s own auditor ruled on, tied to the contract they name.',
     },
   },
 ]

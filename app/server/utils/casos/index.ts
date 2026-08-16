@@ -90,7 +90,11 @@ export function casoThemeCounts(): Record<string, number> {
  * `recopilatorios` and `curros` make, for the same reason.
  */
 export function casoToQueryParams(q: CasoQuery): Record<string, unknown> {
-  const params: Record<string, unknown> = { tag: 'award' }
+  // `award` por omisión, porque es la etapa que lleva la plata. Una ficha que habla de una
+  // COMPRA entera —identificada por su ocid— pide todas las etapas: el llamado, la
+  // adjudicación y también la cancelación.
+  const params: Record<string, unknown> = {}
+  if (!q.allStages) params.tag = 'award'
   if (q.buyerIds?.length) params.buyerIds = q.buyerIds
   if (q.buyers?.length) params.buyers = q.buyers
   if (q.suppliers?.length) params.suppliers = q.suppliers

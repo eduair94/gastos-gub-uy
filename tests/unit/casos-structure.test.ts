@@ -103,7 +103,7 @@ for (const c of casos) {
 // by hand. src/jobs/build-derived-casos.ts fills it from the official override documents, so
 // counting it here would measure the curated modules for content they must never hold.
 // scripts/verify-derived-casos.ts is what guards that theme.
-const DERIVED_THEMES = new Set(['gasto-observado'])
+const DERIVED_THEMES = new Set(['gasto-observado', 'tribunal-de-cuentas'])
 for (const t of CASO_THEMES) {
   if (DERIVED_THEMES.has(t.key)) continue
   const n = casos.filter((c: CasoDef) => c.theme === t.key).length

@@ -37,6 +37,25 @@ const PROHIBIDAS = [
   /\brob[oó]\b/i,
 ]
 
+/**
+ * Lo que el tema del Tribunal de Cuentas NO puede decir.
+ *
+ * Su archivo público trae sólo el VISTO: qué expediente se miró. El fallo —si el gasto fue
+ * observado, por cuánto, con qué fundamento— está únicamente en el PDF, y ese PDF es un
+ * escaneo sin capa de texto. Escribir «observó» sería inventar el fallo. La ficha dice «se
+ * pronunció» y nada más fuerte.
+ */
+const PROHIBIDAS_TCR = [
+  /\bobserv[óo]\b/i,
+  /\bfue\s+observad[ao]\b/i,
+  /\bobjet[óo]\b/i,
+  /\brechaz[óo]\b/i,
+  /\bobjected\b/i,
+]
+
+/** Los temas que arma un trabajo por lotes. Son los únicos que este verificador mira. */
+const DERIVED_THEMES = new Set(['gasto-observado', 'tribunal-de-cuentas'])
+
 /** El mismo piso que verify-casos: menos de dos contratos es una coincidencia. */
 const MIN_CONTRACTS = 2
 const QUERY_TIMEOUT_MS = 25000
@@ -44,7 +63,7 @@ const QUERY_TIMEOUT_MS = 25000
 async function main() {
   await connectToDatabase()
   const all = await listAllCasoDefs()
-  const derived = all.filter(c => c.theme === 'gasto-observado')
+  const derived = all.filter(c => DERIVED_THEMES.has(c.theme))
   console.log(`verificando ${derived.length} fichas derivadas…\n`)
 
   if (!derived.length) {
@@ -75,8 +94,12 @@ async function main() {
       if (!txt.dek?.trim()) errors.push(`${at}: falta el dek en ${loc}`)
       if (!txt.hallazgo?.trim()) errors.push(`${at}: falta el hallazgo en ${loc}`)
       if (!txt.caveat?.trim()) errors.push(`${at}: falta el caveat en ${loc}`)
-      if (!/\b114\b/.test(txt.caveat ?? '')) {
+      // Cada tema armado tiene su límite propio, y el caveat tiene que declararlo.
+      if (c.theme === 'gasto-observado' && !/\b114\b/.test(txt.caveat ?? '')) {
         errors.push(`${at}: el caveat en ${loc} no cita el artículo 114 del TOCAF`)
+      }
+      if (c.theme === 'tribunal-de-cuentas' && !/VISTO/.test(txt.caveat ?? '')) {
+        errors.push(`${at}: el caveat en ${loc} no aclara que sólo se publica el VISTO`)
       }
       // El título no puede quedar con un hueco sin llenar.
       if (/\bnull\b|\bundefined\b|\bNaN\b/.test(`${txt.title} ${txt.dek} ${txt.hallazgo}`)) {
@@ -85,6 +108,16 @@ async function main() {
       const blob = `${txt.title} ${txt.dek} ${txt.contexto} ${txt.hallazgo} ${txt.porQueImporta}`
       for (const re of PROHIBIDAS) {
         if (re.test(blob)) errors.push(`${at}: el texto en ${loc} dicta un fallo (${re.source})`)
+      }
+      if (c.theme === 'tribunal-de-cuentas') {
+        // El VISTO va citado textual, así que lo que diga el Tribunal adentro de las comillas
+        // no cuenta: lo que se controla es lo que escribimos NOSOTROS alrededor.
+        const nuestro = `${txt.title} ${txt.dek} ${txt.porQueImporta} ${txt.statusNote}`
+        for (const re of PROHIBIDAS_TCR) {
+          if (re.test(nuestro)) {
+            errors.push(`${at}: el texto en ${loc} afirma un fallo que sólo está en el PDF (${re.source})`)
+          }
+        }
       }
     }
   }

@@ -17,7 +17,7 @@ import { mongoose } from "../connection/database";
  * pasó en este repo y dejó una colección vacía en producción. El armador junta los slugs de
  * SU corrida y borra sólo lo que sobra de esa lista.
  */
-export type DerivedCasoOrigin = "reiteracion" | "medicion";
+export type DerivedCasoOrigin = "reiteracion" | "tcr" | "medicion";
 
 export interface IDerivedCaso {
   slug: string;
