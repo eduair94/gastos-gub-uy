@@ -473,6 +473,16 @@ async function main(): Promise<void> {
       await tcrResolutions.createIndex({ organismKey: 1, resolvedAt: -1 }, { background: true })
       console.log('✅ tcr_resolutions indexes ensured (tcrId unique, matchedOcid, isProcurement+resolvedAt)')
 
+      // reiteracion_docs: el documento que declara la observación del Tribunal de Cuentas,
+      // escrito por src/jobs/fetch-reiteracion-docs.ts. `ocid` único es la clave del upsert
+      // y la que hace resumible el recorrido; observed+reason agrupa las causales; buyerId
+      // arma la ficha por organismo.
+      const reiteracionDocs = client.db(DB_NAME).collection('reiteracion_docs')
+      await reiteracionDocs.createIndex({ ocid: 1 }, { unique: true, background: true })
+      await reiteracionDocs.createIndex({ observed: 1, reason: 1 }, { background: true })
+      await reiteracionDocs.createIndex({ buyerId: 1 }, { background: true })
+      console.log('✅ reiteracion_docs indexes ensured (ocid unique, observed+reason, buyerId)')
+
       // organism_news: press coverage of each organism procurement, written by
       // src/jobs/refresh-organism-news.ts. buyerId unique is the upsert key and the
       // panel lookup; fetchedAt ascending drives "refresh the stalest first".

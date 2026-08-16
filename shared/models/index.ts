@@ -57,6 +57,9 @@ export * from "./bidder_competition";
 
 // Court of Accounts resolutions tied to the purchase they name (tcr_resolutions).
 export * from "./tcr_resolution";
+// Override-of-objection documents: the state's own record that the Court of Accounts
+// objected to a purchase and the body spent anyway (reiteracion_docs).
+export * from "./reiteracion_doc";
 
 // Press coverage of each organism procurement (organism_news). See shared/news-search.ts.
 export * from "./organism_news";
