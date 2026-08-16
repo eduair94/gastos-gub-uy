@@ -543,7 +543,7 @@
       "tcr": "What the Court of Accounts said",
       "summary": "Summary",
       "items": "What was bought",
-        "timeline": "Timeline",
+      "timeline": "Timeline",
       "documents": "Official documents",
       "amendments": "Amendments",
       "provenance": "Record origin",
@@ -551,7 +551,8 @@
       "itemsTender": "What is requested",
       "reference": "Price reference",
       "technical": "Amount detail and record origin"
-    },    "ai": {
+    },
+    "ai": {
       "title": "AI review of the price flag"
     },
     "itemsHelp": "Awarded items with quantity and unit price.",
@@ -618,7 +619,7 @@
       "tenderAmendment": "A change to the tender conditions.",
       "tenderCancellation": "The tender was cancelled."
     },
-        "status": {
+    "status": {
       "active": "Active",
       "cancelled": "Cancelled",
       "complete": "Finished",
@@ -643,7 +644,7 @@
       "initiationType": "Initiation type",
       "tenderId": "Tender no.",
       "awardId": "Award no.",
-    "awardDate": "Award date",
+      "awardDate": "Award date",
       "awardStatus": "Award status",
       "legalName": "Legal name",
       "rut": "Tax ID / identifier",
@@ -688,9 +689,11 @@
     },
     "reference": {
       "typical": "Typical (median)",
+      "range": "Usual range",
       "stats": "Median {median} · range {range} · {n} comparables",
       "comparables": "Comparables",
       "viewComparables": "View comparable purchases",
+      "viewProduct": "Product page",
       "noBaseline": "Not enough comparables",
       "presNote": "The open-data unit price does not carry the article's presentation (e.g. a 250 g container vs. 1 g), which can change how this comparison reads. When we can recover it, it appears next to the article; you can always check it on",
       "presNoteSource": "the official purchase page.",

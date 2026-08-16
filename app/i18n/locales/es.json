@@ -543,7 +543,7 @@
       "tcr": "Lo que dijo el Tribunal de Cuentas",
       "summary": "Resumen",
       "items": "Qué se compró",
-        "timeline": "Cronología",
+      "timeline": "Cronología",
       "documents": "Documentos oficiales",
       "amendments": "Modificaciones",
       "provenance": "Origen del registro",
@@ -551,7 +551,8 @@
       "itemsTender": "Qué se pide",
       "reference": "Precios de referencia",
       "technical": "Detalle del monto y origen del registro"
-    },    "ai": {
+    },
+    "ai": {
       "title": "Análisis IA de la alerta de precio"
     },
     "itemsHelp": "Artículos adjudicados con su cantidad y precio unitario.",
@@ -618,7 +619,7 @@
       "tenderAmendment": "Cambio en las condiciones del llamado.",
       "tenderCancellation": "El llamado fue anulado."
     },
-        "status": {
+    "status": {
       "active": "Vigente",
       "cancelled": "Anulado",
       "complete": "Finalizado",
@@ -643,7 +644,7 @@
       "initiationType": "Tipo de inicio",
       "tenderId": "N.º de llamado",
       "awardId": "N.º de adjudicación",
-    "awardDate": "Fecha de adjudicación",
+      "awardDate": "Fecha de adjudicación",
       "awardStatus": "Estado de la adjudicación",
       "legalName": "Razón social",
       "rut": "RUT / identificador",
@@ -688,9 +689,11 @@
     },
     "reference": {
       "typical": "Habitual (mediana)",
+      "range": "Rango usual",
       "stats": "Mediana {median} · rango {range} · {n} comparables",
       "comparables": "Comparables",
       "viewComparables": "Ver compras comparables",
+      "viewProduct": "Ficha del producto",
       "noBaseline": "Sin comparables suficientes",
       "presNote": "El precio unitario de los datos abiertos no incluye la presentación del artículo (p. ej. envase de 250 g vs. 1 g), y eso puede cambiar la lectura de la comparación. Cuando la conseguimos figura junto al artículo; siempre podés verificarla en",
       "presNoteSource": "la página oficial de la compra.",
