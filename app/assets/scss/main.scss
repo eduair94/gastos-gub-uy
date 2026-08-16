@@ -375,7 +375,10 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
 .tag--activo  { background: color-mix(in srgb, var(--verde) 12%, transparent); color: var(--verde); border-color: color-mix(in srgb, var(--verde) 30%, transparent); }
 .tag--neutral { background: var(--surface-sunken); color: var(--text-muted); border-color: var(--rule); }
 .tag--alerta  { background: var(--alerta-wash); color: var(--alerta); border-color: color-mix(in srgb, var(--alerta) 32%, transparent); }
-.tag--celeste { background: var(--celeste-wash); color: var(--celeste-deep); border-color: color-mix(in srgb, var(--celeste) 34%, transparent); }
+// `--celeste-wash` (a flat token) measures 4.37:1 against `--celeste-deep` —
+// under the 4.5:1 AA floor for this tag's --t-xs/500 text. The color-mix
+// formula every sibling tag already uses is lighter and measures 4.82:1.
+.tag--celeste { background: color-mix(in srgb, var(--celeste) 12%, transparent); color: var(--celeste-deep); border-color: color-mix(in srgb, var(--celeste) 34%, transparent); }
 
 // ============================================================
 // Chips / pills — the app-wide primitive for compact rounded

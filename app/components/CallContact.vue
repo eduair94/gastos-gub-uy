@@ -75,7 +75,7 @@ async function copy(value: string) {
           mdi-email-outline
         </v-icon>
         <a
-          class="cc__val cc__link"
+          class="cc__val cc__link u-truncate"
           :href="`mailto:${contact.email}`"
           :aria-label="t('contactPanel.srEmail', { v: contact.email })"
         >{{ contact.email }}</a>
@@ -102,13 +102,13 @@ async function copy(value: string) {
         </v-icon>
         <a
           v-if="telHref"
-          class="cc__val cc__link"
+          class="cc__val cc__link u-truncate"
           :href="telHref"
           :aria-label="t('contactPanel.srPhone', { v: contact.telephone })"
         >{{ contact.telephone }}</a>
         <span
           v-else
-          class="cc__val"
+          class="cc__val u-truncate"
         >{{ contact.telephone }}</span>
         <button
           type="button"

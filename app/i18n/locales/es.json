@@ -120,6 +120,7 @@
     "next": "Siguiente",
     "previous": "Anterior",
     "viewAll": "Ver todo",
+    "view": "Ver",
     "viewDetail": "Ver detalle",
     "copy": "Copiar",
     "copied": "Copiado",
@@ -134,7 +135,6 @@
     "count": "Cantidad",
     "name": "Nombre",
     "status": "Estado",
-    "method": "Procedimiento",
     "currency": "Moneda",
     "category": "Categoría",
     "supplier": "Proveedor",
@@ -519,15 +519,19 @@
     "biddersSource": "Ver la frase del acta",
     "biddersActa": "Abrir el acta de adjudicación (PDF)",
     "eyebrow": "Contrato",
+    "ocidLabel": "ID de la compra:",
+    "ocidHelp": "Identificador único de esta compra en el sistema de datos abiertos (OCDS). Sirve para citarla o buscarla — clic para copiarlo.",
+    "tenderStatusChip": "Llamado: {status}",
+    "tenderStatusHelp": "Estado del llamado del que viene esta adjudicación — no de la adjudicación en sí. Puede seguir vigente aunque este lote ya tenga proveedor, por ejemplo en llamados con varios lotes.",
     "notFound": {
       "title": "No encontramos ese contrato",
       "body": "El identificador puede haber cambiado en el origen. Probá buscarlo en el explorador.",
       "action": "Ir al explorador"
     },
     "awarded": "Adjudicado",
+    "awardedNet": "Adjudicado sin impuestos",
     "awardedTo": "Adjudicado a",
     "purchasedBy": "Comprado por",
-    "publishedOn": "Publicado el",
     "officialSource": "Ver en Compras Estatales",
     "officialSourceHelp": "Abre la ficha oficial de este contrato en comprasestatales.gub.uy.",
     "verifiedTotalBadge": "Monto verificado",
@@ -539,15 +543,14 @@
       "tcr": "Lo que dijo el Tribunal de Cuentas",
       "summary": "Resumen",
       "items": "Qué se compró",
-      "parties": "Quiénes participan",
       "timeline": "Cronología",
       "documents": "Documentos oficiales",
-      "raw": "Datos crudos",
       "amendments": "Modificaciones",
       "provenance": "Origen del registro",
       "amount": "Detalle del monto",
       "itemsTender": "Qué se pide",
-      "reference": "Precios de referencia"
+      "reference": "Precios de referencia",
+      "technical": "Detalle del monto y origen del registro"
     },
     "ai": {
       "title": "Análisis IA de la alerta de precio"
@@ -562,15 +565,15 @@
     },
     "noItems": "El registro oficial no detalla artículos para este contrato.",
     "noDocuments": "No hay documentos publicados para este contrato.",
+    "showAllDocs": "Ver los {n} documentos",
     "timeline": {
       "enquiry": "Consultas",
       "tender": "Recepción de ofertas",
       "award": "Adjudicación",
       "published": "Publicación"
     },
-    "relatedTitle": "Otros contratos de este organismo",
+    "relatedTitle": "Otras adjudicaciones de este organismo",
     "supplierHistoryTitle": "Historial de este proveedor",
-    "rawHelp": "El documento OCDS tal como lo publica el Estado.",
     "contextTitle": "Cómo se compara",
     "contextBiggerThan": "Mayor que el {pct} % de los contratos de {year}.",
     "contextRank": "Puesto {rank} entre los contratos de {buyer} en {year}.",
@@ -608,13 +611,23 @@
       "tenderCancellation": "Llamado anulado"
     },
     "stageHelp": {
-      "award": "El Estado adjudicó la compra a un proveedor. Es la etapa que informa montos.",
+      "award": "El Estado adjudicó la compra: ya hay proveedor y monto definidos.",
       "awardUpdate": "Corrección de una adjudicación ya publicada.",
       "awardCancellation": "La adjudicación fue dejada sin efecto.",
       "tender": "Convocatoria publicada. Todavía no hay proveedor ni monto.",
       "tenderUpdate": "Aclaración o respuesta a consultas sobre un llamado.",
       "tenderAmendment": "Cambio en las condiciones del llamado.",
       "tenderCancellation": "El llamado fue anulado."
+    },
+    "status": {
+      "active": "Vigente",
+      "cancelled": "Anulado",
+      "complete": "Finalizado",
+      "unsuccessful": "Desierto"
+    },
+    "initiationTypes": {
+      "tender": "Llamado",
+      "planning": "Planificación"
     },
     "stageTitle": {
       "award": "Adjudicación {ref}",
@@ -631,18 +644,20 @@
       "initiationType": "Tipo de inicio",
       "tenderId": "N.º de llamado",
       "awardId": "N.º de adjudicación",
+      "awardDate": "Fecha de adjudicación",
       "awardStatus": "Estado de la adjudicación",
       "legalName": "Razón social",
       "rut": "RUT / identificador",
       "roles": "Rol",
-      "classification": "Código de catálogo",
+      "classification": "Código",
       "unit": "Unidad",
       "hasEnquiries": "Admite consultas",
       "submissionMethod": "Forma de presentación",
       "submissionMethodDetails": "Condiciones de presentación",
       "procuringEntity": "Unidad ejecutora",
+      "buyingOffice": "Unidad compradora",
+      "buyingOfficeHelp": "La oficina concreta que tramitó esta compra, dentro de la unidad ejecutora. La unidad ejecutora es el organismo (p. ej. OSE); la unidad compradora es la mesa que hizo el llamado y a la que se le consulta.",
       "sourceFile": "Archivo de origen",
-      "sourceYear": "Año de origen",
       "fetched": "Importado el",
       "rssLink": "Enlace del origen",
       "totalItems": "Artículos",
@@ -651,7 +666,7 @@
       "exchangeRateDate": "Tipo de cambio al",
       "originalUYU": "Importe original en pesos",
       "converted": "Incluye conversión",
-      "ocdsJson": "Documento OCDS (JSON)",
+      "sourceDoc": "Documento OCDS de origen",
       "contact": "Contacto"
     },
     "amendmentOf": "Modifica a {id}",
@@ -662,7 +677,7 @@
       "ajuste_llamado": "Ajuste del llamado",
       "items_compra": "Ajuste de ítems"
     },
-    "referenceHelp": "Cada artículo comparado con las compras del mismo ítem en los últimos 36 meses — la misma referencia que usan las alertas.",
+    "referenceHelp": "Cada artículo comparado con las compras del mismo ítem en los últimos 36 meses.",
     "features": {
       "variation": "Variación"
     },
@@ -670,26 +685,34 @@
       "totalWithTax": "Total con impuestos",
       "withTax": "Con impuestos",
       "subtotal": "Subtotal sin impuestos",
-      "taxes": "Impuestos",
-      "help": "Monto total de la compra según el sitio oficial. Los precios del feed de datos abiertos son sin impuestos.",
-      "source": "Ver en comprasestatales"
+      "taxes": "Impuestos"
     },
     "reference": {
-      "paid": "Se pagó",
       "typical": "Habitual (mediana)",
       "range": "Rango usual",
+      "stats": "Mediana {median} · rango {range} · {n} comparables",
       "comparables": "Comparables",
       "viewComparables": "Ver compras comparables",
       "viewProduct": "Ficha del producto",
+      "noBaseline": "Sin comparables suficientes",
       "presNote": "El precio unitario de los datos abiertos no incluye la presentación del artículo (p. ej. envase de 250 g vs. 1 g), y eso puede cambiar la lectura de la comparación. Cuando la conseguimos figura junto al artículo; siempre podés verificarla en",
       "presNoteSource": "la página oficial de la compra.",
       "method": "Cómo se calculan las alertas de precio",
+      "ratio": "{ratio}× la mediana",
+      "coverage": "{missing} de {total} líneas con precio no tienen comparables suficientes para compararse (hacen falta al menos 5 compras del mismo artículo en los últimos 36 meses).",
       "pos": {
         "below": "Bajo lo habitual",
         "typical": "En rango",
         "high": "Por encima",
         "veryHigh": "Muy por encima",
-        "listPrice": "Tarifa conocida"
+        "listPrice": "Precio de lista"
+      },
+      "posHelp": {
+        "below": "Por debajo del rango habitual pagado por compras del mismo artículo en los últimos 36 meses.",
+        "typical": "Dentro del rango habitual pagado por compras del mismo artículo en los últimos 36 meses.",
+        "high": "Por encima del rango habitual, sin llegar al umbral que dispara una alerta de precio.",
+        "veryHigh": "Muy por encima del rango habitual — el mismo umbral que usan las alertas de precio.",
+        "listPrice": "Coincide con una tarifa o denominación ya conocida para este artículo (p. ej. una estampilla legal), por eso no se compara contra la mediana."
       }
     },
     "officialAward": "Ver adjudicación",
