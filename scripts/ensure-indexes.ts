@@ -522,6 +522,24 @@ async function main(): Promise<void> {
       await udecoXref.createIndex({ dataVersion: 1 }, { background: true })
       console.log('✅ udeco_supplier_stats indexes ensured (rut unique, totalUyu, sanctions, dataVersion)')
 
+      // judicial_spending: OPP budget lines the State pays for losing a lawsuit, loaded by
+      // src/jobs/load-judicial-spending.ts. rowKey unique is the upsert key and the per-year sweep
+      // filter; year+creditoVigente backs the ranking, judicial+year the headline series, and
+      // organismo/category the page filters.
+      const judicial = client.db(DB_NAME).collection('judicial_spending')
+      await judicial.createIndex({ rowKey: 1 }, { unique: true, background: true })
+      await judicial.createIndex({ year: -1, creditoVigente: -1 }, { background: true })
+      await judicial.createIndex({ judicial: 1, year: -1 }, { background: true })
+      await judicial.createIndex({ organismo: 1, year: -1 }, { background: true })
+      await judicial.createIndex({ category: 1, year: -1 }, { background: true })
+      console.log('✅ judicial_spending indexes ensured (rowKey unique, year+creditoVigente, judicial+year, organismo, category)')
+
+      // judicial_spending_years: one document per year with the MEASURED coverage of the OPP file.
+      // Tiny (11 rows) but always read next to the series, so the year lookup stays indexed.
+      const judicialYears = client.db(DB_NAME).collection('judicial_spending_years')
+      await judicialYears.createIndex({ year: 1 }, { unique: true, background: true })
+      console.log('✅ judicial_spending_years indexes ensured (year unique)')
+
       // provider_load_error_stats: the load-errors-by-provider cross-reference, rebuilt
       // (compute-then-swap) by src/jobs/cross-provider-load-errors.ts. Same shape as
       // provider_anomaly_stats but scoped to the load-error bucket; `supplierName` unique is the
@@ -772,6 +790,8 @@ async function main(): Promise<void> {
       console.log('   plan: jutep_omisos.{omisoKey unique, incisoCode, fechaOmision, organismo}')
       console.log('   plan: acta_bidders.{ocid unique, found+probedAt}')
       console.log('   plan: udeco_sanctions.{sanctionKey unique, rut, fechaResolucion, tipo}')
+      console.log('   plan: judicial_spending.{rowKey unique, year+creditoVigente, judicial+year, organismo, category}')
+      console.log('   plan: judicial_spending_years.{year unique}')
       console.log('   plan: topic_contracts.{topicKey+ocid unique, +amount/firstSeenAt/sourceYear/category/buyerId, rulesVersion}')
       console.log('   plan: topic_spending.{topicKey+dataVersion, slug}')
       console.log('   plan: organism_group_stats.{groupKey unique, dataVersion}')

@@ -20,6 +20,7 @@
     "unexplained": "Unexplained alerts",
     "omisos": "Undeclared assets",
     "sanciones": "Sanctioned firms",
+    "sentenciasJudiciales": "Lost lawsuits",
     "senalesGestion": "Management signals",
     "providerAnomalies": "Flagged suppliers",
     "providerLoadErrors": "Suppliers with errors",
@@ -1546,6 +1547,10 @@
           "title": "Suppliers sanctioned by consumer protection",
           "dek": "Companies fined or cautioned by the Consumer Protection Unit that also sell to the State, cross-referenced by tax ID against public procurement."
         },
+        "sentenciasJudiciales": {
+          "title": "What the State pays for losing lawsuits",
+          "dek": "Budget credit set aside for court judgments, judicial settlements and health injunctions, year by year and body by body."
+        },
         "genero": {
           "title": "Spending on gender and diversity",
           "dek": "How much the State spends on gender and diversity policy, which body buys it and which supplier receives it. The feed carries no topic label: it is rebuilt from each purchase\u2019s text."
@@ -1650,6 +1655,67 @@
     "panelBodyOne": "The Consumer Protection Unit applied 1 sanction to this company in {to}, totalling {ur} UR in fines.",
     "panelBody": "The Consumer Protection Unit applied {n} sanctions to this company between {from} and {to}, totalling {ur} UR in fines.",
     "panelLink": "See the full cross-reference"
+  },
+  "sentencias": {
+    "title": "What the State pays for losing lawsuits",
+    "lead": "When a public body loses a lawsuit, the damages come out of the budget. Uruguay's national budget breaks spending down by expense object, and seven of those objects name a judicial cause: court judgments, judicial settlements and health injunctions. This is what was set aside to pay them, year by year and body by body.",
+    "caveat": "The budget names no cases and no people. No figure on this page says whom the State compensated or why; it says how much money was set aside under an expense object whose official name is a judgment, a judicial settlement or an injunction. The case-by-case record is not public data: judgments sit as prose in the National Jurisprudence Database, and the registry that does hold the amounts, RUJE, is not published.",
+    "notComputed": "Judicial spending has not been loaded yet. Run the load-judicial-spending job.",
+    "kpi": {
+      "latest": "budgeted for judicial causes in {year}",
+      "total": "total {from}-{to}, in today's pesos",
+      "growth": "growth between {from} and {to}, inflation already removed",
+      "fullySpent": "judicial budget lines spent in full, of those with published execution"
+    },
+    "series": {
+      "title": "Year by year",
+      "dek": "Current budget credit for expense objects with a judicial cause, converted to today's pesos via the Unidad Indexada. Without that conversion, eleven years of inflation lift any series while nothing has actually changed.",
+      "note": "The bar shows budgeted credit, not what was actually paid. Files from 2019 onward publish execution as zero for every row, not only the judicial ones. In the years that do carry it, the judgments line is spent almost in full, which is why the credit is the best available measure of what the State ends up paying."
+    },
+    "flag": {
+      "partial": "partial year: {n} bodies",
+      "noExecution": "no execution published"
+    },
+    "cats": {
+      "title": "For what reason",
+      "dek": "The official name of each expense object declares the cause. Compensation with no declared cause is listed separately: it may be a judgment or an expropriation, and the budget does not say.",
+      "rows": "{n} budget lines"
+    },
+    "cat": {
+      "sentencia": "Court judgments",
+      "acuerdo": "Judicial settlements",
+      "amparo": "Health injunctions (drugs and supplies)",
+      "indemnizacion": "Compensation with no declared cause"
+    },
+    "orgs": {
+      "title": "Which bodies",
+      "dek": "Eleven-year total in today's pesos. The central line sits with the Ministry of Economy, which pays judgments against the State under article 52 of Law 17.930."
+    },
+    "rows": {
+      "title": "The detail",
+      "noData": "no data"
+    },
+    "col": {
+      "year": "Year",
+      "organismo": "Body",
+      "objeto": "Expense object",
+      "vigente": "Budget credit",
+      "ejecutado": "Executed"
+    },
+    "filters": {
+      "year": "Year",
+      "category": "Reason",
+      "allYears": "All years",
+      "allCategories": "All reasons"
+    },
+    "gap": {
+      "title": "What still cannot be known",
+      "body": "Uruguay has no public list of the damages the State pays under court judgment. These are the three sources that would hold the case-by-case record, and why none of them is enough.",
+      "bjn": "The National Jurisprudence Database publishes over 100,000 judgments, but the award amount sits inside the text rather than in a field, and there is no way to query it in bulk.",
+      "ruje": "The Single Registry of State Lawsuits (Decree 98/019) does hold the amounts for every lawsuit the State is party to. It is not public: in 2024 a freedom-of-information request returned 3,076 lawsuits for 2023 and roughly USD 132 million identified, without naming the body or the cause.",
+      "tca": "The Administrative Claims Court annuls administrative acts but does not award damages, so its rulings carry no amounts."
+    },
+    "source": "Source: Office of Planning and Budget, budget credit at"
   },
   "senales": {
     "title": "Management signals",
@@ -2135,6 +2201,10 @@
     "sanciones": {
       "title": "State suppliers sanctioned by consumer protection",
       "description": "Companies sanctioned by Uruguay’s Consumer Protection Unit that also sell to the State, cross-referenced by tax ID against public procurement."
+    },
+    "sentencias": {
+      "title": "What the Uruguayan State pays for losing lawsuits",
+      "description": "Budget credit for court judgments, judicial settlements, compensation and health injunctions, by year and by public body, since 2011."
     },
     "genero": {
         "title": "Public spending on gender and diversity policy in Uruguay",

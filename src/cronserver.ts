@@ -1043,6 +1043,26 @@ class CronServer {
     );
     this.logger.info(`UDECO sanctions load scheduled with expression: ${udecoExpression} (Uruguay timezone)`);
 
+    // Judicial spending (OPP budget credit), monthly on the 1st at 06:00. OPP republishes the
+    // yearly files once a year at most, and the whole load is eleven SQL queries against the CKAN
+    // datastore — a monthly tick is already generous. It runs last of the monthly block so a slow
+    // third-party WAF never delays the rollups the site reads.
+    const judicialExpression = "0 6 1 * *";
+    cron.schedule(
+      judicialExpression,
+      async () => {
+        try {
+          this.logger.info("Starting judicial spending load...");
+          await this.runJobProcess("jobs/load-judicial-spending");
+          this.logger.info("Judicial spending load completed successfully");
+        } catch (error) {
+          this.logger.error("Judicial spending load failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Judicial spending load scheduled with expression: ${judicialExpression} (Uruguay timezone)`);
+
     // Acta bidder extraction, nightly at 03:20 with a BOUNDED batch. Deliberately small and slow:
     // it pulls PDFs from comprasestatales one at a time with a delay, and every probed call is
     // recorded (including the silent ones) so a re-run never re-reads. A backlog drains over
