@@ -178,6 +178,7 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'invAsse', to: localePath('/investigaciones/asse-ambulancias'), icon: 'mdi-ambulance' },
             { key: 'invSaturno', to: localePath('/investigaciones/frigorifico-saturno'), icon: 'mdi-cow' },
             { key: 'invMejorPeor', to: localePath('/investigaciones/mejor-o-peor'), icon: 'mdi-chart-timeline-variant' },
+            { key: 'invSunca', to: localePath('/investigaciones/sunca'), icon: 'mdi-hard-hat' },
             { key: 'invGenero', to: localePath('/investigaciones/gasto-en-genero'), icon: 'mdi-human-male-female' },
             { key: 'invMensajes', to: localePath('/investigaciones/mensajes-del-estado'), icon: 'mdi-bullhorn-variant-outline' },
           ],

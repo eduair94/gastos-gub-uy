@@ -209,6 +209,16 @@ export const INV_CONTENT = {
           "brecha yo/país: 46 pts"
         ]
       },
+      "cardSunca": {
+        "eyebrow": "Convenio del Grupo 9 · 2026–2031",
+        "title": "Cuatro horas menos: qué ganó la construcción y por dónde pasa la cuenta",
+        "dek": "La jornada baja de 44 a 40 horas sin bajar el salario. Las cuatro cifras de costo que circularon no citan estudio. La que sí se puede medir está en los rubros del mayor contrato de obra del registro: ajuste paramétrico y leyes sociales son el 20,59%.",
+        "tags": [
+          "−9,09% de horas, +10,00% por hora",
+          "20,59% del contrato de OSE",
+          "7 contratos son el 71,56%"
+        ]
+      },
       "cardGenero": {
         "eyebrow": "Series · Se actualiza cada lunes",
         "title": "Gasto en políticas de género y diversidad",
@@ -629,6 +639,16 @@ export const INV_CONTENT = {
           "two reference years",
           "homicides x1.7",
           "me/country gap: 46 pts"
+        ]
+      },
+      "cardSunca": {
+        "eyebrow": "Group 9 agreement · 2026-2031",
+        "title": "Four hours less: what construction won, and where the bill lands",
+        "dek": "The working week falls from 44 to 40 hours with no pay cut. The four cost figures that circulated cite no study. The one that can be measured is in the price lines of the largest works contract on record: parametric adjustment plus social contributions are 20.59%.",
+        "tags": [
+          "-9.09% hours, +10.00% per hour",
+          "20.59% of the OSE contract",
+          "7 contracts are 71.56%"
         ]
       },
       "cardGenero": {
