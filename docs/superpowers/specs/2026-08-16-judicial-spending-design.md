@@ -37,18 +37,35 @@ El loader resuelve los `resource_id` en tiempo de ejecución con `package_show` 
 Esta es la decisión que carga con todo. La regla es determinística y vive en
 [shared/judicial-objects.ts](../../../shared/judicial-objects.ts).
 
-| Código | Nombre publicado | Categoría |
-|---|---|---|
-| 711 | Sentencias Judiciales A52 L17930 | `sentencia` |
-| 45.7 | Reparación p/Sentencias Judiciales y complemento A21L16736 | `sentencia` |
-| 42.614 / 42.617 | Pago sentencia c/condena a futuro | `sentencia` |
-| 714 | Acuerdo o Convenio Judicial | `acuerdo` |
-| 793 | Indemnizaciones | `indemnizacion` |
-| 793.1 | Pasivos Militares — Indemnización L17.949 | `indemnizacion` |
-| 522.2 | Fondo Permanente de Indemnización — MGAP | `indemnizacion` |
-| 578.5 | Indemnización p/despido y seguro de desempleo No Func.Pub. | `indemnizacion` |
-| 152.2 | Medicamentos oncológicos por amparos judiciales | `amparo` |
-| 194.1 | Artículos médico-quirúrgicos p/ gastos por amparos judicial | `amparo` |
+Son siete objetos en el titular y uno aparte. El censo completo — los 30 objetos cuyo nombre trae
+una palabra judicial entre 2011 y 2021 — vive en
+[tests/unit/test-judicial-objects.ts](../../../tests/unit/test-judicial-objects.ts) y el test falla
+si aparece uno sin decidir.
+
+| Código | Nombre publicado | Categoría | ¿Titular? |
+|---|---|---|---|
+| 711 | Sentencias Judiciales A52 L17930 | `sentencia` | sí |
+| 45.7 | Reparación p/Sentencias Judiciales y complemento A21L16736 | `sentencia` | sí |
+| 42.614 / 42.617 | Pago sentencia c/condena a futuro | `sentencia` | sí |
+| 714 | Acuerdo o Convenio Judicial | `acuerdo` | sí |
+| 152.2 | Medicamentos oncológicos por amparos judiciales | `amparo` | sí |
+| 194.1 | Artículos médico-quirúrgicos p/ gastos por amparos judicial | `amparo` | sí |
+| 793 | Indemnizaciones | `indemnizacion` | **no** |
+
+El 793 no entra al titular: el presupuesto no le declara causa. Puede ser una condena o puede ser
+una expropiación. Va en su propia fila y con la salvedad escrita.
+
+### Los que quedan afuera y por qué
+
+Once objetos comparten palabra y no cuentan. Tres familias:
+
+- **Nómina del Poder Judicial** (42.126, 42.128, 48.35, 513.9, 749.4, 749.5). Sueldos, jubilaciones
+  de magistrados y convenios colectivos. Sumarlos convertiría el salario de los jueces en el costo
+  de perder juicios.
+- **Prestaciones por ley, sin juicio** (522.2 fondo sanitario del MGAP, 578.5 despido, 793.1 pasivos
+  militares, 513.26 reparación a familiares por violencia doméstica). El Estado las paga porque una
+  ley se lo manda, no porque haya perdido.
+- **Reparaciones edilicias** (279, 794.1). «Reparación» de un techo, no de un daño.
 
 ### Las dos trampas
 
@@ -116,6 +133,28 @@ Cada archivo anual trae otros nombres de columna y otro tipo de dato:
 
 El normalizador acepta las tres formas. Un año con columnas que no reconoce falla ruidoso; no
 escribe cero filas en silencio.
+
+## Lo que quedó medido
+
+Crédito para causas judiciales, en pesos de hoy:
+
+| | 2011 | 2016 | 2021 |
+|---|---|---|---|
+| Crédito judicial | 1.103 millones | 1.561 millones | 3.065 millones |
+
+Creció ×2,8 entre 2011 y 2021, ya descontada la inflación. Acumulado de los once años: 12.442
+millones de pesos de hoy. Por motivo: sentencias 7.924 millones, amparos de salud 3.494 millones,
+acuerdos judiciales 1.024 millones, indemnizaciones sin causa declarada 350 millones.
+
+Dos cuerpos concentran casi todo. «Diversos Créditos · Dir. Gral. de Secretaría (M.E.F.)» son 8.063
+millones: es la caja desde la que el MEF paga las condenas contra el Estado por el art. 52 de la Ley
+17.930. El Ministerio de Salud Pública son 3.494 millones, y son todos amparos — medicamentos
+oncológicos e insumos que el Estado compra porque un paciente le ganó un amparo.
+
+En los años con ejecución publicada, 56 de 64 partidas judiciales se gastaron enteras.
+
+«Diversos Créditos» es un organismo-bolsa, no un cuerpo. La API lo muestra junto a su unidad
+ejecutora; a secas no le dice nada al lector.
 
 ## Lo que la página no dice
 

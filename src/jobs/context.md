@@ -33,6 +33,7 @@ Nothing here sits on the request path. [`src/cronserver.ts`](../cronserver.ts) s
 | [load-udeco-sanctions.ts](load-udeco-sanctions.ts) | UDECO consumer-protection sanctions (1,482 rows, 1,103 firms, 2017-2024) → `udeco_sanctions`. The file is SEMICOLON-delimited and **LATIN-1** despite its UTF-8 headers. Upsert, never sweep. |
 | [refresh-udeco-crossref.ts](refresh-udeco-crossref.ts) | Sanctioned firms × state suppliers → `udeco_supplier_stats`. The RUT join needs a 12-digit normalisation (`R/…`, `R/… `, `R…`, bare) that no index can serve — an exact `$in` misses 28% — so it lives here, not on a request path. |
 | [load-jutep-omisos.ts](load-jutep-omisos.ts) | JUTEP roster of officials declared omisos on their sworn asset declaration (Ley 17.060) → `jutep_omisos`. **Upsert by (documento, fecha), never a swap** — JUTEP republishes cumulatively, so a vanished row is their correction, not our deletion. Resolves the free-text inciso label to a `buyer.id` prefix via [shared/jutep-incisos.ts](../../shared/jutep-incisos.ts) (99.7% of rows; only COLEGIO MEDICO is unresolved, correctly). |
+| [load-judicial-spending.ts](load-judicial-spending.ts) | OPP budget credit for the expense objects that name a judicial cause → `judicial_spending` + per-year measured coverage in `judicial_spending_years`. Taxonomy in [shared/judicial-objects.ts](../../shared/judicial-objects.ts), by CODE never by text. Reads the CKAN datastore, not OPP's portal — see Gotchas for the WAF. |
 | [load-dei.ts](load-dei.ts) | Loads the MIEM DEI industrial-registry CSV → `dei_companies`, upsert by RUT. The RUT join happens at read time in `app/server/utils/dei.ts`. |
 | [refresh-exchange-rates.ts](refresh-exchange-rates.ts) | Upserts monthly BCU USD/EUR/UI averages into `exchange_rates` from api.cambio-uruguay.com. Never deletes months. |
 | [seed-historical-rates.ts](seed-historical-rates.ts) | One-time `exchange_rates` backfill 2000-01…2022-11 via the BCU SOAP service. |
@@ -116,6 +117,7 @@ npx tsx src/jobs/refresh-exchange-rates.ts
 npx tsx src/jobs/seed-historical-rates.ts --commit --from=2004 --to=2006
 npx tsx src/jobs/backfill-pliego-docs.ts --limit 500 --concurrency 8
 npx tsx src/jobs/backfill-reiteracion-docs.ts --limit 2000 --concurrency 8
+npx tsx src/jobs/load-judicial-spending.ts --dry-run    # or --year=2016
 npx tsx src/jobs/enrich-suppliers.ts --dry-run
 npx tsx src/jobs/enrich-supplier-contacts.ts --limit=100 --dry-run
 npx tsx src/jobs/campaign/enqueue.ts --campaign=promo1
@@ -146,6 +148,7 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 | `15 6 * * 1` | `jobs/load-jutep-omisos` — weekly; JUTEP republishes a few times a year, the load is a 5s upsert |
 | `30 5 * * *` | `jobs/refresh-integrity-signals` — after the 04:15 detector, because it reads the anomalies its AI lane triages |
 | `0 3 * * 1` / `0 3 1 * *` / `0 4 1 * *` / `0 5 1 * *` | `jobs/import-sice-catalog` / `jobs/refresh-organism-groups` / `jobs/refresh-dept-indicators` / `jobs/refresh-spending-trend` |
+| `0 6 1 * *` | `jobs/load-judicial-spending` — last of the monthly block, so a slow third-party WAF never delays the rollups the site reads |
 
 ## Conventions
 
@@ -184,6 +187,17 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 - **The cron server only nudges `organism_group_stats` after a reconcile that actually corrected something** (cronserver.ts:190-191). `dept_indicators` has no such nudge, so a correction to an Intendencia award can sit uncorrected there until the 1st of the month.
 - **`MAX_ANOMALIES = 50_000`** (detect-anomalies.ts:70) keeps the worst findings (sorted by severity desc) and logs loudly when hit (:643) — a safety cap, not a correctness bound.
 - **Two campaign library files change live HTTP behaviour**: `app/server/api/campaign/*` imports [campaign/unsubscribe-core.ts](campaign/unsubscribe-core.ts) and [campaign/brevo-events.ts](campaign/brevo-events.ts) directly.
+- **El WAF de AGESIC bloquea el SQL de CKAN con un 200 y una página HTML.** `datastore_search_sql`
+  cae en cuanto la consulta trae `NULLIF`, `CASE WHEN` o un literal de cadena vacía, y también si la
+  query string lleva paréntesis o asteriscos sin percent-encodear. `amountExpr()` y `strictEncode()`
+  en [load-judicial-spending.ts](load-judicial-spending.ts) son la forma más defensiva que pasa; no
+  las "mejores" sin probar contra el servicio. El portal propio de OPP
+  (`transparenciapresupuestaria.opp.gub.uy`) responde 403 a todo cliente que no sea un navegador,
+  incluidos los CSV, desde dev y desde el servidor de producción — por eso el loader va al datastore.
+- **Los archivos anuales de OPP no cubren lo mismo, y la diferencia es de diez veces.** 2016 trae
+  44.527 filas y 32 organismos; 2017 trae 4.500 y 3. 2019-2021 publican el ejecutado en cero para
+  TODAS sus filas. Cualquier serie sobre esta fuente tiene que llevar la cobertura al lado, medida y
+  no escrita a mano — `judicial_spending_years` existe para eso.
 - **No test *framework* (no vitest/jest), no CI test step.** Tests are standalone tsx assertion scripts under `tests/unit/`; run one directly or all via `npm test` (= `node scripts/run-tests.mjs unit`). Also verify with targeted `npx tsc --noEmit` and the `--dry-run` flags (detect-anomalies, score-anomalies-ai, correct-lumpsum-artifacts, reconcile-award-amendments, load-dei, campaign/send).
 - **`shared/config.ts` calls `dotenv.config({ override: true })`** — the root `.env` WINS over shell env vars. `MONGODB_URI=… npx tsx src/jobs/<x>.ts` does NOT do what it looks like for anything importing a shared model. Edit `.env` instead.
 

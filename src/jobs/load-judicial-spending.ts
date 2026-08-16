@@ -29,6 +29,7 @@
  */
 import axios from "axios";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
+import type { IJudicialSpending } from "../../shared/models";
 import { ExchangeRateModel, JudicialSpendingModel, JudicialSpendingYearModel } from "../../shared/models";
 import { JUDICIAL_OBJECT_CODES, classifyJudicialObject } from "../../shared/judicial-objects";
 
@@ -172,6 +173,9 @@ async function uiAverages(): Promise<Map<number, number>> {
   return out;
 }
 
+/** La fila mientras se acumula: todo `IJudicialSpending` menos lo que se completa al cerrar. */
+type GroupedRow = Omit<IJudicialSpending, "objectNames" | "loadedAt">;
+
 interface RawJudicialRow {
   code: unknown;
   name: string | null;
@@ -229,13 +233,7 @@ async function loadYear(
 
   // Una combinación (año, organismo, unidad ejecutora, objeto) puede venir abierta por financiación
   // y programa. Se suma; `sourceRows` guarda cuántas eran.
-  const grouped = new Map<
-    string,
-    {
-      doc: Record<string, unknown>;
-      names: Set<string>;
-    }
-  >();
+  const grouped = new Map<string, { doc: GroupedRow; names: Set<string> }>();
 
   for (const row of raw) {
     const object = classifyJudicialObject(row.code);
@@ -269,31 +267,29 @@ async function loadYear(
       },
       names: new Set<string>(),
     };
-    entry.doc.creditoVigente = (entry.doc.creditoVigente as number) + num(row.vigente);
-    entry.doc.ejecutado = (entry.doc.ejecutado as number) + num(row.ejecutado);
-    entry.doc.sourceRows = (entry.doc.sourceRows as number) + 1;
+    entry.doc.creditoVigente += num(row.vigente);
+    entry.doc.ejecutado += num(row.ejecutado);
+    entry.doc.sourceRows += 1;
     if (row.name) entry.names.add(row.name.trim());
     grouped.set(rowKey, entry);
   }
 
   const loadedAt = new Date();
-  const docs = [...grouped.values()].map((e) => ({
+  const docs: IJudicialSpending[] = [...grouped.values()].map((e) => ({
     ...e.doc,
     objectNames: [...e.names].sort(),
     loadedAt,
   }));
 
-  const judicialDocs = docs.filter((d) => d.judicial === true);
-  const indemDocs = docs.filter((d) => d.judicial === false);
-  const sum = (list: typeof docs, field: "creditoVigente" | "ejecutado"): number =>
-    list.reduce((acc, d) => acc + (d[field] as number), 0);
+  const judicialDocs = docs.filter((d) => d.judicial);
+  const indemDocs = docs.filter((d) => !d.judicial);
+  const sum = (list: IJudicialSpending[], field: "creditoVigente" | "ejecutado"): number =>
+    list.reduce((acc, d) => acc + d[field], 0);
 
   // La igualdad vigente == ejecutado es lo que sostiene titular con el crédito vigente. Se mide, no
   // se asume: si un año deja de cumplirla, la página lo muestra.
-  const withExecution = judicialDocs.filter((d) => (d.ejecutado as number) > 0);
-  const fullySpent = withExecution.filter(
-    (d) => Math.abs((d.ejecutado as number) - (d.creditoVigente as number)) < 1
-  );
+  const withExecution = judicialDocs.filter((d) => d.ejecutado > 0);
+  const fullySpent = withExecution.filter((d) => Math.abs(d.ejecutado - d.creditoVigente) < 1);
 
   const yearDoc = {
     year,

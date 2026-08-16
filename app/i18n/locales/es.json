@@ -20,6 +20,7 @@
     "unexplained": "Alertas sin explicar",
     "omisos": "Declaraciones omitidas",
     "sanciones": "Sancionadas",
+    "sentenciasJudiciales": "Juicios perdidos",
     "senalesGestion": "Señales de gestión",
     "providerAnomalies": "Proveedores señalados",
     "providerLoadErrors": "Proveedores con errores",
@@ -1546,6 +1547,10 @@
           "title": "Proveedores sancionados por Defensa del Consumidor",
           "dek": "Empresas multadas o apercibidas por la Unidad de Defensa del Consumidor que adem\u00e1s le venden al Estado, cruzadas por RUT contra las compras p\u00fablicas."
         },
+        "sentenciasJudiciales": {
+          "title": "Lo que el Estado paga por perder juicios",
+          "dek": "El cr\u00e9dito presupuestal reservado para sentencias, acuerdos judiciales y amparos de salud, a\u00f1o por a\u00f1o y organismo por organismo."
+        },
         "genero": {
           "title": "Gasto en g\u00e9nero y diversidad",
           "dek": "Cu\u00e1nto gasta el Estado en pol\u00edticas de g\u00e9nero y diversidad, qu\u00e9 organismo lo compra y a qu\u00e9 proveedor va. El feed no trae etiqueta de tema: se reconstruye desde el texto de cada compra."
@@ -1650,6 +1655,67 @@
     "panelBodyOne": "La Unidad de Defensa del Consumidor aplicó 1 sanción a esta empresa en {to}, por un total de {ur} UR en multas.",
     "panelBody": "La Unidad de Defensa del Consumidor aplicó {n} sanciones a esta empresa entre {from} y {to}, por un total de {ur} UR en multas.",
     "panelLink": "Ver el cruce completo"
+  },
+  "sentencias": {
+    "title": "Lo que el Estado paga por perder juicios",
+    "lead": "Cuando un organismo público pierde un juicio, la indemnización sale del presupuesto. El presupuesto nacional abre el gasto por objeto, y siete de esos objetos nombran una causa judicial: sentencias, acuerdos judiciales y amparos de salud. Esto es lo que se reservó para pagarlos, año por año y organismo por organismo.",
+    "caveat": "El presupuesto no nombra causas ni personas. Ninguna cifra de esta página dice a quién indemnizó el Estado ni por qué; dice cuánto dinero se reservó bajo un objeto del gasto cuyo nombre oficial es una sentencia, un acuerdo judicial o un amparo. El caso a caso no existe como dato público: las sentencias están en prosa en la Base de Jurisprudencia Nacional, y el registro que sí tiene los montos, el RUJE, no se publica.",
+    "notComputed": "Todavía no cargamos el gasto judicial. Corré el job load-judicial-spending.",
+    "kpi": {
+      "latest": "de crédito para causas judiciales en {year}",
+      "total": "acumulado {from}-{to}, en pesos de hoy",
+      "growth": "creció entre {from} y {to}, ya descontada la inflación",
+      "fullySpent": "partidas judiciales que se gastaron enteras, de las que tienen ejecución publicada"
+    },
+    "series": {
+      "title": "Año por año",
+      "dek": "Crédito vigente para objetos del gasto con causa judicial, convertido a pesos de hoy por Unidad Indexada. Sin esa conversión, once años de inflación suben cualquier serie sin que nada haya cambiado.",
+      "note": "La barra muestra el crédito vigente, no lo efectivamente pagado. Los archivos de 2019 en adelante publican la ejecución en cero para todas sus filas, no sólo las judiciales. En los años que sí la traen, la partida de sentencias se gasta prácticamente entera, y por eso el crédito es la mejor medida disponible de lo que el Estado termina pagando."
+    },
+    "flag": {
+      "partial": "año parcial: {n} organismos",
+      "noExecution": "sin ejecución publicada"
+    },
+    "cats": {
+      "title": "Por qué motivo",
+      "dek": "El nombre oficial de cada objeto del gasto declara la causa. Las indemnizaciones sin causa declarada van aparte: pueden ser una condena o una expropiación, y el presupuesto no lo aclara.",
+      "rows": "{n} partidas"
+    },
+    "cat": {
+      "sentencia": "Sentencias judiciales",
+      "acuerdo": "Acuerdos o convenios judiciales",
+      "amparo": "Amparos de salud (medicamentos e insumos)",
+      "indemnizacion": "Indemnizaciones sin causa declarada"
+    },
+    "orgs": {
+      "title": "Qué organismos",
+      "dek": "Acumulado de los once años en pesos de hoy. La partida central vive en el Ministerio de Economía, que es quien paga las condenas contra el Estado por el artículo 52 de la Ley 17.930."
+    },
+    "rows": {
+      "title": "El detalle",
+      "noData": "sin dato"
+    },
+    "col": {
+      "year": "Año",
+      "organismo": "Organismo",
+      "objeto": "Objeto del gasto",
+      "vigente": "Crédito vigente",
+      "ejecutado": "Ejecutado"
+    },
+    "filters": {
+      "year": "Año",
+      "category": "Motivo",
+      "allYears": "Todos los años",
+      "allCategories": "Todos los motivos"
+    },
+    "gap": {
+      "title": "Lo que todavía no se puede saber",
+      "body": "No existe en Uruguay una lista pública de las indemnizaciones que el Estado paga por sentencia. Estas son las tres fuentes que tendrían el caso a caso, y por qué ninguna alcanza.",
+      "bjn": "La Base de Jurisprudencia Nacional publica más de 100.000 sentencias, pero el monto de la condena está adentro del texto, no en un campo, y no hay forma de consultarla en bloque.",
+      "ruje": "El Registro Único de Juicios del Estado (Decreto 98/019) sí tiene los montos de todos los juicios del Estado. No es público: en 2024 un pedido de acceso a la información devolvió 3.076 juicios en 2023 y unos 132 millones de dólares identificados, sin decir qué organismo ni por qué causa.",
+      "tca": "El Tribunal de lo Contencioso Administrativo anula actos administrativos, pero no fija indemnizaciones, así que sus fallos no traen montos."
+    },
+    "source": "Fuente: Oficina de Planeamiento y Presupuesto, crédito presupuestal en"
   },
   "senales": {
     "title": "Señales de gestión",
@@ -2135,6 +2201,10 @@
     "sanciones": {
       "title": "Proveedores del Estado sancionados por Defensa del Consumidor",
       "description": "Empresas sancionadas por la Unidad de Defensa del Consumidor que además venden al Estado uruguayo, cruzadas por RUT contra las compras públicas."
+    },
+    "sentencias": {
+      "title": "Cuánto paga el Estado uruguayo por perder juicios",
+      "description": "Crédito presupuestal para sentencias judiciales, acuerdos judiciales, indemnizaciones y amparos de salud, por año y por organismo, desde 2011."
     },
     "genero": {
         "title": "Gasto público en políticas de género y diversidad en Uruguay",
