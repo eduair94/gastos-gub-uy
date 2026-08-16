@@ -68,6 +68,7 @@ const series = computed(() => [
       { path: '/investigaciones/hallazgos', emoji: '🔎', ...c.value.cardHallazgos },
       { path: '/investigaciones/datacenter-google', emoji: '🗄️', ...c.value.cardDatacenter },
       { path: '/investigaciones/competencia-aparente', emoji: '🤝', ...c.value.cardCompetencia },
+      { path: '/investigaciones/antel-cuadrillas', emoji: '🛠️', ...c.value.cardAntel },
       { path: '/investigaciones/mensajes-del-estado', emoji: '📣', ...c.value.cardMensajes },
     ],
   },
