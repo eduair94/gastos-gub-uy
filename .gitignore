@@ -31,6 +31,14 @@ firebase.json
 # Agent-tool local state (Serena project index/memories, Codex remote attachments)
 .serena/
 .codex-remote-attachments/
+# Codex hook config: machine-local, it hard-codes an absolute $HOME path.
+.codex/
+# impeccable (design linter) local state: hook cache, per-machine config, and
+# critique reports — outputs of a run, not source. The hook config under
+# .github/hooks/ points at .github/skills/impeccable/, which is not in this
+# repo, so it is dead weight for anyone who does not have the skill installed.
+.impeccable/
+.github/hooks/
 
 # RUPE open-data CSVs — 74MB, re-downloaded by src/jobs/load-rupe.ts from catalogodatos
 rupe/
