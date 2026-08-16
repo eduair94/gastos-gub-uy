@@ -122,3 +122,85 @@ export function casoExplorerQuery(q: CasoQuery): Record<string, string> {
   }
   return out
 }
+
+// ── Las dos fuentes ─────────────────────────────────────────────────────────
+
+/**
+ * Una ficha puede venir de dos lugares, y conviene tener claro por qué son dos.
+ *
+ * Lo CURADO son los módulos de `dossiers/`: texto que escribió y revisó una persona, con
+ * fuentes de prensa verificadas una por una. Vive en git porque su valor es que alguien
+ * responde por cada frase, y porque el diff es la revisión.
+ *
+ * Lo DERIVADO lo arma `src/jobs/build-derived-casos.ts` a partir de documentos oficiales.
+ * Vive en Mongo porque se puede volver a armar con un comando, y porque mil fichas en un
+ * módulo de TS quedarían residentes en la memoria de cada worker de pm2.
+ *
+ * De acá para afuera la diferencia no existe: las dos salen como `CasoDef`.
+ */
+
+/** Sólo los dossiers escritos a mano. Sin red y sin base. */
+export function listCuratedCasoDefs(): CasoDef[] {
+  return CASOS
+}
+
+let derivedCache: { at: number, defs: CasoDef[] } | null = null
+/** Cinco minutos. El armador corre por lotes, no por request. */
+const DERIVED_TTL_MS = 5 * 60 * 1000
+
+async function loadDerived(): Promise<CasoDef[]> {
+  if (derivedCache && Date.now() - derivedCache.at < DERIVED_TTL_MS) return derivedCache.defs
+  try {
+    const { DerivedCasoModel } = await import('../../../../shared/models/derived_caso')
+    const { connectToDatabase } = await import('../database')
+    await connectToDatabase()
+    const rows = await DerivedCasoModel.find({}, { def: 1, rank: 1 })
+      .sort({ rank: 1 })
+      .lean()
+      .maxTimeMS(8000)
+    const defs = rows.map((r: { def?: unknown }) => r.def as CasoDef).filter(Boolean)
+    derivedCache = { at: Date.now(), defs }
+    return defs
+  }
+  catch {
+    // Que la base no conteste no puede tirar abajo las 141 fichas curadas, que no la
+    // necesitan para nada. Se sirve lo último que hubo, o nada.
+    return derivedCache?.defs ?? []
+  }
+}
+
+/** Curadas primero, derivadas después. El orden es editorial y no se invierte. */
+export async function listAllCasoDefs(): Promise<CasoDef[]> {
+  return [...CASOS, ...(await loadDerived())]
+}
+
+export async function listAllCasoDefsByTheme(theme: string): Promise<CasoDef[]> {
+  // El tema armado es el único que obliga a ir a la base. Para los otros catorce alcanza con
+  // lo curado, y así una página de tema curado no paga una consulta que no necesita.
+  if (theme !== 'gasto-observado') return CASOS.filter(c => c.theme === theme)
+  return (await loadDerived()).filter(c => c.theme === theme)
+}
+
+export async function getAnyCasoDef(slug: string): Promise<CasoDef | null> {
+  const curated = getCasoDef(slug)
+  if (curated) return curated
+  try {
+    const { DerivedCasoModel } = await import('../../../../shared/models/derived_caso')
+    const { connectToDatabase } = await import('../database')
+    await connectToDatabase()
+    const row = await DerivedCasoModel.findOne({ slug }, { def: 1 }).lean().maxTimeMS(8000)
+    return ((row as { def?: unknown } | null)?.def as CasoDef) ?? null
+  }
+  catch {
+    return null
+  }
+}
+
+export async function casoThemeCountsAsync(): Promise<Record<string, number>> {
+  const out: Record<string, number> = {}
+  for (const t of CASO_THEMES) out[t.key] = 0
+  for (const c of await listAllCasoDefs()) {
+    out[c.theme] = (out[c.theme] ?? 0) + 1
+  }
+  return out
+}
