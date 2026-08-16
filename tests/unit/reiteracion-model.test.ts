@@ -17,7 +17,8 @@ const paths = Object.keys(ReiteracionDocModel.schema.paths)
 const REQUIRED = [
   'ocid', 'url', 'fetchedAt', 'httpStatus', 'hasText', 'textChars', 'text',
   'buyerId', 'buyerName', 'supplierIds', 'supplierNames', 'sourceYear', 'primaryAmount',
-  'observed', 'reason', 'resolutionNumber', 'resolutionDate', 'tocafArticle', 'observedBy',
+  'observed', 'reason', 'resolutionNumber', 'resolutionDate', 'breachedArticles',
+  'authorityArticle', 'observedBy',
 ]
 for (const p of REQUIRED) {
   check(paths.includes(p), `falta el campo "${p}" en el Schema`)

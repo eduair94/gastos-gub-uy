@@ -88,7 +88,8 @@
     "cronserver:status": "pm2 show gastos-gub-cronserver",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src/**/*.ts",
-    "verify:casos": "tsx scripts/verify-casos.ts"
+    "verify:casos": "tsx scripts/verify-casos.ts",
+    "fetch-reiteracion-docs": "tsx src/jobs/fetch-reiteracion-docs.ts"
   },
   "keywords": [
     "typescript",

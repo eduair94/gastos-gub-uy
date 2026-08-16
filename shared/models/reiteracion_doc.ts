@@ -48,7 +48,8 @@ const ReiteracionDocSchema = new Schema<IReiteracionDoc>(
     reason: { type: String, default: null },
     resolutionNumber: { type: String, default: null },
     resolutionDate: { type: String, default: null },
-    tocafArticle: { type: String, default: null },
+    breachedArticles: { type: [String], default: [] },
+    authorityArticle: { type: String, default: null },
     observedBy: { type: String, default: null },
   },
   { collection: "reiteracion_docs" }
