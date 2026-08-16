@@ -90,10 +90,12 @@ se diseña una vez. Cada instancia lleva su `tests/unit/hallazgo-*.verify.ts`.
 - Lo curado (carril A) sigue en TS y en git. Es texto que un humano revisa.
 - Lo derivado (carriles B y C) va a Mongo. 1.141 casos en módulos TS serían unas
   60.000 líneas residentes en el bundle de Nitro, por cada worker de pm2.
-- Los dossiers curados pasan a import dinámico por tema. Una página de tema carga
-  su módulo y ninguno más.
 - `/api/casos` pagina del lado del servidor. Hoy devuelve la lista entera: con
   1.141 fichas serían unos 2 MB de JSON por render.
+- Los dossiers curados **siguen** con import estático. El import dinámico por tema
+  se evaluó y se descartó: una vez que lo derivado sale del bundle, quedan 7.320
+  líneas curadas, y partirlas en catorce trozos complica el lector para ahorrar
+  poco. Se reabre si lo curado pasa de unas 500 fichas.
 - El lector se unifica. `listCasoDefs()` pasa a ser asíncrono y consulta las dos
   fuentes. Las páginas y los componentes no cambian.
 
