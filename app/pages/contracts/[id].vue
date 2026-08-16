@@ -92,6 +92,15 @@ const showRealToday = computed(() => {
 const tags = computed(() => contractTags(contract.value))
 const showsMoney = computed(() => isMoneyStage(contract.value))
 
+/** The stage help text, spelled out under the chip row instead of living
+ *  only in a `:title` — a hover-only tooltip never reaches a touch reader,
+ *  and this single line is what explains why a release may show no
+ *  supplier, no items or no amount at all. */
+const primaryStageHelp = computed(() => {
+  const stage = primaryTag(contract.value)
+  return stage ? t(`contract.stageHelp.${stage}`) : ''
+})
+
 // The headline is pesos, but the source may have priced the contract in
 // dollars. Saying "$ 337.781,72" above a line reading "US$ 8.400,00"
 // without explanation reads as a contradiction, so name the conversion.
@@ -125,12 +134,51 @@ const ocdsUrl = computed(() =>
   (contract.value as any)?.ocdsUrl ?? ocdsJsonUrl(contract.value?.id),
 )
 
+/**
+ * The one address of the source document.
+ *
+ * `rssLink` and `ocdsUrl` are the SAME document on this feed and usually
+ * differ only by scheme — the feed's own link is `http://`, ours is
+ * `https://` — so printing both listed one URL twice. Prefer https; only
+ * fall back to the other when they genuinely point somewhere else.
+ */
+const sourceDocUrl = computed<string | null>(() => {
+  const rss = (contract.value?.rssLink ?? '').trim()
+  const ocds = (ocdsUrl.value ?? '').trim()
+  if (!rss) return ocds || null
+  if (!ocds) return rss
+  return sameDocument(rss, ocds)
+    ? ([rss, ocds].find(u => u.startsWith('https:')) ?? ocds)
+    : ocds
+})
+
+/** The feed's own link, kept ONLY when it is genuinely a different address —
+ *  folding it into `sourceDocUrl` must never silently drop a second document. */
+const rssLinkDistinct = computed<string | null>(() => {
+  const rss = (contract.value?.rssLink ?? '').trim()
+  const ocds = (ocdsUrl.value ?? '').trim()
+  return rss && ocds && !sameDocument(rss, ocds) ? rss : null
+})
+
+function sameDocument(a: string, b: string): boolean {
+  return a.replace(/^https?:/, '') === b.replace(/^https?:/, '')
+}
+
 const documents = computed(() => {
   const c = contract.value as any
   const tender = c?.tender?.documents ?? []
   const award = (c?.awards ?? []).flatMap((a: any) => a.documents ?? [])
   return [...tender, ...award].filter((d: any) => d?.url)
 })
+
+/** A large pliego set (some contracts carry 30+) rendered unbounded in the
+ *  320px aside — capped, with everything still reachable behind one click,
+ *  nothing dropped. */
+const DOCS_PREVIEW = 8
+const showAllDocs = ref(false)
+const visibleDocuments = computed(() =>
+  showAllDocs.value ? documents.value : documents.value.slice(0, DOCS_PREVIEW),
+)
 
 // ---- What was bought ------------------------------------------------
 // `contractItems` flattens every award into one list, which loses both
@@ -383,8 +431,31 @@ const hasTaxData = computed(() => {
   for (const v of taxByNro.value.values()) if (v.gross) return true
   return false
 })
+/**
+ * Award lines whose `nro` is shared with another line, so the scraped
+ * per-item figures cannot be attributed to either.
+ *
+ * OCDS item ids are `<Ítem Nº>-<sub-index>` and one gov Ítem can be split
+ * across several award lines ("1-1" and "1-2" — 12% of real multi-item
+ * awards). The government page has ONE row per Ítem Nº carrying one
+ * quantity and one total, so handing that row to BOTH lines printed one
+ * line's total on the other: adjudicacion-1349468 showed $111.754 as the
+ * total of its $628.585 line.
+ */
+const ambiguousNros = computed<Set<number>>(() => {
+  const seen = new Map<number, number>()
+  for (const g of itemGroups.value) {
+    for (const r of g.rows) {
+      if (r.nro === null) continue
+      seen.set(r.nro, (seen.get(r.nro) ?? 0) + 1)
+    }
+  }
+  return new Set([...seen.entries()].filter(([, n]) => n > 1).map(([nro]) => nro))
+})
+
 function taxRow(row: ItemRow): ItemTax | null {
-  return row.nro === null ? null : (taxByNro.value.get(row.nro) ?? null)
+  if (row.nro === null || ambiguousNros.value.has(row.nro)) return null
+  return taxByNro.value.get(row.nro) ?? null
 }
 // Prefer the page's fractional quantity — the feed truncates 0,17 KG to 0.
 function displayQuantity(row: ItemRow): number | null {
@@ -414,6 +485,25 @@ const compraTotal = computed<ScrapedMoney | null>(() => {
 // The compra's tax breakdown: subtotal (Σ qty×net sin imp) → impuestos → total
 // con impuestos, all off the same official page so the three always reconcile.
 // Subtotal is only meaningful in a single currency, so it's dropped when lines mix.
+/**
+ * Whether the scraped per-item rows account for EVERY priced award line.
+ *
+ * They often don't: the gov page lists one row per Ítem Nº while OCDS can
+ * split that Ítem across several award lines (adjudicacion-1349468 — obra +
+ * leyes sociales — is two lines against one scraped row). Summing a partial
+ * set as if it were the whole then subtracting it from the tax-INCLUSIVE
+ * grand total produced a nonsense decomposition: subtotal $111.754 and
+ * "impuestos" $766.873 on a $740.339 purchase.
+ */
+const taxRowsCoverAllLines = computed(() => {
+  const priced = itemGroups.value.flatMap(g => g.rows).filter(r => r.unitAmount !== null)
+  if (!priced.length) return false
+  return priced.every((r) => {
+    const t = taxRow(r)
+    return !!t && t.quantity !== null && t.netUnit !== null
+  })
+})
+
 const taxBreakdown = computed<{ total: number, subtotalNet: number | null, impuestos: number | null, currency: string } | null>(() => {
   const total = compraTotal.value
   if (!total) return null
@@ -422,9 +512,14 @@ const taxBreakdown = computed<{ total: number, subtotalNet: number | null, impue
   let mixed = false
   for (const v of taxByNro.value.values()) {
     if (v.gross && v.gross.currency !== total.currency) mixed = true
-    if (v.quantity !== null && v.netUnit !== null) { subtotal += v.quantity * v.netUnit; sawAny = true }
+    if (v.quantity !== null && v.netUnit !== null) {
+      subtotal += v.quantity * v.netUnit
+      sawAny = true
+    }
   }
-  const subtotalNet = sawAny && !mixed ? subtotal : null
+  // The tax-inclusive total is always trustworthy (it is the government's own
+  // figure); only its DECOMPOSITION needs every line to be accounted for.
+  const subtotalNet = sawAny && !mixed && taxRowsCoverAllLines.value ? subtotal : null
   const impuestos = subtotalNet !== null ? total.amount - subtotalNet : null
   return { total: total.amount, subtotalNet, impuestos, currency: total.currency }
 })
@@ -473,6 +568,21 @@ function roleLabel(role: string): string {
 function submissionLabel(method: string): string {
   const key = `contract.submissionMethods.${method}`
   return te(key) ? t(key) : method
+}
+
+/** OCDS status vocabulary (active/cancelled/complete/unsuccessful) — raw
+ *  English tokens printed verbatim was the seam that made a Spanish-canonical
+ *  page look like it was leaking pipeline internals. Same fallback shape as
+ *  `roleLabel`/`submissionLabel` above. */
+function statusLabel(status: string): string {
+  const key = `contract.status.${status}`
+  return te(key) ? t(key) : status
+}
+
+/** OCDS `initiationType` (tender/planning) — same fallback shape again. */
+function initiationTypeLabel(v: string): string {
+  const key = `contract.initiationTypes.${v}`
+  return te(key) ? t(key) : v
 }
 
 function boolLabel(v: boolean): string {
@@ -576,120 +686,160 @@ const submissionParts = computed(() => {
   })
 })
 
-const tenderPeriod = computed(() => periodText(tender.value?.tenderPeriod))
-const enquiryPeriod = computed(() => periodText(tender.value?.enquiryPeriod))
-
+// tenderPeriod/enquiryPeriod are deliberately NOT part of this: Cronología
+// is their only home now, so their presence alone shouldn't decide whether
+// this panel (which no longer renders them) shows.
+// tn.status is deliberately not part of this: the header chip is its only
+// home now (see the Resumen facts markup), so status alone shouldn't decide
+// whether this dl renders — it would render empty.
 const hasTenderFacts = computed(() => {
   const tn = tender.value
   if (!tn) return false
+  // procurementMethodDetails is deliberately absent: the eyebrow is its only
+  // home now, so it must not decide whether this dl — which no longer renders
+  // it — appears at all.
   return !!(
-    tn.id || tn.procuringEntity?.name || tn.status || tn.procurementMethodDetails
-    || tenderPeriod.value || enquiryPeriod.value
+    tn.id || tn.procuringEntity?.name
     || typeof tn.hasEnquiries === 'boolean'
     || tn.submissionMethod?.length || tn.submissionMethodDetails
   )
 })
 
+/** True when the party roster already names this exact entity as the buyer
+ *  — which is the normal case for any release carrying `parties[]`. Gates
+ *  the fallback "Unidad ejecutora" fact row so it only appears for the
+ *  older records where it wouldn't be shown anywhere otherwise. */
+/**
+ * The only award, when there is exactly one.
+ *
+ * Its id and status are facts about the contract, so with a single award they
+ * belong in Resumen with the rest of them. They stay pinned above the items
+ * table only when there are SEVERAL awards, where they are what tells one
+ * block of lines from the next.
+ */
+const singleAward = computed(() => (itemGroups.value.length === 1 ? itemGroups.value[0] : null))
+
+const procuringEntityShownAsParty = computed(() => {
+  const name = tender.value?.procuringEntity?.name
+  return !!name && partyRoster.value.some(p => p.isBuyer && p.name === name)
+})
+
 // ---- Price reference -------------------------------------------------
 interface PriceRef {
-  description: string
   /** Catalogue code (classification.id) — the exact, comma-safe key the baseline buckets on and
-   *  the explorer's `categoryId` filter matches. Used for the comparables + product links. */
+   *  the explorer's `categoryId` filter matches. Used for the comparables link. */
   code: string
-  /** Catalogue description — display only; NOT used to filter (it is many-to-many with codes). */
-  catDesc: string
-  /** Gov item Nº, to join the scraped presentación características. */
-  nro: number | null
   paid: number
   currency: string
   n: number
   median: number
   p25: number
   p95: number
-  min: number
-  max: number
   position: 'below' | 'typical' | 'high' | 'veryHigh' | 'listPrice'
   tone: string
 }
 
+/** `listPrice` states a fact (this paid amount matches a known tariff), not a
+ *  judgment — so unlike `typical` it does NOT share the reassuring celeste tone. */
+function toneForPosition(position: PriceRef['position']): string {
+  switch (position) {
+    case 'veryHigh': return 'tag--alerta'
+    case 'high': return 'tag--neutral'
+    case 'below': return 'tag--activo'
+    case 'listPrice': return 'tag--neutral'
+    default: return 'tag--celeste'
+  }
+}
+
 /**
- * Each priced item joined to its reference distribution (from
- * `itemBaselines` on the API response). Only items with a real baseline
- * of a few comparable purchases are shown — a distribution of one tells
- * the reader nothing.
+ * The reference distribution for ONE priced line, or null when there is no
+ * usable baseline for it.
+ *
+ * Keyed per LINE, never deduplicated. The previous "Precios de referencia"
+ * table folded lines onto one row per `code|currency|unit` and skipped the
+ * rest — measured against 750 real multi-item awards from the public API,
+ * that silently dropped 21% of coded priced lines, and 39% of those contracts
+ * had a dropped line whose price DIFFERED from the shown one (adjudicacion-1358139
+ * shows "Bajo lo habitual" for code 4472 at $11.800 while hiding the same
+ * code's $21.800 line). Each line carries its own paid price, so each line
+ * gets its own verdict.
  */
-const priceReferences = computed<PriceRef[]>(() => {
+function referenceFor(code: string, currency: string, unitName: string, paid: number | null): PriceRef | null {
   const baselines = (contract.value as any)?.itemBaselines as Record<string, any> | undefined
-  if (!baselines) return []
+  if (!baselines || !code || !paid || paid <= 0) return null
 
-  const out: PriceRef[] = []
-  const seen = new Set<string>()
+  // Canonical unit (lowercased, unidad-folded) — the baseline and the detail
+  // API both key on this, so "FRASCO" must fold to "frasco" or the lookup
+  // misses and the comparison disappears. See shared/utils/units.
+  const b = baselines[`${code}|${currency}|${canonicalUnit(unitName)}`]
+  // Below 5 comparables the percentiles are noise, not a reference.
+  if (!b || !b.n || b.n < 5) return null
 
-  for (const award of contract.value?.awards ?? []) {
-    for (const item of (award.items ?? []) as RawItem[]) {
-      const classificationId = item.classification?.id?.trim()
-      const paid = item.unit?.value?.amount
-      if (!classificationId || !paid || paid <= 0) continue
+  // An exact match against the item's recurring (tariff/list) prices wins over
+  // any percentile comparison: catalogue items like TIMBRE PROFESIONAL pool every
+  // legal denomination under one id, so the official 590 parto stamp sits far
+  // above a p95 dominated by the 170 certificado — yet is not an overpayment.
+  const isListPrice = Array.isArray(b.recurringPrices) && b.recurringPrices.includes(paid)
 
-      const currency = item.unit?.value?.currency?.trim() || 'UYU'
-      // Canonical unit (lowercased, unidad-folded) — the baseline and the
-      // detail API both key on this, so "FRASCO" must fold to "frasco" or the
-      // lookup misses and the reference row disappears. See shared/utils/units.
-      const unitName = canonicalUnit(item.unit?.name)
-      const key = `${classificationId}|${currency}|${unitName}`
-      if (seen.has(key)) continue
+  const position: PriceRef['position'] = isListPrice
+    ? 'listPrice'
+    : paid > b.p95
+      ? 'veryHigh'
+      : paid > b.p75
+        ? 'high'
+        : paid < b.p25
+          ? 'below'
+          : 'typical'
 
-      const b = baselines[key]
-      // Below 5 comparables the percentiles are noise, not a reference.
-      if (!b || !b.n || b.n < 5) continue
-      seen.add(key)
+  return {
+    code,
+    paid,
+    currency,
+    n: b.n,
+    median: b.p50,
+    p25: b.p25,
+    p95: b.p95,
+    position,
+    tone: toneForPosition(position),
+  }
+}
 
-      // An exact match against the item's recurring (tariff/list) prices wins over
-      // any percentile comparison: catalogue items like TIMBRE PROFESIONAL pool every
-      // legal denomination under one id, so the official 590 parto stamp sits far
-      // above a p95 dominated by the 170 certificado — yet is not an overpayment.
-      const isListPrice = Array.isArray(b.recurringPrices) && b.recurringPrices.includes(paid)
+function rowReference(row: ItemRow): PriceRef | null {
+  return referenceFor(row.code, row.currency, row.unitName, row.unitAmount)
+}
 
-      const position = isListPrice
-        ? 'listPrice'
-        : paid > b.p95
-          ? 'veryHigh'
-          : paid > b.p75
-            ? 'high'
-            : paid < b.p25
-              ? 'below'
-              : 'typical'
+/** Whether ANY line has a comparison — decides if the column is worth its width. */
+const hasAnyReference = computed(() =>
+  itemGroups.value.some(g => g.rows.some(r => !!rowReference(r))),
+)
 
-      out.push({
-        description: item.description?.trim() || item.classification?.description?.trim() || '—',
-        code: classificationId,
-        catDesc: item.classification?.description?.trim() || '',
-        nro: (() => {
-          const m = /^(\d+)/.exec(item.id ?? '')
-          return m ? Number(m[1]) : null
-        })(),
-        paid,
-        currency,
-        n: b.n,
-        median: b.p50,
-        p25: b.p25,
-        p95: b.p95,
-        min: b.min,
-        max: b.max,
-        position,
-        tone: position === 'veryHigh'
-          ? 'tag--alerta'
-          : position === 'high'
-            ? 'tag--neutral'
-            : position === 'below'
-              ? 'tag--activo'
-              : 'tag--celeste', // 'typical' and 'listPrice' share the informative tone
-
-      })
+/** Priced lines with a catalogue code but no usable baseline. Named explicitly in
+ *  the table footer: a reader could otherwise not tell "we have no comparables"
+ *  from "we didn't check". */
+const referenceGaps = computed(() => {
+  let total = 0
+  let missing = 0
+  for (const g of itemGroups.value) {
+    for (const r of g.rows) {
+      if (!r.code || !r.unitAmount || r.unitAmount <= 0) continue
+      total += 1
+      if (!rowReference(r)) missing += 1
     }
   }
-  return out
+  return missing > 0 ? { missing, total } : null
 })
+
+/** "3,5× la mediana" — physically next to the verdict chip so the number and
+ *  the judgment can never disagree (a calm chip beside a 3.5× figure was the
+ *  original defect: the chip alone could say "en rango" while the number told
+ *  a different story). Always the Uruguay-formatted ratio, one decimal. */
+function ratioText(r: PriceRef): string | null {
+  if (!r.median || r.median <= 0) return null
+  const ratio = r.paid / r.median
+  if (!Number.isFinite(ratio) || ratio <= 0) return null
+  const formatted = new Intl.NumberFormat('es-UY', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(ratio)
+  return t('contract.reference.ratio', { ratio: formatted })
+}
 
 function rangeText(r: PriceRef): string {
   const lo = formatMoney(r.p25, r.currency, { compact: true })
@@ -699,21 +849,15 @@ function rangeText(r: PriceRef): string {
   return `${lo} – ${hiShort}`
 }
 
-/**
- * The scraped características that change what a reference row means:
- * the presentación ("ENVASE · 250 G" — is the unit price per gram or
- * per envase?) and the tipo ("SOMBRILLA DE CALOR" — catalogue id 70063
- * pools estufa and sombrilla rentals into one price distribution).
- * Other characteristics stay in the items table above.
- */
-function refPresentation(r: PriceRef): string {
-  if (r.nro === null) return ''
-  const f = itemFeatures.value.get(r.nro)
-  if (!f) return ''
-  return f.features
-    .filter(x => /presentaci|^tipo$/i.test(x.name.trim()))
-    .map(x => x.value)
-    .join(' · ')
+/** The distribution the verdict came from, as one labelled line. Labelled and
+ *  not three bare numbers: "$ 2,8 M · $ 1,1 M – 13,7 M · 956" gives a reader
+ *  no way to tell median from range from sample size. */
+function statsText(r: PriceRef): string {
+  return t('contract.reference.stats', {
+    median: formatMoney(r.median, r.currency, { compact: true }),
+    range: rangeText(r),
+    n: formatNumber(r.n),
+  })
 }
 
 /**
@@ -738,19 +882,6 @@ function comparablesLink(r: PriceRef): string | null {
   })
 }
 
-/** The product page for this catalogue code — its full who/how-much/price profile. */
-function productLink(code: string): string | null {
-  return code ? localePath(`/products/${encodeURIComponent(code)}`) : null
-}
-
-const referenceColumns = computed(() => [
-  { key: 'description', label: t('common.item'), primary: true },
-  { key: 'paid', label: t('contract.reference.paid'), align: 'end' as const },
-  { key: 'median', label: t('contract.reference.typical'), align: 'end' as const },
-  { key: 'range', label: t('contract.reference.range'), align: 'end' as const, mono: true },
-  { key: 'n', label: t('contract.reference.comparables'), align: 'end' as const, mono: true },
-])
-
 function itemColumns(hasPrices: boolean, hasTax = false) {
   const cols = [
     { key: 'description', label: t('common.description'), primary: true },
@@ -761,6 +892,11 @@ function itemColumns(hasPrices: boolean, hasTax = false) {
   if (hasPrices) {
     cols.push(
       { key: 'unitAmount', label: t('common.unitPrice'), align: 'end' as const } as any,
+      // What that unit price means, on the line it belongs to. Sits directly
+      // after the price it judges so the two can never be read apart.
+      ...(hasAnyReference.value
+        ? [{ key: 'reference', label: t('contract.sections.reference') } as any]
+        : []),
       { key: 'total', label: t('common.total'), align: 'end' as const } as any,
     )
     // The tax-inclusive line total, only once the scrape has supplied it.
@@ -796,12 +932,45 @@ const totalAmounts = computed(() => Object.entries(amt.value?.totalAmounts ?? {}
 // the header already explains why, and a table of zeroes would not.
 const showAmountDetail = computed(() => !!amt.value?.hasAmounts)
 
+/** The exact contact `pickPartyContact` picked for the aside panel
+ *  (shared/utils/contact-point.ts): it prefers `procuringEntity` over
+ *  `buyer`, so a release with BOTH — a common case, e.g. a ministry
+ *  (buyer) and the specific unidad ejecutora (procuringEntity) — can carry
+ *  two DIFFERENT contacts. Suppressing every buyer-role party's inline
+ *  contact whenever the aside has ANY contact would silently drop the one
+ *  the aside didn't pick. Compare by the actual contact instead, so only
+ *  the party whose contact is the one actually shown gets hidden here. */
+const asideContact = computed(() => (contract.value as any)?.contact as
+  { name?: string, email?: string, telephone?: string } | null | undefined)
+
+function isAsideContact(c: { name: string, email: string, phone: string } | null): boolean {
+  const a = asideContact.value
+  if (!c || !a) return false
+  const email = (a.email ?? '').trim()
+  const phone = (a.telephone ?? '').trim()
+  return (!!email && email === c.email) || (!!phone && phone === c.phone)
+}
+
+/** The buying desk's own name, when it says something the executing unit
+ *  above doesn't already. Some records name the contact after the organism
+ *  itself, and repeating that adds a row without adding a fact. */
+const buyingOfficeName = computed<string | null>(() => {
+  const name = (asideContact.value?.name ?? '').trim()
+  if (!name) return null
+  const already = partyRoster.value.some(p => p.isBuyer && p.name.trim() === name)
+  return already ? null : name
+})
+
 // ---- Where the record came from -------------------------------------
 const webFetchDate = computed(() => (contract.value as any)?.webFetchDate as string | undefined)
 
 const showProvenance = computed(() => {
   const c = contract.value
-  return !!(c?.sourceFileName || c?.sourceYear || webFetchDate.value || c?.initiationType || c?.rssLink)
+  // sourceFileName is deliberately not part of this guard: it no longer
+  // renders (operational metadata, not a reader-facing fact — see the
+  // "Ficha técnica" block below), so it can't be the only reason this
+  // section shows.
+  return !!(c?.sourceYear || webFetchDate.value || c?.initiationType || c?.rssLink)
 })
 
 /**
@@ -816,24 +985,59 @@ function docLabel(d: { description?: string, documentType?: string }): string {
   return d.documentType || t('common.download')
 }
 
-// Only steps the source actually dated. A rail of placeholder steps
-// would imply we know more about this contract than we do.
-const timeline = computed(() => {
+interface TimelineStep { key: string, sortDate: string, text: string }
+
+// Only steps the source actually dated. A rail of placeholder steps would
+// imply we know more about this contract than we do.
+//
+// The single source for the whole sequence — Resumen no longer repeats the
+// tender/enquiry periods, so this carries their full range + closing TIME
+// (via the same `periodText` Resumen used to own), not just a bare end date.
+// A bidder needs "closes at 15:00", not just "closes 30 sept".
+const timeline = computed<TimelineStep[]>(() => {
   const c = contract.value as any
-  return [
-    { key: 'enquiry', date: c?.tender?.enquiryPeriod?.endDate },
-    { key: 'tender', date: c?.tender?.tenderPeriod?.endDate },
-    { key: 'award', date: c?.awards?.[0]?.date },
-    { key: 'published', date: c?.date },
+  const steps: (TimelineStep | null)[] = [
+    (() => {
+      const p = c?.tender?.enquiryPeriod
+      const text = periodText(p)
+      const sortDate = p?.endDate ?? p?.startDate
+      return text && sortDate ? { key: 'enquiry', sortDate, text } : null
+    })(),
+    (() => {
+      const p = c?.tender?.tenderPeriod
+      const text = periodText(p)
+      const sortDate = p?.endDate ?? p?.startDate
+      return text && sortDate ? { key: 'tender', sortDate, text } : null
+    })(),
+    c?.awards?.[0]?.date ? { key: 'award', sortDate: c.awards[0].date, text: formatDate(c.awards[0].date) } : null,
+    c?.date ? { key: 'published', sortDate: c.date, text: formatDate(c.date) } : null,
   ]
-    .filter(s => s.date && !Number.isNaN(new Date(s.date).getTime()))
-    .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime())
+  return steps
+    .filter((s): s is TimelineStep => !!s && !Number.isNaN(new Date(s.sortDate).getTime()))
+    .sort((a, b) => new Date(a.sortDate).getTime() - new Date(b.sortDate).getTime())
 })
 
 const rawOpen = ref(false)
 function openRawJson() {
   rawOpen.value = true
   track('raw_json_view')
+}
+
+// Same shape as CallContact's copy button — the OCID is the single most
+// copied string on the page (it's the reference a journalist pastes into a
+// FOI request or a tip), yet had no copy affordance at all.
+const ocidCopied = ref(false)
+let ocidCopyTimer: ReturnType<typeof setTimeout> | undefined
+async function copyOcid(value: string) {
+  try {
+    await navigator.clipboard.writeText(value)
+    ocidCopied.value = true
+    clearTimeout(ocidCopyTimer)
+    ocidCopyTimer = setTimeout(() => {
+      ocidCopied.value = false
+    }, 2000)
+  }
+  catch { /* clipboard unavailable — no-op */ }
 }
 
 // "What else does this agency buy?" is the most common next question.
@@ -973,11 +1177,19 @@ useSeo(() => ({
       <!-- ===== Header ===== -->
       <header class="head">
         <div class="head__main">
-          <p class="u-eyebrow">
-            {{ t('contract.eyebrow') }}
-            <span v-if="contract.tender?.procurementMethodDetails">
-              · {{ contract.tender.procurementMethodDetails }}
-            </span>
+          <!-- The procurement method alone. "Contrato" used to lead here and
+               competed with the stage chip 20px below saying "Adjudicación",
+               for the same record — and "contract" is an OCDS stage this feed
+               never publishes (RELEASE_TAGS has only tender/award variants).
+               "Contratos" survives as the umbrella for the collection: the
+               nav, the /contracts route and the explorer, which really does
+               mix llamados and adjudicaciones. The record itself is named by
+               its stage, once. -->
+          <p
+            v-if="contract.tender?.procurementMethodDetails"
+            class="u-eyebrow"
+          >
+            {{ contract.tender.procurementMethodDetails }}
           </p>
           <h1 class="head__title">
             {{ title }}
@@ -996,40 +1208,77 @@ useSeo(() => ({
           >
             {{ subject }}
           </p>
-
-          <div class="head__meta">
-            <!-- The stage is the single fact that explains why a release
-                 may carry no supplier, no items and no amount. It leads. -->
-            <span
-              v-for="tg in tags"
-              :key="tg"
-              class="tag"
-              :class="tagTone(tg)"
-              :title="t(`contract.stageHelp.${tg}`)"
-            >{{ t(`contract.stage.${tg}`) }}</span>
-            <span
-              v-if="contract.tender?.status"
-              class="tag"
-              :class="statusTagClass(contract.tender.status)"
-            >
-              {{ contract.tender.status }}
-            </span>
-            <span class="head__ocid u-mono">{{ contract.ocid }}</span>
-          </div>
         </div>
 
         <div class="head__money">
           <template v-if="showsMoney">
-            <p class="head__moneyl">
-              {{ t('contract.awarded') }}
-            </p>
-            <MoneyAmount
-              :amount="amount"
-              :currency="currency"
-              size="xl"
-              align="start"
-              decimals
-            />
+            <!-- The feed's tax-exclusive figure and the government's
+                 tax-inclusive one, side by side: they are two readings of the
+                 same purchase, and stacking them made the second look like a
+                 separate, larger amount. The caveat that reconciles them sits
+                 under both. -->
+            <div class="head__totals">
+              <div class="head__total">
+                <!-- Only says "sin impuestos" when a with-taxes figure sits
+                     beside it. Alone it is just the awarded amount, and the
+                     qualifier would raise a distinction with nothing to
+                     contrast against. -->
+                <p class="head__moneyl">
+                  {{ taxBreakdown ? t('contract.awardedNet') : t('contract.awarded') }}
+                </p>
+                <!-- No decimals on the headline figures: at this size the
+                     ",00" is noise on almost every contract, and the exact
+                     cents remain in the per-line table below. -->
+                <MoneyAmount
+                  :amount="amount"
+                  :currency="currency"
+                  size="xl"
+                  align="start"
+                />
+              </div>
+              <div
+                v-if="taxBreakdown"
+                class="head__total"
+              >
+                <p class="head__moneyl">
+                  {{ t('contract.tax.totalWithTax') }}
+                </p>
+                <!-- The magnitude rule is dropped on this pair. It is a
+                     site-wide LOG scale for telling a thousand-peso purchase
+                     from a million-peso one at a glance; on two readings of
+                     the SAME purchase the two bars come out near-identical
+                     and invite a comparison that means nothing. -->
+                <MoneyAmount
+                  :amount="taxBreakdown.total"
+                  :currency="taxBreakdown.currency"
+                  size="xl"
+                  align="start"
+                  :rule="false"
+                />
+              </div>
+            </div>
+            <!-- No caveat paragraph here any more: the two labels above say
+                 "sin impuestos" and "con impuestos", which is the whole of
+                 what the sentence explained. Naming "la ficha oficial de la
+                 compra" only pointed at a place without going there, and the
+                 source band directly below already does, with two buttons. -->
+            <dl
+              v-if="taxBreakdown && taxBreakdown.subtotalNet !== null"
+              class="head__taxbreak"
+            >
+              <div class="head__taxrow">
+                <dt>{{ t('contract.tax.subtotal') }}</dt>
+                <dd class="u-mono">
+                  {{ formatMoney(taxBreakdown.subtotalNet, taxBreakdown.currency, { decimals: true }) }}
+                </dd>
+              </div>
+              <div class="head__taxrow">
+                <dt>{{ t('contract.tax.taxes') }}</dt>
+                <dd class="u-mono">
+                  {{ formatMoney(taxBreakdown.impuestos, taxBreakdown.currency, { decimals: true }) }}
+                </dd>
+              </div>
+            </dl>
             <p
               v-if="showRealToday"
               class="head__real"
@@ -1076,51 +1325,6 @@ useSeo(() => ({
                 >{{ t('contract.verifiedTotalSource') }}</a>
               </p>
             </div>
-
-            <!-- Total CON impuestos, scraped from the official page: the OCDS
-                 feed's "Adjudicado" figure above is tax-exclusive, so this is
-                 the real amount the state paid, plus how it's reached. -->
-            <div
-              v-if="taxBreakdown"
-              class="head__tax"
-            >
-              <p class="head__taxl">
-                {{ t('contract.tax.totalWithTax') }}
-              </p>
-              <MoneyAmount
-                :amount="taxBreakdown.total"
-                :currency="taxBreakdown.currency"
-                size="lg"
-                align="start"
-                decimals
-              />
-              <dl
-                v-if="taxBreakdown.subtotalNet !== null"
-                class="head__taxbreak"
-              >
-                <div class="head__taxrow">
-                  <dt>{{ t('contract.tax.subtotal') }}</dt>
-                  <dd class="u-mono">
-                    {{ formatMoney(taxBreakdown.subtotalNet, taxBreakdown.currency, { decimals: true }) }}
-                  </dd>
-                </div>
-                <div class="head__taxrow">
-                  <dt>{{ t('contract.tax.taxes') }}</dt>
-                  <dd class="u-mono">
-                    {{ formatMoney(taxBreakdown.impuestos, taxBreakdown.currency, { decimals: true }) }}
-                  </dd>
-                </div>
-              </dl>
-              <p class="head__taxsrc">
-                {{ t('contract.tax.help') }}
-                <a
-                  v-if="awardLink"
-                  :href="awardLink"
-                  target="_blank"
-                  rel="noopener external"
-                >{{ t('contract.tax.source') }}</a>
-              </p>
-            </div>
           </template>
           <!-- Not "Sin monto": this stage has no amount to report yet,
                which is a fact about the process, not a gap in the data. -->
@@ -1133,46 +1337,103 @@ useSeo(() => ({
         </div>
       </header>
 
-      <!-- The links back to the source. The site's whole claim rests on
-           these being one click away, on every contract. Two government
-           views: the llamado (call) page, and — for awards — the
-           adjudicación detail page. -->
-      <div
-        v-if="officialUrl || awardLink"
-        class="official"
-      >
-        <v-icon
-          size="20"
-          class="official__i"
+      <!-- Stage/status/OCID + the source band, side by side at half width
+           each instead of the source band running the full page width below
+           everything — the two belong at the same reading height, not one
+           on top of the other. -->
+      <div class="head2">
+        <div class="head2__meta">
+          <div class="head__meta">
+            <!-- The stage is the single fact that explains why a release
+                 may carry no supplier, no items and no amount. It leads. -->
+            <span
+              v-for="tg in tags"
+              :key="tg"
+              class="tag"
+              :class="tagTone(tg)"
+              :title="t(`contract.stageHelp.${tg}`)"
+            >{{ t(`contract.stage.${tg}`) }}</span>
+            <!-- "Llamado:" prefix on purpose: a bare "Vigente"/"Finalizado"
+                 next to the "Adjudicación" stage chip reads as saying the
+                 same thing twice. It usually IS the same fact — but not
+                 always: a multi-lot tender can still be "Vigente" after
+                 THIS lot already has a supplier. The prefix names which of
+                 the two facts this chip is, so the pair never has to be
+                 puzzled out case by case. -->
+            <span
+              v-if="contract.tender?.status"
+              class="tag"
+              :class="statusTagClass(contract.tender.status)"
+              :title="t('contract.tenderStatusHelp')"
+            >
+              {{ t('contract.tenderStatusChip', { status: statusLabel(contract.tender.status) }) }}
+            </span>
+            <button
+              type="button"
+              class="head__ocid"
+              :title="t('contract.ocidHelp')"
+              :aria-label="t('contract.ocidHelp')"
+              @click="copyOcid(contract.ocid!)"
+            >
+              <span class="head__ocidlabel">{{ t('contract.ocidLabel') }}</span>
+              <span class="u-mono">{{ contract.ocid }}</span>
+              <v-icon size="13">
+                {{ ocidCopied ? 'mdi-check' : 'mdi-content-copy' }}
+              </v-icon>
+            </button>
+          </div>
+          <!-- Spelled out, not hover-only: the chip's `title` above never
+               reaches a touch reader, and this is the one line that explains
+               why a release may show no supplier, no items or no amount. -->
+          <p
+            v-if="primaryStageHelp"
+            class="head__stagehelp"
+          >
+            {{ primaryStageHelp }}
+          </p>
+        </div>
+
+        <!-- The links back to the source. The site's whole claim rests on
+             these being one click away, on every contract. Two government
+             views: the llamado (call) page, and — for awards — the
+             adjudicación detail page. -->
+        <div
+          v-if="officialUrl || awardLink"
+          class="official"
         >
-          mdi-shield-check-outline
-        </v-icon>
-        <span class="official__text">
-          <strong>{{ t('contract.officialSource') }}</strong>
-          <span>{{ t('contract.officialSourceHelp') }}</span>
-        </span>
-        <span class="official__actions">
-          <a
-            v-if="awardLink"
-            class="official__btn"
-            :href="awardLink"
-            target="_blank"
-            rel="noopener external"
+          <v-icon
+            size="20"
+            class="official__i"
           >
-            {{ t('contract.officialAward') }}
-            <v-icon size="15">mdi-open-in-new</v-icon>
-          </a>
-          <a
-            v-if="officialUrl"
-            class="official__btn official__btn--ghost"
-            :href="officialUrl"
-            target="_blank"
-            rel="noopener external"
-          >
-            {{ t('contract.officialTender') }}
-            <v-icon size="15">mdi-open-in-new</v-icon>
-          </a>
-        </span>
+            mdi-shield-check-outline
+          </v-icon>
+          <span class="official__text">
+            <strong>{{ t('contract.officialSource') }}</strong>
+            <span>{{ t('contract.officialSourceHelp') }}</span>
+          </span>
+          <span class="official__actions">
+            <a
+              v-if="awardLink"
+              class="official__btn"
+              :href="awardLink"
+              target="_blank"
+              rel="noopener external"
+            >
+              {{ t('contract.officialAward') }}
+              <v-icon size="15">mdi-open-in-new</v-icon>
+            </a>
+            <a
+              v-if="officialUrl"
+              class="official__btn official__btn--ghost"
+              :href="officialUrl"
+              target="_blank"
+              rel="noopener external"
+            >
+              {{ t('contract.officialTender') }}
+              <v-icon size="15">mdi-open-in-new</v-icon>
+            </a>
+          </span>
+        </div>
       </div>
 
       <div class="grid">
@@ -1281,99 +1542,140 @@ useSeo(() => ({
             :winners="suppliers.map(s => s.name).filter(Boolean)"
           />
 
-          <!-- ===== Who ===== -->
-          <section class="panel block">
-            <div class="panel__head">
-              <h2>{{ t('contract.sections.parties') }}</h2>
-            </div>
-            <div class="panel__body parties">
-              <!-- Driven by `parties[]`, the release's own roster: every
-                   entry, named with the role it actually played. -->
-              <div
-                v-for="p in partyRoster"
-                :key="p.key"
-                class="party"
-              >
-                <p class="party__role">
-                  {{ p.roles.length ? p.roles.map(roleLabel).join(' · ') : t('contract.fields.roles') }}
-                </p>
-                <NuxtLink
-                  v-if="p.to"
-                  :to="localePath(p.to)"
-                  class="party__name"
-                >
-                  {{ p.name || '—' }}
-                </NuxtLink>
-                <span
-                  v-else
-                  class="party__name party__name--plain"
-                >{{ p.name || '—' }}</span>
-
-                <!-- Which administration held office the year this was recorded —
-                     public record, context only. Silent for organisms with no
-                     executive mandate (judiciary, university) and undated releases. -->
-                <MandateChip
-                  v-if="p.isBuyer && p.id"
-                  :buyer-id="p.id"
-                  :year="contract?.sourceYear"
-                  show-self-governed
-                  class="party__mandate"
-                />
-
-                <span
-                  v-if="p.legalName"
-                  class="party__sub"
-                >{{ t('contract.fields.legalName') }}: {{ p.legalName }}</span>
-                <span
-                  v-if="p.rut"
-                  class="party__sub u-mono"
-                >{{ t('contract.fields.rut') }}: {{ p.rut }}</span>
-
-                <!-- Who to actually ask. The source carries this per
-                     party and the government's own page prints it. -->
-                <div
-                  v-if="p.contact"
-                  class="contact"
-                >
-                  <p class="contact__l">
-                    {{ t('contract.fields.contact') }}
-                  </p>
-                  <span
-                    v-if="p.contact.name"
-                    class="contact__name"
-                  >{{ p.contact.name }}</span>
-                  <a
-                    v-if="p.contact.email"
-                    :href="`mailto:${p.contact.email}`"
-                    class="contact__link u-truncate"
-                  >{{ p.contact.email }}</a>
-                  <a
-                    v-if="p.contact.phone"
-                    :href="`tel:${p.contact.phone.replace(/[^\d+]/g, '')}`"
-                    class="contact__link u-mono"
-                  >{{ p.contact.phone }}</a>
-                </div>
-              </div>
-
-              <div class="party">
-                <p class="party__role">
-                  {{ t('contract.publishedOn') }}
-                </p>
-                <span class="party__name party__name--plain u-mono">{{ formatDateLong(date) }}</span>
-              </div>
-            </div>
-          </section>
-
-          <!-- ===== The tender this release belongs to ===== -->
+          <!-- ===== Resumen: who, then the process facts =====
+               Merged from two panels that used to repeat the same fact
+               twice — the tender's `procuringEntity.name` and the buyer
+               party's name are the same entity, so it now shows once, as
+               the linked party card, not again as inert text below. -->
           <section
-            v-if="hasTenderFacts"
+            v-if="partyRoster.length || hasTenderFacts"
             class="panel block"
           >
             <div class="panel__head">
               <h2>{{ t('contract.sections.summary') }}</h2>
             </div>
             <div class="panel__body">
-              <dl class="facts">
+              <div class="parties">
+                <!-- Driven by `parties[]`, the release's own roster: every
+                   entry, named with the role it actually played. -->
+                <div
+                  v-for="p in partyRoster"
+                  :key="p.key"
+                  class="party"
+                >
+                  <p class="party__role">
+                    {{ p.roles.length ? p.roles.map(roleLabel).join(' · ') : t('contract.fields.roles') }}
+                  </p>
+                  <NuxtLink
+                    v-if="p.to"
+                    :to="localePath(p.to)"
+                    class="party__name"
+                  >
+                    {{ p.name || '—' }}
+                  </NuxtLink>
+                  <span
+                    v-else
+                    class="party__name party__name--plain"
+                  >{{ p.name || '—' }}</span>
+
+                  <!-- Which administration held office the year this was recorded —
+                     public record, context only. Silent for organisms with no
+                     executive mandate (judiciary, university) and undated releases. -->
+                  <MandateChip
+                    v-if="p.isBuyer && p.id"
+                    :buyer-id="p.id"
+                    :year="contract?.sourceYear"
+                    show-self-governed
+                    class="party__mandate"
+                  />
+
+                  <span
+                    v-if="p.legalName"
+                    class="party__sub"
+                  >{{ t('contract.fields.legalName') }}: {{ p.legalName }}</span>
+                  <span
+                    v-if="p.rut"
+                    class="party__sub u-mono"
+                  >{{ t('contract.fields.rut') }}: {{ p.rut }}</span>
+
+                  <!-- Who to actually ask. The source carries this per party
+                     and the government's own page prints it — except when
+                     it's the exact contact the aside panel already shows
+                     (buyer vs procuringEntity can carry DIFFERENT contacts,
+                     so this only hides the one that's actually duplicated). -->
+                  <div
+                    v-if="p.contact && !(p.isBuyer && isAsideContact(p.contact))"
+                    class="contact"
+                  >
+                    <p class="contact__l">
+                      {{ t('contract.fields.contact') }}
+                    </p>
+                    <span
+                      v-if="p.contact.name"
+                      class="contact__name"
+                    >{{ p.contact.name }}</span>
+                    <a
+                      v-if="p.contact.email"
+                      :href="`mailto:${p.contact.email}`"
+                      class="contact__link u-truncate"
+                    >{{ p.contact.email }}</a>
+                    <a
+                      v-if="p.contact.phone"
+                      :href="`tel:${p.contact.phone.replace(/[^\d+]/g, '')}`"
+                      class="contact__link u-mono"
+                    >{{ p.contact.phone }}</a>
+                  </div>
+                </div>
+              </div>
+
+              <dl
+                v-if="hasTenderFacts || singleAward"
+                class="facts facts--cols"
+              >
+                <!-- With one award these describe the contract, so they read
+                     here with the rest of its facts instead of floating above
+                     the items table. Several awards keep them per block. -->
+                <div
+                  v-if="singleAward?.awardId"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.awardId') }}</dt>
+                  <dd class="u-mono">
+                    {{ singleAward.awardId }}
+                  </dd>
+                </div>
+                <div
+                  v-if="singleAward?.awardStatus"
+                  class="facts__row"
+                >
+                  <dt>{{ t('contract.fields.awardStatus') }}</dt>
+                  <dd>
+                    <span
+                      class="tag"
+                      :class="statusTagClass(singleAward.awardStatus)"
+                    >{{ statusLabel(singleAward.awardStatus) }}</span>
+                  </dd>
+                </div>
+                <!-- The specific office that ran this purchase — "Cerro Largo
+                     TEC", not just "OSE". `buyer.id` is <inciso>-<unidad
+                     ejecutora> (shared/organism-groups.ts), so the party above
+                     names the executing unit while this names the desk inside
+                     it. It is the most granular answer to "who bought this",
+                     and until now it only existed as the first line of the
+                     aside's contact card. -->
+                <div
+                  v-if="buyingOfficeName"
+                  class="facts__row"
+                >
+                  <dt>
+                    {{ t('contract.fields.buyingOffice') }}
+                    <span
+                      class="facts__help"
+                      :title="t('contract.fields.buyingOfficeHelp')"
+                    >?</span>
+                  </dt>
+                  <dd>{{ buyingOfficeName }}</dd>
+                </div>
                 <div
                   v-if="tender?.id"
                   class="facts__row"
@@ -1383,45 +1685,29 @@ useSeo(() => ({
                     {{ tender.id }}
                   </dd>
                 </div>
+                <!-- Only when the party roster above didn't already name this
+                     entity — the common case (a `parties[]`-carrying release)
+                     already shows it as the linked buyer/procuringEntity
+                     card; this is the fallback for older records where it
+                     wouldn't otherwise appear anywhere. -->
                 <div
-                  v-if="tender?.procuringEntity?.name"
+                  v-if="tender?.procuringEntity?.name && !procuringEntityShownAsParty"
                   class="facts__row"
                 >
                   <dt>{{ t('contract.fields.procuringEntity') }}</dt>
                   <dd>{{ tender.procuringEntity.name }}</dd>
                 </div>
-                <div
-                  v-if="tender?.status"
-                  class="facts__row"
-                >
-                  <dt>{{ t('common.status') }}</dt>
-                  <dd>{{ tender.status }}</dd>
-                </div>
-                <div
-                  v-if="tender?.procurementMethodDetails"
-                  class="facts__row"
-                >
-                  <dt>{{ t('common.method') }}</dt>
-                  <dd>{{ tender.procurementMethodDetails }}</dd>
-                </div>
-                <div
-                  v-if="tenderPeriod"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.timeline.tender') }}</dt>
-                  <dd class="u-mono">
-                    {{ tenderPeriod }}
-                  </dd>
-                </div>
-                <div
-                  v-if="enquiryPeriod"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.timeline.enquiry') }}</dt>
-                  <dd class="u-mono">
-                    {{ enquiryPeriod }}
-                  </dd>
-                </div>
+                <!-- No "Estado" row here on purpose: the header chip above
+                     renders under the EXACT same condition (tender?.status)
+                     and shows it better — colour-coded by statusTagClass,
+                     in the highest-visibility spot on the page. Repeating it
+                     as plain text was the one status that broke the pattern
+                     "Etapa" already follows: never echoed in Resumen. -->
+                <!-- No "Procedimiento" row: now that the eyebrow above the
+                     title carries the method alone, this restated it a few
+                     centimetres below. The eyebrow is the better home — it is
+                     the first thing read, and "Compra Directa" vs "Licitación
+                     Pública" frames everything under it. -->
                 <div
                   v-if="typeof tender?.hasEnquiries === 'boolean'"
                   class="facts__row"
@@ -1436,9 +1722,16 @@ useSeo(() => ({
                   <dt>{{ t('contract.fields.submissionMethod') }}</dt>
                   <dd>{{ tender.submissionMethod.map(submissionLabel).join(' · ') }}</dd>
                 </div>
+                <!-- Full width only when it earns it. This field is usually a
+                     packed multi-part string ("Lugar entrega: … ;Fecha
+                     prórroga: …") that needs the room, but it is often just
+                     "Electrónica" — and spanning that across both columns
+                     left a hole in the grid, so a 4-fact Resumen rendered
+                     3 items down the left and 1 on the right instead of 2×2. -->
                 <div
                   v-if="tender?.submissionMethodDetails"
                   class="facts__row"
+                  :class="{ 'facts__row--full': submissionParts.length > 1 }"
                 >
                   <dt>{{ t('contract.fields.submissionMethodDetails') }}</dt>
                   <dd>
@@ -1491,6 +1784,7 @@ useSeo(() => ({
                   type="search"
                   class="ifilter__input"
                   :placeholder="t('contract.itemsFilter.placeholder')"
+                  :aria-label="t('contract.itemsFilter.placeholder')"
                 >
               </label>
               <button
@@ -1506,7 +1800,10 @@ useSeo(() => ({
                 </v-icon>
                 {{ t('contract.itemsFilter.onlyAlerts') }}
               </button>
-              <span class="ifilter__count u-mono">{{ t('contract.itemsFilter.shown', { shown: shownItemRows, total: totalItemRows }) }}</span>
+              <span
+                class="ifilter__count u-mono"
+                aria-live="polite"
+              >{{ t('contract.itemsFilter.shown', { shown: shownItemRows, total: totalItemRows }) }}</span>
             </div>
 
             <div
@@ -1526,8 +1823,12 @@ useSeo(() => ({
               :key="g.key"
               class="agroup"
             >
+              <!-- Only when there are SEVERAL awards. With one, its id and
+                   status describe the contract and now read in Resumen; a
+                   lone block repeating them above its own table was a header
+                   for a grouping the reader could not see. -->
               <dl
-                v-if="g.awardId || g.awardDate || g.awardStatus"
+                v-if="itemGroups.length > 1"
                 class="facts facts--award"
               >
                 <div
@@ -1539,11 +1840,15 @@ useSeo(() => ({
                     {{ g.awardId }}
                   </dd>
                 </div>
+                <!-- Only worth naming per award when there is more than one;
+                     a single award's date is already Cronología's
+                     "Adjudicación" entry, and repeating it here — unlabelled
+                     as to WHICH date it even is — was confusing, not helpful. -->
                 <div
-                  v-if="g.awardDate"
+                  v-if="itemGroups.length > 1 && g.awardDate"
                   class="facts__row"
                 >
-                  <dt>{{ t('common.date') }}</dt>
+                  <dt>{{ t('contract.fields.awardDate') }}</dt>
                   <dd class="u-mono">
                     {{ formatDate(g.awardDate) }}
                   </dd>
@@ -1557,7 +1862,7 @@ useSeo(() => ({
                     <span
                       class="tag"
                       :class="statusTagClass(g.awardStatus)"
-                    >{{ g.awardStatus }}</span>
+                    >{{ statusLabel(g.awardStatus) }}</span>
                   </dd>
                 </div>
                 <!-- Only worth naming per award when there is more than
@@ -1580,6 +1885,7 @@ useSeo(() => ({
 
               <DataTable
                 v-else
+                class="itemstable"
                 :columns="itemColumns(g.hasPrices, hasTaxData)"
                 :rows="g.rows"
                 :row-key="it => it.key"
@@ -1590,19 +1896,25 @@ useSeo(() => ({
                   {{ row.description || '—' }}
                   <!-- The price flag on this exact line, restored inline: the
                        feed unit price sits far above this item's usual range.
-                       The full analysis is the panel at the top of the page. -->
-                  <a
+                       The full analysis is the panel at the top of the page —
+                       but AI triage is a separate second stage, so a
+                       statistically-flagged line on an un-triaged release has
+                       no #alerta-precio panel to jump to. Render a plain
+                       badge rather than a link that would silently do
+                       nothing. -->
+                  <component
+                    :is="aiVerdict ? 'a' : 'span'"
                     v-if="rowAnomaly(row)"
                     class="ialert"
                     :class="`ialert--${rowAnomaly(row).severity}`"
-                    href="#alerta-precio"
+                    :href="aiVerdict ? '#alerta-precio' : undefined"
                     :title="rowAnomaly(row).description"
                   >
                     <v-icon size="12">
                       mdi-alert
                     </v-icon>
                     {{ t('contract.itemsFilter.alert') }}
-                  </a>
+                  </component>
                   <!-- Características scraped from the gov page — the
                        open-data feed doesn't carry them. See
                        /api/contracts/[id]/features. -->
@@ -1653,8 +1965,58 @@ useSeo(() => ({
                     :rate-table="rateTable"
                     :rule="false"
                     size="sm"
-                    decimals
                   />
+                </template>
+                <!-- What this line's unit price means against the same
+                     catalogue item's last 36 months. Per LINE, so two lines
+                     sharing a code but not a price each get their own
+                     verdict — the old separate table showed only the first. -->
+                <template #cell:reference="{ row }">
+                  <template v-if="rowReference(row)">
+                    <span class="refcell__verdict">
+                      <span
+                        class="tag refcell__pos"
+                        :class="rowReference(row)!.tone"
+                      >
+                        {{ t(`contract.reference.pos.${rowReference(row)!.position}`) }}
+                        <!-- The verdict's definition, inside the chip it
+                             defines. A real <button>, not a `title`: it
+                             reveals on hover AND on keyboard focus, so the
+                             definition is reachable without a pointer. -->
+                        <button
+                          type="button"
+                          class="refhelp"
+                          :aria-label="t(`contract.reference.posHelp.${rowReference(row)!.position}`)"
+                        >
+                          ?
+                          <span
+                            class="refhelp__bubble"
+                            role="tooltip"
+                          >{{ t(`contract.reference.posHelp.${rowReference(row)!.position}`) }}</span>
+                        </button>
+                      </span>
+                      <span
+                        v-if="ratioText(rowReference(row)!)"
+                        class="refcell__ratio u-mono"
+                      >{{ ratioText(rowReference(row)!) }}</span>
+                    </span>
+                    <span class="refcell__stats">{{ statsText(rowReference(row)!) }}</span>
+                    <NuxtLink
+                      v-if="comparablesLink(rowReference(row)!)"
+                      :to="comparablesLink(rowReference(row)!)!"
+                      class="refcell__link"
+                    >{{ t('contract.reference.viewComparables') }}</NuxtLink>
+                  </template>
+                  <!-- Named, not blank: a reader could otherwise not tell
+                       "no comparables" from "we didn't check". -->
+                  <span
+                    v-else-if="row.unitAmount"
+                    class="refcell__none"
+                  >{{ t('contract.reference.noBaseline') }}</span>
+                  <span
+                    v-else
+                    class="u-muted"
+                  >—</span>
                 </template>
                 <template #cell:total="{ row }">
                   <MoneyConvert
@@ -1692,105 +2054,42 @@ useSeo(() => ({
             >
               {{ t('contract.itemsFilter.noMatch') }}
             </div>
-          </section>
 
-          <!-- ===== Price reference =====
-               What the alert compares each item against: the price
-               distribution of the same catalogue item across the last
-               three years. Answers "similar to what?" with the exact
-               data the flag is scored on. -->
-          <section
-            v-if="priceReferences.length"
-            class="panel block"
-          >
-            <div class="panel__head">
-              <h2>{{ t('contract.sections.reference') }}</h2>
-              <p class="panel__help">
-                {{ t('contract.referenceHelp') }}
-              </p>
-            </div>
-            <DataTable
-              :columns="referenceColumns"
-              :rows="priceReferences"
-              :row-key="(_r, i) => i"
-              min-width="600px"
-              :framed="false"
-            >
-              <template #cell:description="{ row }">
-                <span class="refcell__name">{{ row.description }}</span>
-                <span
-                  class="tag refcell__pos"
-                  :class="row.tone"
+            <template v-if="hasAnyReference">
+              <div class="panel__foot">
+                <p class="reftable__note">
+                  {{ t('contract.referenceHelp') }}
+                </p>
+                <!-- Counted per LINE, not per catalogue code: the whole point
+                     of merging these tables was that a per-code count hid
+                     dropped lines instead of revealing them. -->
+                <p
+                  v-if="referenceGaps"
+                  class="reftable__note"
                 >
-                  {{ t(`contract.reference.pos.${row.position}`) }}
-                </span>
-                <!-- The scraped presentación ("ENVASE · 250 G"): the fact
-                     that decides whether the unit price is per gram or
-                     per envase — i.e. whether the flag above is real. -->
-                <span
-                  v-if="refPresentation(row)"
-                  class="refcell__pres u-mono"
-                >{{ refPresentation(row) }}</span>
-                <span class="refcell__links">
-                  <NuxtLink
-                    v-if="comparablesLink(row)"
-                    :to="comparablesLink(row)!"
-                    class="refcell__link"
-                  >{{ t('contract.reference.viewComparables') }}</NuxtLink>
-                  <NuxtLink
-                    v-if="productLink(row.code)"
-                    :to="productLink(row.code)!"
-                    class="refcell__link"
-                  >{{ t('contract.reference.viewProduct') }}</NuxtLink>
-                </span>
-              </template>
-              <template #cell:paid="{ row }">
-                <MoneyAmount
-                  :amount="row.paid"
-                  :currency="row.currency"
-                  :rule="false"
-                  size="sm"
-                  decimals
-                />
-              </template>
-              <template #cell:median="{ row }">
-                <MoneyAmount
-                  :amount="row.median"
-                  :currency="row.currency"
-                  :rule="false"
-                  size="sm"
-                />
-              </template>
-              <template #cell:range="{ row }">
-                <span class="refcell__range">{{ rangeText(row) }}</span>
-              </template>
-              <template #cell:n="{ row }">
-                {{ formatNumber(row.n) }}
-              </template>
-            </DataTable>
-            <!-- The note + method link get a real padded footer instead of
-                 sitting flush against the card's left and bottom edges. -->
-            <div class="panel__foot">
-              <!-- The one caveat this table needs: the feed's unit price
-                   ignores the presentación, so "per G" can mean "per
-                   250 G envase". Without saying so, a correct row reads
-                   as a 250× scandal — or a real one reads as normal. -->
-              <p class="reftable__note">
-                {{ t('contract.reference.presNote') }}
-                <a
-                  v-if="awardLink"
-                  :href="awardLink"
-                  target="_blank"
-                  rel="noopener"
-                >{{ t('contract.reference.presNoteSource') }}</a>
-              </p>
-              <NuxtLink
-                :to="localePath('/analytics/anomalies')"
-                class="reftable__link"
-              >
-                {{ t('contract.reference.method') }}
-              </NuxtLink>
-            </div>
+                  {{ t('contract.reference.coverage', referenceGaps) }}
+                </p>
+                <!-- The one caveat this comparison needs: the feed's unit price
+                     ignores the presentación, so "per G" can mean "per
+                     250 G envase". Without saying so, a correct row reads
+                     as a 250× scandal — or a real one reads as normal. -->
+                <p class="reftable__note">
+                  {{ t('contract.reference.presNote') }}
+                  <a
+                    v-if="awardLink"
+                    :href="awardLink"
+                    target="_blank"
+                    rel="noopener"
+                  >{{ t('contract.reference.presNoteSource') }}</a>
+                </p>
+                <NuxtLink
+                  :to="localePath('/analytics/anomalies')"
+                  class="reftable__link"
+                >
+                  {{ t('contract.reference.method') }}
+                </NuxtLink>
+              </div>
+            </template>
           </section>
 
           <!-- ===== Amendments ===== -->
@@ -1872,6 +2171,180 @@ useSeo(() => ({
               </li>
             </ol>
           </section>
+
+          <!-- ===== Technical detail =====
+               Amount breakdown, ingest provenance and raw JSON: real facts,
+               but not what a reader reaches for first. These three used to
+               anchor the aside — where they outlived the aside's own content
+               on a short record and left the lateral column scrolling well
+               past the last thing worth reading. One collapsed block, at the
+               foot of the evidence it explains, closed by default. -->
+          <details class="techdetails block">
+            <summary class="techdetails__summary">
+              {{ t('contract.sections.technical') }}
+            </summary>
+
+            <section
+              v-if="showAmountDetail"
+              class="panel block techdetails__block"
+            >
+              <div class="panel__head">
+                <h2>{{ t('contract.sections.amount') }}</h2>
+              </div>
+              <div class="panel__body">
+                <dl class="facts facts--cols">
+                  <div
+                    v-for="[cur, val] in totalAmounts"
+                    :key="cur"
+                    class="facts__row"
+                  >
+                    <dt>{{ cur }}</dt>
+                    <dd>
+                      <MoneyAmount
+                        :amount="val"
+                        :currency="cur"
+                        :rule="false"
+                        size="sm"
+                        align="start"
+                        decimals
+                      />
+                    </dd>
+                  </div>
+                  <div
+                    v-if="typeof amt?.totalItems === 'number'"
+                    class="facts__row"
+                  >
+                    <dt>{{ t('contract.fields.totalItems') }}</dt>
+                    <dd class="u-mono">
+                      {{ formatNumber(amt.totalItems) }}
+                    </dd>
+                  </div>
+                  <div
+                    v-if="amt?.currencies?.length"
+                    class="facts__row"
+                  >
+                    <dt>{{ t('contract.fields.currencies') }}</dt>
+                    <dd class="u-mono">
+                      {{ amt.currencies.join(' · ') }}
+                    </dd>
+                  </div>
+                  <div
+                    v-if="typeof amt?.originalUYUAmount === 'number'"
+                    class="facts__row"
+                  >
+                    <dt>{{ t('contract.fields.originalUYU') }}</dt>
+                    <dd>
+                      <MoneyAmount
+                        :amount="amt.originalUYUAmount"
+                        currency="UYU"
+                        :rule="false"
+                        size="sm"
+                        align="start"
+                        decimals
+                      />
+                    </dd>
+                  </div>
+                  <div
+                    v-if="typeof amt?.hasConvertedAmounts === 'boolean'"
+                    class="facts__row"
+                  >
+                    <dt>{{ t('contract.fields.converted') }}</dt>
+                    <dd>{{ boolLabel(amt.hasConvertedAmounts) }}</dd>
+                  </div>
+                  <div
+                    v-if="amt?.exchangeRateDate"
+                    class="facts__row"
+                  >
+                    <dt>{{ t('contract.fields.exchangeRateDate') }}</dt>
+                    <dd class="u-mono">
+                      {{ formatDate(amt.exchangeRateDate) }}
+                    </dd>
+                  </div>
+                  <!-- `amt.version` (the internal calculation-pipeline version)
+                       and `sourceFileName` below are operational metadata, not
+                       business facts — DESIGN.md's Don't list names both. The
+                       raw-JSON dialog two blocks down already serves anyone
+                       who needs them. -->
+                </dl>
+              </div>
+            </section>
+
+            <section
+              v-if="showProvenance"
+              class="panel block techdetails__block"
+            >
+              <div class="panel__head">
+                <h2>{{ t('contract.sections.provenance') }}</h2>
+              </div>
+              <div class="panel__body">
+                <dl class="facts facts--cols">
+                  <div
+                    v-if="contract.initiationType"
+                    class="facts__row"
+                  >
+                    <dt>{{ t('contract.fields.initiationType') }}</dt>
+                    <dd>{{ initiationTypeLabel(contract.initiationType) }}</dd>
+                  </div>
+                  <!-- No "Año de origen": it is just the year of the dates
+                       already on the page (Cronología, "Importado el"), so it
+                       restated a fact the reader can already see. -->
+                  <div
+                    v-if="webFetchDate"
+                    class="facts__row"
+                  >
+                    <dt>{{ t('contract.fields.fetched') }}</dt>
+                    <dd class="u-mono">
+                      {{ formatDate(webFetchDate) }}
+                    </dd>
+                  </div>
+                  <!-- The machine-readable original, distinct from the human
+                       page linked at the top: someone checking our arithmetic
+                       wants the exact document we parsed. One row, two ways in
+                       — read it here, or open the source. `rssLink` and
+                       `ocdsUrl` are the same address on this feed, differing
+                       only by scheme, so they were printing twice. -->
+                  <div
+                    v-if="sourceDocUrl"
+                    class="facts__row facts__row--full"
+                  >
+                    <dt>{{ t('contract.fields.sourceDoc') }}</dt>
+                    <dd class="srcdoc">
+                      <button
+                        class="rawbtn"
+                        type="button"
+                        @click="openRawJson"
+                      >
+                        {{ t('common.view') }}
+                      </button>
+                      <a
+                        :href="sourceDocUrl"
+                        target="_blank"
+                        rel="noopener external"
+                        class="facts__link u-truncate"
+                      >{{ sourceDocUrl }}</a>
+                    </dd>
+                  </div>
+                  <!-- Only when the feed's own link is a DIFFERENT address —
+                       normally it is the same document over http and folds
+                       into the row above. -->
+                  <div
+                    v-if="rssLinkDistinct"
+                    class="facts__row facts__row--full"
+                  >
+                    <dt>{{ t('contract.fields.rssLink') }}</dt>
+                    <dd>
+                      <a
+                        :href="rssLinkDistinct"
+                        target="_blank"
+                        rel="noopener external"
+                        class="facts__link u-truncate"
+                      >{{ rssLinkDistinct }}</a>
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </section>
+          </details>
         </div>
 
         <!-- ===== Aside ===== -->
@@ -1902,7 +2375,7 @@ useSeo(() => ({
                 />
                 <span class="tl__body">
                   <span class="tl__label">{{ t(`contract.timeline.${s.key}`) }}</span>
-                  <span class="tl__date u-mono">{{ formatDate(s.date) }}</span>
+                  <span class="tl__date u-mono">{{ s.text }}</span>
                 </span>
               </li>
             </ol>
@@ -1925,7 +2398,7 @@ useSeo(() => ({
               class="docs"
             >
               <li
-                v-for="(d, i) in documents"
+                v-for="(d, i) in visibleDocuments"
                 :key="i"
               >
                 <a
@@ -1944,193 +2417,14 @@ useSeo(() => ({
                 </a>
               </li>
             </ul>
-          </section>
-
-          <!-- ===== How the figure was built ===== -->
-          <section
-            v-if="showAmountDetail"
-            class="panel block"
-          >
-            <div class="panel__head">
-              <h2>{{ t('contract.sections.amount') }}</h2>
-            </div>
-            <div class="panel__body">
-              <dl class="facts">
-                <div
-                  v-for="[cur, val] in totalAmounts"
-                  :key="cur"
-                  class="facts__row"
-                >
-                  <dt>{{ cur }}</dt>
-                  <dd>
-                    <MoneyAmount
-                      :amount="val"
-                      :currency="cur"
-                      :rule="false"
-                      size="sm"
-                      align="start"
-                      decimals
-                    />
-                  </dd>
-                </div>
-                <div
-                  v-if="typeof amt?.totalItems === 'number'"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.totalItems') }}</dt>
-                  <dd class="u-mono">
-                    {{ formatNumber(amt.totalItems) }}
-                  </dd>
-                </div>
-                <div
-                  v-if="amt?.currencies?.length"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.currencies') }}</dt>
-                  <dd class="u-mono">
-                    {{ amt.currencies.join(' · ') }}
-                  </dd>
-                </div>
-                <div
-                  v-if="typeof amt?.originalUYUAmount === 'number'"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.originalUYU') }}</dt>
-                  <dd>
-                    <MoneyAmount
-                      :amount="amt.originalUYUAmount"
-                      currency="UYU"
-                      :rule="false"
-                      size="sm"
-                      align="start"
-                      decimals
-                    />
-                  </dd>
-                </div>
-                <div
-                  v-if="typeof amt?.hasConvertedAmounts === 'boolean'"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.converted') }}</dt>
-                  <dd>{{ boolLabel(amt.hasConvertedAmounts) }}</dd>
-                </div>
-                <div
-                  v-if="amt?.exchangeRateDate"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.exchangeRateDate') }}</dt>
-                  <dd class="u-mono">
-                    {{ formatDate(amt.exchangeRateDate) }}
-                  </dd>
-                </div>
-                <div
-                  v-if="typeof amt?.version === 'number'"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.version') }}</dt>
-                  <dd class="u-mono">
-                    {{ amt.version }}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </section>
-
-          <!-- ===== Where this record came from ===== -->
-          <section
-            v-if="showProvenance"
-            class="panel block"
-          >
-            <div class="panel__head">
-              <h2>{{ t('contract.sections.provenance') }}</h2>
-            </div>
-            <div class="panel__body">
-              <dl class="facts">
-                <div
-                  v-if="contract.initiationType"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.initiationType') }}</dt>
-                  <dd>{{ contract.initiationType }}</dd>
-                </div>
-                <div
-                  v-if="contract.sourceFileName"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.sourceFile') }}</dt>
-                  <dd class="u-mono">
-                    {{ contract.sourceFileName }}
-                  </dd>
-                </div>
-                <div
-                  v-if="contract.sourceYear"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.sourceYear') }}</dt>
-                  <dd class="u-mono">
-                    {{ contract.sourceYear }}
-                  </dd>
-                </div>
-                <div
-                  v-if="webFetchDate"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.fetched') }}</dt>
-                  <dd class="u-mono">
-                    {{ formatDate(webFetchDate) }}
-                  </dd>
-                </div>
-                <div
-                  v-if="contract.rssLink"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.rssLink') }}</dt>
-                  <dd>
-                    <a
-                      :href="contract.rssLink"
-                      target="_blank"
-                      rel="noopener external"
-                      class="facts__link u-truncate"
-                    >{{ contract.rssLink }}</a>
-                  </dd>
-                </div>
-                <!-- The machine-readable original, distinct from the
-                     human page linked at the top. Someone checking our
-                     arithmetic wants the exact document we parsed. -->
-                <div
-                  v-if="ocdsUrl"
-                  class="facts__row"
-                >
-                  <dt>{{ t('contract.fields.ocdsJson') }}</dt>
-                  <dd>
-                    <a
-                      :href="ocdsUrl"
-                      target="_blank"
-                      rel="noopener external"
-                      class="facts__link u-truncate"
-                    >{{ ocdsUrl }}</a>
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </section>
-
-          <section class="panel block">
-            <div class="panel__head">
-              <h2>{{ t('contract.sections.raw') }}</h2>
-            </div>
-            <div class="panel__body">
-              <p class="u-muted rawnote">
-                {{ t('contract.rawHelp') }}
-              </p>
-              <button
-                class="rawbtn"
-                type="button"
-                @click="openRawJson"
-              >
-                {{ t('contract.sections.raw') }}
-              </button>
-            </div>
+            <button
+              v-if="!showAllDocs && documents.length > DOCS_PREVIEW"
+              type="button"
+              class="docs__more"
+              @click="showAllDocs = true"
+            >
+              {{ t('contract.showAllDocs', { n: documents.length }) }}
+            </button>
           </section>
         </aside>
       </div>
@@ -2172,8 +2466,32 @@ useSeo(() => ({
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--s-5);
   align-items: start;
+  /* The rule that used to close .head now closes .head2 instead — stage,
+     OCID and the source band read as part of the same header zone as the
+     title and the amount, not a separate section below it. */
+}
+
+/* Stage/status/OCID (left) and the source band (right), half width each —
+   was a full-width band stacked below everything; now it sits at the same
+   reading height as the chips it's paired with. */
+.head2 {
+  display: grid;
+  /* Not an even split: the source band needs the room to keep its two
+     buttons on one line, and the meta column (a couple of chips, the OCID
+     button, one line of help text) rarely needs more than 40%. */
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--s-5);
+  align-items: start;
+  margin-top: var(--s-4);
   padding-bottom: var(--s-5);
   border-bottom: 1px solid var(--rule);
+}
+
+.head2__meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
 }
 
 .head__title {
@@ -2197,6 +2515,37 @@ useSeo(() => ({
 }
 
 .head__ocid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 2px var(--s-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: none;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.head__ocid:hover {
+  border-color: var(--rule);
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+.head__ocid .v-icon { opacity: 0.7; }
+
+/* A raw "ocds-yfs5dr-…" string with no label reads as noise to a reader who
+   has never heard of OCDS — this names what it is before showing it. */
+.head__ocidlabel {
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+  opacity: 0.8;
+}
+
+.head__stagehelp {
+  margin: var(--s-2) 0 0;
   font-size: var(--t-xs);
   color: var(--text-muted);
 }
@@ -2250,27 +2599,23 @@ useSeo(() => ({
   font-weight: 600;
 }
 
-/* ---- Total con impuestos (scraped) ---- */
-.head__tax {
-  margin-top: var(--s-4);
-  padding-top: var(--s-3);
-  border-top: 1px dashed var(--border);
-  max-width: 34ch;
+/* ---- The two readings of the same purchase, side by side ----
+   The feed's tax-exclusive total and the government's tax-inclusive one.
+   Stacked, the second read as a separate (larger) amount; in one row they
+   read as what they are — the same purchase, before and after tax. */
+.head__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-6);
 }
 
-.head__taxl {
-  margin: 0 0 var(--s-1);
-  font-size: var(--t-xs);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
+.head__total { min-width: 0; }
 
 .head__taxbreak {
   margin: var(--s-2) 0 0;
   display: grid;
   gap: 2px;
+  max-width: 34ch;
 }
 
 .head__taxrow {
@@ -2289,26 +2634,15 @@ useSeo(() => ({
   font-weight: 600;
 }
 
-.head__taxsrc {
-  margin: var(--s-2) 0 0;
-  font-size: var(--t-xs);
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
-.head__taxsrc a {
-  color: var(--celeste-deep);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 /* ---- Official source ---- */
 .official {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--s-3);
-  margin-top: var(--s-5);
+  /* Spacing now comes from .head2's own margin-top — this sits beside
+     .head2__meta, not stacked below the whole header. */
+  min-width: 0;
   padding: var(--s-3) var(--s-4);
   border: 1px solid color-mix(in srgb, var(--celeste) 40%, transparent);
   border-radius: var(--r-lg);
@@ -2399,6 +2733,37 @@ useSeo(() => ({
 
 .block + .block { margin-top: var(--s-5); }
 
+/* ---- Technical detail (collapsed) ----
+   Amount breakdown, provenance and raw JSON — real, but not what a reader
+   reaches for first. Each inner section keeps its own .panel card (same
+   look as every other section on the page); <details> only adds the
+   disclosure, closed by default. */
+.techdetails__summary {
+  margin-bottom: var(--s-4);
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.techdetails__summary::-webkit-details-marker { display: none; }
+
+.techdetails__summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 1em;
+  margin-right: var(--s-1);
+  transition: transform var(--dur) var(--ease);
+}
+
+.techdetails[open] .techdetails__summary::before { transform: rotate(90deg); }
+
+.techdetails__block + .techdetails__block { margin-top: var(--s-4); }
+
 .block__head {
   display: flex;
   align-items: baseline;
@@ -2425,6 +2790,15 @@ useSeo(() => ({
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--s-4);
+}
+
+/* Resumen merges the party cards and the process facts into one
+   `.panel__body` now — this is the deliberate gap between them, not the
+   doubled padding two separate panel bodies used to stack. */
+.parties + .facts {
+  margin-top: var(--s-5);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--rule);
 }
 
 .party {
@@ -2514,37 +2888,108 @@ a.party__name:hover { text-decoration: underline; }
 
 .contact__link:hover { text-decoration: underline; }
 
-/* ---- Price reference ---- */
-.refcell__name { margin-right: var(--s-2); }
+/* Absorbing the price comparison took this table to 8 columns, which overran
+   the 982px main column and pushed "Total" behind a horizontal scrollbar.
+   Tighter cell gutters (8px instead of 16px) buy back ~110px — enough to fit
+   without dropping a column or truncating a figure. Scoped to this table so
+   every other DataTable on the site keeps the roomier default. */
+.itemstable :deep(.dt__th),
+.itemstable :deep(.dt__td) { padding-inline: var(--s-2); }
 
-/* Chip flows under the (often long) item name; inline-block lets the
-   top margin actually push it off the name line above. */
-.refcell__pos {
-  display: inline-block;
-  vertical-align: middle;
-  margin-top: var(--s-1);
+/* …but only BETWEEN columns. The outer edges keep the panel's own inset so
+   the table's first and last columns line up with the heading, the help text
+   and the footnotes above and below it, instead of running edge to edge. */
+.itemstable :deep(.dt__th:first-child),
+.itemstable :deep(.dt__td:first-child) { padding-left: var(--s-5); }
+
+.itemstable :deep(.dt__th:last-child),
+.itemstable :deep(.dt__td:last-child) { padding-right: var(--s-5); }
+
+/* The verdict column's header is the longest label in the row; letting it
+   wrap keeps it from setting the column's minimum width on its own. */
+.itemstable :deep(.dt__th) { white-space: normal; }
+
+/* DataTable cells default to `overflow-wrap: anywhere` so a long OCID or URL
+   can't push the table sideways. In these short columns that turned "UNIDAD"
+   into "UNIDA / D": one word, split mid-letter. Let them size to their widest
+   word instead — the values here are one short token, so they cost a few
+   pixels and never overflow. */
+.itemstable :deep(.dt__td:nth-child(3) .dt__value),
+.itemstable :deep(.dt__td:nth-child(4) .dt__value) {
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
-/* "$ 213.115 – 4,5 M" — keep the compact "M" suffix on the same line
-   instead of orphaning it below; the column can take the width. */
-.refcell__range { white-space: nowrap; }
+.itemstable :deep(.dt__th:nth-child(3)),
+.itemstable :deep(.dt__th:nth-child(4)),
+.itemstable :deep(.dt__td:nth-child(3)),
+.itemstable :deep(.dt__td:nth-child(4)) { min-width: max-content; }
 
-/* The scraped presentación ("ENVASE · 250 G") on its own quiet line. */
-.refcell__pres {
+/* Slack goes to the description, not to the short columns.
+   `width: 100%` on one cell of an auto-layout table is the standard way to
+   say "this column takes whatever is left": every other column then sits at
+   its own content width instead of each padding out a share of the surplus,
+   which is what left a gap between a 5-digit catalogue code and the quantity
+   beside it. The description is the column that can always use more room. */
+.itemstable :deep(.dt__th:first-child),
+.itemstable :deep(.dt__td:first-child) { width: 100%; }
+
+/* ---- Price comparison (a column of the items table) ----
+   Stacked inside one cell: verdict + ratio lead, the distribution behind
+   them, the drill-down link last. */
+.refcell__verdict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* The whole chip is the tooltip's trigger, not just the "?" — a 13px target
+   is a poor thing to have to hit for the definition of the badge beside it.
+   `default` cursor because the chip is a label, not selectable prose: an
+   I-beam over it invited a text selection that means nothing here. */
+.refcell__pos {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  cursor: default;
+  user-select: none;
+}
+
+/* The ratio sits right beside the verdict chip so the two can never say
+   different things — a calm chip next to a 3.5× figure was the original defect. */
+.refcell__ratio {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* "Habitual $ 131 · $ 115 – 177 · 100 comparables" — the numbers the verdict
+   is derived from, one quiet line under it. */
+.refcell__stats {
   display: block;
-  margin-top: var(--s-1);
+  margin-top: 2px;
+  /* Floors the comparison column — the widest content in the row: a verdict
+     chip, a ratio, then median + range + sample size. Letting the description
+     take ALL the table's slack starved it to ~125px and stacked that into
+     four cramped lines. A min-width here propagates to the column, so the
+     description gets the REST of the surplus, not every last pixel. */
+  min-width: 17rem;
+  font-size: var(--t-xs);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* A priced line whose catalogue code has under 5 comparable purchases. Stated
+   rather than left blank, so "no baseline" never reads as "not checked". */
+.refcell__none {
   font-size: var(--t-xs);
   color: var(--text-muted);
 }
 
-.refcell__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3);
-  margin-top: var(--s-1);
-}
-
 .refcell__link {
+  display: inline-block;
+  margin-top: var(--s-1);
   font-size: var(--t-xs);
   font-weight: 600;
   color: var(--celeste-deep);
@@ -2558,7 +3003,77 @@ a.party__name:hover { text-decoration: underline; }
   margin: 0;
   font-size: var(--t-xs);
   color: var(--text-muted);
-  max-width: 70ch;
+  /* No measure cap: as a footnote under a full-width table, a 70ch column
+     reads as a layout error rather than as careful line length. It spans the
+     table it annotates. */
+}
+
+.reftable__note + .reftable__note { margin-top: var(--s-2); }
+
+/* The verdict definition, per chip: a "?" that reveals on hover AND on
+   keyboard focus. A real <button> rather than a `title` attribute so it is
+   reachable without a pointer — a native tooltip never opens on tap or Tab. */
+.refhelp {
+  /* Deliberately NOT a positioning context: the bubble anchors to the chip
+     (.refcell__pos) so it centres over the whole badge and the badge's own
+     hover can open it. */
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  /* Inherits the chip's own tone so it reads as part of the badge, not as a
+     control bolted next to it. */
+  border: 1px solid currentColor;
+  border-radius: var(--r-full);
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.65;
+  cursor: help;
+}
+
+.refcell__pos:hover .refhelp,
+.refhelp:focus-visible { opacity: 1; }
+
+.refhelp__bubble {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 5;
+  width: max-content;
+  max-width: 260px;
+  transform: translateX(-50%);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  font-size: var(--t-xs);
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  color: var(--text);
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Hovering ANYWHERE on the chip opens it, not only the 13px "?" — keyboard
+   focus on the button still does too, so it stays reachable without a pointer. */
+.refcell__pos:hover .refhelp__bubble,
+.refhelp:focus-visible .refhelp__bubble {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .refhelp__bubble { transition: opacity var(--dur) var(--ease); }
 }
 
 .reftable__note a {
@@ -2583,12 +3098,6 @@ a.party__name:hover { text-decoration: underline; }
 
 .reftable__link:hover { text-decoration: underline; }
 
-@media (max-width: 760px) {
-  /* On the stacked card the badge sits under the item name. */
-  .refcell__name { display: block; margin-bottom: var(--s-2); }
-  .refcell__pos { display: inline-block; }
-}
-
 /* ---- Fact lists ---- */
 .facts {
   margin: 0;
@@ -2603,6 +3112,26 @@ a.party__name:hover { text-decoration: underline; }
   gap: var(--s-3);
 }
 
+/* Two field-groups per row, label stacked above value inside each — the
+   Resumen section's 8 short facts read as a long single column otherwise,
+   wasting the panel's full width. */
+.facts--cols {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--s-5);
+}
+
+.facts--cols .facts__row {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 2px;
+}
+
+.facts--cols .facts__row--full { grid-column: 1 / -1; }
+
+@media (max-width: 560px) {
+  .facts--cols { grid-template-columns: minmax(0, 1fr); }
+}
+
 .facts dt {
   font-family: var(--font-mono);
   font-size: var(--t-xs);
@@ -2610,6 +3139,29 @@ a.party__name:hover { text-decoration: underline; }
   text-transform: uppercase;
   color: var(--text-muted);
 }
+
+/* "Unidad ejecutora" vs "unidad compradora" is a real distinction in the
+   Uruguayan hierarchy (buyer.id is <inciso>-<unidad ejecutora>) and nothing
+   on the page said which was which. */
+.facts__help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-left: 4px;
+  border: 1px solid currentColor;
+  border-radius: var(--r-full);
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: normal;
+  line-height: 1;
+  opacity: 0.7;
+  cursor: help;
+}
+
+.facts__help:hover { opacity: 1; }
 
 .facts dd {
   margin: 0;
@@ -2694,39 +3246,10 @@ a.party__name:hover { text-decoration: underline; }
   overflow-wrap: anywhere;
 }
 
-/* ---- Items table ---- */
-.itable {
-  width: 100%;
-  /* Tuned to still fit at the 760px card breakpoint, so the table never
-     pushes the page sideways in the gap before `.dtable` takes over. */
-  min-width: 680px;
-  border-collapse: collapse;
-}
-
-.itable th {
-  padding: var(--s-3) var(--s-4);
-  text-align: left;
-  font-family: var(--font-mono);
-  font-size: var(--t-xs);
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--rule);
-  white-space: nowrap;
-}
-
-.itable td {
-  padding: var(--s-3) var(--s-4);
-  font-size: var(--t-sm);
-  vertical-align: top;
-  border-bottom: 1px solid var(--rule);
-}
-
-.itable tr:last-child td { border-bottom: 0; }
-
-.itable__d { display: block; }
-
+/* ---- Items table ----
+   Only `.itable__code` and `.itable__u` are still used, inside DataTable's
+   cell slots — the rest of this block styled a hand-rolled <table> that
+   DataTable replaced. */
 .itable__code {
   display: block;
   font-size: var(--t-sm);
@@ -2757,12 +3280,6 @@ a.itable__code:hover { text-decoration: underline; }
 .ifeat__v {
   font-weight: 600;
   color: var(--text);
-}
-
-.itable th.itable__num,
-.itable td.itable__num {
-  text-align: right;
-  white-space: nowrap;
 }
 
 /* ---- Rank ---- */
@@ -2893,23 +3410,51 @@ a.itable__code:hover { text-decoration: underline; }
 
 .docs__link:hover { background: var(--surface-sunken); }
 
+.docs__more {
+  display: block;
+  width: 100%;
+  padding: var(--s-3) var(--s-5);
+  border: 0;
+  border-top: 1px solid var(--rule);
+  background: none;
+  text-align: left;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--celeste-deep);
+  cursor: pointer;
+}
+
+.docs__more:hover { background: var(--surface-sunken); }
+
 /* ---- Raw ---- */
 .rawnote {
   margin: 0 0 var(--s-3);
   font-size: var(--t-xs);
 }
 
+/* "Ver" — the raw document, inline beside its own URL. It used to be a
+   full-width button owning a whole panel; that panel is gone, its one action
+   folded into the source-document row. */
 .rawbtn {
-  width: 100%;
-  padding: var(--s-2);
+  flex: none;
+  padding: 2px var(--s-3);
   border: 1px solid var(--rule-strong);
   border-radius: var(--r-md);
   background: transparent;
   color: var(--text);
   font-family: var(--font-body);
-  font-size: var(--t-sm);
+  font-size: var(--t-xs);
   font-weight: 600;
   cursor: pointer;
+}
+
+/* The action and the address on one line, the URL truncating rather than
+   pushing the button out of the row. */
+.srcdoc {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
 }
 
 .rawbtn:hover { background: var(--surface-sunken); }
@@ -2977,6 +3522,7 @@ a.itable__code:hover { text-decoration: underline; }
   .head__title { max-width: none; }
   .head__money { min-width: 0; }
   .head__nomoney { max-width: none; }
+  .head2 { grid-template-columns: 1fr; }
 
   .amds__row {
     grid-template-columns: 1fr;
@@ -2992,9 +3538,15 @@ a.itable__code:hover { text-decoration: underline; }
   .rank__link :deep(.money) { grid-column: 2; grid-row: 1 / span 2; }
 }
 
-/* ===== AI review panel ===== */
-.airev { border-left: 3px solid var(--alerta); }
+/* ===== AI review panel =====
+   The rail colour lives on the verdict modifier, never on the base rule: an
+   unconditional red border painted the same alarm on a contract the AI
+   cleared ("Posible explicación") as on one it couldn't explain — the
+   evidence contract's "a pattern, not a verdict" promise, undone by CSS. */
+.airev { border-left: 3px solid var(--rule-strong); }
 .airev--no { border-left-color: var(--alerta); }
+.airev--yes { border-left-color: var(--verde); }
+.airev--uncertain { border-left-color: var(--rule-strong); }
 
 .airev .panel__head {
   display: flex;
@@ -3017,6 +3569,18 @@ a.itable__code:hover { text-decoration: underline; }
   color: var(--alerta);
   border-color: color-mix(in srgb, var(--alerta) 45%, transparent);
   background: color-mix(in srgb, var(--alerta) 12%, transparent);
+}
+
+.airev__verdict--yes {
+  color: var(--verde);
+  border-color: color-mix(in srgb, var(--verde) 45%, transparent);
+  background: color-mix(in srgb, var(--verde) 12%, transparent);
+}
+
+.airev__verdict--uncertain {
+  color: var(--text-muted);
+  border-color: var(--rule-strong);
+  background: var(--surface-sunken);
 }
 
 .airev__body {
@@ -3070,7 +3634,9 @@ a.itable__code:hover { text-decoration: underline; }
 }
 
 .airev__docs a {
-  color: var(--alerta);
+  /* Same link colour as the rest of the page — evidence links are not
+     themselves an accusation, regardless of which panel they sit in. */
+  color: var(--celeste-deep);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -3117,7 +3683,12 @@ a.itable__code:hover { text-decoration: underline; }
   color: var(--text);
   font-family: var(--font-body);
   font-size: var(--t-sm);
-  outline: none;
+  /* No local `outline: none`: this only renders past 6 rows or with an
+     active flag, so it never showed up in a quick check on a short
+     contract — but killing the outline here silently opted this ONE
+     input out of the sitewide focus-visible ring every other control gets
+     (main.scss:430), leaving only a 1px border-colour shift on the wrapper
+     as the sole focus signal. Let the global rule apply. */
 }
 
 .ifilter__toggle {
