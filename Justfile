@@ -14,12 +14,68 @@ mongo_container := "gastos-gub-mongo"
 mongo_volume := "gastos-gub-mongo-data"
 mongo_port := "27017"
 
+# Ports a dashboard can end up on. 3600 is what .env configures; 3000 is Nuxt's
+# default, which is where a dev server lands when it was started from a
+# directory where app/.env isn't picked up. Leaving one of each running serves
+# two DIFFERENT builds on two ports, and you debug the one you aren't editing.
+app_ports := "3600 3000"
+
 # Start the dashboard against whatever .env already says. No container, no seed.
 dev:
     npm --prefix app run dev
 
-# Stop the local Mongo container started by `just run`.
-stop:
+# Free the app ports. ONLY processes whose working directory is inside this
+# checkout are killed: 3000 is Node's default port, so anything at all can be
+# sitting on it — another project's dev server included. A process we cannot
+# identify is reported and left alone.
+#
+# This lives in its own recipe so `stop` and `run` share one copy, and so `stop`
+# stays line-based: `just` strips the `-` (ignore-error) prefix only in the
+# linewise path, so a `-docker stop` inside a shebang recipe would reach bash
+# verbatim and fail with `-docker: command not found`.
+_free-ports:
+    #!/usr/bin/env bash
+    set -uo pipefail
+
+    repo="$(cd "{{justfile_directory()}}" && pwd -P)"
+
+    port_pids() {
+      local pids
+      pids="$(lsof -ti "tcp:$1" 2>/dev/null || true)"
+      if [ -z "$pids" ]; then
+        # `grep -o` + `cut`, not `grep -oP`: -P is GNU-only, and one ss line can
+        # carry several pid= entries.
+        pids="$(ss -ltnpH "sport = :$1" 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d= -f2 | sort -u || true)"
+      fi
+      echo "$pids"
+    }
+
+    proc_cwd() {
+      if [ -r "/proc/$1/cwd" ]; then
+        readlink -f "/proc/$1/cwd" 2>/dev/null || true
+      else
+        lsof -a -d cwd -p "$1" -Fn 2>/dev/null | sed -n 's/^n//p' | head -1
+      fi
+    }
+
+    for port in {{app_ports}}; do
+      mine=""
+      for pid in $(port_pids "$port"); do
+        cwd="$(proc_cwd "$pid")"
+        case "${cwd:-}" in
+          "$repo" | "$repo"/*) mine="$mine $pid" ;;
+          '') echo "→ port $port: cannot read pid $pid's working directory, leaving it alone" ;;
+          *) echo "→ port $port: pid $pid runs from $cwd, not this checkout — leaving it alone" ;;
+        esac
+      done
+      if [ -n "$mine" ]; then
+        echo "→ freeing port $port (pid$mine)"
+        kill $mine 2>/dev/null || true
+      fi
+    done
+
+# Stop the local Mongo container and any dashboard still holding an app port.
+stop: _free-ports
     -docker stop "{{mongo_container}}"
 
 # Bootstrap everything and start the dashboard on http://localhost:3600.
@@ -113,6 +169,14 @@ run:
     fi
 
     # 6. run the dashboard; Ctrl+C stops it AND the mongo container.
+    #
+    # Whatever already holds an app port goes first. A previous run killed with
+    # SIGKILL, or a `npm run dev` started by hand from a subdirectory (which
+    # misses app/.env and so listens on 3000 instead of 3600), leaves a server
+    # serving a stale build — and then the page you are looking at is not the
+    # code you are editing. Both ports are freed on the way in and on the way out.
+    "{{just_executable()}}" _free-ports || true
+
     CLEANED_UP=""
     cleanup() {
       [ -n "$CLEANED_UP" ] && return
@@ -120,6 +184,7 @@ run:
       echo ""
       echo "→ stopping…"
       [ -n "${APP_PID:-}" ] && kill "$APP_PID" 2>/dev/null || true
+      "{{just_executable()}}" _free-ports || true
       docker stop "{{mongo_container}}" >/dev/null 2>&1 || true
     }
     trap cleanup INT TERM EXIT
