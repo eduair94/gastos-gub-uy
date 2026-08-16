@@ -14,12 +14,30 @@ mongo_container := "gastos-gub-mongo"
 mongo_volume := "gastos-gub-mongo-data"
 mongo_port := "27017"
 
+# Ports a dashboard can end up on. 3600 is what .env configures; 3000 is Nuxt's
+# default, which is where a dev server lands when it was started from a
+# directory where app/.env isn't picked up. Leaving one of each running serves
+# two DIFFERENT builds on two ports, and you debug the one you aren't editing.
+app_ports := "3600 3000"
+
 # Start the dashboard against whatever .env already says. No container, no seed.
 dev:
     npm --prefix app run dev
 
-# Stop the local Mongo container started by `just run`.
+# Stop the local Mongo container started by `just run`, and any dashboard still
+# holding one of the app ports.
 stop:
+    #!/usr/bin/env bash
+    for port in {{app_ports}}; do
+      pids="$(lsof -ti "tcp:$port" 2>/dev/null || true)"
+      if [ -z "$pids" ]; then
+        pids="$(ss -ltnpH "sport = :$port" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | sort -u || true)"
+      fi
+      if [ -n "$pids" ]; then
+        echo "→ stopping dashboard on port $port (pid $(echo $pids | tr '\n' ' '))"
+        kill $pids 2>/dev/null || true
+      fi
+    done
     -docker stop "{{mongo_container}}"
 
 # Bootstrap everything and start the dashboard on http://localhost:3600.
@@ -113,6 +131,26 @@ run:
     fi
 
     # 6. run the dashboard; Ctrl+C stops it AND the mongo container.
+    #
+    # Whatever already holds an app port goes first. A previous run killed with
+    # SIGKILL, or a `npm run dev` started by hand from a subdirectory (which
+    # misses app/.env and so listens on 3000 instead of 3600), leaves a server
+    # serving a stale build — and then the page you are looking at is not the
+    # code you are editing. Both ports are freed on the way in and on the way out.
+    free_app_ports() {
+      for port in {{app_ports}}; do
+        local pids
+        pids="$(lsof -ti "tcp:$port" 2>/dev/null || true)"
+        if [ -z "$pids" ]; then
+          pids="$(ss -ltnpH "sport = :$port" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | sort -u || true)"
+        fi
+        [ -z "$pids" ] && continue
+        echo "→ freeing port $port (pid $(echo $pids | tr '\n' ' '))"
+        kill $pids 2>/dev/null || true
+      done
+    }
+    free_app_ports
+
     CLEANED_UP=""
     cleanup() {
       [ -n "$CLEANED_UP" ] && return
@@ -120,6 +158,7 @@ run:
       echo ""
       echo "→ stopping…"
       [ -n "${APP_PID:-}" ] && kill "$APP_PID" 2>/dev/null || true
+      free_app_ports
       docker stop "{{mongo_container}}" >/dev/null 2>&1 || true
     }
     trap cleanup INT TERM EXIT
