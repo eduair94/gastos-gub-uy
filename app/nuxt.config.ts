@@ -258,12 +258,23 @@ export default defineNuxtConfig({
   sitemap: {
     autoLastmod: true,
     // The static page scanner (nuxt:pages, the implicit `pages` sitemap below)
-    // only ever sees the ~50 static routes — every entity detail page
+    // only ever sees the ~60 static routes — every entity detail page
     // ([id]/[slug]/[code]/[compraId]) has to be listed explicitly. Each is its
-    // own NAMED sitemap (not one combined `sources` array) so @nuxtjs/sitemap
-    // actually auto-chunks past `defaultSitemapsChunkSize` — a single giant
-    // source rendered as one ~45MB, 40s file mixing every entity type, nowhere
-    // near Google's 50k-URLs-per-file limit. See server/api/__sitemap__/*.ts.
+    // own NAMED sitemap (not one combined `sources` array), so no single file
+    // mixes every entity type. See server/api/__sitemap__/*.ts.
+    //
+    // WARNING: `defaultSitemapsChunkSize` ALONE CHUNKS NOTHING. On
+    // @nuxtjs/sitemap 7.6.0 the chunking branch is gated on a truthy `chunks`
+    // key on the CHILD (`module.mjs`: `if (definition.chunks) {`), and the size
+    // below is only read inside that branch. This block claimed for months that
+    // the children auto-chunked past it. They never did: `products.xml` reached
+    // 46,493 URLs, 93% of Google's hard 50,000-per-file cap, past which the file
+    // is rejected whole.
+    //
+    // Verifying this needs patience. `sitemap_index.xml` is cached for 10
+    // minutes with `swr: true` (`builder/sitemap-index.js`), so for two restarts
+    // after the change the index still served the old 8 children. It is not
+    // broken — wait out the TTL and re-request before concluding anything.
     defaultSitemapsChunkSize: 5000,
     sitemaps: {
       // WARNING: `includeAppSources` is load-bearing. Declaring `sitemaps`
@@ -295,10 +306,12 @@ export default defineNuxtConfig({
           '/newsletter/**',
         ],
       },
+      // `chunks: true` only on the three that need it. The others sit far under
+      // the cap and splitting them would only add index round-trips.
       buyers: { sources: ['/api/__sitemap__/buyers'] },
-      suppliers: { sources: ['/api/__sitemap__/suppliers'] },
-      products: { sources: ['/api/__sitemap__/products'] },
-      contracts: { sources: ['/api/__sitemap__/contracts'] },
+      suppliers: { chunks: true, sources: ['/api/__sitemap__/suppliers'] },
+      products: { chunks: true, sources: ['/api/__sitemap__/products'] },
+      contracts: { chunks: true, sources: ['/api/__sitemap__/contracts'] },
       llamados: { sources: ['/api/__sitemap__/llamados'] },
       cases: { sources: ['/api/__sitemap__/cases'] },
       blog: { sources: ['/api/__sitemap__/blog'] },
@@ -319,6 +332,12 @@ export default defineNuxtConfig({
     // in the same Redis-backed SWR layer as the public APIs, so subscriptions
     // keep receiving the last good feed through a brief Mongo or deploy blip.
     '/rss/**': apiCache(5 * 60),
+
+    // Sitemap sources. A chunked child refetches its whole source once per
+    // chunk, so without this `products` runs the same 46k-row query ten times
+    // per rebuild. The handlers hold their own 6h in-process cache; this makes
+    // the cache shared across the two pm2 workers.
+    '/api/__sitemap__/**': apiCache(6 * 60 * 60),
 
     // Homepage + explorer hot paths.
     '/api/dashboard/**': apiCache(5 * 60),

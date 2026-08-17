@@ -132,6 +132,18 @@ export default defineEventHandler(async (event) => {
     return
   }
 
+  // The sitemap sources are never limited.
+  //
+  // WARNING: chunked sitemaps refetch their whole source once PER CHUNK, so
+  // `products` alone asks this handler ten times in a burst from the server
+  // itself. One 429 does not just fail that chunk — @nuxtjs/sitemap turns the
+  // error into an empty `<urlset>` and then CACHES it, so a transient limit
+  // silently withdraws tens of thousands of URLs until the TTL expires.
+  // These routes read precomputed id lists and are not a data-exfiltration path.
+  if (event.node.req.url.startsWith('/api/__sitemap__/')) {
+    return
+  }
+
   // Authenticated API-key callers are limited on their key id, not their IP, at
   // a much higher ceiling. apiAuth.ts already validated the key and set context.
   const apiKey = event.context.apiKey as { id: string } | null
