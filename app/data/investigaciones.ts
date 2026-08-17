@@ -272,7 +272,7 @@ export const INV_CONTENT = {
       "cardAntel": {
         "eyebrow": "Investigación propia · Tercerización",
         "title": "«La cuadrilla de Antel»: quién instala la fibra y qué cobra",
-        "dek": "La cuadrilla sí es de una empresa contratada: está en el pliego. El precio del dicho no cierra. Y buscándolo apareció que de 164 llamados de obra de red, uno solo dice quién construye la red.",
+        "dek": "La cuadrilla trabaja para una empresa contratista: está en el pliego. El precio del dicho no cierra. Y de 164 llamados de obra de red, uno solo dice quién construye la red.",
         "tags": [
           "6 de 164 con adjudicatario",
           "3,3 % vs 82,7 % de OSE",
@@ -704,7 +704,7 @@ export const INV_CONTENT = {
       "cardAntel": {
         "eyebrow": "Own investigation · Outsourcing",
         "title": "\"The Antel crew\": who installs the fibre and what they charge",
-        "dek": "The crew does work for a contractor: it is in the tender documents. The price in the rumour does not add up. And looking for it turned up that of 164 network-works tenders, exactly one says who builds the network.",
+        "dek": "The crew works for a contractor: it is in the tender documents. The price in the saying does not add up. And of 164 network-works tenders, exactly one says who builds the network.",
         "tags": [
           "6 of 164 name a winner",
           "3.3% vs OSE's 82.7%",
