@@ -213,11 +213,16 @@ const hasBreakdown = computed(() =>
   byYear.value.length > 0 || byBuyer.value.length > 0 || categories.value.length > 0,
 )
 
+// See the note on the product page: the noun is pluralised by its own key
+// because two independent counts share this sentence. The raw number selects
+// the branch; the formatted string is what the reader sees.
 const seoDescription = computed(() => t('seo.supplierDetail.description', {
   name: supplier.value?.name ?? '',
   amount: formatMoney(supplier.value?.totalValue, 'UYU', { compact: true }),
   contracts: formatNumber(supplier.value?.totalContracts),
+  contractWord: t('seo.units.contrato', supplier.value?.totalContracts ?? 0),
   buyers: formatNumber(supplier.value?.buyerCount),
+  buyerWord: t('seo.units.organismo', supplier.value?.buyerCount ?? 0),
 }))
 
 // Resolved in setup scope: the useSeo getter below can be re-invoked outside

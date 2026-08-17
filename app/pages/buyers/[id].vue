@@ -254,11 +254,15 @@ const breadcrumbLd = useBreadcrumbLd([
 
 useSeo(() => ({
   title: t('seo.buyerDetail.title', { name: name.value }),
+  // See the note on the product page: the noun is pluralised by its own key
+  // because two independent counts share this sentence.
   description: t('seo.buyerDetail.description', {
     name: name.value,
     amount: formatMoney(buyer.value?.totalSpending, 'UYU', { compact: true }),
     contracts: formatNumber(buyer.value?.totalContracts),
+    contractWord: t('seo.units.contrato', buyer.value?.totalContracts ?? 0),
     suppliers: formatNumber(buyer.value?.supplierCount),
+    supplierWord: t('seo.units.proveedor', buyer.value?.supplierCount ?? 0),
   }),
   path: `/buyers/${encodeURIComponent(buyerId.value)}`,
   noindex: notFound.value,

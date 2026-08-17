@@ -2105,6 +2105,12 @@
     }
   },
   "seo": {
+      "units": {
+        "contrato": "contract | contracts",
+        "organismo": "agency | agencies",
+        "organismoComprador": "buying agency | buying agencies",
+        "proveedor": "supplier | suppliers"
+      },
       "casos": {
         "title": "Where the money is argued over — public investment files",
         "description": "Files on questioned Uruguayan state investment and spending, with verified sources and the cross-reference against the official Compras Estatales data."
@@ -2221,7 +2227,7 @@
     },
     "productDetail": {
       "title": "{name} — state purchases",
-      "description": "{name}: {contracts} contracts across {buyers} buying agencies. Who buys it, from whom, and at what price."
+      "description": "{name}: {contracts} {contractWord} across {buyers} {buyerWord}. Who buys it, from whom, and at what price."
     },
     "suppliers": {
       "title": "Suppliers to the Uruguayan state",
@@ -2241,7 +2247,7 @@
     },
     "supplierDetail": {
       "title": "{name} — state supplier",
-      "description": "{name} received {amount} from the Uruguayan state across {contracts} contracts with {buyers} agencies."
+      "description": "{name} received {amount} from the Uruguayan state across {contracts} {contractWord} with {buyers} {buyerWord}."
     },
     "buyers": {
       "title": "Buying agencies of the Uruguayan state",
@@ -2249,7 +2255,7 @@
     },
     "buyerDetail": {
       "title": "{name} — agency purchases",
-      "description": "{name} spent {amount} across {contracts} contracts with {suppliers} suppliers."
+      "description": "{name} spent {amount} across {contracts} {contractWord} with {suppliers} {supplierWord}."
     },
     "anomalies": {
       "title": "Flags in Uruguay's public procurement",

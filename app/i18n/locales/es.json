@@ -2105,6 +2105,12 @@
     }
   },
   "seo": {
+      "units": {
+        "contrato": "contrato | contratos",
+        "organismo": "organismo | organismos",
+        "organismoComprador": "organismo comprador | organismos compradores",
+        "proveedor": "proveedor | proveedores"
+      },
       "casos": {
         "title": "Dónde se discute la plata — fichas de inversión pública",
         "description": "Fichas sobre inversiones y gastos del Estado uruguayo que están cuestionados, con fuentes verificadas y el cruce con los datos oficiales de Compras Estatales."
@@ -2221,7 +2227,7 @@
     },
     "productDetail": {
       "title": "{name} — compras del Estado",
-      "description": "{name}: {contracts} contratos y {buyers} organismos compradores. Quién lo compra, a quién y a qué precio."
+      "description": "{name}: {contracts} {contractWord} y {buyers} {buyerWord}. Quién lo compra, a quién y a qué precio."
     },
     "suppliers": {
       "title": "Proveedores del Estado uruguayo",
@@ -2241,7 +2247,7 @@
     },
     "supplierDetail": {
       "title": "{name} — proveedor del Estado",
-      "description": "{name} cobró {amount} del Estado uruguayo en {contracts} contratos con {buyers} organismos."
+      "description": "{name} cobró {amount} del Estado uruguayo en {contracts} {contractWord} con {buyers} {buyerWord}."
     },
     "buyers": {
       "title": "Organismos compradores del Estado uruguayo",
@@ -2249,7 +2255,7 @@
     },
     "buyerDetail": {
       "title": "{name} — compras del organismo",
-      "description": "{name} gastó {amount} en {contracts} contratos con {suppliers} proveedores."
+      "description": "{name} gastó {amount} en {contracts} {contractWord} con {suppliers} {supplierWord}."
     },
     "anomalies": {
       "title": "Alertas en compras públicas del Uruguay",

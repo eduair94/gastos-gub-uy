@@ -200,10 +200,16 @@ const breadcrumbLd = useBreadcrumbLd([
 
 useSeo(() => ({
   title: t('seo.productDetail.title', { name: description.value }),
+  // The noun is pluralised by its own key, not hardcoded: two independent counts
+  // share this sentence and vue-i18n allows one plural choice per key. The count
+  // goes in twice — the raw number selects the branch, the formatted string is
+  // what the reader sees. Hardcoding the plural shipped "1 contratos" to the SERP.
   description: t('seo.productDetail.description', {
     name: description.value,
     contracts: formatNumber(product.value?.contractCount),
+    contractWord: t('seo.units.contrato', product.value?.contractCount ?? 0),
     buyers: formatNumber(product.value?.buyerCount),
+    buyerWord: t('seo.units.organismoComprador', product.value?.buyerCount ?? 0),
   }),
   path: `/products/${encodeURIComponent(code.value)}`,
   noindex: notFound.value,
