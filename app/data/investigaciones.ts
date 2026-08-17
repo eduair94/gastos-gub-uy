@@ -209,6 +209,26 @@ export const INV_CONTENT = {
           "brecha yo/país: 46 pts"
         ]
       },
+      "cardDiario": {
+        "eyebrow": "Se publica todas las mañanas",
+        "title": "Hallazgos del día",
+        "dek": "Un hallazgo medido por día sobre el registro de compras: saltos de gasto, rubros concentrados, licitaciones con una sola oferta, precios que el control automático no pudo explicar. Cada uno dice qué falta para afirmar más.",
+        "tags": [
+          "8 carriles de medición",
+          "verificador automático",
+          "sin veredictos"
+        ]
+      },
+      "cardVivienda": {
+        "eyebrow": "Ley 18.795 · 2011–2026",
+        "title": "La vivienda que el Estado no compra",
+        "dek": "El régimen de vivienda promovida lleva 52.713 viviendas promovidas y 30.525 terminadas, y no deja un solo contrato en el registro de compras. La DGI publica su costo en cinco líneas sueltas y ningún total. El Ministerio de Vivienda contestó que sólo podía informar el IVA.",
+        "tags": [
+          "cero contratos",
+          "61% monoambiente o 1 dormitorio",
+          "sin apertura territorial"
+        ]
+      },
       "cardSunca": {
         "eyebrow": "Convenio del Grupo 9 · 2026–2031",
         "title": "Cuatro horas menos: qué ganó la construcción y por dónde pasa la cuenta",
@@ -639,6 +659,26 @@ export const INV_CONTENT = {
           "two reference years",
           "homicides x1.7",
           "me/country gap: 46 pts"
+        ]
+      },
+      "cardDiario": {
+        "eyebrow": "Published every morning",
+        "title": "Daily findings",
+        "dek": "One measured finding a day from the procurement record: spending jumps, concentrated categories, tenders with a single bid, prices the automatic review could not explain. Each one states what is still missing to say more.",
+        "tags": [
+          "8 measurement lanes",
+          "automatic checker",
+          "no verdicts"
+        ]
+      },
+      "cardVivienda": {
+        "eyebrow": "Law 18.795 · 2011-2026",
+        "title": "The housing the state does not buy",
+        "dek": "The promoted housing regime has 52,713 homes promoted and 30,525 finished, and leaves not one contract in the procurement record. The tax office publishes its cost in five loose lines and no total. The Housing Ministry answered that it could only report VAT.",
+        "tags": [
+          "zero contracts",
+          "61% studio or 1-bedroom",
+          "no territorial breakdown"
         ]
       },
       "cardSunca": {

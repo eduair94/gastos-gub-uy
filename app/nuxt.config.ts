@@ -274,6 +274,7 @@ export default defineNuxtConfig({
       llamados: { sources: ['/api/__sitemap__/llamados'] },
       cases: { sources: ['/api/__sitemap__/cases'] },
       blog: { sources: ['/api/__sitemap__/blog'] },
+      diario: { sources: ['/api/__sitemap__/diario'] },
     },
   },
 

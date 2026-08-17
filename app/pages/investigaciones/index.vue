@@ -80,6 +80,8 @@ const series = computed(() => [
     cards: [
       { path: '/investigaciones/mejor-o-peor', emoji: '📉', ...c.value.cardMejorPeor },
       { path: '/investigaciones/sunca', emoji: '🦺', ...c.value.cardSunca },
+      { path: '/investigaciones/vivienda-promovida', emoji: '🏘️', ...c.value.cardVivienda },
+      { path: '/investigaciones/diario', emoji: '🗓️', ...c.value.cardDiario },
     ],
   },
 ])

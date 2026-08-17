@@ -9,6 +9,12 @@ import type { Document } from 'mongoose'
 
 export type NotificationFrequency = 'instant' | 'daily'
 
+/**
+ * Cadencia del newsletter. NO confundir con `NotificationFrequency`, que rige las alertas de
+ * llamados: son dos preferencias distintas del mismo usuario y comparten la palabra 'daily'.
+ */
+export type NewsletterFrequency = 'daily' | 'weekly'
+
 // Delivery channels for a matched llamado. `inapp` is the persistent inbox
 // (always on); the rest are external and opt-in per user + connection state.
 export type NotificationChannel = 'email' | 'push' | 'telegram' | 'inapp'
@@ -51,6 +57,9 @@ export interface IUser extends Document {
     subscribedAt?: Date | undefined
     unsubscribedAt?: Date | undefined
     source?: 'registration' | 'login' | 'account' | undefined
+    /** Cadencia del envío. Ausente se lee como 'daily' — ver el modelo. */
+    frequency?: NewsletterFrequency | undefined
+    frequencyChangedAt?: Date | undefined
   } | undefined
   // Present only once the user links a Telegram chat.
   telegram?: ITelegramLink | undefined

@@ -184,6 +184,8 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'invSunca', to: localePath('/investigaciones/sunca'), icon: 'mdi-hard-hat' },
             { key: 'invGenero', to: localePath('/investigaciones/gasto-en-genero'), icon: 'mdi-human-male-female' },
             { key: 'invMensajes', to: localePath('/investigaciones/mensajes-del-estado'), icon: 'mdi-bullhorn-variant-outline' },
+            { key: 'invVivienda', to: localePath('/investigaciones/vivienda-promovida'), icon: 'mdi-home-city-outline' },
+            { key: 'invDiario', to: localePath('/investigaciones/diario'), icon: 'mdi-calendar-text-outline' },
           ],
         },
         {

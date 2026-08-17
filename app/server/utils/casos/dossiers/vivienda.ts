@@ -142,6 +142,7 @@ export const CASOS_VIVIENDA: CasoDef[] = [
   },
   {
     slug: 'vivienda-promovida-exoneraciones-monoambientes',
+    investigationPath: '/investigaciones/vivienda-promovida',
     emoji: '🏢',
     theme: 'vivienda',
     period: '2011-2026',
@@ -191,6 +192,7 @@ export const CASOS_VIVIENDA: CasoDef[] = [
   },
   {
     slug: 'entre-todos-viviendas-poblacion-objetivo',
+    investigationPath: '/investigaciones/vivienda-promovida',
     emoji: '🏘️',
     theme: 'vivienda',
     period: '2022-2026',

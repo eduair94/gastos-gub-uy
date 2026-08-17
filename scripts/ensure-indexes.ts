@@ -591,6 +591,21 @@ async function main(): Promise<void> {
       await newsletterIssues.createIndex({ status: 1, publishedAt: -1 }, { background: true })
       console.log('✅ newsletter_issues indexes ensured (weekKey, slug unique; published archive)')
 
+      const dailyIssues = db.collection('newsletter_daily_issues')
+      await dailyIssues.createIndex({ dayKey: 1 }, { unique: true, background: true })
+      await dailyIssues.createIndex({ slug: 1 }, { unique: true, background: true })
+      await dailyIssues.createIndex({ status: 1, publishedAt: -1 }, { background: true })
+      console.log('✅ newsletter_daily_issues indexes ensured (dayKey, slug unique; published archive)')
+
+      const dailyInvestigations = db.collection('daily_investigations')
+      await dailyInvestigations.createIndex({ slug: 1 }, { unique: true, background: true })
+      await dailyInvestigations.createIndex({ status: 1, publishedAt: -1 }, { background: true })
+      await dailyInvestigations.createIndex({ dayKey: -1 }, { background: true })
+      // La consulta que corre en CADA corrida del motor: «¿este sujeto ya salió?».
+      await dailyInvestigations.createIndex({ subjectKey: 1, publishedAt: -1 }, { background: true })
+      await dailyInvestigations.createIndex({ lane: 1, publishedAt: -1 }, { background: true })
+      console.log('✅ daily_investigations indexes ensured (slug unique; dedupe by subject; archive)')
+
       const newsletterDeliveries = db.collection('newsletter_deliveries')
       await newsletterDeliveries.createIndex({ issueId: 1, userId: 1, channel: 1 }, { unique: true, background: true })
       await newsletterDeliveries.createIndex({ issueId: 1, status: 1, channel: 1 }, { background: true })

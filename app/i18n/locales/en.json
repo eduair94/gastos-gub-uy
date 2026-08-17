@@ -86,6 +86,8 @@
     "invMejorPeor": "Are we getting worse?",
     "genero": "Gender spending",
     "invMensajes": "The State messages",
+    "invVivienda": "Promoted housing",
+    "invDiario": "Daily findings",
     "invGenero": "Gender spending"
   },
   "money": {
@@ -2956,6 +2958,13 @@
     "indexTitle": "The state's largest purchases, week by week",
     "indexLead": "A verifiable record of the largest awards published and new statistical signals. Facts come from the data; Gemini helps read them.",
     "weeklyStamp": "Weekly public record",
+    "dailyStamp": "Daily edition",
+    "readFull": "Read the full note",
+    "dailyAnomalies": "{n} new price signal(s) in the last 24 hours. A statistical alert does not prove wrongdoing.",
+    "frequencyTitle": "How often you want it",
+    "frequencyDaily": "Every day",
+    "frequencyWeekly": "Only the Monday round-up",
+    "frequencySaved": "Done, we changed the frequency.",
     "everyMonday": "New issue every Monday",
     "archiveTitle": "Issue archive",
     "weekTotal": "Total eligible amount for the week",
