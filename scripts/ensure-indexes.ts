@@ -522,6 +522,18 @@ async function main(): Promise<void> {
       await udecoXref.createIndex({ dataVersion: 1 }, { background: true })
       console.log('✅ udeco_supplier_stats indexes ensured (rut unique, totalUyu, sanctions, dataVersion)')
 
+      // bjn_condenas: sentencias de la Base de Jurisprudencia Nacional, bajadas por
+      // src/jobs/load-bjn-condenas.ts. sentenciaKey unique es la clave de upsert y lo que hace
+      // reanudable el crawl; publishable+fecha sirve la lista; verdict.organismoNorm el corte por
+      // organismo; verdict.dataVersion el reproceso incremental del verificador.
+      const bjn = client.db(DB_NAME).collection('bjn_condenas')
+      await bjn.createIndex({ sentenciaKey: 1 }, { unique: true, background: true })
+      await bjn.createIndex({ publishable: 1, fecha: -1 }, { background: true })
+      await bjn.createIndex({ 'verdict.organismoNorm': 1, fecha: -1 }, { background: true })
+      await bjn.createIndex({ anio: -1 }, { background: true })
+      await bjn.createIndex({ 'verdict.dataVersion': 1 }, { background: true })
+      console.log('✅ bjn_condenas indexes ensured (sentenciaKey unique, publishable+fecha, organismoNorm, anio, dataVersion)')
+
       // judicial_spending: OPP budget lines the State pays for losing a lawsuit, loaded by
       // src/jobs/load-judicial-spending.ts. rowKey unique is the upsert key and the per-year sweep
       // filter; year+creditoVigente backs the ranking, judicial+year the headline series, and

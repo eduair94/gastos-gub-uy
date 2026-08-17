@@ -72,6 +72,10 @@ export * from "./udeco_sanction";
 // UDECO × state-supplier cross-reference (udeco_supplier_stats)
 export * from "./udeco_supplier_stats";
 
+// Sentencias where the State was condemned to pay (bjn_condenas). The dispositive reader lives in
+// shared/bjn-award.ts and the header reader in shared/bjn-hoja.ts.
+export * from "./bjn_condena";
+
 // Budget lines the State pays for losing a lawsuit (judicial_spending +
 // judicial_spending_years). See shared/judicial-objects.ts for the taxonomy.
 export * from "./judicial_spending";
