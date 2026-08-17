@@ -646,6 +646,32 @@ useSeo(() => ({
           </ChartBlock>
         </div>
 
+        <!-- Year strip.
+             This page switches year client-side, so before this strip existed
+             the 24 per-year pages at /gastos/[year] had no internal link
+             pointing at them and lived only in the sitemap. -->
+        <section class="ev-years">
+          <h2 class="ev-h2">
+            {{ t('evolucion.yearLinks.title') }}
+          </h2>
+          <p class="ev-audit__help">
+            {{ t('evolucion.yearLinks.help') }}
+          </p>
+          <ul class="ev-years__l">
+            <li
+              v-for="yl in years.filter(v => v.bridge)"
+              :key="`yl-${yl.year}`"
+            >
+              <NuxtLink
+                class="ev-years__a"
+                :to="localePath(`/gastos/${yl.year}`)"
+              >
+                {{ yl.year }}
+              </NuxtLink>
+            </li>
+          </ul>
+        </section>
+
         <!-- Audit -->
         <section
           id="auditoria"
@@ -914,6 +940,33 @@ useSeo(() => ({
   gap: var(--s-5);
   min-width: 0;
 }
+
+/* Year strip — the internal path to the per-year pages. */
+.ev-years { margin-block: var(--s-7); }
+
+.ev-years__l {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ev-years__a {
+  display: inline-block;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ev-years__a:hover { background: var(--surface-sunken); }
 
 /* Price vs quantity */
 .ev-pq__help,

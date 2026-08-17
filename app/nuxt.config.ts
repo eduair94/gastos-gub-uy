@@ -315,6 +315,7 @@ export default defineNuxtConfig({
       llamados: { sources: ['/api/__sitemap__/llamados'] },
       cases: { sources: ['/api/__sitemap__/cases'] },
       blog: { sources: ['/api/__sitemap__/blog'] },
+      years: { sources: ['/api/__sitemap__/years'] },
     },
   },
 
@@ -380,6 +381,10 @@ export default defineNuxtConfig({
     '/api/analytics/dei-signals': apiCache(10 * 60),
     '/api/analytics/organism-groups': apiCache(10 * 60),
     '/api/analytics/party-comparison': apiCache(10 * 60),
+    // The whole series (evolucion-gasto) and one year of it (/gastos/[year]).
+    // The base path had no rule at all; `/**` covers the per-year route.
+    '/api/analytics/spending-trend': apiCache(60 * 60),
+    '/api/analytics/spending-trend/**': apiCache(60 * 60),
   },
 
   nitro: {

@@ -1331,6 +1331,27 @@
     "officialLink": "Go to Compras Estatales",
     "disclaimer": "This site does not correct the official data or forward reports: it only detects possible errors and shows you where to take them. The correction is made at the source."
   },
+  "gastosYear": {
+    "kicker": "Spending for the year",
+    "h1": "What the Uruguayan state bought in {year}",
+    "seoTitle": "How much the Uruguayan state spent in {year}",
+    "seoFallback": "Uruguayan state purchasing in {year}: how much, which agencies bought and from whom, with the detail of what was excluded and why.",
+    "datasetName": "Uruguayan state purchasing, {year}",
+    "partial": "{year} is still running. The figures cover what is published so far and are not annualised.",
+    "nominal": "Purchases {year}",
+    "real": "In today's pesos",
+    "releases": "Records",
+    "buyers": "Agencies",
+    "suppliers": "Suppliers",
+    "pctGdp": "Of GDP",
+    "basis": "Every amount is converted at its own month's exchange rate and deflated by the BCU Unidad Indexada. The series measures purchasing published as open data, not the national budget.",
+    "compareAll": "Compare every year",
+    "notFound": {
+      "title": "We do not have that year",
+      "body": "The series starts in 2002. The year may not exist, or it may not be computed yet.",
+      "action": "See spending over time"
+    }
+  },
   "evolucion": {
     "kicker": "Analysis",
     "title": "Did spending rise, or did the peso just fall?",
@@ -1430,6 +1451,10 @@
       "releasesTitle": "Records published",
       "releasesHelp": "Number of priced awards per year.",
       "releases": "Priced records"
+    },
+    "yearLinks": {
+      "title": "Spending year by year",
+      "help": "Each year has its own page, with the full bridge, the agencies that moved the number and the largest contracts."
     },
     "audit": {
       "title": "What we excluded, and why",
