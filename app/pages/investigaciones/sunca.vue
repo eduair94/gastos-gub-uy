@@ -61,8 +61,10 @@ const LABELS = {
     amount: 'Pesos',
     share: 'Del lado en pesos',
     total: 'Total adjudicado',
-    formula: 'Cuenta',
+    formula: 'Las tres cuentas',
     reading: 'Qué significa',
+    schedule: 'Los cuatro escalones',
+    seven: 'Los siete contratos, en millones de pesos',
   },
   en: {
     sources: 'Sources',
@@ -73,8 +75,10 @@ const LABELS = {
     amount: 'Pesos',
     share: 'Of the peso side',
     total: 'Total awarded',
-    formula: 'Calculation',
+    formula: 'The three calculations',
     reading: 'What it means',
+    schedule: 'The four steps',
+    seven: 'The seven contracts, in million pesos',
   },
 } as const
 
@@ -116,14 +120,34 @@ const leakFacts = computed(() => [
         :columns="4"
         :items="heroTiles"
       />
-      <div class="inv-prose sunca-intro">
-        <p
-          v-for="(p, i) in c.portada.parrafos"
-          :key="i"
-        >
-          {{ p }}
-        </p>
-      </div>
+      <InvSplit
+        class="sunca-intro"
+        sticky
+      >
+        <div class="inv-prose">
+          <p
+            v-for="(p, i) in c.portada.parrafos"
+            :key="i"
+          >
+            {{ p }}
+          </p>
+        </div>
+
+        <template #aside>
+          <p class="sunca-railh">
+            {{ c.portada.ficha.titulo }}
+          </p>
+          <dl class="sunca-ficha">
+            <template
+              v-for="f in c.portada.ficha.filas"
+              :key="f.k"
+            >
+              <dt>{{ f.k }}</dt>
+              <dd>{{ f.v }}</dd>
+            </template>
+          </dl>
+        </template>
+      </InvSplit>
     </InvSection>
 
     <!-- Qué se acordó. Va antes de cualquier cifra de costo. -->
@@ -131,32 +155,39 @@ const leakFacts = computed(() => [
       :eyebrow="common.common.method ?? 'Método'"
       :title="c.acuerdo.titulo"
     >
-      <ol class="sunca-steps">
-        <li
-          v-for="s in c.acuerdo.cronograma"
-          :key="s.fecha"
-          class="sunca-step"
-        >
-          <p class="sunca-step__h u-mono">
-            {{ s.horas }}
+      <InvSplit sticky>
+        <div class="inv-prose">
+          <p
+            v-for="(p, i) in c.acuerdo.parrafos"
+            :key="i"
+          >
+            {{ p }}
           </p>
-          <p class="sunca-step__d">
-            {{ s.fecha }}
-          </p>
-          <p class="sunca-step__n">
-            {{ s.nota }}
-          </p>
-        </li>
-      </ol>
+        </div>
 
-      <div class="inv-prose sunca-after">
-        <p
-          v-for="(p, i) in c.acuerdo.parrafos"
-          :key="i"
-        >
-          {{ p }}
-        </p>
-      </div>
+        <template #aside>
+          <p class="sunca-railh">
+            {{ l.schedule }}
+          </p>
+          <ol class="sunca-steps">
+            <li
+              v-for="s in c.acuerdo.cronograma"
+              :key="s.fecha"
+              class="sunca-step"
+            >
+              <p class="sunca-step__h u-mono">
+                {{ s.horas }}
+              </p>
+              <p class="sunca-step__d">
+                {{ s.fecha }}
+              </p>
+              <p class="sunca-step__n">
+                {{ s.nota }}
+              </p>
+            </li>
+          </ol>
+        </template>
+      </InvSplit>
     </InvSection>
 
     <!-- Las conquistas anteriores -->
@@ -187,32 +218,41 @@ const leakFacts = computed(() => [
 
     <!-- La aritmética. Tres cuentas, no una opinión. -->
     <InvSection :title="c.aritmetica.titulo">
-      <div class="sunca-math">
-        <div
-          v-for="q in c.aritmetica.cuentas"
-          :key="q.formula"
-          class="sunca-math__c"
-        >
-          <p class="sunca-math__f u-mono">
-            {{ q.formula }}
-          </p>
-          <p class="sunca-math__r u-mono">
-            {{ q.resultado }}
-          </p>
-          <p class="sunca-math__l">
-            {{ q.lectura }}
+      <!-- Sin `sticky`: acá el carril (las tres cuentas) es MÁS ALTO que la prosa, y fijarlo lo
+           dejaría empujando la sección después de que el texto terminó. -->
+      <InvSplit>
+        <div class="inv-prose">
+          <p
+            v-for="(p, i) in c.aritmetica.parrafos"
+            :key="i"
+          >
+            {{ p }}
           </p>
         </div>
-      </div>
 
-      <div class="inv-prose sunca-after">
-        <p
-          v-for="(p, i) in c.aritmetica.parrafos"
-          :key="i"
-        >
-          {{ p }}
-        </p>
-      </div>
+        <template #aside>
+          <p class="sunca-railh">
+            {{ l.formula }}
+          </p>
+          <div class="sunca-math">
+            <div
+              v-for="q in c.aritmetica.cuentas"
+              :key="q.formula"
+              class="sunca-math__c"
+            >
+              <p class="sunca-math__f u-mono">
+                {{ q.formula }}
+              </p>
+              <p class="sunca-math__r u-mono">
+                {{ q.resultado }}
+              </p>
+              <p class="sunca-math__l">
+                {{ q.lectura }}
+              </p>
+            </div>
+          </div>
+        </template>
+      </InvSplit>
     </InvSection>
 
     <!-- La auditoría de las cifras ajenas, ANTES de mostrar la propia -->
@@ -340,14 +380,38 @@ const leakFacts = computed(() => [
       alt
       :title="c.escala.titulo"
     >
-      <div class="inv-prose">
-        <p
-          v-for="(p, i) in c.escala.parrafos"
-          :key="i"
-        >
-          {{ p }}
-        </p>
-      </div>
+      <InvSplit>
+        <div class="inv-prose">
+          <p
+            v-for="(p, i) in c.escala.parrafos"
+            :key="i"
+          >
+            {{ p }}
+          </p>
+        </div>
+
+        <template #aside>
+          <p class="sunca-railh">
+            {{ l.seven }}
+          </p>
+          <ol class="sunca-seven">
+            <li
+              v-for="k in c.escala.contratos"
+              :key="k.nombre"
+            >
+              <p class="sunca-seven__m u-mono sunca-money">
+                {{ k.monto }}
+              </p>
+              <p class="sunca-seven__n">
+                {{ k.nombre }}
+              </p>
+              <p class="sunca-seven__o">
+                {{ k.organismo }} · {{ k.ano }}
+              </p>
+            </li>
+          </ol>
+        </template>
+      </InvSplit>
     </InvSection>
 
     <!-- Los límites, con el mismo peso que los hallazgos -->
@@ -387,8 +451,83 @@ const leakFacts = computed(() => [
 </template>
 
 <style scoped lang="scss">
-.sunca-intro,
-.sunca-after { margin-top: var(--s-6); }
+.sunca-intro { margin-top: var(--s-6); }
+
+/* EL RÓTULO DEL CARRIL. Sin él, el bloque de la derecha se lee como una segunda columna de texto en
+   vez de como evidencia de apoyo. */
+.sunca-railh {
+  margin: 0 0 var(--s-3);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* EN EL CARRIL TODO VA EN UNA COLUMNA. Estos bloques nacieron como filas de ancho completo, así que
+   su `auto-fit` daría tres columnas dentro del carril y volvería a apretar el contenido. */
+.inv-split__aside .sunca-steps,
+.inv-split__aside .sunca-math { grid-template-columns: minmax(0, 1fr); }
+
+/* La ficha del convenio: clave a la izquierda, valor a la derecha. */
+.sunca-ficha {
+  display: grid;
+  grid-template-columns: minmax(0, 11ch) minmax(0, 1fr);
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: 1.5;
+}
+
+.sunca-ficha dt {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.sunca-ficha dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Los siete contratos que concentran la obra registrada. */
+.sunca-seven {
+  display: grid;
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sunca-seven li {
+  border-left: 2px solid var(--rule-strong);
+  padding-inline-start: var(--s-3);
+  min-width: 0;
+}
+
+.sunca-seven__m {
+  margin: 0;
+  font-size: var(--t-md);
+  line-height: 1.1;
+}
+
+.sunca-seven__n {
+  margin: 2px 0 0;
+  font-size: var(--t-sm);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.sunca-seven__o {
+  margin: 2px 0 0;
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
 
 /* El cronograma: cuatro escalones. Celeste, no oro: no son plata. */
 .sunca-steps {

@@ -192,6 +192,16 @@ wrapper. `.hero__in` and the `/about` article rail both exist because this rule
 was broken. On viewports wide enough to leave a rail beside the article, give the
 rail something — a sticky section index, related evidence — rather than air.
 
+In `pages/investigaciones/**` that rule has a primitive and a token. The measure
+is `--inv-measure` (41rem: 74 characters per line at the 1.15rem body), declared
+once in `_investigaciones.scss`, and `InvSplit` puts prose in a track of exactly
+that width with the remaining width as a rail. It is `rem`, not `ch`, because
+`ch` resolves against the font-size of whichever element reads it — the grid
+track inherits 1rem while the paragraph runs at 1.15rem, so one `66ch` produced
+two different widths. Never widen the measure to close a gap on a wide screen:
+that trades reading for cosmetics. Fill the rail with the section's own evidence,
+or leave the section single-track.
+
 Map surfaces are workbenches, not decorative hero imagery. Search, locate,
 radius and result count remain legible over or adjacent to the map. Supplier
 markers must remain recognizable against light and dark cartography.
