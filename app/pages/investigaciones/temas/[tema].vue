@@ -18,7 +18,9 @@ const tema = computed(() => String(route.params.tema))
 // diez fichas cada uno, pero los temas ARMADOS tienen cientos.
 const PER_PAGE = 24
 const page = ref(1)
-watch(tema, () => { page.value = 1 })
+watch(tema, () => {
+  page.value = 1
+})
 
 const { data: res } = await useFetch<any>('/api/casos', {
   query: computed(() => ({ theme: tema.value, page: page.value, perPage: PER_PAGE })),
