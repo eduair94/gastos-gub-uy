@@ -58,9 +58,29 @@ export function useSeo(input: MaybeRefOrGetter<SeoInput>) {
   const resolved = computed(() => toValue(input))
 
   const siteUrl = (config.public.siteUrl as string) || ''
+
+  /**
+   * WARNING: `?page=` must survive into the canonical.
+   *
+   * Every page of every directory used to canonicalise to page one, so each
+   * paginated URL told Google "I am a duplicate, index the other one instead".
+   * That silently cancels the crawlable `<a href>` pagers in `DataPager`: the
+   * crawler follows the link and is then told the destination does not count.
+   * Page 2..N of a directory is genuinely different content and gets its own
+   * canonical.
+   *
+   * ONLY `page` is carried. `search`, `sort`, `rubro` and the filter params stay
+   * out on purpose — those views are near-duplicates of the unfiltered list and
+   * already pass `noindex`, so folding them onto the clean URL is correct.
+   */
   const canonical = computed(() => {
     const path = resolved.value.path ?? route.path
-    return `${siteUrl}${path}`.replace(/([^:])\/{2,}/g, '$1/')
+    const base = `${siteUrl}${path}`.replace(/([^:])\/{2,}/g, '$1/')
+    // A page that hands us a path with its own query string owns it entirely.
+    if (path.includes('?')) return base
+    const page = Number(route.query.page)
+    if (!Number.isInteger(page) || page <= 1) return base
+    return `${base}?page=${page}`
   })
 
   const brand = computed(() => t('brand.name'))
