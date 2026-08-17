@@ -164,5 +164,51 @@ console.log("\nverificador de la nota diaria\n");
   check("no captura «37,» con la coma pegada", nums.includes("37") && !nums.includes("37,"), nums.join(","));
 }
 
+// 16. La NORMA del carril puede usar una palabra prohibida para NEGARLA.
+//     Medido: la norma de `reiteracion-nueva` dice «Observado no quiere decir ilegal», y eso
+//     dejaba ese carril imposible de publicar para siempre.
+{
+  const r = run(baseText({
+    norm: "Reiterar un gasto observado es un acto previsto por la ley. Observado no quiere decir ilegal.",
+  }));
+  check("la norma del carril puede decir «no quiere decir ilegal»", r.ok, r.reasons.join(" | "));
+}
+
+// 17. Pero el MODELO no puede meter la palabra en su propio texto.
+{
+  const r = run(baseText({ measured: "La Dirección adjudicó 185.316.878 pesos en 37 compras de forma ilegal." }));
+  check("el texto del modelo sigue sin poder decir «ilegal»", !r.ok);
+}
+
+// 18. La misma cifra escrita con otra magnitud es la misma cifra.
+{
+  const facts: IDailyFact[] = [
+    { label: "Monto de la compra reiterada", value: "$ 12,3 mil millones", raw: 12265830000, provenance: "reiteracion_docs.primaryAmount" },
+    { label: "Organismo", value: "UTE", provenance: "reiteracion_docs.buyerName" },
+    { label: "Resolución", value: "1234/2026", provenance: "reiteracion_docs.resolutionNumber" },
+  ];
+  const es = baseText({
+    title: "UTE reiteró un gasto observado por 12.300 millones de pesos",
+    dek: "El organismo reiteró un gasto observado por 12.300 millones de pesos, según el documento oficial.",
+    measured: "La Administración Nacional de Usinas y Trasmisiones Eléctricas reiteró un gasto observado por 12.300 millones de pesos. El documento declara la resolución que lo dispuso.",
+  });
+  const r = run(es, { ...es, title: "UTE overrode an objection worth 12,300 million pesos" }, facts);
+  check("acepta «12.300 millones» contra un hecho de «$ 12,3 mil millones»", r.ok, r.reasons.join(" | "));
+}
+
+// 19. Una cifra realmente distinta sigue cayendo.
+{
+  const facts: IDailyFact[] = [
+    { label: "Monto de la compra reiterada", value: "$ 12,3 mil millones", raw: 12265830000, provenance: "reiteracion_docs.primaryAmount" },
+    { label: "Organismo", value: "UTE", provenance: "reiteracion_docs.buyerName" },
+    { label: "Resolución", value: "1234/2026", provenance: "reiteracion_docs.resolutionNumber" },
+  ];
+  const es = baseText({
+    measured: "La Administración reiteró un gasto observado por 45.900 millones de pesos, según el documento oficial del organismo.",
+  });
+  const r = run(es, undefined, facts);
+  check("rechaza «45.900 millones» contra el mismo hecho", !r.ok);
+}
+
 console.log(failures === 0 ? "\nTODO OK\n" : `\n${failures} FALLA(S)\n`);
 process.exit(failures === 0 ? 0 : 1);

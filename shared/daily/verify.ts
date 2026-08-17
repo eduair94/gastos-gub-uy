@@ -61,8 +61,20 @@ const MESES = "enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septi
   + "|january|february|march|april|may|june|july|august|september|october|november|december";
 const UNIDADES_TIEMPO = "d[ií]as?|semanas?|meses|mes|a[nñ]os?|horas?|days?|weeks?|months?|years?|hours?";
 
+export interface ClaimedNumber {
+  /** La cifra tal como aparece escrita. */
+  raw: string;
+  /** El factor de su palabra de magnitud: «12,3 mil millones» trae 1e9. */
+  magnitude: number;
+}
+
+/** Las cifras afirmadas, sólo su forma escrita. Es la vista que usan los tests. */
+export function claimedNumbers(text: string): string[] {
+  return claimedNumbersDetailed(text).map(n => n.raw);
+}
+
 /**
- * Los números que un texto AFIRMA como medición.
+ * Los números que un texto AFIRMA como medición, con su palabra de magnitud.
  *
  * Descarta el andamiaje de la prosa, que no es una afirmación cuantitativa y produciría
  * rechazos falsos. MEDIDO CONTRA EL PRIMER BORRADOR: sin estos descartes, la frase legítima
@@ -75,8 +87,8 @@ const UNIDADES_TIEMPO = "d[ií]as?|semanas?|meses|mes|a[nñ]os?|horas?|days?|wee
  *   ventana temporal              24 meses, 30 días, dos años
  *   entero de una sola cifra      «tres organismos»
  */
-export function claimedNumbers(text: string): string[] {
-  const out: string[] = [];
+export function claimedNumbersDetailed(text: string): ClaimedNumber[] {
+  const out: ClaimedNumber[] = [];
   // Captura 1.234.567,89 · 1,234,567.89 · 1234567 · 12,5 · 12.5
   const re = /\d[\d.,]*/g;
   let m: RegExpExecArray | null;
@@ -100,39 +112,88 @@ export function claimedNumbers(text: string): string[] {
     if (digits.length <= 1) continue;
     const asInt = Number(digits);
     if (digits.length === 4 && asInt >= 1990 && asInt <= 2100) continue; // año
-    out.push(raw);
+    out.push({ raw, magnitude: magnitudeAfter(text, m.index + m[0].length) });
   }
   return out;
 }
 
-/** Un número, sin separadores de miles ni decimales, para comparar contra los hechos. */
-function normalizeNumber(raw: string): string {
-  return raw.replace(/[.,]/g, "").replace(/^0+(?=\d)/, "");
+/**
+ * El factor que sigue a una cifra: «mil millones», «millones», «mil».
+ *
+ * POR QUÉ HACE FALTA, y ya rechazó una nota correcta: el bloque medido decía «$ 12,3 mil
+ * millones» y la prosa decía «12.300 millones». Es el mismo número —12.300.000.000— escrito de
+ * dos formas legítimas. Sin aplicar la magnitud, comparar da falso siempre.
+ */
+function magnitudeAfter(text: string, endIndex: number): number {
+  const tail = text.slice(endIndex, endIndex + 24).toLowerCase();
+  if (/^\s*mil\s+millones/.test(tail) || /^\s*billion/.test(tail)) return 1e9;
+  if (/^\s*millones?\b/.test(tail) || /^\s*million/.test(tail)) return 1e6;
+  if (/^\s*mil\b/.test(tail) || /^\s*thousand/.test(tail)) return 1e3;
+  return 1;
+}
+
+/**
+ * Las lecturas posibles de una cifra escrita: la rioplatense y la inglesa.
+ *
+ * SE PRUEBAN LAS DOS A PROPÓSITO. Atarla al idioma del texto la volvía frágil: el modelo a
+ * veces escribe «185.316.878» dentro del texto en inglés, y leerlo con la convención inglesa
+ * da `NaN`. La comparación fallaba cerrada y la nota se rechazaba con un mensaje que hablaba
+ * de una cifra que sí estaba medida.
+ *
+ * Aceptar las dos lecturas no afloja el control: la cifra igual tiene que COINCIDIR con un
+ * hecho medido. Lo único que deja de importar es con qué convención se escribió.
+ */
+function parseNumberCandidates(raw: string): number[] {
+  const rioplatense = Number(raw.replace(/\./g, "").replace(/,/g, "."));
+  const ingles = Number(raw.replace(/,/g, ""));
+  const out: number[] = [];
+  for (const v of [rioplatense, ingles]) {
+    if (Number.isFinite(v) && !out.includes(v)) out.push(v);
+  }
+  return out;
+}
+
+/** Todos los valores numéricos que un texto contiene, ya escalados por su magnitud. */
+function numericValuesIn(text: string): number[] {
+  const out: number[] = [];
+  const re = /\d[\d.,]*/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const raw = m[0].replace(/[.,]+$/, "");
+    if (!raw) continue;
+    const scale = magnitudeAfter(text, m.index + m[0].length);
+    for (const value of parseNumberCandidates(raw)) out.push(value * scale);
+  }
+  return out;
 }
 
 /**
  * ¿El número está en el bloque medido?
  *
- * Acepta el valor exacto y el redondeo que la prosa usa de verdad: «$ 185,3 millones» para
- * 185.316.878. Por eso compara también los primeros dígitos significativos.
+ * Compara VALORES, no cadenas, con una tolerancia del 1%. Esa tolerancia es lo que deja pasar
+ * el redondeo que la prosa usa de verdad —«$ 185,3 millones» por 185.316.878, que se desvía
+ * 0,009%— sin dejar pasar una cifra distinta.
+ *
+ * MEDIDO: la versión anterior comparaba prefijos de dígitos y rechazaba «12.300 millones»
+ * contra un hecho que decía «$ 12,3 mil millones». Es el mismo número.
  */
-function factsContain(numRaw: string, facts: IDailyFact[]): boolean {
-  const target = normalizeNumber(numRaw);
-  if (!target) return false;
+const TOLERANCIA = 0.01;
+
+function factsContain(numRaw: string, magnitude: number, facts: IDailyFact[]): boolean {
+  const targets = parseNumberCandidates(numRaw).map(v => v * magnitude);
+  if (!targets.length) return false;
 
   for (const fact of facts) {
     // La etiqueta y la procedencia también cuentan: «mediana de 24 meses» describe la
     // ventana medida, y la prosa la repite con todo derecho.
-    const haystack = [fact.value, fact.raw === undefined ? "" : String(fact.raw), fact.label, fact.provenance].join(" ");
-    for (const cand of haystack.match(/\d[\d.,]*/g) ?? []) {
-      const norm = normalizeNumber(cand);
-      if (norm === target) return true;
-      // Redondeo hacia arriba o abajo en la prosa: comparar prefijos significativos.
-      const short = target.length <= norm.length ? target : norm;
-      const long = target.length <= norm.length ? norm : target;
-      if (short.length >= 2 && long.startsWith(short.slice(0, Math.min(short.length, 3)))) {
-        // Sólo vale si además la magnitud coincide (mismo orden de 10, ±1).
-        if (Math.abs(long.length - short.length) <= 1 && long.slice(0, 2) === short.slice(0, 2)) return true;
+    const candidates = numericValuesIn([fact.value, fact.label, fact.provenance].join(" "));
+    if (fact.raw !== undefined && Number.isFinite(fact.raw)) candidates.push(Number(fact.raw));
+
+    for (const cand of candidates) {
+      for (const target of targets) {
+        if (cand === target) return true;
+        const scale = Math.max(Math.abs(cand), Math.abs(target));
+        if (scale > 0 && Math.abs(cand - target) / scale <= TOLERANCIA) return true;
       }
     }
   }
@@ -152,7 +213,19 @@ function checkText(t: IDailyText, locale: string, facts: IDailyFact[], reasons: 
   if (String(t.title ?? "").length > 110) reasons.push(`${locale}.title supera 110 caracteres`);
   if (String(t.dek ?? "").length > 240) reasons.push(`${locale}.dek supera 240 caracteres`);
 
-  const whole = [t.title, t.dek, t.measured, t.contexto, t.norm, t.missing, t.answers].join(" \n ");
+  /**
+   * Lo que escribió el MODELO. `norm` y `normCite` quedan afuera a propósito.
+   *
+   * POR QUÉ, y es un defecto que ya inutilizó un carril entero. La norma la escribe una
+   * persona en `src/jobs/lib/daily-leads.ts` y el modelo sólo la copia; el verificador ya
+   * comprueba aparte que la copió textualmente. La del carril de reiteración dice «Observado
+   * no quiere decir ilegal», que usa la palabra prohibida justamente para NEGARLA. Escanearla
+   * hacía que ese carril fuera imposible de publicar, para siempre.
+   *
+   * La regla real: las palabras prohibidas existen para que el MODELO no dicte un fallo. Un
+   * texto fijo y revisado a mano no las necesita.
+   */
+  const whole = [t.title, t.dek, t.measured, t.contexto, t.missing, t.answers].join(" \n ");
   for (const re of PROHIBIDAS) {
     if (re.test(whole)) reasons.push(`${locale} usa una palabra que dicta un fallo: ${re.source}`);
   }
@@ -181,9 +254,9 @@ function checkText(t: IDailyText, locale: string, facts: IDailyFact[], reasons: 
   }
 
   // REGLA 4. Todo número afirmado tiene que existir en el bloque medido.
-  for (const num of claimedNumbers([t.measured, t.dek, t.title].join(" "))) {
-    if (!factsContain(num, facts)) {
-      reasons.push(`${locale} afirma el número «${num}», que no está en los hechos medidos`);
+  for (const num of claimedNumbersDetailed([t.measured, t.dek, t.title].join(" "))) {
+    if (!factsContain(num.raw, num.magnitude, facts)) {
+      reasons.push(`${locale} afirma el número «${num.raw}», que no está en los hechos medidos`);
     }
   }
 }
