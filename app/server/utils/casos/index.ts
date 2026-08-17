@@ -181,9 +181,14 @@ export async function listAllCasoDefs(): Promise<CasoDef[]> {
 }
 
 export async function listAllCasoDefsByTheme(theme: string): Promise<CasoDef[]> {
-  // El tema armado es el único que obliga a ir a la base. Para los otros catorce alcanza con
-  // lo curado, y así una página de tema curado no paga una consulta que no necesita.
-  if (theme !== 'gasto-observado') return CASOS.filter(c => c.theme === theme)
+  // Lo curado primero, porque no cuesta nada. Si el tema tiene dossiers escritos a mano, no
+  // hace falta ir a la base: por diseño un tema es curado O armado, nunca los dos.
+  //
+  // La caída a lo derivado es genérica a propósito. Antes preguntaba por un tema concreto, y
+  // al sumar el segundo tema armado sus fichas quedaron sin «seguir leyendo»: la lista salía
+  // vacía y nadie se enteraba.
+  const curated = CASOS.filter(c => c.theme === theme)
+  if (curated.length) return curated
   return (await loadDerived()).filter(c => c.theme === theme)
 }
 
