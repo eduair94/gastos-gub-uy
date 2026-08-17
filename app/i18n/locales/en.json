@@ -1671,7 +1671,8 @@
     "series": {
       "title": "Year by year",
       "dek": "Current budget credit for expense objects with a judicial cause, converted to today's pesos via the Unidad Indexada. Without that conversion, eleven years of inflation lift any series while nothing has actually changed.",
-      "note": "The bar shows budgeted credit, not what was actually paid. Files from 2019 onward publish execution as zero for every row, not only the judicial ones. In the years that do carry it, the judgments line is spent almost in full, which is why the credit is the best available measure of what the State ends up paying."
+      "note": "The bar shows budgeted credit, not what was actually paid. Files from 2019 onward publish execution as zero for every row, not only the judicial ones. In the years that do carry it, the judgments line is spent almost in full, which is why the credit is the best available measure of what the State ends up paying.",
+      "endsAt": "The series ends in {year} because the source ends there: OPP stopped updating budget credit broken down by expense object in July 2022, and no other body publishes the national budget at that level of detail. We checked the open-data catalogue for later years — there are none."
     },
     "flag": {
       "partial": "partial year: {n} bodies",
@@ -1694,7 +1695,9 @@
     },
     "rows": {
       "title": "The detail",
-      "noData": "no data"
+      "noData": "no data",
+      "count": "{n} budget lines · the filters narrow this table, not the figures above",
+      "empty": "No budget line matches those filters. That is a valid result: not every reason appears in every year."
     },
     "col": {
       "year": "Year",

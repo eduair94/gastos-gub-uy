@@ -38,8 +38,23 @@ watch([year, category, page], () => {
   router.replace({ query: q })
 })
 
-const { data: res, pending, error } = await useFetch<any>('/api/analytics/sentencias', {
+/**
+ * DOS PEDIDOS, NO UNO. La vista general —serie, cortes, ranking, cifras— no depende de los
+ * filtros, así que se pide una sola vez y no se vuelve a tocar. Sólo la tabla se vuelve a pedir.
+ *
+ * Con un pedido único, cada cambio de selector ponía `pending` en true, el `v-else-if` de arriba
+ * desmontaba la página entera y el lector veía saltar todo por una tabla de 25 filas. Separarlos es
+ * lo que saca el salto: la mitad de arriba nunca se desmonta.
+ */
+const { data: overview, error } = await useFetch<any>('/api/analytics/sentencias', {
+  key: 'sentencias-overview',
+  query: { limit: 1 },
+})
+
+const { data: rowsRes, pending: rowsPending } = await useFetch<any>('/api/analytics/sentencias', {
+  key: 'sentencias-rows',
   query: computed(() => ({
+    view: 'rows',
     page: page.value,
     limit: ITEMS_PER_PAGE,
     ...(year.value ? { year: year.value } : {}),
@@ -47,12 +62,13 @@ const { data: res, pending, error } = await useFetch<any>('/api/analytics/senten
   })),
 })
 
-const series = computed<any[]>(() => res.value?.data?.series ?? [])
-const byCategory = computed<any[]>(() => res.value?.data?.byCategory ?? [])
-const byOrganismo = computed<any[]>(() => res.value?.data?.byOrganismo ?? [])
-const rows = computed<any[]>(() => res.value?.data?.rows ?? [])
-const meta = computed<any>(() => res.value?.data?.meta ?? null)
-const totalPages = computed<number>(() => res.value?.data?.pagination?.totalPages ?? 1)
+const series = computed<any[]>(() => overview.value?.data?.series ?? [])
+const byCategory = computed<any[]>(() => overview.value?.data?.byCategory ?? [])
+const byOrganismo = computed<any[]>(() => overview.value?.data?.byOrganismo ?? [])
+const meta = computed<any>(() => overview.value?.data?.meta ?? null)
+const rows = computed<any[]>(() => rowsRes.value?.data?.rows ?? [])
+const totalRows = computed<number>(() => rowsRes.value?.data?.pagination?.total ?? 0)
+const totalPages = computed<number>(() => rowsRes.value?.data?.pagination?.totalPages ?? 1)
 
 /** El último año con dato — la foto más reciente del crédito. */
 const latest = computed<any | null>(() => series.value.length ? series.value[series.value.length - 1] : null)
@@ -152,12 +168,6 @@ useSeo(() => ({
         {{ t('sentencias.notComputed') }}
       </v-alert>
 
-      <v-progress-linear
-        v-else-if="pending"
-        indeterminate
-        color="accent"
-      />
-
       <template v-else-if="meta">
         <div class="kpis">
           <div class="kpi">
@@ -238,6 +248,11 @@ useSeo(() => ({
 
           <p class="note">
             {{ t('sentencias.series.note') }}
+          </p>
+          <!-- Por qué la serie se corta. Sin esta línea, el último año se lee como un dato que
+               falta por culpa nuestra. -->
+          <p class="note">
+            {{ t('sentencias.series.endsAt', { year: meta.datasetEndsAt }) }}
           </p>
         </section>
 
@@ -328,51 +343,70 @@ useSeo(() => ({
             />
           </div>
 
-          <!-- `<DataTable>`, no una tabla cruda: cinco columnas sólo entran en un
-               teléfono como una tarjeta por fila. -->
-          <DataTable
-            :columns="rowCols"
-            :rows="rows"
-            :row-key="(r: any) => r.rowKey"
-            min-width="640px"
+          <p class="rows__count u-mono">
+            {{ t('sentencias.rows.count', { n: totalRows }) }}
+          </p>
+
+          <!-- La tabla NO se desmonta mientras se vuelve a pedir: se atenúa. Desmontarla
+               colapsaba el alto de la sección y el documento saltaba bajo el cursor. -->
+          <div
+            class="rows__wrap"
+            :class="{ 'is-loading': rowsPending }"
+            :aria-busy="rowsPending"
           >
-            <template #cell:organismo="{ row }">
-              <span class="rows__org">{{ row.organismo }}</span>
-              <span
-                v-if="row.unidadEjecutora !== row.organismo"
-                class="rows__ue"
-              >{{ row.unidadEjecutora }}</span>
-            </template>
+            <!-- `<DataTable>`, no una tabla cruda: cinco columnas sólo entran en un
+                 teléfono como una tarjeta por fila. -->
+            <DataTable
+              :columns="rowCols"
+              :rows="rows"
+              :row-key="(r: any) => r.rowKey"
+              min-width="640px"
+            >
+              <!-- Una combinación puede no tener filas y es un resultado válido: en 2021 no hubo
+                   ningún acuerdo judicial presupuestado. Sin este texto la sección queda muda y se
+                   lee como un error de la página. -->
+              <template #empty>
+                {{ t('sentencias.rows.empty') }}
+              </template>
 
-            <template #cell:objectLabel="{ row }">
-              <span>{{ row.objectLabel }}</span>
-              <span class="rows__code u-mono">{{ row.objectCode }}</span>
-            </template>
+              <template #cell:organismo="{ row }">
+                <span class="rows__org">{{ row.organismo }}</span>
+                <span
+                  v-if="row.unidadEjecutora !== row.organismo"
+                  class="rows__ue"
+                >{{ row.unidadEjecutora }}</span>
+              </template>
 
-            <template #cell:creditoVigente="{ row }">
-              <MoneyAmount
-                :amount="row.creditoVigente"
-                currency="UYU"
-                compact
-                size="sm"
-              />
-            </template>
+              <template #cell:objectLabel="{ row }">
+                <span>{{ row.objectLabel }}</span>
+                <span class="rows__code u-mono">{{ row.objectCode }}</span>
+              </template>
 
-            <template #cell:ejecutado="{ row }">
-              <MoneyAmount
-                v-if="executionOf(row).known"
-                :amount="row.ejecutado"
-                currency="UYU"
-                compact
-                size="sm"
-              />
-              <span
-                v-else
-                class="rows__nodata"
-                :title="t('sentencias.flag.noExecution')"
-              >{{ t('sentencias.rows.noData') }}</span>
-            </template>
-          </DataTable>
+              <template #cell:creditoVigente="{ row }">
+                <MoneyAmount
+                  :amount="row.creditoVigente"
+                  currency="UYU"
+                  compact
+                  size="sm"
+                />
+              </template>
+
+              <template #cell:ejecutado="{ row }">
+                <MoneyAmount
+                  v-if="executionOf(row).known"
+                  :amount="row.ejecutado"
+                  currency="UYU"
+                  compact
+                  size="sm"
+                />
+                <span
+                  v-else
+                  class="rows__nodata"
+                  :title="t('sentencias.flag.noExecution')"
+                >{{ t('sentencias.rows.noData') }}</span>
+              </template>
+            </DataTable>
+          </div>
 
           <!-- `<DataPager>`, no `<v-pagination>`: siete botones de 48px más
                anterior/siguiente piden 432px y empujan la página de costado. -->
@@ -516,6 +550,17 @@ useSeo(() => ({
 /* ---- Detalle ---- */
 .filters { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-bottom: var(--s-4); }
 .filters > * { flex: 1 1 12rem; min-width: 0; }
+
+.rows__count { margin: 0 0 var(--s-3); font-size: var(--t-xs); color: var(--text-muted); }
+
+/* Atenuar, no desmontar. `min-height` evita que una página de 3 filas colapse la
+   sección y mueva todo lo que hay debajo. */
+.rows__wrap { min-height: 18rem; transition: opacity var(--dur) var(--ease); }
+.rows__wrap.is-loading { opacity: 0.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rows__wrap { transition: none; }
+}
 
 .rows__org { display: block; }
 .rows__ue { display: block; font-size: var(--t-xs); color: var(--text-muted); }

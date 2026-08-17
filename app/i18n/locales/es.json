@@ -1671,7 +1671,8 @@
     "series": {
       "title": "Año por año",
       "dek": "Crédito vigente para objetos del gasto con causa judicial, convertido a pesos de hoy por Unidad Indexada. Sin esa conversión, once años de inflación suben cualquier serie sin que nada haya cambiado.",
-      "note": "La barra muestra el crédito vigente, no lo efectivamente pagado. Los archivos de 2019 en adelante publican la ejecución en cero para todas sus filas, no sólo las judiciales. En los años que sí la traen, la partida de sentencias se gasta prácticamente entera, y por eso el crédito es la mejor medida disponible de lo que el Estado termina pagando."
+      "note": "La barra muestra el crédito vigente, no lo efectivamente pagado. Los archivos de 2019 en adelante publican la ejecución en cero para todas sus filas, no sólo las judiciales. En los años que sí la traen, la partida de sentencias se gasta prácticamente entera, y por eso el crédito es la mejor medida disponible de lo que el Estado termina pagando.",
+      "endsAt": "La serie termina en {year} porque ahí termina la fuente: OPP dejó de actualizar el crédito presupuestal abierto por objeto del gasto en julio de 2022, y ningún otro organismo publica el presupuesto nacional con ese nivel de detalle. Revisamos el catálogo de datos abiertos por años posteriores y no existen."
     },
     "flag": {
       "partial": "año parcial: {n} organismos",
@@ -1694,7 +1695,9 @@
     },
     "rows": {
       "title": "El detalle",
-      "noData": "sin dato"
+      "noData": "sin dato",
+      "count": "{n} partidas · los filtros acotan esta tabla, no las cifras de arriba",
+      "empty": "No hay ninguna partida con esos filtros. Es un resultado válido: no todos los motivos aparecen todos los años."
     },
     "col": {
       "year": "Año",
