@@ -22,9 +22,19 @@ const localePath = useLocalePath()
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
-const { data: res } = await useFetch<any>(() => `/api/casos/${slug.value}`)
+const { data: res, error } = await useFetch<any>(() => `/api/casos/${slug.value}`)
 
 const data = computed(() => res.value?.data ?? null)
+
+// The `noindex` further down was already right; the STATUS was not. A missing
+// dossier answered 200, so an invented slug was a real page to a crawler.
+// A 5xx is NOT a miss — a transient failure must not 404 a live dossier.
+const errStatus = computed<number>(() =>
+  (error.value as any)?.statusCode ?? (error.value as any)?.response?.status ?? 0,
+)
+if (import.meta.server && (errStatus.value === 404 || (!error.value && !res.value?.data))) {
+  setResponseStatus(useRequestEvent()!, 404)
+}
 const text = computed(() => (locale.value === 'en' ? data.value?.en : data.value?.es) ?? null)
 const themeMeta = computed(() => data.value?.themeMeta ?? null)
 const themeText = computed(() => (themeMeta.value ? (locale.value === 'en' ? themeMeta.value.en : themeMeta.value.es) : null))

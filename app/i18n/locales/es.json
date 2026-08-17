@@ -2749,7 +2749,12 @@
     "statusAmended": "Modificado",
     "statusClosed": "Cerrado",
     "statusAwarded": "Adjudicado",
-    "statusCancelled": "Cancelado"
+    "statusCancelled": "Cancelado",
+    "notFound": {
+      "title": "No encontramos ese llamado",
+      "body": "Puede haber cerrado y salido del registro, o el número puede estar mal.",
+      "action": "Ver los llamados abiertos"
+    }
   },
   "hook": {
     "bandTitle": "¿Empresa, ciudadano o prensa?",

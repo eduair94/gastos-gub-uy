@@ -12,8 +12,23 @@ const slug = computed(() => String(route.params.slug))
 
 const { data: res, error } = await useFetch<any>(() => `/api/recopilatorios/${slug.value}`)
 
-if (error.value?.statusCode === 404 || (!res.value?.data && !error.value)) {
-  // Surfaced through the template's not-found block below.
+/**
+ * WARNING: an unknown slug must answer 404, not 200.
+ *
+ * This used to be an empty `if` whose only effect was a comment. The template's
+ * not-found block looked right to a reader, but the response stayed HTTP 200
+ * with `index, follow` and the generic "Recopilatorios" title, so any invented
+ * slug was an indexable page.
+ *
+ * A 5xx is NOT a miss — a transient failure must never noindex a live one.
+ */
+const errStatus = computed<number>(() =>
+  (error.value as any)?.statusCode ?? (error.value as any)?.response?.status ?? 0,
+)
+const notFound = computed(() => errStatus.value === 404 || (!error.value && !res.value?.data))
+
+if (import.meta.server && notFound.value) {
+  setResponseStatus(useRequestEvent()!, 404)
 }
 
 const data = computed(() => res.value?.data ?? null)
@@ -46,6 +61,7 @@ useSeo(() => ({
   title: text.value ? t('seo.recopDetail.title', { title: text.value.title }) : t('seo.recop.title'),
   description: text.value?.dek ?? t('seo.recop.description'),
   path: `/recopilatorios/${slug.value}`,
+  noindex: notFound.value,
   kicker: 'Recopilatorio',
   // Only the resolved compilation gets the rich article treatment — mirrors
   // how title/description above fall back while `data` is loading or 404s.

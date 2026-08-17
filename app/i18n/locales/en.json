@@ -2749,7 +2749,12 @@
     "statusAmended": "Amended",
     "statusClosed": "Closed",
     "statusAwarded": "Awarded",
-    "statusCancelled": "Cancelled"
+    "statusCancelled": "Cancelled",
+    "notFound": {
+      "title": "We could not find that call",
+      "body": "It may have closed and left the record, or the number may be wrong.",
+      "action": "See the open calls"
+    }
   },
   "hook": {
     "bandTitle": "Company, citizen or press?",

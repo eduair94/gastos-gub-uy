@@ -30,8 +30,29 @@ const { track } = useAnalytics()
 
 const compraId = computed(() => String(route.params.compraId))
 
-const { data } = await useFetch<{ data: OpenCall }>(() => `/api/open-calls/${compraId.value}`)
+const { data, error } = await useFetch<{ data: OpenCall }>(() => `/api/open-calls/${compraId.value}`)
 const call = computed<OpenCall>(() => data.value?.data ?? ({} as OpenCall))
+
+/**
+ * WARNING: an unknown compraId must answer 404, not 200.
+ *
+ * This page used to render the generic "Llamados abiertos" title with an empty
+ * body at HTTP 200 and `index, follow` for ANY id. `open_calls` churns and the
+ * sitemap advertises 2,750 of them at `changefreq: daily`, so every expired call
+ * became an indexable near-empty page — an unbounded soft-404 farm.
+ *
+ * A 5xx is NOT a miss. Following the pattern in `products/[code].vue`, only a
+ * real 404 (or an OK answer carrying no call) counts as gone; a transient
+ * failure must never noindex a live call.
+ */
+const errStatus = computed<number>(() =>
+  (error.value as any)?.statusCode ?? (error.value as any)?.response?.status ?? 0,
+)
+const notFound = computed(() => errStatus.value === 404 || (!error.value && !data.value?.data))
+
+if (import.meta.server && notFound.value) {
+  setResponseStatus(useRequestEvent()!, 404)
+}
 
 // Guard against double-firing between SSR hydration and a later client nav.
 let viewedId = ''
@@ -69,28 +90,35 @@ const seoDescription = call.value.description || call.value.title || t('llamados
 const buyerName = call.value.buyer?.name || call.value.procuringEntity?.name
 
 useSeo({
-  title: seoTitle,
-  description: seoDescription,
+  title: notFound.value ? t('llamados.notFound.title') : seoTitle,
+  description: notFound.value ? t('llamados.notFound.body') : seoDescription,
   path: `/llamados/${compraId.value}`,
+  noindex: notFound.value,
   // No schema.org type honestly fits "open tender" (Event/GovernmentService would be a
   // forced match and risk a Search Console validation error) — a plain WebPage states the
   // facts without overclaiming a type.
   kicker: 'Llamado abierto',
-  jsonLd: [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'WebPage',
-      'name': seoTitle,
-      'description': seoDescription,
-      ...(buyerName ? { about: { '@type': 'Organization', 'name': buyerName } } : {}),
-      ...(call.value.publishDate ? { datePublished: new Date(call.value.publishDate).toISOString() } : {}),
-      'url': `${config.public.siteUrl}/llamados/${compraId.value}`,
-    },
-    {
-      '@context': 'https://schema.org',
-      ...orgLd,
-    },
-  ],
+  // A call that does not exist gets no graph: describing a missing thing is
+  // exactly what makes a soft 404 look like a real page.
+  ...(notFound.value
+    ? {}
+    : {
+        jsonLd: [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'WebPage',
+            'name': seoTitle,
+            'description': seoDescription,
+            ...(buyerName ? { about: { '@type': 'Organization', 'name': buyerName } } : {}),
+            ...(call.value.publishDate ? { datePublished: new Date(call.value.publishDate).toISOString() } : {}),
+            'url': `${config.public.siteUrl}/llamados/${compraId.value}`,
+          },
+          {
+            '@context': 'https://schema.org',
+            ...orgLd,
+          },
+        ],
+      }),
 })
 
 const statusLabel = computed(() => {
@@ -163,180 +191,193 @@ function docHref(d: { url?: string }): string {
 
 <template>
   <div class="u-container calldetail">
-    <NuxtLink
-      :to="localePath('/llamados')"
-      class="calldetail__back"
-    >
-      <v-icon size="16">
-        mdi-arrow-left
-      </v-icon> {{ t('nav.llamados') }}
-    </NuxtLink>
+    <!-- An unknown or expired call answers 404 and says so, rather than
+         rendering the generic index title over an empty body. -->
+    <StatePanel
+      v-if="notFound"
+      :title="t('llamados.notFound.title')"
+      :body="t('llamados.notFound.body')"
+      :action-to="localePath('/llamados')"
+      :action-label="t('llamados.notFound.action')"
+      level="h1"
+    />
 
-    <header class="calldetail__head panel">
-      <div class="calldetail__meta">
-        <span class="tag tag--activo">{{ statusLabel }}</span>
-        <span
-          v-if="call.procurementMethodDetails"
-          class="u-mono calldetail__method"
-        >{{ call.procurementMethodDetails }}</span>
-      </div>
-      <h1 class="calldetail__title">
-        {{ call.title }}
-      </h1>
-      <p
-        v-if="call.buyer?.name"
-        class="calldetail__buyer"
+    <template v-else>
+      <NuxtLink
+        :to="localePath('/llamados')"
+        class="calldetail__back"
       >
-        {{ call.buyer.name }}
-      </p>
-      <div class="calldetail__facts">
-        <span
-          v-if="call.tenderPeriod?.endDate"
-          class="calldetail__fact"
-        >
-          <v-icon size="16">mdi-calendar-clock</v-icon>
-          {{ t('llamados.closes') }} <strong>{{ formatDateTime(call.tenderPeriod.endDate) }}</strong>
-        </span>
-        <span
-          v-if="call.publishDate"
-          class="calldetail__fact u-muted"
-        >
-          {{ t('llamados.published') }} {{ formatDate(call.publishDate) }}
-        </span>
-      </div>
+        <v-icon size="16">
+          mdi-arrow-left
+        </v-icon> {{ t('nav.llamados') }}
+      </NuxtLink>
 
-      <div class="calldetail__actions">
-        <a
-          v-if="call.sourceUrl"
-          :href="call.sourceUrl"
-          target="_blank"
-          rel="noopener"
-          class="calldetail__source"
+      <header class="calldetail__head panel">
+        <div class="calldetail__meta">
+          <span class="tag tag--activo">{{ statusLabel }}</span>
+          <span
+            v-if="call.procurementMethodDetails"
+            class="u-mono calldetail__method"
+          >{{ call.procurementMethodDetails }}</span>
+        </div>
+        <h1 class="calldetail__title">
+          {{ call.title }}
+        </h1>
+        <p
+          v-if="call.buyer?.name"
+          class="calldetail__buyer"
         >
-          <v-icon size="16">mdi-open-in-new</v-icon> {{ t('llamados.source') }}
-        </a>
-
-        <template v-if="user">
-          <v-btn
-            :variant="saved ? 'flat' : 'outlined'"
-            :color="saved ? 'success' : undefined"
-            :loading="savingState"
-            size="small"
-            @click="toggleSave"
+          {{ call.buyer.name }}
+        </p>
+        <div class="calldetail__facts">
+          <span
+            v-if="call.tenderPeriod?.endDate"
+            class="calldetail__fact"
           >
-            <v-icon
-              start
-              size="16"
+            <v-icon size="16">mdi-calendar-clock</v-icon>
+            {{ t('llamados.closes') }} <strong>{{ formatDateTime(call.tenderPeriod.endDate) }}</strong>
+          </span>
+          <span
+            v-if="call.publishDate"
+            class="calldetail__fact u-muted"
+          >
+            {{ t('llamados.published') }} {{ formatDate(call.publishDate) }}
+          </span>
+        </div>
+
+        <div class="calldetail__actions">
+          <a
+            v-if="call.sourceUrl"
+            :href="call.sourceUrl"
+            target="_blank"
+            rel="noopener"
+            class="calldetail__source"
+          >
+            <v-icon size="16">mdi-open-in-new</v-icon> {{ t('llamados.source') }}
+          </a>
+
+          <template v-if="user">
+            <v-btn
+              :variant="saved ? 'flat' : 'outlined'"
+              :color="saved ? 'success' : undefined"
+              :loading="savingState"
+              size="small"
+              @click="toggleSave"
             >
-              {{ saved ? 'mdi-bookmark' : 'mdi-bookmark-outline' }}
-            </v-icon>
-            {{ saved ? t('llamados.saved') : t('llamados.save') }}
-          </v-btn>
-          <v-select
-            v-if="saved"
-            :model-value="reminderDays"
-            :items="[{ title: '—', value: 0 }, { title: '3', value: 3 }, { title: '7', value: 7 }]"
-            :label="t('llamados.remind')"
-            density="compact"
-            hide-details
-            class="calldetail__remind"
-            @update:model-value="setReminder"
-          />
-        </template>
-        <NuxtLink
-          v-else-if="authEnabled"
-          :to="localePath('/login')"
-          class="calldetail__loginhint u-muted"
-        >
-          {{ t('llamados.loginToSave') }}
-        </NuxtLink>
-      </div>
-    </header>
-
-    <div class="calldetail__grid">
-      <div class="calldetail__main">
-        <section
-          v-if="call.description"
-          class="panel calldetail__section"
-        >
-          <h2 class="u-eyebrow">
-            {{ t('llamados.object') }}
-          </h2>
-          <p class="calldetail__desc">
-            {{ call.description }}
-          </p>
-        </section>
-
-        <section
-          v-if="call.items?.length"
-          class="panel calldetail__section"
-        >
-          <h2 class="u-eyebrow">
-            {{ t('llamados.items') }}
-          </h2>
-          <ul class="calldetail__items">
-            <li
-              v-for="(it, i) in call.items"
-              :key="`it-${i}`"
-              class="calldetail__item"
-            >
-              <span class="calldetail__itemdesc">{{ it.description }}</span>
-              <span
-                v-if="it.quantity"
-                class="u-mono u-muted"
-              >{{ formatNumber(it.quantity) }} {{ it.unit?.name }}</span>
-            </li>
-          </ul>
-        </section>
-
-        <CallBidEstimate
-          :estimate="(estimate as any)"
-          :compra-id="compraId"
-        />
-
-        <CallRecentAwards :recent="(recentAwards as any)" />
-
-        <ClientOnly>
-          <PliegoSummary
-            :compra-id="compraId"
-            :has-benchmarks="benchmarks.length > 0"
-          />
-        </ClientOnly>
-
-        <CallBenchmarks :benchmarks="(benchmarks as any)" />
-      </div>
-
-      <aside class="calldetail__aside">
-        <CallContact
-          :contact="(call as any).contact"
-          :organism="call.buyer?.name"
-        />
-        <section
-          v-if="call.documents?.length"
-          class="panel calldetail__section"
-        >
-          <h2 class="u-eyebrow">
-            {{ t('llamados.documents') }}
-          </h2>
-          <ul class="calldetail__docs">
-            <li
-              v-for="(d, i) in call.documents"
-              :key="`d-${i}`"
-            >
-              <a
-                :href="docHref(d)"
-                target="_blank"
-                rel="noopener"
-                class="calldetail__doc"
+              <v-icon
+                start
+                size="16"
               >
-                <v-icon size="16">mdi-file-document-outline</v-icon>
-                <span class="u-truncate">{{ d.title || t('llamados.openDocument') }}</span>
-              </a>
-            </li>
-          </ul>
-        </section>
-      </aside>
-    </div>
+                {{ saved ? 'mdi-bookmark' : 'mdi-bookmark-outline' }}
+              </v-icon>
+              {{ saved ? t('llamados.saved') : t('llamados.save') }}
+            </v-btn>
+            <v-select
+              v-if="saved"
+              :model-value="reminderDays"
+              :items="[{ title: '—', value: 0 }, { title: '3', value: 3 }, { title: '7', value: 7 }]"
+              :label="t('llamados.remind')"
+              density="compact"
+              hide-details
+              class="calldetail__remind"
+              @update:model-value="setReminder"
+            />
+          </template>
+          <NuxtLink
+            v-else-if="authEnabled"
+            :to="localePath('/login')"
+            class="calldetail__loginhint u-muted"
+          >
+            {{ t('llamados.loginToSave') }}
+          </NuxtLink>
+        </div>
+      </header>
+
+      <div class="calldetail__grid">
+        <div class="calldetail__main">
+          <section
+            v-if="call.description"
+            class="panel calldetail__section"
+          >
+            <h2 class="u-eyebrow">
+              {{ t('llamados.object') }}
+            </h2>
+            <p class="calldetail__desc">
+              {{ call.description }}
+            </p>
+          </section>
+
+          <section
+            v-if="call.items?.length"
+            class="panel calldetail__section"
+          >
+            <h2 class="u-eyebrow">
+              {{ t('llamados.items') }}
+            </h2>
+            <ul class="calldetail__items">
+              <li
+                v-for="(it, i) in call.items"
+                :key="`it-${i}`"
+                class="calldetail__item"
+              >
+                <span class="calldetail__itemdesc">{{ it.description }}</span>
+                <span
+                  v-if="it.quantity"
+                  class="u-mono u-muted"
+                >{{ formatNumber(it.quantity) }} {{ it.unit?.name }}</span>
+              </li>
+            </ul>
+          </section>
+
+          <CallBidEstimate
+            :estimate="(estimate as any)"
+            :compra-id="compraId"
+          />
+
+          <CallRecentAwards :recent="(recentAwards as any)" />
+
+          <ClientOnly>
+            <PliegoSummary
+              :compra-id="compraId"
+              :has-benchmarks="benchmarks.length > 0"
+            />
+          </ClientOnly>
+
+          <CallBenchmarks :benchmarks="(benchmarks as any)" />
+        </div>
+
+        <aside class="calldetail__aside">
+          <CallContact
+            :contact="(call as any).contact"
+            :organism="call.buyer?.name"
+          />
+          <section
+            v-if="call.documents?.length"
+            class="panel calldetail__section"
+          >
+            <h2 class="u-eyebrow">
+              {{ t('llamados.documents') }}
+            </h2>
+            <ul class="calldetail__docs">
+              <li
+                v-for="(d, i) in call.documents"
+                :key="`d-${i}`"
+              >
+                <a
+                  :href="docHref(d)"
+                  target="_blank"
+                  rel="noopener"
+                  class="calldetail__doc"
+                >
+                  <v-icon size="16">mdi-file-document-outline</v-icon>
+                  <span class="u-truncate">{{ d.title || t('llamados.openDocument') }}</span>
+                </a>
+              </li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </template>
   </div>
 </template>
 
