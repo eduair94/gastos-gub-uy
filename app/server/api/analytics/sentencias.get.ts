@@ -57,7 +57,43 @@ export default defineEventHandler(async (event) => {
     await connectToDatabase()
 
     const query = getQuery(event)
-    const { year, category, organismo, sortBy = 'vigente', page = 1, limit = 50 } = query
+    const { year, category, organismo, sortBy = 'vigente', page = 1, limit = 50, view } = query
+
+    const filter: Record<string, unknown> = {}
+    const yearNum = Number(year)
+    if (Number.isInteger(yearNum) && yearNum > 2000) filter.year = yearNum
+    if (typeof category === 'string' && category) filter.category = category
+    if (typeof organismo === 'string' && organismo) filter.organismo = organismo
+
+    const pageNum = Math.max(1, Number(page) || 1)
+    const limitNum = Math.min(200, Math.max(1, Number(limit) || 50))
+    const sort = SORT_FIELDS[sortBy as string] ?? SORT_FIELDS.vigente!
+
+    /**
+     * `view=rows` sirve SÓLO la tabla filtrada.
+     *
+     * La página lo usa al cambiar un filtro. Antes cada cambio de selector volvía a pedir la
+     * respuesta entera —serie, cortes, ranking y tabla—, y la página se desmontaba y volvía a
+     * montarse: el lector veía saltar todo por una tabla de 25 filas. La vista general no depende
+     * de los filtros y no se vuelve a pedir.
+     */
+    if (view === 'rows') {
+      const [rows, total] = await Promise.all([
+        JudicialSpendingModel.find(filter, { _id: 0, __v: 0 })
+          .sort({ ...sort, rowKey: 1 })
+          .skip((pageNum - 1) * limitNum)
+          .limit(limitNum)
+          .lean(),
+        JudicialSpendingModel.countDocuments(filter),
+      ])
+      return {
+        success: true,
+        data: {
+          rows,
+          pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+        },
+      }
+    }
 
     const years = await JudicialSpendingYearModel
       .find({}, { _id: 0, __v: 0 })
@@ -111,16 +147,9 @@ export default defineEventHandler(async (event) => {
     // Los años completos son el único terreno donde una comparación se sostiene.
     const solid = series.filter(s => !s.partial)
 
-    const filter: Record<string, unknown> = {}
-    const yearNum = Number(year)
-    if (Number.isInteger(yearNum) && yearNum > 2000) filter.year = yearNum
-    if (typeof category === 'string' && category) filter.category = category
-    if (typeof organismo === 'string' && organismo) filter.organismo = organismo
-
-    const pageNum = Math.max(1, Number(page) || 1)
-    const limitNum = Math.min(200, Math.max(1, Number(limit) || 50))
-    const sort = SORT_FIELDS[sortBy as string] ?? SORT_FIELDS.vigente!
-
+    // LOS CORTES VAN SIN FILTRAR, A PROPÓSITO. Son el contexto fijo contra el que se lee la tabla.
+    // Filtrarlos con el año hacía que elegir 2021 dejara el ranking con un solo año mientras la
+    // serie seguía mostrando once: dos cifras distintas de lo mismo en la misma pantalla.
     const [rows, total, byCategory, byOrganismo] = await Promise.all([
       JudicialSpendingModel.find(filter, { _id: 0, __v: 0 })
         .sort({ ...sort, rowKey: 1 })
@@ -130,7 +159,6 @@ export default defineEventHandler(async (event) => {
       JudicialSpendingModel.countDocuments(filter),
       // 188 documentos en total: los dos rollups son baratos y evitan una segunda colección.
       JudicialSpendingModel.aggregate([
-        { $match: filter },
         {
           $group: {
             _id: { category: '$category', year: '$year' },
@@ -141,7 +169,6 @@ export default defineEventHandler(async (event) => {
         },
       ]),
       JudicialSpendingModel.aggregate([
-        { $match: filter },
         {
           $group: {
             // La unidad ejecutora entra a la clave para poder desambiguar los organismos-bolsa.
@@ -228,6 +255,9 @@ export default defineEventHandler(async (event) => {
           fullySpentRows: series.reduce((s, y) => s + y.fullySpentRows, 0),
           rowsWithExecution: series.reduce((s, y) => s + y.rowsWithExecution, 0),
           partialCoverageRatio: PARTIAL_COVERAGE_RATIO,
+          // El último año que OPP publicó. Sale del dato, no de una constante: el día que OPP
+          // retome la serie, la página deja de decir 2021 sola.
+          datasetEndsAt: years[years.length - 1]!.year,
           sourceUrl: years[0]!.sourceUrl,
           loadedAt: years[years.length - 1]!.loadedAt,
         },
