@@ -90,7 +90,11 @@ export function casoThemeCounts(): Record<string, number> {
  * `recopilatorios` and `curros` make, for the same reason.
  */
 export function casoToQueryParams(q: CasoQuery): Record<string, unknown> {
-  const params: Record<string, unknown> = { tag: 'award' }
+  // `award` por omisión, porque es la etapa que lleva la plata. Una ficha que habla de una
+  // COMPRA entera —identificada por su ocid— pide todas las etapas: el llamado, la
+  // adjudicación y también la cancelación.
+  const params: Record<string, unknown> = {}
+  if (!q.allStages) params.tag = 'award'
   if (q.buyerIds?.length) params.buyerIds = q.buyerIds
   if (q.buyers?.length) params.buyers = q.buyers
   if (q.suppliers?.length) params.suppliers = q.suppliers
@@ -100,6 +104,8 @@ export function casoToQueryParams(q: CasoQuery): Record<string, unknown> {
   if (q.procurementMethodDetails?.length) params.procurementMethodDetails = q.procurementMethodDetails
   if (q.yearFrom != null) params.yearFrom = q.yearFrom
   if (q.yearTo != null) params.yearTo = q.yearTo
+  if (q.hasReiteracion) params.hasReiteracion = true
+  if (q.ocids?.length) params.ocids = q.ocids
   return params
 }
 
@@ -119,6 +125,93 @@ export function casoExplorerQuery(q: CasoQuery): Record<string, string> {
   for (const [k, v] of Object.entries(params)) {
     if (v == null) continue
     out[k] = Array.isArray(v) ? encodeQueryList(v.map(String)) : String(v)
+  }
+  return out
+}
+
+// ── Las dos fuentes ─────────────────────────────────────────────────────────
+
+/**
+ * Una ficha puede venir de dos lugares, y conviene tener claro por qué son dos.
+ *
+ * Lo CURADO son los módulos de `dossiers/`: texto que escribió y revisó una persona, con
+ * fuentes de prensa verificadas una por una. Vive en git porque su valor es que alguien
+ * responde por cada frase, y porque el diff es la revisión.
+ *
+ * Lo DERIVADO lo arma `src/jobs/build-derived-casos.ts` a partir de documentos oficiales.
+ * Vive en Mongo porque se puede volver a armar con un comando, y porque mil fichas en un
+ * módulo de TS quedarían residentes en la memoria de cada worker de pm2.
+ *
+ * De acá para afuera la diferencia no existe: las dos salen como `CasoDef`.
+ */
+
+/** Sólo los dossiers escritos a mano. Sin red y sin base. */
+export function listCuratedCasoDefs(): CasoDef[] {
+  return CASOS
+}
+
+let derivedCache: { at: number, defs: CasoDef[] } | null = null
+/** Cinco minutos. El armador corre por lotes, no por request. */
+const DERIVED_TTL_MS = 5 * 60 * 1000
+
+async function loadDerived(): Promise<CasoDef[]> {
+  if (derivedCache && Date.now() - derivedCache.at < DERIVED_TTL_MS) return derivedCache.defs
+  try {
+    const { DerivedCasoModel } = await import('../../../../shared/models/derived_caso')
+    const { connectToDatabase } = await import('../database')
+    await connectToDatabase()
+    const rows = await DerivedCasoModel.find({}, { def: 1, rank: 1 })
+      .sort({ rank: 1 })
+      .lean()
+      .maxTimeMS(8000)
+    const defs = rows.map((r: { def?: unknown }) => r.def as CasoDef).filter(Boolean)
+    derivedCache = { at: Date.now(), defs }
+    return defs
+  }
+  catch {
+    // Que la base no conteste no puede tirar abajo las 141 fichas curadas, que no la
+    // necesitan para nada. Se sirve lo último que hubo, o nada.
+    return derivedCache?.defs ?? []
+  }
+}
+
+/** Curadas primero, derivadas después. El orden es editorial y no se invierte. */
+export async function listAllCasoDefs(): Promise<CasoDef[]> {
+  return [...CASOS, ...(await loadDerived())]
+}
+
+export async function listAllCasoDefsByTheme(theme: string): Promise<CasoDef[]> {
+  // Lo curado primero, porque no cuesta nada. Si el tema tiene dossiers escritos a mano, no
+  // hace falta ir a la base: por diseño un tema es curado O armado, nunca los dos.
+  //
+  // La caída a lo derivado es genérica a propósito. Antes preguntaba por un tema concreto, y
+  // al sumar el segundo tema armado sus fichas quedaron sin «seguir leyendo»: la lista salía
+  // vacía y nadie se enteraba.
+  const curated = CASOS.filter(c => c.theme === theme)
+  if (curated.length) return curated
+  return (await loadDerived()).filter(c => c.theme === theme)
+}
+
+export async function getAnyCasoDef(slug: string): Promise<CasoDef | null> {
+  const curated = getCasoDef(slug)
+  if (curated) return curated
+  try {
+    const { DerivedCasoModel } = await import('../../../../shared/models/derived_caso')
+    const { connectToDatabase } = await import('../database')
+    await connectToDatabase()
+    const row = await DerivedCasoModel.findOne({ slug }, { def: 1 }).lean().maxTimeMS(8000)
+    return ((row as { def?: unknown } | null)?.def as CasoDef) ?? null
+  }
+  catch {
+    return null
+  }
+}
+
+export async function casoThemeCountsAsync(): Promise<Record<string, number>> {
+  const out: Record<string, number> = {}
+  for (const t of CASO_THEMES) out[t.key] = 0
+  for (const c of await listAllCasoDefs()) {
+    out[c.theme] = (out[c.theme] ?? 0) + 1
   }
   return out
 }

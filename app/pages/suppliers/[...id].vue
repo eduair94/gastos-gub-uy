@@ -213,11 +213,16 @@ const hasBreakdown = computed(() =>
   byYear.value.length > 0 || byBuyer.value.length > 0 || categories.value.length > 0,
 )
 
+// See the note on the product page: the noun is pluralised by its own key
+// because two independent counts share this sentence. The raw number selects
+// the branch; the formatted string is what the reader sees.
 const seoDescription = computed(() => t('seo.supplierDetail.description', {
   name: supplier.value?.name ?? '',
   amount: formatMoney(supplier.value?.totalValue, 'UYU', { compact: true }),
   contracts: formatNumber(supplier.value?.totalContracts),
+  contractWord: t('seo.units.contrato', supplier.value?.totalContracts ?? 0),
   buyers: formatNumber(supplier.value?.buyerCount),
+  buyerWord: t('seo.units.organismo', supplier.value?.buyerCount ?? 0),
 }))
 
 // Resolved in setup scope: the useSeo getter below can be re-invoked outside
@@ -236,6 +241,10 @@ useSeo(() => ({
   path: pagePath.value,
   noindex: notFound.value,
   kicker: 'Proveedor',
+  // Spanish source data in translated chrome: the name, the figures and the item
+  // text are identical in /en, so the English twin is a near-duplicate answering
+  // no English query. Indexed in es only. See useSeo's defaultLocaleOnly.
+  defaultLocaleOnly: true,
   stat: notFound.value || !supplier.value
     ? undefined
     : formatMoney(supplier.value.totalValue, 'UYU', { compact: true }),
@@ -364,6 +373,32 @@ useSeo(() => ({
           </dd>
         </div>
       </dl>
+
+      <!-- ===== The record in one paragraph =====
+           Same reason as the agency page: 43k supplier profiles whose only unique
+           content is a stat row and a table read as thin, and give an assistant
+           nothing to quote. Both sentences are generated from this firm's own
+           loaded figures. The second one needs `stats`, which the source omits
+           for suppliers with no published breakdown — hence the guard. -->
+      <p
+        v-if="activeYears.length"
+        class="lede"
+      >
+        {{ t('suppliers.detail.summary', {
+          name: supplier.name,
+          amount: formatMoney(supplier.totalValue, 'UYU', { compact: true }),
+          contracts: formatNumber(supplier.totalContracts),
+          buyers: formatNumber(supplier.buyerCount),
+          first: activeYears[0],
+          last: activeYears[activeYears.length - 1],
+        }) }}
+        <template v-if="concentration">
+          {{ t('suppliers.detail.summaryTop', {
+            buyer: concentration.name,
+            share: formatNumber(concentration.pct),
+          }) }}
+        </template>
+      </p>
 
       <!-- ===== Who it competes against =====
            Se presentó a N llamados y ganó M, más los rivales con los que más coincide.
@@ -764,6 +799,16 @@ useSeo(() => ({
   margin: 0;
   font-size: var(--t-sm);
   color: var(--text-muted);
+}
+
+/* The generated opening paragraph. Body-size primary text; the measure cap sits
+   on the <p> itself, never on a wrapper (DESIGN.md). */
+.lede {
+  margin: var(--s-5) 0 0;
+  max-width: 68ch;
+  font-size: var(--t-md);
+  line-height: 1.6;
+  color: var(--text);
 }
 
 /* ---- Stat row ---- */

@@ -12,10 +12,25 @@ const localePath = useLocalePath()
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 
-// `error` is deliberately not destructured: an unknown slug renders
-// <NotFoundPanel> from `data` being null, so the fetch error has no separate
-// UI and binding it only left an unused variable behind.
-const { data: res } = await useFetch<any>(() => `/api/curros/${slug.value}`)
+const { data: res, error } = await useFetch<any>(() => `/api/curros/${slug.value}`)
+
+/**
+ * WARNING: an unknown slug must answer 404, not 200.
+ *
+ * The <NotFoundPanel> rendered from a null `data` looked right to a reader but
+ * the response was still HTTP 200 with `index, follow` and the generic
+ * "Curros en evidencia" title, so any invented slug was an indexable page.
+ *
+ * A 5xx is NOT a miss — a transient failure must never noindex a live case.
+ */
+const errStatus = computed<number>(() =>
+  (error.value as any)?.statusCode ?? (error.value as any)?.response?.status ?? 0,
+)
+const notFound = computed(() => errStatus.value === 404 || (!error.value && !res.value?.data))
+
+if (import.meta.server && notFound.value) {
+  setResponseStatus(useRequestEvent()!, 404)
+}
 
 const data = computed(() => res.value?.data ?? null)
 const text = computed(() => (locale.value === 'en' ? data.value?.en : data.value?.es) ?? null)
@@ -55,6 +70,7 @@ useSeo(() => ({
   title: text.value ? t('seo.currosDetail.title', { title: text.value.title }) : t('seo.curros.title'),
   description: text.value?.dek ?? t('seo.curros.description'),
   path: `/curros/${slug.value}`,
+  noindex: notFound.value,
   // Only once the case has actually resolved (text.value is null while
   // loading or on an unknown slug) — otherwise there is no headline/dek to
   // put in an Article node. Cases carry a free period label ("2010–2011"),

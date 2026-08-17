@@ -254,15 +254,23 @@ const breadcrumbLd = useBreadcrumbLd([
 
 useSeo(() => ({
   title: t('seo.buyerDetail.title', { name: name.value }),
+  // See the note on the product page: the noun is pluralised by its own key
+  // because two independent counts share this sentence.
   description: t('seo.buyerDetail.description', {
     name: name.value,
     amount: formatMoney(buyer.value?.totalSpending, 'UYU', { compact: true }),
     contracts: formatNumber(buyer.value?.totalContracts),
+    contractWord: t('seo.units.contrato', buyer.value?.totalContracts ?? 0),
     suppliers: formatNumber(buyer.value?.supplierCount),
+    supplierWord: t('seo.units.proveedor', buyer.value?.supplierCount ?? 0),
   }),
   path: `/buyers/${encodeURIComponent(buyerId.value)}`,
   noindex: notFound.value,
   kicker: 'Organismo',
+  // Spanish source data in translated chrome: the name, the figures and the item
+  // text are identical in /en, so the English twin is a near-duplicate answering
+  // no English query. Indexed in es only. See useSeo's defaultLocaleOnly.
+  defaultLocaleOnly: true,
   stat: formatMoney(buyer.value?.totalSpending, 'UYU', { compact: true }),
   jsonLd: notFound.value
     ? undefined
@@ -354,6 +362,31 @@ useSeo(() => ({
           >{{ firstYear }}–{{ lastYear }}</span>
         </div>
       </section>
+
+      <!-- ===== The record in one paragraph =====
+           Every figure here is already on the page as a number in a stat tile or
+           a chart. It is restated as prose on purpose: a page whose only unique
+           content is a table reads as thin to a crawler and gives an assistant
+           nothing quotable. Both sentences are generated from this agency's own
+           loaded data, so no two agency pages say the same thing. -->
+      <p
+        v-if="firstYear && lastYear"
+        class="lede"
+      >
+        {{ t('buyers.detail.summary', {
+          name,
+          contracts: formatNumber(buyer?.totalContracts),
+          suppliers: formatNumber(buyer?.supplierCount),
+          first: firstYear,
+          last: lastYear,
+        }) }}
+        <template v-if="concentration !== null && suppliers[0]">
+          {{ t('buyers.detail.summaryTop', {
+            supplier: suppliers[0].name,
+            share: formatNumber(Math.round(concentration)),
+          }) }}
+        </template>
+      </p>
 
       <!-- ===== What the live record covers ===== -->
       <p
@@ -707,6 +740,17 @@ useSeo(() => ({
 }
 
 /* ---- Basis note ---- */
+/* The generated opening paragraph. Primary text, so it reads at body size and
+   full ink — `.basis` below is the caveat voice and stays muted and boxed.
+   The measure cap sits on the <p> itself, never on a wrapper (DESIGN.md). */
+.lede {
+  margin: var(--s-5) 0 0;
+  max-width: 68ch;
+  font-size: var(--t-md);
+  line-height: 1.6;
+  color: var(--text);
+}
+
 .basis {
   margin: var(--s-5) 0 0;
   padding: var(--s-3) var(--s-4);

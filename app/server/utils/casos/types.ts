@@ -60,6 +60,14 @@ export type CasoStatus
     | 'rescision'
   // audit
     | 'auditoria'
+  /**
+   * El órgano de control SE PRONUNCIÓ, y no sabemos en qué sentido.
+   *
+   * Existe porque `auditoria` se rotula «Observado», y eso es una afirmación. Para las fichas
+   * del archivo del Tribunal de Cuentas sería falsa: su ficha pública trae sólo el VISTO, y si
+   * el gasto fue observado consta únicamente en el PDF, que es un escaneo.
+   */
+    | 'pronunciamiento'
   // management / policy
     | 'sobrecosto'
     | 'inconcluso'
@@ -98,6 +106,36 @@ export interface CasoQuery {
   procurementMethodDetails?: string[] | undefined
   yearFrom?: number | undefined
   yearTo?: number | undefined
+  /**
+   * Sólo compras con documento de reiteración del gasto: las que el Tribunal de Cuentas
+   * observó y el organismo pagó igual.
+   *
+   * Existe para que una ficha por organismo tenga un cruce ACOTADO. Sin esto la consulta
+   * sería sólo por comprador, y una consulta sólo por comprador devuelve el padrón entero
+   * del organismo — su contabilidad, no el caso. Es la regla 3 de verify-casos.
+   */
+  hasReiteracion?: boolean | undefined
+  /**
+   * OCID exactos, para la ficha que habla de UNA compra.
+   *
+   * `search` no sirve para esto: el buscador re-chequea la frase contra títulos, objetos y
+   * nombres, y el id de la compra no está en ninguno de esos campos. Devolvía cero.
+   */
+  ocids?: string[] | undefined
+  /**
+   * Muestra TODAS las etapas del expediente, sin filtrar por `tag`.
+   *
+   * Por omisión el cruce se limita a `award`, que es la etapa que lleva la plata. Eso está
+   * bien cuando la ficha habla de una adjudicación, y está mal cuando habla de una COMPRA
+   * identificada por su ocid: el ocid es la compra entera, y sus etapas son `tender`,
+   * `award`, `tenderUpdate`, `tenderCancellation` o `awardCancellation`.
+   *
+   * MEDIDO: forzando `award`, 96 de las 307 fichas del Tribunal de Cuentas cruzaban cero,
+   * porque la resolución nombra el LLAMADO y el título del llamado vive en el release
+   * `tender`. Enumerar etapas tampoco alcanzó: una de esas compras existe sólo como
+   * `tenderCancellation`, y una lista siempre se olvida de un valor.
+   */
+  allStages?: boolean | undefined
 }
 
 export interface CasoSource {
@@ -174,6 +212,8 @@ export type CasoThemeKey
     | 'estado-y-fondos'
     | 'ambiente'
     | 'deporte-y-cultura'
+    | 'gasto-observado'
+    | 'tribunal-de-cuentas'
 
 export interface CasoThemeDef {
   key: CasoThemeKey
@@ -270,6 +310,39 @@ export const CASO_THEMES: CasoThemeDef[] = [
     emoji: '🎭',
     es: { label: 'Deporte y cultura', dek: 'El Centenario rumbo al Mundial 2030, los fondos concursables y los cachés que paga el Estado.' },
     en: { label: 'Sport and culture', dek: 'The Centenario stadium heading to the 2030 World Cup, arts funds, and the fees the state pays performers.' },
+  },
+  // El único tema que NO se escribe a mano. Sus fichas las arma
+  // src/jobs/build-derived-casos.ts a partir del documento oficial de reiteración, y viven en
+  // la colección `derived_casos`. Va último para no correr el orden de las catorce curadas.
+  {
+    key: 'gasto-observado',
+    emoji: '🧾',
+    es: {
+      label: 'Gasto observado y reiterado',
+      dek: 'Compras que el Tribunal de Cuentas observó y que el organismo pagó igual, amparado en el artículo 114 del TOCAF.',
+    },
+    en: {
+      label: 'Observed and overridden spending',
+      dek: 'Purchases the Court of Auditors objected to and the body paid anyway, under article 114 of the TOCAF.',
+    },
+  },
+  // También armado. Sale de `tcr_resolutions` y lo escribe el mismo trabajo.
+  //
+  // CUIDADO CON EL VERBO. La ficha del archivo del Tribunal publica sólo el VISTO, que dice
+  // qué expediente se miró. Si el gasto fue observado, por cuánto y con qué fundamento está
+  // únicamente en el PDF, que es un escaneo. Por eso este tema dice «se pronunció» y NUNCA
+  // «observó»: decir observó sería inventar el fallo.
+  {
+    key: 'tribunal-de-cuentas',
+    emoji: '⚖️',
+    es: {
+      label: 'El Tribunal de Cuentas, compra por compra',
+      dek: 'Las compras sobre las que se pronunció el auditor del propio Estado, atadas al contrato que nombran.',
+    },
+    en: {
+      label: 'The Court of Auditors, purchase by purchase',
+      dek: 'The purchases the state’s own auditor ruled on, tied to the contract they name.',
+    },
   },
 ]
 

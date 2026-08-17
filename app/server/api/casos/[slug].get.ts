@@ -1,7 +1,7 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import type { PipelineStage } from 'mongoose'
 import { ReleaseModel } from '../../../../shared/models/release'
-import { casoExplorerQuery, casoToQueryParams, getCasoDef, getCasoTheme, listCasoDefsByTheme } from '../../utils/casos'
+import { casoExplorerQuery, casoToQueryParams, getAnyCasoDef, getCasoTheme, listAllCasoDefsByTheme } from '../../utils/casos'
 import { connectToDatabase, mongoose } from '../../utils/database'
 import { sourceUrl } from '../../utils/query'
 import { buildContractFilters, toMatchDocument } from '../contracts/index.get'
@@ -51,7 +51,8 @@ interface LeanRelease {
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug') ?? ''
-  const def = getCasoDef(slug)
+  // Busca primero en lo curado, que no toca la base, y sólo después en lo derivado.
+  const def = await getAnyCasoDef(slug)
   if (!def) {
     throw createError({ statusCode: 404, statusMessage: 'Caso not found' })
   }
@@ -60,9 +61,8 @@ export default defineEventHandler(async (event) => {
 
   // Lateral navigation: theme siblings first (they share the reader's current
   // question), then any explicit `related` from other themes.
-  const siblings = listCasoDefsByTheme(def.theme).filter(c => c.slug !== def.slug)
-  const explicit = (def.related ?? [])
-    .map(s => getCasoDef(s))
+  const siblings = (await listAllCasoDefsByTheme(def.theme)).filter(c => c.slug !== def.slug)
+  const explicit = (await Promise.all((def.related ?? []).map(s => getAnyCasoDef(s))))
     .filter((c): c is NonNullable<typeof c> => Boolean(c) && c!.slug !== def.slug && c!.theme !== def.theme)
   const related = [...siblings, ...explicit].slice(0, 8).map(c => ({
     slug: c.slug,

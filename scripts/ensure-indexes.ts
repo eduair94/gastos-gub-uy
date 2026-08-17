@@ -473,6 +473,47 @@ async function main(): Promise<void> {
       await tcrResolutions.createIndex({ organismKey: 1, resolvedAt: -1 }, { background: true })
       console.log('✅ tcr_resolutions indexes ensured (tcrId unique, matchedOcid, isProcurement+resolvedAt)')
 
+      // reiteracion_docs: el documento que declara la observación del Tribunal de Cuentas,
+      // escrito por src/jobs/fetch-reiteracion-docs.ts. `ocid` único es la clave del upsert
+      // y la que hace resumible el recorrido; observed+reason agrupa las causales; buyerId
+      // arma la ficha por organismo.
+      const reiteracionDocs = client.db(DB_NAME).collection('reiteracion_docs')
+      await reiteracionDocs.createIndex({ ocid: 1 }, { unique: true, background: true })
+      await reiteracionDocs.createIndex({ observed: 1, reason: 1 }, { background: true })
+      await reiteracionDocs.createIndex({ buyerId: 1 }, { background: true })
+      console.log('✅ reiteracion_docs indexes ensured (ocid unique, observed+reason, buyerId)')
+
+      // derived_casos: fichas armadas por src/jobs/build-derived-casos.ts. `slug` único es la
+      // clave del upsert y la de la página de detalle; los otros dos ordenan el índice y la
+      // página de tema sin traer el `def` entero.
+      const derivedCasos = client.db(DB_NAME).collection('derived_casos')
+      await derivedCasos.createIndex({ slug: 1 }, { unique: true, background: true })
+      await derivedCasos.createIndex({ origin: 1, rank: 1 }, { background: true })
+      await derivedCasos.createIndex({ 'def.theme': 1, rank: 1 }, { background: true })
+      console.log('✅ derived_casos indexes ensured (slug unique, origin+rank, def.theme+rank)')
+
+      // releases: el filtro `hasReiteracion` del explorador y de toda ficha del tema
+      // «gasto observado».
+      //
+      // POR QUÉ ES PARCIAL. `awards.documents` es un array grande: indexarlo entero mete más
+      // de dos millones de entradas, casi todas `awardNotice`, que a nadie le sirven. El
+      // filtro parcial deja SÓLO las 5.825 compras con documento de reiteración. El índice
+      // queda chico y la consulta pasa a ser un acierto directo.
+      //
+      // SIN ESTO LA PÁGINA TIRA 500. Sin índice, el planificador de Mongo no llega a elegir
+      // plan y devuelve «multiplanner encountered a failure while selecting best plan»
+      // después de nueve segundos, que es justo el presupuesto del endpoint.
+      const releasesCol = client.db(DB_NAME).collection('releases')
+      await releasesCol.createIndex(
+        { 'awards.documents.documentType': 1 },
+        {
+          name: 'reiteracion_partial',
+          background: true,
+          partialFilterExpression: { 'awards.documents.documentType': 'reiteracionGasto' },
+        },
+      )
+      console.log('✅ releases.reiteracion_partial ensured (parcial: sólo reiteracionGasto)')
+
       // organism_news: press coverage of each organism procurement, written by
       // src/jobs/refresh-organism-news.ts. buyerId unique is the upsert key and the
       // panel lookup; fetchedAt ascending drives "refresh the stalest first".

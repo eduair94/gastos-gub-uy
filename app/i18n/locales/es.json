@@ -748,6 +748,8 @@
     },
     "detail": {
       "eyebrow": "Producto",
+      "summary": "El Estado uruguayo compró {name} en {contracts} adjudicaciones entre {first} y {last}. Participaron {buyers} organismos.",
+      "summaryTop": "El organismo que más compró es {buyer}. El proveedor que más vendió es {supplier}.",
       "category": "Rubro",
       "officialUnit": "Unidad oficial: {unit}",
       "totalSpent": "Gasto informado",
@@ -822,6 +824,8 @@
     },
     "detail": {
       "eyebrow": "Proveedor",
+      "summary": "{name} cobró {amount} del Estado uruguayo en {contracts} adjudicaciones entre {first} y {last}. Le vendió a {buyers} organismos.",
+      "summaryTop": "Su mayor comprador es {buyer}, con el {share}% del gasto registrado.",
       "totalEarned": "Total cobrado",
       "contractCount": "Contratos",
       "buyerCount": "Organismos que le compraron",
@@ -1068,6 +1072,8 @@
     },
     "detail": {
       "eyebrow": "Organismo",
+      "summary": "{name} registra {contracts} adjudicaciones con {suppliers} proveedores entre {first} y {last}.",
+      "summaryTop": "Su mayor proveedor es {supplier}, con el {share}% del gasto registrado.",
       "totalSpent": "Total gastado",
       "contractCount": "Contratos",
       "supplierCount": "Proveedores distintos",
@@ -1351,6 +1357,27 @@
     "officialLink": "Ir a Compras Estatales",
     "disclaimer": "Este sitio no corrige los datos oficiales ni reenvía reportes: solo detecta posibles errores y te muestra a dónde llevarlos. La corrección la hace la fuente."
   },
+  "gastosYear": {
+    "kicker": "Gasto del año",
+    "h1": "Qué compró el Estado uruguayo en {year}",
+    "seoTitle": "Cuánto gastó el Estado uruguayo en {year}",
+    "seoFallback": "Las compras del Estado uruguayo en {year}: cuánto, quién compró y a quién, con el detalle de qué se excluyó y por qué.",
+    "datasetName": "Compras del Estado uruguayo, {year}",
+    "partial": "{year} todavía está en curso. Las cifras cubren lo publicado hasta hoy y no se anualizan.",
+    "nominal": "Compras {year}",
+    "real": "En pesos de hoy",
+    "releases": "Registros",
+    "buyers": "Organismos",
+    "suppliers": "Proveedores",
+    "pctGdp": "Del PIB",
+    "basis": "Cada monto se convierte al tipo de cambio de su propio mes y se deflacta con la Unidad Indexada del BCU. La serie mide compras publicadas como datos abiertos, no el presupuesto nacional.",
+    "compareAll": "Comparar todos los años",
+    "notFound": {
+      "title": "No tenemos ese año",
+      "body": "La serie arranca en 2002. Puede que el año no exista o que todavía no esté calculado.",
+      "action": "Ver la evolución del gasto"
+    }
+  },
   "evolucion": {
     "kicker": "Análisis",
     "title": "¿Aumentó el gasto, o solo bajó el peso?",
@@ -1450,6 +1477,10 @@
       "releasesTitle": "Registros publicados",
       "releasesHelp": "Cantidad de adjudicaciones con monto por año.",
       "releases": "Registros con monto"
+    },
+    "yearLinks": {
+      "title": "El gasto año por año",
+      "help": "Cada año tiene su propia página, con el puente completo, los organismos que movieron el número y los contratos más grandes."
     },
     "audit": {
       "title": "Qué excluimos y por qué",
@@ -2193,6 +2224,12 @@
     }
   },
   "seo": {
+      "units": {
+        "contrato": "contrato | contratos",
+        "organismo": "organismo | organismos",
+        "organismoComprador": "organismo comprador | organismos compradores",
+        "proveedor": "proveedor | proveedores"
+      },
       "casos": {
         "title": "Dónde se discute la plata — fichas de inversión pública",
         "description": "Fichas sobre inversiones y gastos del Estado uruguayo que están cuestionados, con fuentes verificadas y el cruce con los datos oficiales de Compras Estatales."
@@ -2313,7 +2350,7 @@
     },
     "productDetail": {
       "title": "{name} — compras del Estado",
-      "description": "{name}: {contracts} contratos y {buyers} organismos compradores. Quién lo compra, a quién y a qué precio."
+      "description": "{name}: {contracts} {contractWord} y {buyers} {buyerWord}. Quién lo compra, a quién y a qué precio."
     },
     "suppliers": {
       "title": "Proveedores del Estado uruguayo",
@@ -2333,7 +2370,7 @@
     },
     "supplierDetail": {
       "title": "{name} — proveedor del Estado",
-      "description": "{name} cobró {amount} del Estado uruguayo en {contracts} contratos con {buyers} organismos."
+      "description": "{name} cobró {amount} del Estado uruguayo en {contracts} {contractWord} con {buyers} {buyerWord}."
     },
     "buyers": {
       "title": "Organismos compradores del Estado uruguayo",
@@ -2341,7 +2378,7 @@
     },
     "buyerDetail": {
       "title": "{name} — compras del organismo",
-      "description": "{name} gastó {amount} en {contracts} contratos con {suppliers} proveedores."
+      "description": "{name} gastó {amount} en {contracts} {contractWord} con {suppliers} {supplierWord}."
     },
     "anomalies": {
       "title": "Alertas en compras públicas del Uruguay",
@@ -2835,7 +2872,12 @@
     "statusAmended": "Modificado",
     "statusClosed": "Cerrado",
     "statusAwarded": "Adjudicado",
-    "statusCancelled": "Cancelado"
+    "statusCancelled": "Cancelado",
+    "notFound": {
+      "title": "No encontramos ese llamado",
+      "body": "Puede haber cerrado y salido del registro, o el número puede estar mal.",
+      "action": "Ver los llamados abiertos"
+    }
   },
   "hook": {
     "bandTitle": "¿Empresa, ciudadano o prensa?",
@@ -3313,6 +3355,7 @@
         "archivo": "Archivado",
         "rescision": "Rescindido",
         "auditoria": "Observado",
+        "pronunciamiento": "Se pronunció",
         "sobrecosto": "Sobrecosto",
         "inconcluso": "Sin terminar",
         "en-ejecucion": "En ejecución",

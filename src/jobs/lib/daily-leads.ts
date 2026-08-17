@@ -25,13 +25,12 @@ import { ReleaseModel } from "../../../shared/models/release";
 import type { DailyLane, IDailyFact, IDailyQuery } from "../../../shared/types/daily-investigation";
 
 /**
- * `reiteracion_docs` y `derived_casos` se leen por acceso directo a la colección, sin modelo.
+ * `reiteracion_docs` se lee por acceso directo a la colección, sin modelo.
  *
- * POR QUÉ. Las dos colecciones tienen datos en producción, pero los modelos que las declaran
- * viven en una rama todavía sin mergear. Importarlos ataría este trabajo a esa rama y lo
- * rompería en `master`. El acceso directo funciona en las dos y no arrastra nada.
- *
- * El carril que las usa se salta solo cuando la colección no existe.
+ * POR QUÉ SIGUE ASÍ despues de que el modelo llegó a `master`. El acceso directo no obliga a
+ * este trabajo a conocer el esquema del otro carril, y el carril se salta solo cuando la
+ * colección no existe todavía. Eso hace que una instalación nueva —sin el trabajo de
+ * reiteraciones corrido— arranque igual, en vez de fallar al importar.
  */
 async function rawCollection(name: string): Promise<import("mongodb").Collection | null> {
   const db = mongoose.connection.db;

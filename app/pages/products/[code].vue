@@ -200,14 +200,24 @@ const breadcrumbLd = useBreadcrumbLd([
 
 useSeo(() => ({
   title: t('seo.productDetail.title', { name: description.value }),
+  // The noun is pluralised by its own key, not hardcoded: two independent counts
+  // share this sentence and vue-i18n allows one plural choice per key. The count
+  // goes in twice — the raw number selects the branch, the formatted string is
+  // what the reader sees. Hardcoding the plural shipped "1 contratos" to the SERP.
   description: t('seo.productDetail.description', {
     name: description.value,
     contracts: formatNumber(product.value?.contractCount),
+    contractWord: t('seo.units.contrato', product.value?.contractCount ?? 0),
     buyers: formatNumber(product.value?.buyerCount),
+    buyerWord: t('seo.units.organismoComprador', product.value?.buyerCount ?? 0),
   }),
   path: `/products/${encodeURIComponent(code.value)}`,
   noindex: notFound.value,
   kicker: 'Producto',
+  // Spanish source data in translated chrome: the name, the figures and the item
+  // text are identical in /en, so the English twin is a near-duplicate answering
+  // no English query. Indexed in es only. See useSeo's defaultLocaleOnly.
+  defaultLocaleOnly: true,
   stat: product.value?.contractCount ? formatNumber(product.value.contractCount) : undefined,
   jsonLd: notFound.value
     ? undefined
@@ -322,6 +332,30 @@ useSeo(() => ({
           >{{ product.firstYear }}–{{ product.lastYear }}</span>
         </div>
       </section>
+
+      <!-- ===== The record in one paragraph =====
+           Same reason as the agency and supplier pages: 46k catalogue codes whose
+           only unique content is a stat row reads as thin. Money is deliberately
+           NOT in the lead sentence — the source prices this record sparsely, so a
+           line count is the figure that is always true. -->
+      <p
+        v-if="product.firstYear && product.lastYear"
+        class="lede"
+      >
+        {{ t('products.detail.summary', {
+          name: description,
+          contracts: formatNumber(product.contractCount),
+          buyers: formatNumber(product.buyerCount),
+          first: product.firstYear,
+          last: product.lastYear,
+        }) }}
+        <template v-if="topBuyers[0] && topSuppliers[0]">
+          {{ t('products.detail.summaryTop', {
+            buyer: topBuyers[0].name,
+            supplier: topSuppliers[0].name,
+          }) }}
+        </template>
+      </p>
 
       <!-- ===== Anticipated tender (self-hides when no upcoming forecast) ===== -->
       <AnticipatedTenderCard
@@ -595,6 +629,16 @@ useSeo(() => ({
 }
 
 /* ---- Stats ---- */
+/* The generated opening paragraph. Body-size primary text; the measure cap sits
+   on the <p> itself, never on a wrapper (DESIGN.md). */
+.lede {
+  margin: var(--s-5) 0 0;
+  max-width: 68ch;
+  font-size: var(--t-md);
+  line-height: 1.6;
+  color: var(--text);
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

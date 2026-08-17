@@ -254,6 +254,27 @@ export function buildContractFilters(query: Record<string, unknown>): ContractFi
   const tag = toArray(query.tag)
   if (tag.length) and.push({ tag: { $in: tag } })
 
+  // --- Gasto reiterado ------------------------------------------------------
+  // La compra que lleva un documento de reiteración es la que el Tribunal de Cuentas observó
+  // y el organismo pagó igual. El documento es la prueba: existe sólo cuando hubo
+  // observación.
+  //
+  // Es un filtro y no una ficha aparte porque compone: `buyers` + esto da las compras
+  // reiteradas DE UN organismo, que es un conjunto acotado. Sin él, una ficha por organismo
+  // tendría que preguntar por el padrón entero del organismo, y eso es su contabilidad, no
+  // el caso.
+  if (query.hasReiteracion === true || query.hasReiteracion === 'true' || query.hasReiteracion === '1') {
+    and.push({ 'awards.documents.documentType': 'reiteracionGasto' })
+  }
+
+  // --- OCID exacto ----------------------------------------------------------
+  // Para cuando una ficha habla de UNA compra concreta. `search` no sirve: el buscador
+  // re-chequea la frase completa contra títulos, objetos y nombres, y el id de la compra no
+  // vive en ninguno de esos campos, así que devuelve cero. `ocid` sí tiene índice propio
+  // (`ocid_1`), y una consulta exacta resuelve en unos 175ms.
+  const ocids = toArray(query.ocids)
+  if (ocids.length) and.push({ ocid: { $in: ocids } })
+
   return {
     and,
     text,

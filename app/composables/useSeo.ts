@@ -34,6 +34,17 @@ interface SeoInput {
   /** 'article' emits article:* OG tags and a byline. Default 'website'. */
   type?: 'website' | 'article'
   article?: SeoArticle
+  /**
+   * Index this page in the DEFAULT locale only; `noindex, follow` elsewhere.
+   *
+   * For the entity detail families, whose body is Spanish source data wrapped in
+   * translated chrome. The name, the organism, the item description and every
+   * figure are identical in `/en`, so indexing both yields ~100k near-duplicate
+   * pairs answering no English query. The translated surfaces — the directories,
+   * the investigations, the analytics pages, /about — do NOT set this: they are
+   * genuinely translated and there are about fifty of them.
+   */
+  defaultLocaleOnly?: boolean
 }
 
 /**
@@ -58,9 +69,45 @@ export function useSeo(input: MaybeRefOrGetter<SeoInput>) {
   const resolved = computed(() => toValue(input))
 
   const siteUrl = (config.public.siteUrl as string) || ''
+
+  /**
+   * WARNING: `?page=` must survive into the canonical.
+   *
+   * Every page of every directory used to canonicalise to page one, so each
+   * paginated URL told Google "I am a duplicate, index the other one instead".
+   * That silently cancels the crawlable `<a href>` pagers in `DataPager`: the
+   * crawler follows the link and is then told the destination does not count.
+   * Page 2..N of a directory is genuinely different content and gets its own
+   * canonical.
+   *
+   * ONLY `page` is carried. `search`, `sort`, `rubro` and the filter params stay
+   * out on purpose — those views are near-duplicates of the unfiltered list and
+   * already pass `noindex`, so folding them onto the clean URL is correct.
+   */
+  /**
+   * The locale segment, for a canonical that agrees with the page's own hreflang.
+   *
+   * WARNING: build it by CONCATENATION, never with `localePath()`. That resolves
+   * through the router and re-encodes the params, which would turn a supplier id
+   * back into `/suppliers/R%2F210002980010` and re-break the sitemap-vs-canonical
+   * match. Pages pass a locale-LESS path (`app/context.md` claimed `useSeo` ran
+   * `localePath()` on it; it never did), and the strategy is
+   * `prefix_except_default` with `es` as default, so the prefix is `/en` or ''.
+   */
+  const localePrefix = computed(() => (locale.value === 'es' ? '' : `/${locale.value}`))
+
   const canonical = computed(() => {
     const path = resolved.value.path ?? route.path
-    return `${siteUrl}${path}`.replace(/([^:])\/{2,}/g, '$1/')
+    // `route.path` already carries the prefix; an explicit `path` does not.
+    const prefixed = resolved.value.path === undefined
+      ? path
+      : `${localePrefix.value}${path}`
+    const base = `${siteUrl}${prefixed}`.replace(/([^:])\/{2,}/g, '$1/')
+    // A page that hands us a path with its own query string owns it entirely.
+    if (path.includes('?')) return base
+    const page = Number(route.query.page)
+    if (!Number.isInteger(page) || page <= 1) return base
+    return `${base}?page=${page}`
   })
 
   const brand = computed(() => t('brand.name'))
@@ -108,7 +155,9 @@ export function useSeo(input: MaybeRefOrGetter<SeoInput>) {
       meta,
     }
 
-    if (resolved.value.noindex) {
+    // `follow` in both cases: the page still passes authority to what it links,
+    // it just does not compete for a result of its own.
+    if (resolved.value.noindex || (resolved.value.defaultLocaleOnly && locale.value !== 'es')) {
       meta.push({ name: 'robots', content: 'noindex, follow' })
     }
 

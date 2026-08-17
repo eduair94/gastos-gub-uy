@@ -1,7 +1,11 @@
-# Security contact for gastos.gub.uy (Con la tuya, contribuyente)
+# Security contact for Con la tuya, contribuyente
 # https://www.rfc-editor.org/rfc/rfc9116
+#
+# WARNING: `Canonical` must be the URI this file is actually served from.
+# It pointed at https://gastos.gub.uy, which has no DNS, so the record was
+# invalid per RFC 9116 section 2.5.4. The live origin is conlatuya.checkleaked.cc.
 
 Contact: mailto:shellixs750@gmail.com
 Expires: 2027-07-19T00:00:00.000Z
 Preferred-Languages: es, en
-Canonical: https://gastos.gub.uy/.well-known/security.txt
+Canonical: https://conlatuya.checkleaked.cc/.well-known/security.txt

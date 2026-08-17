@@ -21,20 +21,17 @@ const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
 
-const { data: res } = await useFetch<any>('/api/casos')
-
-const items = computed<any[]>(() => res.value?.data?.items ?? [])
-const themes = computed<any[]>(() => res.value?.data?.themes ?? [])
-
-function themeText(th: any) {
-  return locale.value === 'en' ? th.en : th.es
-}
-const themeById = computed<Record<string, any>>(() =>
-  Object.fromEntries(themes.value.map((th: any) => [th.key, th])))
+const PER_PAGE = 24
+const page = ref(1)
+const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
 
 const KINDS = ['judicial', 'auditoria', 'gestion', 'debate'] as const
 
 // Filters live in the URL so a filtered view is a shareable link.
+//
+// ORDEN: estos tres se declaran ANTES del useFetch y no después. `useFetch` evalúa su `query`
+// en el acto para armar el pedido, así que si lee `theme` antes de esta línea el setup muere
+// con «Cannot access before initialization» y la página entera devuelve 500.
 const theme = computed({
   get: () => (typeof route.query.tema === 'string' ? route.query.tema : ''),
   set: (v: string) => setQuery({ tema: v || undefined }),
@@ -43,7 +40,32 @@ const kind = computed({
   get: () => (typeof route.query.tipo === 'string' ? route.query.tipo : ''),
   set: (v: string) => setQuery({ tipo: v || undefined }),
 })
-const q = ref(typeof route.query.q === 'string' ? route.query.q : '')
+
+// El servidor filtra y pagina. Traer las mil fichas para filtrarlas en memoria pondría más de
+// 2MB en el payload de SSR, y un filtro que corre sobre una sola página daría un contador
+// falso.
+const { data: res } = await useFetch<any>('/api/casos', {
+  query: computed(() => ({
+    page: page.value,
+    perPage: PER_PAGE,
+    theme: theme.value || undefined,
+    kind: kind.value || undefined,
+    q: q.value.trim() || undefined,
+  })),
+})
+
+const items = computed<any[]>(() => res.value?.data?.items ?? [])
+const themes = computed<any[]>(() => res.value?.data?.themes ?? [])
+const totalPages = computed<number>(() => res.value?.data?.totalPages ?? 1)
+const total = computed<number>(() => res.value?.data?.total ?? 0)
+const totalAll = computed<number>(() => res.value?.data?.totalAll ?? 0)
+const sourceTotal = computed<number>(() => res.value?.data?.sourceTotal ?? 0)
+
+function themeText(th: any) {
+  return locale.value === 'en' ? th.en : th.es
+}
+const themeById = computed<Record<string, any>>(() =>
+  Object.fromEntries(themes.value.map((th: any) => [th.key, th])))
 
 function setQuery(patch: Record<string, string | undefined>) {
   // Rebuilt rather than mutated: an empty value must LEAVE the address bar, not
@@ -55,35 +77,18 @@ function setQuery(patch: Record<string, string | undefined>) {
   router.replace({ query: next })
 }
 
-const filtered = computed(() => {
-  const needle = q.value.trim().toLowerCase()
-  return items.value.filter((i: any) => {
-    if (theme.value && i.theme !== theme.value) return false
-    if (kind.value && i.statusKind !== kind.value) return false
-    if (!needle) return true
-    const txt = locale.value === 'en' ? i.en : i.es
-    const hay = `${txt.title} ${txt.dek} ${(i.organisms ?? []).join(' ')} ${i.amountReported ?? ''}`.toLowerCase()
-    return hay.includes(needle)
-  })
-})
-
 const hasFilters = computed(() => Boolean(theme.value || kind.value || q.value.trim()))
 function clearFilters() {
   q.value = ''
+  page.value = 1
   router.replace({ query: {} })
 }
 
-const PER_PAGE = 24
-const page = ref(1)
-const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PER_PAGE)))
-const paged = computed(() => filtered.value.slice((page.value - 1) * PER_PAGE, page.value * PER_PAGE))
 // Narrowing the set while parked on page 7 would show an empty grid and read
 // as "no results" for a filter that has plenty.
-watch(filtered, () => {
+watch([theme, kind, q], () => {
   page.value = 1
 })
-
-const sourceTotal = computed(() => items.value.reduce((a: number, i: any) => a + (i.sourceCount ?? 0), 0))
 
 const siteUrl = useRuntimeConfig().public.siteUrl as string
 const orgLd = useOrgLd()
@@ -104,8 +109,10 @@ useSeo(() => ({
     {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      'numberOfItems': items.value.length,
-      'itemListElement': items.value.slice(0, 100).map((i: any, idx: number) => ({
+      // `numberOfItems` cuenta la colección entera; la lista enumera la página a la vista.
+      // Cada ficha tiene además su URL en el sitemap, así que el rastreo no depende de esto.
+      'numberOfItems': totalAll.value,
+      'itemListElement': items.value.map((i: any, idx: number) => ({
         '@type': 'ListItem',
         'position': idx + 1,
         'name': (locale.value === 'en' ? i.en : i.es).title,
@@ -129,8 +136,8 @@ useSeo(() => ({
     >
       <div class="hero__stats">
         <div class="hero__stat">
-          <b>{{ formatNumber(items.length) }}</b>
-          <span>{{ t('casos.count', { n: items.length }) }}</span>
+          <b>{{ formatNumber(totalAll) }}</b>
+          <span>{{ t('casos.count', { n: totalAll }) }}</span>
         </div>
         <div class="hero__stat">
           <b>{{ formatNumber(sourceTotal) }}</b>
@@ -247,7 +254,7 @@ useSeo(() => ({
       </div>
 
       <div class="fmeta">
-        <span class="u-mono">{{ t('casos.filters.results', { n: filtered.length, total: items.length }) }}</span>
+        <span class="u-mono">{{ t('casos.filters.results', { n: total, total: totalAll }) }}</span>
         <button
           v-if="hasFilters"
           type="button"
@@ -264,10 +271,10 @@ useSeo(() => ({
       id="casos-results"
       class="u-container sec"
     >
-      <template v-if="filtered.length">
+      <template v-if="items.length">
         <div class="cgrid">
           <CasoCard
-            v-for="i in paged"
+            v-for="i in items"
             :key="i.slug"
             :item="i"
             :theme-emoji="themeById[i.theme]?.emoji"
@@ -278,6 +285,7 @@ useSeo(() => ({
           v-if="totalPages > 1"
           v-model:page="page"
           :total-pages="totalPages"
+          :page-query-key="null"
           scroll-target-id="casos-results"
           class="pager"
         />

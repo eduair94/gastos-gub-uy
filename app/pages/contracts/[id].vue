@@ -31,6 +31,13 @@ const rateTable = computed(() => rateRes.value?.data ?? null)
 const itemDate = computed(() => contractDate(contract.value))
 const notFound = computed(() => !!error.value || !contract.value)
 
+// The `noindex` further down was already right; the STATUS was not. A missing
+// contract answered 200, so an invented id was a real page as far as a crawler
+// is concerned. Both signals have to agree.
+if (import.meta.server && notFound.value) {
+  setResponseStatus(useRequestEvent()!, 404)
+}
+
 // Names the page, and every related row below it: the explicit subject,
 // else the stage-named fallback.
 const contractName = useContractTitle()
@@ -1141,6 +1148,10 @@ useSeo(() => ({
   path: `/contracts/${id.value}`,
   noindex: notFound.value,
   kicker: t('contract.eyebrow'),
+  // Spanish source data in translated chrome: the name, the figures and the item
+  // text are identical in /en, so the English twin is a near-duplicate answering
+  // no English query. Indexed in es only. See useSeo's defaultLocaleOnly.
+  defaultLocaleOnly: true,
   stat: showsMoney.value ? formatMoney(amount.value, currency.value) : undefined,
   jsonLd: contract.value
     ? [

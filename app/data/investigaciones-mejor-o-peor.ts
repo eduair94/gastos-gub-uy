@@ -349,12 +349,16 @@ export const MOP_INDICATORS: IndicatorRow[] = [
         value: 20.3,
       },
       {
+        year: 2021,
+        value: 21.6,
+      },
+      {
         year: 2022,
         value: 23.2,
       },
       {
         year: 2023,
-        value: 21.1,
+        value: 21.39,
       },
       {
         year: 2024,

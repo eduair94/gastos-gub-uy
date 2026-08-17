@@ -13,10 +13,24 @@ const localePath = useLocalePath()
 const route = useRoute()
 const tema = computed(() => String(route.params.tema))
 
-const { data: res } = await useFetch<any>(() => `/api/casos?theme=${encodeURIComponent(tema.value)}`)
+// PAGINA, y no es opcional. El endpoint devuelve 24 fichas por página, así que sin paginador
+// un tema grande mostraba 24 y escondía el resto sin decirlo. Los catorce temas curados tienen
+// diez fichas cada uno, pero los temas ARMADOS tienen cientos.
+const PER_PAGE = 24
+const page = ref(1)
+watch(tema, () => {
+  page.value = 1
+})
+
+const { data: res } = await useFetch<any>('/api/casos', {
+  query: computed(() => ({ theme: tema.value, page: page.value, perPage: PER_PAGE })),
+})
 
 const items = computed<any[]>(() => res.value?.data?.items ?? [])
 const themes = computed<any[]>(() => res.value?.data?.themes ?? [])
+const totalPages = computed<number>(() => res.value?.data?.totalPages ?? 1)
+/** El total del tema, que NO es lo que vino en esta página. */
+const total = computed<number>(() => res.value?.data?.total ?? 0)
 const theme = computed(() => themes.value.find((th: any) => th.key === tema.value) ?? null)
 const themeText = computed(() => (theme.value ? (locale.value === 'en' ? theme.value.en : theme.value.es) : null))
 const others = computed(() => themes.value.filter((th: any) => th.key !== tema.value))
@@ -58,7 +72,9 @@ useSeo(() => ({
         {
           '@context': 'https://schema.org',
           '@type': 'ItemList',
-          'numberOfItems': items.value.length,
+          // Cuenta el tema entero; la lista enumera la página a la vista. Cada ficha tiene su
+          // URL propia en el sitemap, así que el rastreo no depende de esta enumeración.
+          'numberOfItems': total.value,
           'itemListElement': items.value.map((i: any, idx: number) => ({
             '@type': 'ListItem',
             'position': idx + 1,
@@ -85,11 +101,14 @@ useSeo(() => ({
         :back-label="t('casos.backToAll')"
       >
         <p class="hero__meta u-mono">
-          {{ t('casos.themePageLead', { n: items.length }) }} · {{ t('casos.sourcesTotal', { n: sourceTotal }) }}
+          {{ t('casos.themePageLead', { n: total }) }} · {{ t('casos.sourcesTotal', { n: sourceTotal }) }}
         </p>
       </RecordHero>
 
-      <section class="u-container sec">
+      <section
+        id="tema-fichas"
+        class="u-container sec"
+      >
         <div class="cgrid">
           <CasoCard
             v-for="i in items"
@@ -97,6 +116,14 @@ useSeo(() => ({
             :item="i"
           />
         </div>
+        <DataPager
+          v-if="totalPages > 1"
+          v-model:page="page"
+          :total-pages="totalPages"
+          :page-query-key="null"
+          scroll-target-id="tema-fichas"
+          class="pager"
+        />
       </section>
 
       <section class="u-container sec">
@@ -151,6 +178,8 @@ useSeo(() => ({
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--s-5);
 }
+
+.pager { margin-top: var(--s-6); }
 
 @media (max-width: 640px) {
   .cgrid { grid-template-columns: minmax(0, 1fr); }

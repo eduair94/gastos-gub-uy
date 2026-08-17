@@ -258,23 +258,65 @@ export default defineNuxtConfig({
   sitemap: {
     autoLastmod: true,
     // The static page scanner (nuxt:pages, the implicit `pages` sitemap below)
-    // only ever sees the ~50 static routes — every entity detail page
+    // only ever sees the ~60 static routes — every entity detail page
     // ([id]/[slug]/[code]/[compraId]) has to be listed explicitly. Each is its
-    // own NAMED sitemap (not one combined `sources` array) so @nuxtjs/sitemap
-    // actually auto-chunks past `defaultSitemapsChunkSize` — a single giant
-    // source rendered as one ~45MB, 40s file mixing every entity type, nowhere
-    // near Google's 50k-URLs-per-file limit. See server/api/__sitemap__/*.ts.
+    // own NAMED sitemap (not one combined `sources` array), so no single file
+    // mixes every entity type. See server/api/__sitemap__/*.ts.
+    //
+    // WARNING: `defaultSitemapsChunkSize` ALONE CHUNKS NOTHING. On
+    // @nuxtjs/sitemap 7.6.0 the chunking branch is gated on a truthy `chunks`
+    // key on the CHILD (`module.mjs`: `if (definition.chunks) {`), and the size
+    // below is only read inside that branch. This block claimed for months that
+    // the children auto-chunked past it. They never did: `products.xml` reached
+    // 46,493 URLs, 93% of Google's hard 50,000-per-file cap, past which the file
+    // is rejected whole.
+    //
+    // Verifying this needs patience. `sitemap_index.xml` is cached for 10
+    // minutes with `swr: true` (`builder/sitemap-index.js`), so for two restarts
+    // after the change the index still served the old 8 children. It is not
+    // broken — wait out the TTL and re-request before concluding anything.
     defaultSitemapsChunkSize: 5000,
     sitemaps: {
-      pages: {},
+      // WARNING: `includeAppSources` is load-bearing. Declaring `sitemaps`
+      // detaches the app sources (nuxt:pages) from every named sitemap, so the
+      // bare `pages: {}` this used to be rendered an EMPTY urlset — for months
+      // the homepage, all 21 analytics pages and all 19 investigations were in
+      // no sitemap at all, while the 100k+ entity URLs were submitted fine.
+      // The flag is what re-attaches the route scanner. Never drop it.
+      //
+      // `exclude` matters for the same reason: the scanner also finds the
+      // signed-in area and the auth pages, which have no business in an index.
+      //
+      // TRAP: exclude ONLY these. `/buyers/**` and friends look like the right
+      // way to stop entity detail URLs landing here twice, but the pattern also
+      // matches `/buyers` itself and silently drops the directory index — the
+      // single most valuable hub page of that whole family. The entity routes
+      // never needed excluding: the route scanner cannot fill `[id]`/`[slug]`,
+      // so it skips dynamic routes by itself and the named sitemaps below own
+      // them. Verified by counting `<loc>` in /__sitemap__/pages.xml.
+      pages: {
+        includeAppSources: true,
+        exclude: [
+          '/app/**',
+          '/auth/**',
+          '/login',
+          '/registro',
+          '/recuperar',
+          '/unsubscribe',
+          '/newsletter/**',
+        ],
+      },
+      // `chunks: true` only on the three that need it. The others sit far under
+      // the cap and splitting them would only add index round-trips.
       buyers: { sources: ['/api/__sitemap__/buyers'] },
-      suppliers: { sources: ['/api/__sitemap__/suppliers'] },
-      products: { sources: ['/api/__sitemap__/products'] },
-      contracts: { sources: ['/api/__sitemap__/contracts'] },
+      suppliers: { chunks: true, sources: ['/api/__sitemap__/suppliers'] },
+      products: { chunks: true, sources: ['/api/__sitemap__/products'] },
+      contracts: { chunks: true, sources: ['/api/__sitemap__/contracts'] },
       llamados: { sources: ['/api/__sitemap__/llamados'] },
       cases: { sources: ['/api/__sitemap__/cases'] },
       blog: { sources: ['/api/__sitemap__/blog'] },
       diario: { sources: ['/api/__sitemap__/diario'] },
+      years: { sources: ['/api/__sitemap__/years'] },
     },
   },
 
@@ -292,6 +334,12 @@ export default defineNuxtConfig({
     // in the same Redis-backed SWR layer as the public APIs, so subscriptions
     // keep receiving the last good feed through a brief Mongo or deploy blip.
     '/rss/**': apiCache(5 * 60),
+
+    // Sitemap sources. A chunked child refetches its whole source once per
+    // chunk, so without this `products` runs the same 46k-row query ten times
+    // per rebuild. The handlers hold their own 6h in-process cache; this makes
+    // the cache shared across the two pm2 workers.
+    '/api/__sitemap__/**': apiCache(6 * 60 * 60),
 
     // Homepage + explorer hot paths.
     '/api/dashboard/**': apiCache(5 * 60),
@@ -334,6 +382,10 @@ export default defineNuxtConfig({
     '/api/analytics/dei-signals': apiCache(10 * 60),
     '/api/analytics/organism-groups': apiCache(10 * 60),
     '/api/analytics/party-comparison': apiCache(10 * 60),
+    // The whole series (evolucion-gasto) and one year of it (/gastos/[year]).
+    // The base path had no rule at all; `/**` covers the per-year route.
+    '/api/analytics/spending-trend': apiCache(60 * 60),
+    '/api/analytics/spending-trend/**': apiCache(60 * 60),
   },
 
   nitro: {

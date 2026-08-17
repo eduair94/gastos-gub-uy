@@ -99,12 +99,32 @@ The rules, in order of how often they are broken here:
 9. **No gerund chains.** One gerund per sentence at most.
 10. **Warnings first, as an order.** The trap goes before the explanation, not after it.
 
-**The one carve-out, and it is deliberate.** The site's published copy — investigation prose, page
-deks, disclaimers — keeps the voice [PRODUCT.md](PRODUCT.md) defines: "plain, precise and
-occasionally wry". Rules 1, 4, 5, 7 and 10 apply there too and improve it. Rules 2, 3 and 6 do not:
-a piece that explains why a figure cannot be published needs a sentence long enough to hold the
-reason. Published prose is edited for a reader, not for a technician. Everything else on this list
-is edited for whoever maintains the code, and that reader wants it shorter.
+The reference manual is [danyuchn/asd-ste100-skill](https://github.com/danyuchn/asd-ste100-skill).
+It flags exactly what this repo keeps flagging by hand: ambiguous word choice, passive voice with no
+actor, sentences that carry two instructions, oversized noun clusters, dropped words, phrasal verbs,
+nominalised actions, semicolons, stacked hedges and marketing adjectives. Treat that list as binding.
+
+**Published investigation prose is INSIDE the standard, not outside it.** Every piece under
+`app/pages/investigaciones/**` and its `app/data/investigaciones-*.ts` follows all ten rules above
+plus the manual's flag list. An investigation is read by someone deciding whether to trust a number.
+Ambiguity, padding and filler cost trust, so they are defects there for the same reason they are
+defects in code. Concretely, in published prose:
+
+- No sentence may carry a claim and its hedge in the same breath. State the claim, then state the
+  limit in its own sentence.
+- No marketing adjective ever ("clave", "histórico", "impactante") unless you are quoting a source
+  that said it, with attribution.
+- One term per concept, across the whole piece and across pieces: `adjudicación`, `jornada`,
+  `ajuste paramétrico`, `corpus`. Never rotate for variety.
+- Every figure names its source or its measurement in the same paragraph. A number with no
+  provenance is junk content, and junk content gets cut.
+
+**The one relaxation, and it is bounded.** Rules 2 and 3 (max 20/25 words, max 5/6 sentences) are
+targets, not hard caps, in published prose: a sentence that explains why a figure cannot be
+published may need the extra clause to hold the reason. Rule 6 ("say what to do") does not apply to
+descriptive prose, which reports rather than instructs. Nothing else is relaxed. The voice
+[PRODUCT.md](PRODUCT.md) defines — "plain, precise and occasionally wry" — survives all of this;
+STE100 removes the padding around the voice, not the voice.
 
 ## Conventions (repo-wide)
 
@@ -152,6 +172,12 @@ is edited for whoever maintains the code, and that reader wants it shorter.
   all four. It runs in `app`'s `prebuild`, so a regression fails the deploy build. It is a text scan.
   For anything subtler use the 360px check in [Verifying work](#verifying-work-in-a-test-less-repo).
 - **No `npm test` framework.** List `tests/` to discover the standalone `tsx` scripts.
+- **Las fichas de caso vienen de DOS fuentes.** Las curadas están en
+  `app/server/utils/casos/dossiers/*.ts` y las revisa un diff. Las derivadas están en la
+  colección `derived_casos`, las arma [src/jobs/build-derived-casos.ts](src/jobs/build-derived-casos.ts)
+  y ocupan el tema `gasto-observado`. `listCasoDefs()` devuelve **sólo las curadas**; para las
+  dos hay que usar `listAllCasoDefs()`, que es asíncrona. Nunca escribas a mano una ficha con
+  tema `gasto-observado`: la próxima corrida del armador la borra.
 - The Express API under `src/api/**` and the `precalculate-dashboard`/`populate-analytics` scripts are
   **legacy/dead** — the live API is `app/server/api/**` and the live rollups are `src/jobs/refresh-*`.
 - Contact-directory exports deliberately use Mongo cursors, 250-row serializers and one shared heavy
