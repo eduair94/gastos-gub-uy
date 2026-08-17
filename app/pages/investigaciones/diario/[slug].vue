@@ -17,6 +17,7 @@
  */
 const route = useRoute()
 const { locale, t } = useI18n()
+const localePath = useLocalePath()
 
 const { data: res, error } = await useFetch<any>(`/api/investigaciones/diario/${route.params.slug}`)
 
@@ -64,16 +65,26 @@ const factColumns = computed(() => [
   { key: 'provenance', label: locale.value === 'en' ? 'Where it comes from' : 'De dónde sale', muted: true },
 ])
 
-/** El enlace al explorador con el mismo recorte que produjo la medición. */
-const exploreHref = computed(() => {
-  const q = note.value.query ?? {}
-  const params = new URLSearchParams()
-  for (const [key, value] of Object.entries(q)) {
-    if (value === undefined || value === null || value === '') continue
-    params.set(key, Array.isArray(value) ? value.join(',') : String(value))
-  }
-  const qs = params.toString()
-  return qs ? `/contratos?${qs}` : '/contratos'
+/**
+ * El enlace al explorador con el mismo recorte que produjo la medición.
+ *
+ * EL RECORTE LO ARMA LA API, no esta página: `casoExplorerQuery` vive en
+ * `app/server/utils/casos`, que es código de servidor, y la ficha de caso hace lo mismo.
+ *
+ * La versión hecha a mano que esto reemplaza traía cuatro defectos, y todos rompían el enlace:
+ *
+ *   1. Apuntaba a `/contratos`. El explorador vive en `/contracts` y contestaba 404.
+ *   2. Sin `localePath`, así que en inglés perdía el prefijo de idioma.
+ *   3. Sin el `tag=award` por omisión, que es la etapa que lleva la plata.
+ *   4. Unía las listas con una coma cruda. Los nombres de organismo TRAEN comas —el mayor
+ *      comprador del corpus es «Administración Nacional de Combustible, Alcohol y Portland»—
+ *      y esa coma es indistinguible del separador: el nombre se partía en dos fragmentos que
+ *      no son ningún comprador, y el filtro no encontraba nada. `encodeQueryList` la escapa.
+ */
+const explorerTo = computed(() => {
+  const query = note.value.explorerQuery
+  if (!query || !Object.keys(query).length) return null
+  return { path: localePath('/contracts'), query }
 })
 
 const L = computed(() => locale.value === 'en'
@@ -127,10 +138,17 @@ const L = computed(() => locale.value === 'en'
         <p>{{ text.contexto }}</p>
       </div>
 
-      <InvActions
-        v-if="note.ocids?.length || note.query"
-        :items="[{ label: L.explore, to: exploreHref }]"
-      />
+      <!-- InvActions es un envoltorio de SLOT. Pasarle `items` no renderiza nada. -->
+      <InvActions v-if="explorerTo">
+        <v-btn
+          :to="explorerTo"
+          color="primary"
+          variant="flat"
+          class="text-none"
+        >
+          {{ L.explore }}
+        </v-btn>
+      </InvActions>
     </InvSection>
 
     <!-- 2. La norma. Nombrarla NO es acusar de violarla. -->

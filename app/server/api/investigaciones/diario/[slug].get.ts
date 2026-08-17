@@ -1,5 +1,7 @@
 import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { connectToDatabase } from '../../../utils/database'
+import { casoExplorerQuery } from '../../../utils/casos'
+import type { CasoQuery } from '../../../utils/casos'
 import { DailyInvestigationModel } from '../../../../../shared/models/daily_investigation'
 
 /**
@@ -17,5 +19,14 @@ export default defineEventHandler(async (event) => {
   const doc = await DailyInvestigationModel.findOne({ slug, status: 'published' }).lean()
   if (!doc) throw createError({ statusCode: 404, statusMessage: 'Nota no encontrada' })
 
-  return { success: true, data: doc }
+  /**
+   * El recorte del explorador se arma acá y no en la página.
+   *
+   * `casoExplorerQuery` es código de servidor, y además escapa la coma dentro de cada valor.
+   * Sin ese escape, «Administración Nacional de Combustible, Alcohol y Portland» viaja partido
+   * en dos fragmentos que no son ningún comprador, y el filtro no devuelve nada.
+   */
+  const explorerQuery = casoExplorerQuery((doc.query ?? {}) as CasoQuery)
+
+  return { success: true, data: { ...doc, explorerQuery } }
 })
