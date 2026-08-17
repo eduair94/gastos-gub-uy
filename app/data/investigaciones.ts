@@ -209,6 +209,16 @@ export const INV_CONTENT = {
           "brecha yo/país: 46 pts"
         ]
       },
+      "cardSuicidios": {
+        "eyebrow": "MSP 1997–2025 · corpus 2002–2026",
+        "title": "Siete compras contra el suicidio en veinticuatro años",
+        "dek": "Uruguay mide su tasa de suicidio con precisión y la publica desde 1997. En 1.639.165 compras del Estado, la palabra aparece siete veces. La Estrategia Nacional 2021-2025 no pide plata: pide 76 horas semanales.",
+        "tags": [
+          "668 muertes en 2025",
+          "19,16 cada 100.000",
+          "7 compras en 24 años"
+        ]
+      },
       "cardSunca": {
         "eyebrow": "Convenio del Grupo 9 · 2026–2031",
         "title": "Cuatro horas menos: qué ganó la construcción y por dónde pasa la cuenta",
@@ -639,6 +649,16 @@ export const INV_CONTENT = {
           "two reference years",
           "homicides x1.7",
           "me/country gap: 46 pts"
+        ]
+      },
+      "cardSuicidios": {
+        "eyebrow": "Health Ministry 1997-2025 · corpus 2002-2026",
+        "title": "Seven purchases against suicide in twenty-four years",
+        "dek": "Uruguay measures its suicide rate precisely and has published it since 1997. Across 1,639,165 state purchases the word appears seven times. The 2021-2025 National Strategy does not ask for money: it asks for 76 weekly hours.",
+        "tags": [
+          "668 deaths in 2025",
+          "19.16 per 100,000",
+          "7 purchases in 24 years"
         ]
       },
       "cardSunca": {
