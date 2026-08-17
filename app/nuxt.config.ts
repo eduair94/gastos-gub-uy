@@ -266,7 +266,35 @@ export default defineNuxtConfig({
     // near Google's 50k-URLs-per-file limit. See server/api/__sitemap__/*.ts.
     defaultSitemapsChunkSize: 5000,
     sitemaps: {
-      pages: {},
+      // WARNING: `includeAppSources` is load-bearing. Declaring `sitemaps`
+      // detaches the app sources (nuxt:pages) from every named sitemap, so the
+      // bare `pages: {}` this used to be rendered an EMPTY urlset — for months
+      // the homepage, all 21 analytics pages and all 19 investigations were in
+      // no sitemap at all, while the 100k+ entity URLs were submitted fine.
+      // The flag is what re-attaches the route scanner. Never drop it.
+      //
+      // `exclude` matters for the same reason: the scanner also finds the
+      // signed-in area and the auth pages, which have no business in an index.
+      //
+      // TRAP: exclude ONLY these. `/buyers/**` and friends look like the right
+      // way to stop entity detail URLs landing here twice, but the pattern also
+      // matches `/buyers` itself and silently drops the directory index — the
+      // single most valuable hub page of that whole family. The entity routes
+      // never needed excluding: the route scanner cannot fill `[id]`/`[slug]`,
+      // so it skips dynamic routes by itself and the named sitemaps below own
+      // them. Verified by counting `<loc>` in /__sitemap__/pages.xml.
+      pages: {
+        includeAppSources: true,
+        exclude: [
+          '/app/**',
+          '/auth/**',
+          '/login',
+          '/registro',
+          '/recuperar',
+          '/unsubscribe',
+          '/newsletter/**',
+        ],
+      },
       buyers: { sources: ['/api/__sitemap__/buyers'] },
       suppliers: { sources: ['/api/__sitemap__/suppliers'] },
       products: { sources: ['/api/__sitemap__/products'] },

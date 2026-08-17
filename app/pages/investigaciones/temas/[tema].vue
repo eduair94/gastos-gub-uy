@@ -120,6 +120,7 @@ useSeo(() => ({
           v-if="totalPages > 1"
           v-model:page="page"
           :total-pages="totalPages"
+          :page-query-key="null"
           scroll-target-id="tema-fichas"
           class="pager"
         />

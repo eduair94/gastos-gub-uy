@@ -27,8 +27,15 @@ withDefaults(defineProps<{
   totalPages: number
   /** Render the bottom pager too. */
   foot?: boolean
+  /**
+   * Forwarded to `<DataPager>`: the query key that carries the page number.
+   * Pass `null` when the host page keeps `page` in local state only, so the
+   * pagers stay buttons instead of promising a URL that would not restore.
+   */
+  pageQueryKey?: string | null
 }>(), {
   foot: true,
+  pageQueryKey: 'page',
 })
 
 const emit = defineEmits<{ 'update:page': [value: number] }>()
@@ -51,6 +58,7 @@ const anchorId = useId()
       v-if="totalPages > 1"
       :page="page"
       :total-pages="totalPages"
+      :page-query-key="pageQueryKey"
       sticky
       :scroll-target-id="anchorId"
       @update:page="emit('update:page', $event)"
@@ -63,6 +71,7 @@ const anchorId = useId()
       class="plist__foot"
       :page="page"
       :total-pages="totalPages"
+      :page-query-key="pageQueryKey"
       :scroll-target-id="anchorId"
       @update:page="emit('update:page', $event)"
     />
