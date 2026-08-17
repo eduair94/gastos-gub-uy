@@ -18,12 +18,15 @@ import {
   parseDispositive,
   parseUyAmount,
 } from '../../shared/bjn-award'
+import { parseHojaInsumo, parseHojaDate, sentenciaKey } from '../../shared/bjn-hoja'
 
 import FIXTURES from '../fixtures/bjn-dispositivas.json'
 
 interface Fixture {
   title: string
   procedimiento: string | null
+  /** La cabecera de la Hoja de Insumo, hasta «Firmantes». */
+  head: string
   dispositive: string | null
 }
 
@@ -50,7 +53,42 @@ const byPrefix = (p: string): Fixture => {
 const withNarrative = (f: Fixture): string =>
   `Vistos y considerando. La actora reclamó U$S 999.999 por daño moral y $ 88.888 por daño material. ${f.dispositive ?? ''}`
 
-console.log('parseUyAmount')
+console.log('la cabecera de la Hoja de Insumo')
+{
+  let read = 0
+  for (const f of fixtures) if (parseHojaInsumo(f.head)) read++
+  check(`se leen las ${fixtures.length} cabeceras`, read === fixtures.length, `${read}/${fixtures.length}`)
+
+  const civil = parseHojaInsumo(byPrefix('46/2023').head)!
+  check('46/2023 número', civil.numero === '46/2023', civil.numero)
+  check('46/2023 sede con espacios y ordinal', civil.sede === 'Tribunal Apelaciones Civil 4ºTº', civil.sede)
+  check('46/2023 tipo', civil.tipo === 'DEFINITIVA')
+  check('46/2023 fecha en UTC', civil.fecha?.toISOString().slice(0, 10) === '2023-03-23', String(civil.fecha))
+  check('46/2023 procedimiento', civil.procedimiento === 'PROCESO CIVIL ORDINARIO', String(civil.procedimiento))
+  check('46/2023 año del número', civil.anio === 2023)
+
+  // La sede lleva espacios y la ficha cambia de forma: el ancla son los enumerados, no las
+  // posiciones. Estas dos fichas convivían y rompían cualquier conteo de palabras.
+  check('ficha con guiones (2-58775/2009)', parseHojaInsumo(byPrefix('i460/2011').head)?.ficha === '2-58775/2009')
+  check('ficha con espacios (2 61219 2009)', parseHojaInsumo(byPrefix('318/2010').head)?.ficha === '2 61219 2009')
+
+  // TRAMPA: las sentencias viejas de la Suprema Corte traen «Sin datos» donde va la ficha. Exigir
+  // un dígito ahí dejaba 4 de cada 16 sin leer.
+  const vieja = parseHojaInsumo(byPrefix('202/2004').head)!
+  check('«Sin datos» se lee como ausencia, no como ficha', vieja.ficha === null, String(vieja.ficha))
+  check('202/2004 igual trae sede y procedimiento', vieja.sede === 'Suprema Corte de Justicia' && vieja.procedimiento === 'RECURSO DE CASACIÓN')
+
+  check('varias materias se separan', parseHojaInsumo(byPrefix('318/2010').head)?.materias.length === 2)
+  check('fecha inválida es null', parseHojaDate('31/02/2020') === null)
+  check('fecha válida', parseHojaDate('20/10/2010')?.toISOString().slice(0, 10) === '2010-10-20')
+  check('la clave natural une sede y número', sentenciaKey('Tribunal Apelaciones Civil 4ºTº', '46/2023') === 'tribunal-apelaciones-civil-4-t|46-2023', sentenciaKey('Tribunal Apelaciones Civil 4ºTº', '46/2023'))
+
+  // El fuero sale de la cabecera y decide si la sentencia entra al corpus de dinero.
+  const penal = parseHojaInsumo(byPrefix('141/2020').head)!
+  check('141/2020 es fuero penal', penal.procedimiento === 'PROCESO PENAL ORDINARIO', String(penal.procedimiento))
+}
+
+console.log('\nparseUyAmount')
 check('872.377 es ochocientos setenta y dos mil', parseUyAmount('872.377') === 872377)
 check('10.000 es diez mil, no diez', parseUyAmount('10.000') === 10000)
 check('1.234,56 respeta la coma decimal', parseUyAmount('1.234,56') === 1234.56)
