@@ -722,6 +722,8 @@
     },
     "detail": {
       "eyebrow": "Producto",
+      "summary": "El Estado uruguayo compró {name} en {contracts} adjudicaciones entre {first} y {last}. Participaron {buyers} organismos.",
+      "summaryTop": "El organismo que más compró es {buyer}. El proveedor que más vendió es {supplier}.",
       "category": "Rubro",
       "officialUnit": "Unidad oficial: {unit}",
       "totalSpent": "Gasto informado",

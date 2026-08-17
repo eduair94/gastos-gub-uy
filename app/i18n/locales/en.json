@@ -722,6 +722,8 @@
     },
     "detail": {
       "eyebrow": "Product",
+      "summary": "The Uruguayan state bought {name} across {contracts} awards between {first} and {last}. {buyers} agencies took part.",
+      "summaryTop": "The agency that bought most is {buyer}. The supplier that sold most is {supplier}.",
       "category": "Category",
       "officialUnit": "Official unit: {unit}",
       "totalSpent": "Reported spend",

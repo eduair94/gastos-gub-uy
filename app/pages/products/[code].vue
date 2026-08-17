@@ -323,6 +323,30 @@ useSeo(() => ({
         </div>
       </section>
 
+      <!-- ===== The record in one paragraph =====
+           Same reason as the agency and supplier pages: 46k catalogue codes whose
+           only unique content is a stat row reads as thin. Money is deliberately
+           NOT in the lead sentence — the source prices this record sparsely, so a
+           line count is the figure that is always true. -->
+      <p
+        v-if="product.firstYear && product.lastYear"
+        class="lede"
+      >
+        {{ t('products.detail.summary', {
+          name: description,
+          contracts: formatNumber(product.contractCount),
+          buyers: formatNumber(product.buyerCount),
+          first: product.firstYear,
+          last: product.lastYear,
+        }) }}
+        <template v-if="topBuyers[0] && topSuppliers[0]">
+          {{ t('products.detail.summaryTop', {
+            buyer: topBuyers[0].name,
+            supplier: topSuppliers[0].name,
+          }) }}
+        </template>
+      </p>
+
       <!-- ===== Anticipated tender (self-hides when no upcoming forecast) ===== -->
       <AnticipatedTenderCard
         :rubro="code"
@@ -595,6 +619,16 @@ useSeo(() => ({
 }
 
 /* ---- Stats ---- */
+/* The generated opening paragraph. Body-size primary text; the measure cap sits
+   on the <p> itself, never on a wrapper (DESIGN.md). */
+.lede {
+  margin: var(--s-5) 0 0;
+  max-width: 68ch;
+  font-size: var(--t-md);
+  line-height: 1.6;
+  color: var(--text);
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
