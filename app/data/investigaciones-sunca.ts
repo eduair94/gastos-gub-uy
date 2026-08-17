@@ -69,6 +69,14 @@ export interface SuncaRubro {
 
 export interface SuncaBloque { titulo: string, parrafos: string[] }
 
+/** Un contrato del carril de «escala». Sólo los siete que concentran la serie. */
+export interface SuncaContrato {
+  nombre: string
+  organismo: string
+  ano: string
+  monto: string
+}
+
 export interface SuncaContent {
   kicker: string
   titulo: string
@@ -76,7 +84,7 @@ export interface SuncaContent {
   alcance: string
   periodo: string
   origen: string
-  portada: { cifras: SuncaCifra[], parrafos: string[] }
+  portada: { cifras: SuncaCifra[], parrafos: string[], ficha: { titulo: string, filas: { k: string, v: string }[] } }
   acuerdo: SuncaBloque & { cronograma: { fecha: string, horas: string, nota: string }[] }
   hitos: { titulo: string, dek: string, items: SuncaHito[] }
   aritmetica: SuncaBloque & { cuentas: { formula: string, resultado: string, lectura: string }[] }
@@ -85,7 +93,7 @@ export interface SuncaContent {
     contrato: { titulo: string, subtitulo: string, total: string, rubros: SuncaRubro[] }
     derivacion: string[]
   }
-  escala: SuncaBloque
+  escala: SuncaBloque & { contratos: SuncaContrato[] }
   limites: { titulo: string, puntos: string[] }
   fuentes: SuncaFuente[]
 }
@@ -115,6 +123,22 @@ const CONTENT: Record<Locale, SuncaContent> = {
         'El tamaño de ese canal se ve en los rubros. En el mayor contrato de obra del registro —el saneamiento de OSE adjudicado en 2024 a SACEEM, CIEMSA, TEYMA y una empresa brasileña— la adjudicación publica 416 líneas de precio. Entre ellas hay 80 líneas llamadas «Ajuste Paramétrico» por 3.408 millones de pesos y 151 líneas llamadas «LL SS» —leyes sociales— por 2.824 millones. Juntas son el 20,59% del lado en pesos del contrato, y el contrato tiene rubros previstos hasta 2029.',
         'Con eso alcanza para una cuenta que el debate no hizo. Si la mano de obra con sus leyes sociales es el 20,16% de ese contrato, un aumento del 10% en el costo por hora agrega alrededor del 2% al contrato, no el 10% que se publicó. Para que un contrato de obra subiera 10% por esta vía, la mano de obra tendría que ser casi todo el costo. No lo es en ninguno de los contratos que pudimos abrir.',
       ],
+      ficha: {
+        titulo: 'El convenio en once líneas',
+        filas: [
+          { k: 'Ámbito', v: 'Grupo 9, subgrupo 01 — industria de la construcción y actividades complementarias' },
+          { k: 'Partes', v: 'SUNCA y las gremiales empresariales de la construcción' },
+          { k: 'Preacuerdo', v: '4 de agosto de 2026' },
+          { k: 'Asamblea', v: '13 de agosto de 2026, aprobado' },
+          { k: 'Firma', v: '15 de agosto de 2026, Dirección Nacional de Trabajo' },
+          { k: 'Vigencia', v: 'Abril de 2026 a marzo de 2031' },
+          { k: 'Jornada', v: 'De 44 a 40 horas semanales, entre 2027 y 2030' },
+          { k: 'Salario', v: 'Sin reducción. Ajuste de 5,17% retroactivo a abril de 2026' },
+          { k: 'Ajustes', v: 'Anuales cada abril hasta 2030, con correctivos por inflación' },
+          { k: 'Conflicto previo', v: 'Más de 120 días. El sindicato contó 126' },
+          { k: 'Empieza a bajar horas', v: '30 de agosto de 2027' },
+        ],
+      },
     },
     acuerdo: {
       titulo: 'Qué se acordó, exactamente',
@@ -249,6 +273,15 @@ const CONTENT: Record<Locale, SuncaContent> = {
         'La cara visible del ajuste paramétrico es más chica que eso, y hay que decirlo con precisión. En todo el corpus, 1.188 compras publican rubros con línea de ajuste paramétrico, y son de cuatro organismos: OSE, UTE, la Administración Nacional de Puertos y la Intendencia de Montevideo. En esas compras el ajuste paramétrico es el 8,90% del monto y las leyes sociales el 6,46%. El contrato de saneamiento de OSE pesa tres cuartas partes de ese agregado, así que el porcentaje describe sobre todo a ese contrato.',
         'Vale una última cifra, porque conecta las dos puntas de esta historia. El presidente de la Cámara de la Construcción que firmó el convenio, Alejandro Ruibal, es director de SACEEM. SACEEM tiene 48.034 millones de pesos adjudicados por el Estado en 130 compras, medido por su RUT en las dos grafías con que el registro lo escribe. Eso no describe ninguna irregularidad. Describe que quien negocia el costo laboral del sector es, además, uno de los mayores contratistas del Estado.',
       ],
+      contratos: [
+        { nombre: 'Circuito 3 · Ruta 14 centro-oeste, by pass Sarandí del Yí y conexión con la Ruta 3', organismo: 'Dirección Nacional de Vialidad', ano: '2020', monto: '25.921' },
+        { nombre: 'Circuito 5 · tramos de las rutas 14 y 15', organismo: 'Dirección Nacional de Vialidad', ano: '2023', monto: '18.958' },
+        { nombre: 'Grupo Vial Oriental uno', organismo: 'Dirección Nacional de Vialidad', ano: '2021', monto: '18.246' },
+        { nombre: 'Grupo Vial Oriental dos', organismo: 'Dirección Nacional de Vialidad', ano: '2022', monto: '17.056' },
+        { nombre: 'Centro de rehabilitación con tres unidades de internación, Libertad', organismo: 'Ministerio del Interior', ano: '2024', monto: '12.231' },
+        { nombre: 'Circuito 6 · Cuchilla Grande', organismo: 'Dirección Nacional de Vialidad', ano: '2023', monto: '11.612' },
+        { nombre: 'Grupo San José', organismo: 'Dirección Nacional de Vialidad', ano: '2022', monto: '10.369' },
+      ],
     },
     limites: {
       titulo: 'Lo que esta medición no puede decir',
@@ -300,6 +333,22 @@ const CONTENT: Record<Locale, SuncaContent> = {
         'The size of that channel shows up in the price lines. In the largest works contract on record — the OSE sanitation scheme awarded in 2024 to SACEEM, CIEMSA, TEYMA and a Brazilian firm — the award publishes 416 price lines. Among them are 80 lines called "Ajuste Paramétrico" worth 3,408 million pesos and 151 lines called "LL SS" — social contributions — worth 2,824 million. Together they are 20.59% of the peso side, and the contract has lines budgeted through 2029.',
         'That is enough for a calculation the debate never made. If labour plus its social contributions is 20.16% of that contract, a 10% rise in hourly cost adds about 2% to the contract, not the 10% that was published. For a works contract to rise 10% through this channel, labour would have to be nearly the whole cost. It is not, in any contract we could open.',
       ],
+      ficha: {
+        titulo: 'The agreement in eleven lines',
+        filas: [
+          { k: 'Scope', v: 'Group 9, subgroup 01 — construction industry and complementary activities' },
+          { k: 'Parties', v: 'SUNCA and the construction employer chambers' },
+          { k: 'Pre-agreement', v: '4 August 2026' },
+          { k: 'Assembly', v: '13 August 2026, approved' },
+          { k: 'Signed', v: '15 August 2026, National Labour Directorate' },
+          { k: 'Term', v: 'April 2026 to March 2031' },
+          { k: 'Week', v: 'From 44 to 40 hours, between 2027 and 2030' },
+          { k: 'Pay', v: 'No cut. 5.17% rise backdated to April 2026' },
+          { k: 'Rises', v: 'Annual each April through 2030, with inflation correctives' },
+          { k: 'Dispute before it', v: 'More than 120 days. The union counted 126' },
+          { k: 'Hours start falling', v: '30 August 2027' },
+        ],
+      },
     },
     acuerdo: {
       titulo: 'What was agreed, exactly',
@@ -433,6 +482,15 @@ const CONTENT: Record<Locale, SuncaContent> = {
         'The seven are six road schemes and one prison complex. The six road schemes are design, build, operate and finance contracts from the National Roads Directorate — circuits 3, 5 and 6, the two Grupo Vial Oriental contracts and San José — all denominated in indexed units. The seventh is the rehabilitation centre with three detention units at Libertad, San José, awarded by the Interior Ministry in 2024.',
         'The visible face of parametric adjustment is smaller than that, and it has to be said precisely. Across the whole corpus, 1,188 purchases publish items with a parametric adjustment line, and they come from four bodies: OSE, UTE, the National Ports Administration and the Montevideo city government. In those purchases parametric adjustment is 8.90% of the amount and social contributions 6.46%. The OSE sanitation contract is three quarters of that aggregate, so the percentage mostly describes that one contract.',
         'One last figure, because it links both ends of this story. The construction chamber president who signed the agreement, Alejandro Ruibal, is a director of SACEEM. SACEEM holds 48,034 million pesos awarded by the state across 130 purchases, measured by its tax ID in both spellings the record uses. That describes no irregularity. It describes that the person negotiating the sector\'s labour cost is also one of the state\'s largest contractors.',
+      ],
+      contratos: [
+        { nombre: 'Circuit 3 · Route 14 centre-west, Sarandí del Yí bypass and the link to Route 3', organismo: 'National Roads Directorate', ano: '2020', monto: '25,921' },
+        { nombre: 'Circuit 5 · sections of routes 14 and 15', organismo: 'National Roads Directorate', ano: '2023', monto: '18,958' },
+        { nombre: 'Grupo Vial Oriental one', organismo: 'National Roads Directorate', ano: '2021', monto: '18,246' },
+        { nombre: 'Grupo Vial Oriental two', organismo: 'National Roads Directorate', ano: '2022', monto: '17,056' },
+        { nombre: 'Rehabilitation centre with three detention units, Libertad', organismo: 'Interior Ministry', ano: '2024', monto: '12,231' },
+        { nombre: 'Circuit 6 · Cuchilla Grande', organismo: 'National Roads Directorate', ano: '2023', monto: '11,612' },
+        { nombre: 'Grupo San José', organismo: 'National Roads Directorate', ano: '2022', monto: '10,369' },
       ],
     },
     limites: {
