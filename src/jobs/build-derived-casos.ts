@@ -75,6 +75,23 @@ function slugify(s: string): string {
     .replace(/-+$/g, '')
 }
 
+/**
+ * La clave que identifica a UNA empresa, y no a una de sus grafías.
+ *
+ * EL CORPUS GUARDA EL MISMO RUT DE VARIAS FORMAS: «R/214535370019», «214535370019», con y sin
+ * prefijo. Agrupar por el `supplierId` crudo parte una empresa en varias: «S.A. EMISORAS DE
+ * TELEVISION Y ANEXOS SAETA» salía como CINCO fichas de «3 compras» cada una, cuando son
+ * quince compras de una sola empresa. Además de repetir, cada ficha subcontaba.
+ *
+ * Los dígitos son el RUT y son lo único estable. Si el id no tiene dígitos —pasa— se cae al
+ * nombre normalizado, que es peor pero no parte nada.
+ */
+function claveProveedor(supplierId: string, name: string): string {
+  const digits = supplierId.replace(/\D/g, '')
+  if (digits.length >= 8) return `rut:${digits}`
+  return `name:${name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '')}`
+}
+
 function money(uyu: number): string {
   if (uyu >= 1e9) return `$ ${(uyu / 1e9).toFixed(1)} mil millones`
   if (uyu >= 1e6) return `$ ${(uyu / 1e6).toFixed(1)} millones`
@@ -225,7 +242,7 @@ function buildOrganismo(buyerId: string, buyerName: string, rows: Row[], nameIsS
   }
 }
 
-function buildProveedor(supplierId: string, name: string, rows: Row[]): CasoDef {
+function buildProveedor(supplierIds: string[], name: string, rows: Row[]): CasoDef {
   const total = totalOf(rows)
   const per = period(rows.map(r => r.sourceYear))
   const reason = reasonLine(rows)
@@ -269,7 +286,9 @@ function buildProveedor(supplierId: string, name: string, rows: Row[]): CasoDef 
     organisms: organisms.length ? organisms.slice(0, 6) : ['Organismo no declarado'],
     suppliersNamed: [name],
     feedCoverage: 'likely',
-    query: { supplierIds: [supplierId], hasReiteracion: true },
+    // TODAS las grafías del mismo RUT. Con una sola, el cruce mostraría un tercio de las
+    // compras que la ficha dice contar.
+    query: { supplierIds, hasReiteracion: true },
     sources: sourcesFrom(rows),
     es,
     en,
@@ -417,20 +436,35 @@ async function main() {
   }
   console.log(`  grano organismo: ${nOrg} fichas`)
 
-  // Grano 2 — por proveedor. Se agrupa por RUT y NUNCA por nombre: el corpus guarda la misma
-  // empresa con dos grafías, y agrupar por nombre parte el grupo en dos.
-  const porProveedor = new Map<string, Row[]>()
+  // Grano 2 — por proveedor, agrupado por RUT CANÓNICO.
+  //
+  // Ni por nombre ni por el id crudo. Por nombre parte la empresa cargada con dos grafías
+  // (LIMITADA/LIMITATA). Por id crudo la parte igual, porque el mismo RUT está guardado con
+  // prefijo y sin prefijo: SAETA salía como cinco fichas de tres compras en vez de una de
+  // quince.
+  const porProveedor = new Map<string, { rows: Row[], ids: Set<string>, names: Set<string> }>()
   for (const r of rows) {
-    for (const id of r.supplierIds ?? []) {
-      porProveedor.set(id, [...(porProveedor.get(id) ?? []), r])
+    const ids = r.supplierIds ?? []
+    const names = r.supplierNames ?? []
+    for (const [i, id] of ids.entries()) {
+      const nombre = names[i] ?? names[0] ?? id
+      const clave = claveProveedor(id, nombre)
+      const g = porProveedor.get(clave) ?? { rows: [], ids: new Set<string>(), names: new Set<string>() }
+      g.rows.push(r)
+      g.ids.add(id)
+      if (nombre) g.names.add(nombre)
+      porProveedor.set(clave, g)
     }
   }
   let nProv = 0
-  for (const [supplierId, group] of porProveedor) {
-    if (group.length < MIN_POR_PROVEEDOR) continue
-    const name = group.flatMap(g => g.supplierNames)[0]
+  for (const g of porProveedor.values()) {
+    // Una compra puede repetirse si la empresa figura dos veces en el mismo release.
+    const unicas = [...new Map(g.rows.map(r => [r.ocid, r])).values()]
+    if (unicas.length < MIN_POR_PROVEEDOR) continue
+    // El nombre más largo suele ser el más completo («S.A.» contra «SOCIEDAD ANONIMA»).
+    const name = [...g.names].sort((a, b) => b.length - a.length)[0]
     if (!name) continue
-    defs.push(buildProveedor(supplierId, name, group))
+    defs.push(buildProveedor([...g.ids], name, unicas))
     nProv++
   }
   console.log(`  grano proveedor: ${nProv} fichas`)
