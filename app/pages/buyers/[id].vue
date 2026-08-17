@@ -267,6 +267,10 @@ useSeo(() => ({
   path: `/buyers/${encodeURIComponent(buyerId.value)}`,
   noindex: notFound.value,
   kicker: 'Organismo',
+  // Spanish source data in translated chrome: the name, the figures and the item
+  // text are identical in /en, so the English twin is a near-duplicate answering
+  // no English query. Indexed in es only. See useSeo's defaultLocaleOnly.
+  defaultLocaleOnly: true,
   stat: formatMoney(buyer.value?.totalSpending, 'UYU', { compact: true }),
   jsonLd: notFound.value
     ? undefined

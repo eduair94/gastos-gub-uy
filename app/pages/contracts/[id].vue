@@ -944,6 +944,10 @@ useSeo(() => ({
   path: `/contracts/${id.value}`,
   noindex: notFound.value,
   kicker: t('contract.eyebrow'),
+  // Spanish source data in translated chrome: the name, the figures and the item
+  // text are identical in /en, so the English twin is a near-duplicate answering
+  // no English query. Indexed in es only. See useSeo's defaultLocaleOnly.
+  defaultLocaleOnly: true,
   stat: showsMoney.value ? formatMoney(amount.value, currency.value) : undefined,
   jsonLd: contract.value
     ? [

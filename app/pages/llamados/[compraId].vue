@@ -98,6 +98,10 @@ useSeo({
   // forced match and risk a Search Console validation error) — a plain WebPage states the
   // facts without overclaiming a type.
   kicker: 'Llamado abierto',
+  // Spanish source data in translated chrome: the name, the figures and the item
+  // text are identical in /en, so the English twin is a near-duplicate answering
+  // no English query. Indexed in es only. See useSeo's defaultLocaleOnly.
+  defaultLocaleOnly: true,
   // A call that does not exist gets no graph: describing a missing thing is
   // exactly what makes a soft 404 look like a real page.
   ...(notFound.value
