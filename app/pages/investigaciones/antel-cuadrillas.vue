@@ -2,7 +2,7 @@
 /**
  * «La cuadrilla de Antel»: tercerización de la obra de fibra, y el precio del dicho.
  *
- * EL ORDEN DE LA PÁGINA ES EL ARGUMENTO. Primero la afirmación textual, después la mitad que se
+ * EL ORDEN DE LA PÁGINA ES EL ARGUMENTO. Primero el dicho textual, después la mitad que se
  * verifica, después la cuenta que desarma la otra mitad, y recién ahí lo que NO se puede saber.
  * Mover «lo que no se puede saber» al final convertiría una respuesta en una acusación: el lector
  * cerraría la página creyendo que hay un precio oculto probado, que es exactamente lo que no hay.
@@ -55,7 +55,7 @@ useSeo(() => ({
 const LABELS = {
   es: {
     sources: 'Fuentes',
-    claim: 'La afirmación',
+    claim: 'El dicho',
     schedule: 'El rubro, tal como figura en la planilla de cotización',
     code: 'Código',
     item: 'Ítem',
@@ -74,7 +74,7 @@ const LABELS = {
   },
   en: {
     sources: 'Sources',
-    claim: 'The claim',
+    claim: 'The saying',
     schedule: 'The line item, as it appears in the price schedule',
     code: 'Code',
     item: 'Item',
@@ -137,7 +137,7 @@ const leakFacts = computed(() => [
       </div>
     </InvSection>
 
-    <!-- La afirmación, textual y separada del resto -->
+    <!-- El dicho, textual y separado del resto -->
     <InvSection :title="c.afirmacion.titulo">
       <blockquote class="an-claim">
         <p class="inv-kicker">
@@ -420,7 +420,7 @@ const leakFacts = computed(() => [
 <style scoped lang="scss">
 .an-intro { margin-top: var(--s-6); }
 
-/* La afirmación, citada. No lleva oro: no es plata, es un dicho. */
+/* El dicho, citado. No lleva oro: no es plata. */
 .an-claim {
   margin: 0 0 var(--s-6);
   padding: var(--s-4) var(--s-5);
