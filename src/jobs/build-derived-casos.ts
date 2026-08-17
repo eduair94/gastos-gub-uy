@@ -135,6 +135,24 @@ function reasonLine(rows: Row[]): { es: string, en: string } {
   }
 }
 
+/**
+ * ¿La causal dominante es presupuestal?
+ *
+ * IMPORTA PARA NO SER INJUSTOS. La causal que más se repite, lejos, es que el organismo no
+ * tenía disponibilidad en el rubro. Eso es un problema del comprador y no dice absolutamente
+ * nada de la empresa que vendió. Como la ficha por proveedor lleva el nombre de la empresa en
+ * el título, cuando el motivo es presupuestal la ficha lo declara ahí mismo, y no escondido
+ * en el caveat.
+ */
+function esPresupuestal(rows: Row[]): boolean {
+  const reasons = rows.map(r => r.reason).filter((x): x is string => Boolean(x))
+  if (!reasons.length) return false
+  const counts = new Map<string, number>()
+  for (const r of reasons) counts.set(r, (counts.get(r) ?? 0) + 1)
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]!
+  return /disponibilidad|presupuest|rubro|cr[ée]dito/i.test(top[0])
+}
+
 /** Los artículos del TOCAF que las observaciones del grupo señalan como incumplidos. */
 function articlesLine(rows: Row[]): { es: string, en: string } {
   const arts = [...new Set(rows.flatMap(r => r.breachedArticles ?? []))].sort((a, b) => Number(a) - Number(b))
@@ -212,9 +230,19 @@ function buildProveedor(supplierId: string, name: string, rows: Row[]): CasoDef 
   const per = period(rows.map(r => r.sourceYear))
   const reason = reasonLine(rows)
   const organisms = [...new Set(rows.map(r => r.buyerName).filter((x): x is string => Boolean(x)))]
+  // Cuando la causal es presupuestal, la ficha lo dice en el dek y no en la letra chica: el
+  // título lleva el nombre de la empresa, y el lector tiene que saber en la primera línea que
+  // el reparo es del comprador.
+  const presupuestal = esPresupuestal(rows)
+  const aclaracion = presupuestal
+    ? ' El motivo declarado es presupuestal —el organismo no tenía disponibilidad en el rubro—, así que el reparo es a la cuenta del comprador y no a la empresa.'
+    : ''
+  const aclaracionEn = presupuestal
+    ? ' The stated reason is budgetary — the body had no funds available in the line — so the objection concerns the buyer\'s accounts, not the company.'
+    : ''
   const es: CasoText = {
     title: `${name}: ${rows.length} compras que se pagaron sobre una observación`,
-    dek: `El Tribunal de Cuentas observó ${rows.length} compras a esta empresa. Los organismos las reiteraron y las pagaron.`,
+    dek: `El Tribunal de Cuentas observó ${rows.length} compras a esta empresa. Los organismos las reiteraron y las pagaron.${aclaracion}`,
     contexto: `Esta ficha mira el mismo hecho desde el lado del proveedor. Agrupa por RUT y no por nombre, porque el corpus guarda la misma empresa con más de una grafía. Entre ${per}, ${organisms.length} organismo(s) reiteraron gastos observados en compras a ${name}.`,
     hallazgo: `Las ${rows.length} compras suman ${money(total)} en pesos uruguayos normalizados. ${reason.es}`,
     statusNote: `Cifra medida sobre el corpus el día que corrió el armador.`,
@@ -223,7 +251,7 @@ function buildProveedor(supplierId: string, name: string, rows: Row[]): CasoDef 
   }
   const en: CasoText = {
     title: `${name}: ${rows.length} purchases paid over an objection`,
-    dek: `The Court of Auditors objected to ${rows.length} purchases from this company. The buying bodies overrode and paid.`,
+    dek: `The Court of Auditors objected to ${rows.length} purchases from this company. The buying bodies overrode and paid.${aclaracionEn}`,
     contexto: `This file looks at the same fact from the supplier's side. It groups by tax id, not by name, because the corpus stores the same company under more than one spelling. Between ${per}, ${organisms.length} body/bodies overrode objections on purchases from ${name}.`,
     hallazgo: `The ${rows.length} purchases add up to ${moneyEn(total)} in normalised Uruguayan pesos. ${reason.en}`,
     statusNote: `Figure measured against the corpus on the day the builder ran.`,
