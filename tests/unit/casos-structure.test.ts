@@ -15,7 +15,7 @@ import type { CasoDef } from '../../app/server/utils/casos'
 
 const STATUSES = new Set([
   'condena', 'procesamiento', 'formalizacion', 'imputacion', 'juicio', 'investigacion',
-  'denuncia', 'absolucion', 'archivo', 'rescision', 'auditoria', 'sobrecosto',
+  'denuncia', 'absolucion', 'archivo', 'rescision', 'auditoria', 'pronunciamiento', 'sobrecosto',
   'inconcluso', 'en-ejecucion', 'terminado', 'debate', 'sin-resolver',
 ])
 const KINDS = new Set(['judicial', 'auditoria', 'gestion', 'debate'])

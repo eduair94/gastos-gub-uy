@@ -60,6 +60,14 @@ export type CasoStatus
     | 'rescision'
   // audit
     | 'auditoria'
+  /**
+   * El órgano de control SE PRONUNCIÓ, y no sabemos en qué sentido.
+   *
+   * Existe porque `auditoria` se rotula «Observado», y eso es una afirmación. Para las fichas
+   * del archivo del Tribunal de Cuentas sería falsa: su ficha pública trae sólo el VISTO, y si
+   * el gasto fue observado consta únicamente en el PDF, que es un escaneo.
+   */
+    | 'pronunciamiento'
   // management / policy
     | 'sobrecosto'
     | 'inconcluso'

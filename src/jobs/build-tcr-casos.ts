@@ -152,7 +152,7 @@ function buildCompra(ocid: string, rows: Res[]): CasoDef {
     theme: 'tribunal-de-cuentas',
     period: per,
     statusKind: 'auditoria',
-    status: 'auditoria',
+    status: 'pronunciamiento',
     organisms: [organism],
     feedCoverage: 'likely',
     // Por OCID exacto: la resolución nombra UNA compra y la ficha muestra esa compra.
@@ -193,7 +193,7 @@ function buildOrganismo(organism: string, rows: Res[]): CasoDef {
     theme: 'tribunal-de-cuentas',
     period: per,
     statusKind: 'auditoria',
-    status: 'auditoria',
+    status: 'pronunciamiento',
     organisms: [organism],
     feedCoverage: 'likely',
     // Las compras atadas de este organismo, por OCID exacto. Es el conjunto, no el padrón.

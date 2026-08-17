@@ -84,6 +84,12 @@ async function main() {
     if (!c.organisms.length) errors.push(`${at}: sin organismo`)
     if (!c.emoji) errors.push(`${at}: sin emoji`)
     if (c.statusKind !== 'auditoria') errors.push(`${at}: statusKind debe ser "auditoria", es "${c.statusKind}"`)
+    // El RÓTULO también afirma. `auditoria` se muestra como «Observado», y en el tema del
+    // Tribunal eso sería decir lo único que no podemos decir. El texto de la ficha estaba
+    // bien y la insignia de la tarjeta lo contradecía.
+    if (c.theme === 'tribunal-de-cuentas' && c.status !== 'pronunciamiento') {
+      errors.push(`${at}: el status debe ser "pronunciamiento" y es "${c.status}" — «Observado» afirma un fallo que no consta`)
+    }
 
     for (const s of c.sources) {
       if (!/^https?:\/\/\S+$/i.test(s.url)) errors.push(`${at}: fuente sin URL válida: ${s.url}`)
