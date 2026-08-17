@@ -365,6 +365,32 @@ useSeo(() => ({
         </div>
       </dl>
 
+      <!-- ===== The record in one paragraph =====
+           Same reason as the agency page: 43k supplier profiles whose only unique
+           content is a stat row and a table read as thin, and give an assistant
+           nothing to quote. Both sentences are generated from this firm's own
+           loaded figures. The second one needs `stats`, which the source omits
+           for suppliers with no published breakdown — hence the guard. -->
+      <p
+        v-if="activeYears.length"
+        class="lede"
+      >
+        {{ t('suppliers.detail.summary', {
+          name: supplier.name,
+          amount: formatMoney(supplier.totalValue, 'UYU', { compact: true }),
+          contracts: formatNumber(supplier.totalContracts),
+          buyers: formatNumber(supplier.buyerCount),
+          first: activeYears[0],
+          last: activeYears[activeYears.length - 1],
+        }) }}
+        <template v-if="concentration">
+          {{ t('suppliers.detail.summaryTop', {
+            buyer: concentration.name,
+            share: formatNumber(concentration.pct),
+          }) }}
+        </template>
+      </p>
+
       <!-- ===== Who it competes against =====
            Se presentó a N llamados y ganó M, más los rivales con los que más coincide.
            Lo habilita el bloque de oferentes de la ficha del gobierno: el feed OCDS
@@ -764,6 +790,16 @@ useSeo(() => ({
   margin: 0;
   font-size: var(--t-sm);
   color: var(--text-muted);
+}
+
+/* The generated opening paragraph. Body-size primary text; the measure cap sits
+   on the <p> itself, never on a wrapper (DESIGN.md). */
+.lede {
+  margin: var(--s-5) 0 0;
+  max-width: 68ch;
+  font-size: var(--t-md);
+  line-height: 1.6;
+  color: var(--text);
 }
 
 /* ---- Stat row ---- */

@@ -796,6 +796,8 @@
     },
     "detail": {
       "eyebrow": "Supplier",
+      "summary": "{name} received {amount} from the Uruguayan state across {contracts} awards between {first} and {last}. It sold to {buyers} agencies.",
+      "summaryTop": "Its largest buyer is {buyer}, with {share}% of recorded spending.",
       "totalEarned": "Total received",
       "contractCount": "Contracts",
       "buyerCount": "Agencies that bought from them",
@@ -1042,6 +1044,8 @@
     },
     "detail": {
       "eyebrow": "Agency",
+      "summary": "{name} records {contracts} awards with {suppliers} suppliers between {first} and {last}.",
+      "summaryTop": "Its largest supplier is {supplier}, with {share}% of recorded spending.",
       "totalSpent": "Total spent",
       "contractCount": "Contracts",
       "supplierCount": "Distinct suppliers",

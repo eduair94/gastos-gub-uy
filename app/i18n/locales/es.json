@@ -796,6 +796,8 @@
     },
     "detail": {
       "eyebrow": "Proveedor",
+      "summary": "{name} cobró {amount} del Estado uruguayo en {contracts} adjudicaciones entre {first} y {last}. Le vendió a {buyers} organismos.",
+      "summaryTop": "Su mayor comprador es {buyer}, con el {share}% del gasto registrado.",
       "totalEarned": "Total cobrado",
       "contractCount": "Contratos",
       "buyerCount": "Organismos que le compraron",
@@ -1042,6 +1044,8 @@
     },
     "detail": {
       "eyebrow": "Organismo",
+      "summary": "{name} registra {contracts} adjudicaciones con {suppliers} proveedores entre {first} y {last}.",
+      "summaryTop": "Su mayor proveedor es {supplier}, con el {share}% del gasto registrado.",
       "totalSpent": "Total gastado",
       "contractCount": "Contratos",
       "supplierCount": "Proveedores distintos",

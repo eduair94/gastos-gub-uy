@@ -355,6 +355,31 @@ useSeo(() => ({
         </div>
       </section>
 
+      <!-- ===== The record in one paragraph =====
+           Every figure here is already on the page as a number in a stat tile or
+           a chart. It is restated as prose on purpose: a page whose only unique
+           content is a table reads as thin to a crawler and gives an assistant
+           nothing quotable. Both sentences are generated from this agency's own
+           loaded data, so no two agency pages say the same thing. -->
+      <p
+        v-if="firstYear && lastYear"
+        class="lede"
+      >
+        {{ t('buyers.detail.summary', {
+          name,
+          contracts: formatNumber(buyer?.totalContracts),
+          suppliers: formatNumber(buyer?.supplierCount),
+          first: firstYear,
+          last: lastYear,
+        }) }}
+        <template v-if="concentration !== null && suppliers[0]">
+          {{ t('buyers.detail.summaryTop', {
+            supplier: suppliers[0].name,
+            share: formatNumber(Math.round(concentration)),
+          }) }}
+        </template>
+      </p>
+
       <!-- ===== What the live record covers ===== -->
       <p
         v-if="firstPricedYear"
@@ -707,6 +732,17 @@ useSeo(() => ({
 }
 
 /* ---- Basis note ---- */
+/* The generated opening paragraph. Primary text, so it reads at body size and
+   full ink — `.basis` below is the caveat voice and stays muted and boxed.
+   The measure cap sits on the <p> itself, never on a wrapper (DESIGN.md). */
+.lede {
+  margin: var(--s-5) 0 0;
+  max-width: 68ch;
+  font-size: var(--t-md);
+  line-height: 1.6;
+  color: var(--text);
+}
+
 .basis {
   margin: var(--s-5) 0 0;
   padding: var(--s-3) var(--s-4);
