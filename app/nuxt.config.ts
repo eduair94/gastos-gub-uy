@@ -317,6 +317,7 @@ export default defineNuxtConfig({
       blog: { sources: ['/api/__sitemap__/blog'] },
       diario: { sources: ['/api/__sitemap__/diario'] },
       years: { sources: ['/api/__sitemap__/years'] },
+      canales: { sources: ['/api/__sitemap__/canales'] },
     },
   },
 

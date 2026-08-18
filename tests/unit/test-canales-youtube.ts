@@ -18,10 +18,13 @@ import {
   REJECTED,
   TOPIC_TERMS,
   VERIFIED_ON,
+  channelPath,
   channelUrl,
+  getChannelBySlug,
   isActive,
   matchesTopic,
 } from '../../app/data/canales-youtube'
+import { SAMPLED_ON, SAMPLES } from '../../app/data/canales-youtube-muestra'
 
 const ids = CHANNELS.map(c => c.id)
 assert.equal(new Set(ids).size, ids.length, 'channel ids must be unique')
@@ -139,5 +142,53 @@ for (const term of TOPIC_TERMS) {
   assert.match(term, /^[a-z0-9][a-z0-9 -]*$/, `topic term "${term}" must carry no accents or metacharacters`)
 }
 assert.equal(new Set(TOPIC_TERMS).size, TOPIC_TERMS.length, 'topic terms must be unique')
+
+// ─── Fichas por canal ────────────────────────────────────────────────────────────
+
+const slugs = CHANNELS.map(c => c.slug)
+assert.equal(new Set(slugs).size, slugs.length, 'channel slugs must be unique')
+for (const c of CHANNELS) {
+  assert.match(c.slug, /^[a-z0-9]+(-[a-z0-9]+)*$/, `${c.name}: slug must be kebab-case ASCII`)
+  assert.equal(channelPath(c), `/canales-youtube/${c.slug}`)
+  assert.equal(getChannelBySlug(c.slug)?.id, c.id, `${c.name}: slug must resolve back to the channel`)
+}
+assert.equal(getChannelBySlug('no-existe'), undefined)
+
+// El bloque parlamentario es un hecho institucional y sólo lo llevan los partidos.
+for (const c of CHANNELS) {
+  if (c.bloc) {
+    assert.equal(c.category, 'partidos', `${c.name}: bloc only belongs to a party channel`)
+    assert.ok(c.bloc === 'gobierno' || c.bloc === 'oposicion', `${c.name}: unknown bloc`)
+  }
+}
+const parties = CHANNELS.filter(c => c.category === 'partidos')
+for (const p of parties) {
+  assert.ok(p.bloc, `${p.name}: a party channel must say whether it governs or opposes`)
+}
+// Uno solo gobierna. Si algún día son dos, es porque cambió el gobierno y hay que revisarlo.
+assert.equal(parties.filter(p => p.bloc === 'gobierno').length, 1, 'exactly one party channel governs')
+
+// ─── La medición por canal ───────────────────────────────────────────────────────
+
+assert.match(SAMPLED_ON, /^\d{4}-\d{2}-\d{2}$/)
+for (const c of CHANNELS) {
+  const s = SAMPLES[c.id]
+  assert.ok(s, `${c.name}: missing its measured sample`)
+  assert.ok(s.n >= 0, `${c.name}: sample size must not be negative`)
+  assert.ok(s.topicHits <= s.n, `${c.name}: topic hits cannot exceed the sample (${s.topicHits} > ${s.n})`)
+  for (const [party, n] of Object.entries(s.mentions)) {
+    assert.ok(n > 0, `${c.name}: a zero mention must be absent, not stored (${party})`)
+    assert.ok(n <= s.n, `${c.name}: ${party} mentions cannot exceed the sample`)
+  }
+}
+// No sobran filas: una medición huérfana apuntaría a un canal que ya no publicamos.
+for (const id of Object.keys(SAMPLES)) {
+  assert.ok(CHANNELS.some(c => c.id === id), `sample ${id} has no channel`)
+}
+
+// El canal del partido de gobierno nombra a su propio partido: es la señal que prueba
+// que el conteo mide algo y no ruido.
+const fa = CHANNELS.find(c => c.slug === 'frente-amplio')!
+assert.ok((SAMPLES[fa.id]?.mentions.fa ?? 0) > 0, 'the governing party channel must name its own party')
 
 console.log(`✓ canales-youtube: ${CHANNELS.length} canales, ${REJECTED.length} descartados, ${GAPS.length} vacíos`)

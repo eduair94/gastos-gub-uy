@@ -44,14 +44,28 @@ export type Category = 'estado' | 'medios' | 'partidos' | 'analisis'
 /** Cómo se probó que el canal es uruguayo y es de quien dice ser. */
 export type Proof = 'pais' | 'sitio'
 
+/**
+ * Dónde está el canal respecto del gobierno, cuando eso es un hecho institucional.
+ *
+ * Sólo lo llevan los partidos. El Frente Amplio gobierna desde marzo de 2025 y el resto
+ * de los partidos con bancas está fuera del gobierno. No es una ubicación ideológica:
+ * a los medios NO se les pone etiqueta, y en su lugar la ficha publica una medición de
+ * lo que cada uno publica (ver ~/data/canales-youtube-muestra).
+ */
+export type Bloc = 'gobierno' | 'oposicion'
+
 export interface Channel {
   /** Identificador de YouTube (UC…). Es la clave estable: el handle cambia. */
   id: string
   /** Nombre tal como lo publica el canal. */
   name: string
+  /** Parte final de la URL de su ficha en este sitio. */
+  slug: string
   /** Handle actual. Se muestra, pero los enlaces salen por `id`. */
   handle: string
   category: Category
+  /** Sólo partidos. Hecho institucional, no ubicación ideológica. */
+  bloc?: Bloc
   /** Qué publica el canal. */
   what: Bi
   /** Por qué sirve para seguir el dinero público. */
@@ -87,6 +101,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCz1Li9JcQB9XP-HfgN0IYLQ',
     name: 'Presidencia Uruguay',
+    slug: 'presidencia',
     handle: '@PresidenciaUruguay-b2s',
     category: 'estado',
     what: {
@@ -108,6 +123,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCyM7oro5NhR5oPyMEFB_rUA',
     name: 'Cámara de Senadores',
+    slug: 'camara-de-senadores',
     handle: '@SenadoUY',
     category: 'estado',
     what: {
@@ -129,6 +145,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCUxioxgZ7obrP3wVJApAK1w',
     name: 'Cámara de Representantes',
+    slug: 'camara-de-representantes',
     handle: '@diputados_uy',
     category: 'estado',
     what: {
@@ -150,6 +167,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCMHQqhtbpxfcnPPYpryapHA',
     name: 'Canal 5 Uruguay',
+    slug: 'canal-5',
     handle: '@Canal5UY',
     category: 'estado',
     what: {
@@ -171,6 +189,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCcEFFCUo9fD5DK1FcclyKUA',
     name: 'TV Ciudad',
+    slug: 'tv-ciudad',
     handle: '@TVCiudad6.1',
     category: 'estado',
     what: {
@@ -192,6 +211,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCfV6oJPalBI6mXUwG6p2KZQ',
     name: 'Intendencia de Montevideo',
+    slug: 'intendencia-de-montevideo',
     handle: '@IntendenciaMdeo',
     category: 'estado',
     what: {
@@ -214,6 +234,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UC9fkm72wx-bBK-le5rYh2Fw',
     name: 'Banco Central del Uruguay',
+    slug: 'banco-central',
     handle: '@BCUUy',
     category: 'estado',
     what: {
@@ -236,6 +257,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCVKp6bAT-JfruLq39qKsQyA',
     name: 'INE Uruguay',
+    slug: 'ine',
     handle: '@ine_uruguay',
     category: 'estado',
     what: {
@@ -258,6 +280,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCu6vr8WRDa_4vxKeZZS7sxg',
     name: 'Ministerio de Economía y Finanzas',
+    slug: 'ministerio-de-economia',
     handle: '@DGSUruguay',
     category: 'estado',
     what: {
@@ -279,6 +302,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCpA43PbOMswp_XMOdsHBUdw',
     name: 'Oficina de Planeamiento y Presupuesto',
+    slug: 'opp',
     handle: '@opp_uruguay',
     category: 'estado',
     what: {
@@ -300,6 +324,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCY04W7gCXX-POpNbSRArhLA',
     name: 'Auditoría Interna de la Nación',
+    slug: 'auditoria-interna',
     handle: '@auditoriainternadelanacion9617',
     category: 'estado',
     what: {
@@ -321,6 +346,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UC0vIwy6dZNIBRzdNw87CIhg',
     name: 'Agencia Reguladora de Compras Estatales',
+    slug: 'arce',
     handle: '@accegubuy',
     category: 'estado',
     what: {
@@ -344,6 +370,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCp6X5jzfmwbOeclRArOi18g',
     name: 'Canal 4',
+    slug: 'canal-4',
     handle: '@Canal4uy',
     category: 'medios',
     what: {
@@ -366,6 +393,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCJI9kSwvvHX2CJeF8iZ6x8Q',
     name: 'Canal 10 Uruguay',
+    slug: 'canal-10',
     handle: '@Canal10UruguayOficial',
     category: 'medios',
     what: {
@@ -387,6 +415,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCimPJKAbuM6z6b6DPZz86Mw',
     name: 'Teledoce',
+    slug: 'teledoce',
     handle: '@Teledocecom',
     category: 'medios',
     what: {
@@ -409,6 +438,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCA4VRT895OOPPHq-pc2V2CQ',
     name: 'VTV Uruguay',
+    slug: 'vtv',
     handle: '@VTVSitioOficial',
     category: 'medios',
     what: {
@@ -430,6 +460,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCLvbVJDsVX4-qoyladIiVaQ',
     name: 'El Observador',
+    slug: 'el-observador',
     handle: '@ObservaUY',
     category: 'medios',
     what: {
@@ -451,6 +482,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCzj1iuImjo-Eb8JMELC1Jwg',
     name: 'En Perspectiva',
+    slug: 'en-perspectiva',
     handle: '@EnPerspectiva',
     category: 'medios',
     what: {
@@ -472,6 +504,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCu0rrtxKLExB_fNSAJ_SU9A',
     name: 'la diaria',
+    slug: 'la-diaria',
     handle: '@ladiaria_',
     category: 'medios',
     what: {
@@ -494,6 +527,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCwxfiP2WBmLEblsrGgwWNMA',
     name: 'DelSol 99.5 FM',
+    slug: 'delsol',
     handle: '@DelSolUy',
     category: 'medios',
     what: {
@@ -515,6 +549,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UC3QAqpAruUVvqKuWOzmkItg',
     name: 'El País Uruguay',
+    slug: 'el-pais',
     handle: '@elpaisuy',
     category: 'medios',
     what: {
@@ -536,6 +571,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UC0HcjuycMRw7SbZ7s4CnaGQ',
     name: 'Sarandí 690',
+    slug: 'sarandi-690',
     handle: '@sarandi690ok',
     category: 'medios',
     what: {
@@ -557,6 +593,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCa2cus7gyarXD8049iaLHBg',
     name: 'Búsqueda',
+    slug: 'busqueda',
     handle: '@busquedaonline',
     category: 'medios',
     what: {
@@ -578,6 +615,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCp-xwj7EBBAWG6Kuu5D5ECw',
     name: 'Brecha',
+    slug: 'brecha',
     handle: '@SemanarioBrecha',
     category: 'medios',
     what: {
@@ -598,6 +636,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCu-U3hwhBTR3lzyZnPUL2Hg',
     name: 'M24',
+    slug: 'm24',
     handle: '@M24Radio',
     category: 'medios',
     what: {
@@ -620,7 +659,9 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCV8W9j9ibdHeOWNudYKouIA',
     name: 'Frente Amplio',
+    slug: 'frente-amplio',
     handle: '@frenteampliotv',
+    bloc: 'gobierno',
     category: 'partidos',
     what: {
       es: 'Actos, informes de bancada y comunicados del partido de gobierno.',
@@ -642,7 +683,9 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UChOvhoIUvGENpuCPN3n-1ag',
     name: 'Partido Nacional',
+    slug: 'partido-nacional',
     handle: '@PartidoNacionalTV',
+    bloc: 'oposicion',
     category: 'partidos',
     what: {
       es: 'Conferencias del Directorio y actividad de sus legisladores.',
@@ -664,7 +707,9 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCjuOpeUQHpRKe114HUdyayA',
     name: 'Partido Independiente',
+    slug: 'partido-independiente',
     handle: '@PIndependienteUY',
+    bloc: 'oposicion',
     category: 'partidos',
     what: {
       es: 'Declaraciones de sus dirigentes sobre la agenda económica.',
@@ -685,7 +730,9 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UChcXJjUHFD8CwtR3BDWcPTw',
     name: 'Partido Colorado',
+    slug: 'partido-colorado',
     handle: '@PartidoColorado',
+    bloc: 'oposicion',
     category: 'partidos',
     what: {
       es: 'Actos y eventos del partido.',
@@ -705,7 +752,9 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UC5MglaJ502q71hg3tIS4vdQ',
     name: 'Cabildo Abierto',
+    slug: 'cabildo-abierto',
     handle: '@CabildoAbierto',
+    bloc: 'oposicion',
     category: 'partidos',
     what: {
       es: 'Canal oficial del partido. No publica desde noviembre de 2024.',
@@ -726,7 +775,9 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCOIYve64PJyzQMxaw3fMN7Q',
     name: 'Identidad Soberana',
+    slug: 'identidad-soberana',
     handle: '@identidadsoberana5983',
+    bloc: 'oposicion',
     category: 'partidos',
     what: {
       es: 'Canal oficial del partido, con cuatro videos. El último es de agosto de 2022.',
@@ -747,6 +798,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCnUBLJIHakWlH5foMVFnsSg',
     name: 'Vértice',
+    slug: 'vertice',
     handle: '@Vertice_uy',
     category: 'analisis',
     what: {
@@ -766,6 +818,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UCKp4MO61532tT7x5Gx0vj-A',
     name: 'CED Uruguay',
+    slug: 'ced',
     handle: '@ceduruguay',
     category: 'analisis',
     what: {
@@ -787,6 +840,7 @@ export const CHANNELS: Channel[] = [
   {
     id: 'UC-93r-Go3w15TiNHtYhKdAA',
     name: 'CERES Uruguay',
+    slug: 'ceres',
     handle: '@ceresuruguay6980',
     category: 'analisis',
     what: {
@@ -949,6 +1003,15 @@ export const LIMITES: Bi[] = [
 
 export function channelUrl(id: string): string {
   return `https://www.youtube.com/channel/${id}`
+}
+
+/** Ficha del canal dentro de este sitio. Sin prefijo de idioma: eso lo pone `localePath`. */
+export function channelPath(channel: Channel): string {
+  return `/canales-youtube/${channel.slug}`
+}
+
+export function getChannelBySlug(slug: string): Channel | undefined {
+  return CHANNELS.find(c => c.slug === slug)
 }
 
 /** Activo = publicó dentro de la ventana. Se mide contra `now`, nunca contra el reloj del módulo. */
