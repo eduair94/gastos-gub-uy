@@ -239,6 +239,16 @@ export const INV_CONTENT = {
           "7 compras en 24 años"
         ]
       },
+      "cardDocumentoFa": {
+        "eyebrow": "Documento del VIII Congreso · agosto de 2026",
+        "title": "El documento del FA, contado por cinco medios y medido contra tres fuentes",
+        "dek": "El Plenario Nacional aprobó 63 páginas y el partido las publicó seis días después. Medimos su texto y chequeamos cinco de sus afirmaciones: dos se confirman, una se corrige por 30 millones de dólares y dos no se pueden decidir con dato público.",
+        "tags": [
+          "«85% de 63 prioridades» no está en el texto",
+          "3 de 17 menciones de seguridad",
+          "US$ 970 M, no 1.000"
+        ]
+      },
       "cardSunca": {
         "eyebrow": "Convenio del Grupo 9 · 2026–2031",
         "title": "Cuatro horas menos: qué ganó la construcción y por dónde pasa la cuenta",
@@ -709,6 +719,16 @@ export const INV_CONTENT = {
           "668 deaths in 2025",
           "19.16 per 100,000",
           "7 purchases in 24 years"
+        ]
+      },
+      "cardDocumentoFa": {
+        "eyebrow": "VIII Congress document · August 2026",
+        "title": "The Frente Amplio document, told by five outlets and measured against three sources",
+        "dek": "The National Plenary approved 63 pages and the party published them six days later. We measured its text and checked five of its claims: two hold, one is off by 30 million dollars, and two cannot be settled with public data.",
+        "tags": [
+          "\"85% of 63 priorities\" is not in the text",
+          "3 of 17 security mentions",
+          "US$ 970 M, not 1,000"
         ]
       },
       "cardSunca": {

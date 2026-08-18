@@ -81,6 +81,7 @@ const series = computed(() => [
     cards: [
       { path: '/investigaciones/mejor-o-peor', emoji: '📉', ...c.value.cardMejorPeor },
       { path: '/investigaciones/suicidios', emoji: '🕯️', ...c.value.cardSuicidios },
+      { path: '/investigaciones/documento-fa', emoji: '📄', ...c.value.cardDocumentoFa },
       { path: '/investigaciones/sunca', emoji: '🦺', ...c.value.cardSunca },
       { path: '/investigaciones/vivienda-promovida', emoji: '🏘️', ...c.value.cardVivienda },
       { path: '/investigaciones/diario', emoji: '🗓️', ...c.value.cardDiario },
