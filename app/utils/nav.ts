@@ -186,6 +186,7 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'invMensajes', to: localePath('/investigaciones/mensajes-del-estado'), icon: 'mdi-bullhorn-variant-outline' },
             { key: 'invVivienda', to: localePath('/investigaciones/vivienda-promovida'), icon: 'mdi-home-city-outline' },
             { key: 'invDiario', to: localePath('/investigaciones/diario'), icon: 'mdi-calendar-text-outline' },
+            { key: 'invCanales', to: localePath('/investigaciones/canales-privados'), icon: 'mdi-television-play' },
           ],
         },
         {
