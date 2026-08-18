@@ -2358,7 +2358,14 @@
     "authorContact": "Contacto"
   },
   "footer": {
-    "source": "Datos: Compras Estatales (OCDS) vía catalogodatos.gub.uy",
+    "dataHead": "Datos",
+    "sourceLabel": "Fuente",
+    "sourceValue": "Compras Estatales (OCDS)",
+    "viaLabel": "Vía",
+    "viaValue": "catalogodatos.gub.uy",
+    "seriesLabel": "Serie",
+    "seriesValue": "2002 — hoy",
+    "siteHead": "El sitio",
     "disclaimer": "Sitio independiente. No es un sitio oficial del Estado uruguayo.",
     "api": "API pública",
     "developers": "Desarrolladores",
