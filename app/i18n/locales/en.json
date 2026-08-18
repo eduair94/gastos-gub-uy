@@ -40,6 +40,7 @@
     "competencia": "Competition",
     "tribunalCuentas": "Court of Accounts",
     "plataformas": "Other platforms",
+    "canalesYt": "YouTube channels",
     "more": "More",
     "explorar": "Explore",
     "senales": "What to check",
@@ -2200,6 +2201,10 @@
       "title": "Who else watches the Uruguayan State: transparency platforms compared",
       "description": "A sourced comparison of the platforms publishing data about the Uruguayan State: Control Ciudadano, datospublicos.uy, DATA Uruguay, ARCE, OPP, JUTEP and this site. What each covers, what it costs and what it is for."
     },
+    "canalesYt": {
+      "title": "Uruguayan YouTube channels on public spending and politics",
+      "description": "A verified directory of Uruguayan YouTube channels for following public money: parliament, the agencies that buy, the outlets that report and the parties. With each channel's identity proof and its latest videos."
+    },
     "tribunalCuentas": {
       "title": "What the Court of Accounts said about state purchases",
       "description": "Court of Accounts rulings on Uruguayan public procurement, each next to the purchase it names, with a link to the original ruling."
@@ -2516,6 +2521,59 @@
       "action": "Clear filters"
     },
     "note": "Official contact data published by the agencies on comprasestatales.gub.uy."
+  },
+  "canalesYt": {
+    "eyebrow": "Directory",
+    "title": "Uruguayan politics on YouTube",
+    "lead": "The Uruguayan channels worth following to track public money: the parliament that votes the budget, the agencies that buy, the outlets that report and the parties that argue. Every channel got in on an identity proof, not on its size.",
+    "verifiedLabel": "Table verified on {date}",
+    "statVerified": "verified channels",
+    "statActive": "posted in the last 90 days",
+    "statRejected": "searched and rejected",
+    "limitsTitle": "What this is and what it is not",
+    "feedTitle": "Latest",
+    "feedHelp": "The latest videos from the channels below, read from their public feeds. It is an automatic read: we neither pick nor review any video.",
+    "feedStamp": "Read on {date}",
+    "onlyTopic": "Spending and politics only",
+    "hiddenNote": "The filter leaves out {n} videos from these same channels.",
+    "staleNote": "YouTube did not answer on the last read. This is the previous one.",
+    "feedEmpty": "No video in the feed passes the active filters.",
+    "filterAll": "All",
+    "countLabel": "{n} channels",
+    "channel": "Channel",
+    "subs": "Subscribers",
+    "videos": "Videos",
+    "lastUpload": "Latest video",
+    "notPublished": "Not published",
+    "noVideos": "No videos",
+    "buyerLink": "Its spending here",
+    "siteLink": "Official site",
+    "cat": {
+      "header": "Category",
+      "estado": "The state filming itself",
+      "medios": "Outlets covering national politics",
+      "partidos": "Parties with seats",
+      "analisis": "Think tanks and interviews"
+    },
+    "catHelp": {
+      "estado": "The primary source. The session, the press conference and the announcement come out unedited, before any article exists.",
+      "medios": "The ones who ask. Three of these channels receive state advertising, and we measured how much.",
+      "partidos": "The argument without an intermediary. Only the party's official channel: personal channels and faction channels are excluded by rule.",
+      "analisis": "The ones arguing about the level of spending rather than a single contract."
+    },
+    "proof": {
+      "country": "YouTube publishes Uruguay",
+      "site": "Linked from its official site",
+      "both": "Country and official site"
+    },
+    "inactiveTitle": "They exist and they do not publish",
+    "inactiveHelp": "Channels that passed the identity proof and have posted nothing for over 90 days. They stay listed because their archive is still online, and because an abandoned official channel says something too.",
+    "rejectedTitle": "Searched, measured and rejected",
+    "rejectedHelp": "Each one came up first in the search. None qualified, and here is the measured reason.",
+    "gapsTitle": "What does not exist",
+    "methodTitle": "How it was built",
+    "methodFoot": "The same standard we use to compare transparency platforms:",
+    "methodLink": "who else watches the Uruguayan state"
   },
   "plataformas": {
     "eyebrow": "Comparison",

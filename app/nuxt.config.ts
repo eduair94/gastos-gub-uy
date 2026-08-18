@@ -385,6 +385,11 @@ export default defineNuxtConfig({
     // The base path had no rule at all; `/**` covers the per-year route.
     '/api/analytics/spending-trend': apiCache(60 * 60),
     '/api/analytics/spending-trend/**': apiCache(60 * 60),
+
+    // Lee los feeds públicos de YouTube, que son de un tercero. El handler ya
+    // tiene su propia caché de una hora; esta la comparte entre los dos workers
+    // de pm2, así que el barrido corre una vez por hora y no dos.
+    '/api/canales-youtube': apiCache(60 * 60),
   },
 
   nitro: {
