@@ -111,6 +111,76 @@ export const CANAL_PAUTA_REAL: CanalYear[] = [
   { year: 2025, value: 8175996 },
 ]
 
+export interface ClaseYear {
+  year: number
+  /** Toda la clase «Publicidad y propaganda», en pesos de agosto de 2026. */
+  clase: number
+  /** La parte de esa clase que cobran los canales 4, 10 y 12, en los mismos pesos. */
+  canales: number
+  /** Parte de los canales sobre la clase, en porcentaje de pesos corrientes del año. */
+  share: number
+  /** Adjudicaciones distintas de la clase en el año. */
+  contratos: number
+}
+
+/**
+ * La pauta oficial ENTERA contra la parte que cobran los canales, año por año.
+ * Responde por qué cayó: no es sólo que los canales cobren menos, es que hay menos
+ * pauta registrada Y los canales se quedan con menos parte de ella.
+ *
+ * OJO CON LA COMPARACIÓN. Acá los montos de los canales están limitados a la clase
+ * «Publicidad y propaganda». Los totales por canal del resto de la pieza suman también
+ * unos pocos códigos de fuera de la clase (diseño de campaña, espacio satelital), así
+ * que son un poco mayores. Es la misma base, distinto recorte, y se dice en la tabla.
+ *
+ * 2026 va incompleto: el año sigue corriendo.
+ */
+export const PAUTA_CLASE_SERIE: ClaseYear[] = [
+  { year: 2014, clase: 1506308170, canales: 118263462, share: 7.8, contratos: 776 },
+  { year: 2015, clase: 562046521, canales: 58782279, share: 10.6, contratos: 818 },
+  { year: 2016, clase: 772558931, canales: 41395857, share: 5.6, contratos: 830 },
+  { year: 2017, clase: 407070824, canales: 11464313, share: 2.9, contratos: 807 },
+  { year: 2018, clase: 506235120, canales: 40720144, share: 8.1, contratos: 868 },
+  { year: 2019, clase: 578946205, canales: 39114340, share: 6.8, contratos: 853 },
+  { year: 2020, clase: 489595257, canales: 30870542, share: 6.3, contratos: 519 },
+  { year: 2021, clase: 358873259, canales: 25810637, share: 7, contratos: 500 },
+  { year: 2022, clase: 643422580, canales: 41326734, share: 6.3, contratos: 577 },
+  { year: 2023, clase: 193319891, canales: 34733249, share: 18.1, contratos: 494 },
+  { year: 2024, clase: 233644464, canales: 15433998, share: 6.6, contratos: 532 },
+  { year: 2025, clase: 298045919, canales: 8175995, share: 2.7, contratos: 437 },
+  { year: 2026, clase: 87646467, canales: 0, share: 0, contratos: 225 },
+]
+
+/** Las dos caídas, medidas entre el pico de 2014 y 2025, en pesos de hoy. */
+export const CAIDA = {
+  claseVeces: 5,
+  canalesVeces: 14,
+  sharePico: 7.8,
+  shareUltimo: 2.7,
+  contratosPico: 776,
+  contratosUltimo: 437,
+  anioPico: 2014,
+  anioUltimo: 2025,
+  /** En lo que va de 2026 los tres canales no registran ninguna adjudicación. */
+  canales2026: 0,
+}
+
+/**
+ * El marco legal del reparto: qué obliga la norma y qué NO se puede comprobar acá.
+ * Verificado contra el texto del decreto en IMPO, no contra la prensa.
+ */
+export const REGLA_INTERIOR = {
+  ley: 'Ley 19.924',
+  articulo: 774,
+  decreto: 'Decreto 392/022',
+  decretoUrl: 'https://www.impo.com.uy/bases/decretos/392-2022',
+  minimoInteriorPct: 20,
+  porDepartamentoPct: 0.5,
+  porDepartamentoCompetenciaPct: 0.25,
+  rendicionAntesDe: '30 de marzo',
+  validaMedios: 'Ministerio de Industria, Energía y Minería',
+}
+
 /**
  * La compra de televisión del Ministerio de Turismo, repetida al centavo en 2024 y 2025.
  * Adjudicaciones ocds-yfs5dr-1171329 (27/08/2024) y ocds-yfs5dr-1242895 (15/05/2025).
@@ -186,11 +256,34 @@ export const CANAL_STATS = {
   deflactor: 'Unidad Indexada · pesos de agosto de 2026',
 }
 
+export interface CanalNews { key: string, amountText: string, source: string, url: string, date: string }
+
+/**
+ * Prensa citada. NO sale de la base: son hechos de julio y agosto de 2026 y contexto de
+ * industria. Cada tarjeta enlaza a su nota. El balance dice qué pasó; ninguna fuente
+ * publicada dice por qué, y la ficha lo declara así.
+ */
+export const CANALES_NEWS: CanalNews[] = [
+  { key: 'despidos', amountText: '≈ 25 despidos + 15 eventuales', source: 'APU · Montevideo Portal', url: 'https://www.apu.uy/noticias/canal-12-despidos-ruptura-de-convenio-colectivo-y-un-conflicto-abierto', date: '27/07/2026' },
+  { key: 'convenio', amountText: 'convenio de 2005, denunciado', source: 'PIT-CNT · Montevideo Portal', url: 'https://www.montevideo.com.uy/Noticias/Trabajadores-de-Canal-12-en-paro-por-ola-de-despidos--25-personas-quedarian-cesantes-uc969819', date: 'julio 2026' },
+  { key: 'silencio', amountText: 'sin explicación económica pública', source: 'APU', url: 'https://www.apu.uy/noticias/canal-12-despidos-ruptura-de-convenio-colectivo-y-un-conflicto-abierto', date: 'agosto 2026' },
+  { key: 'plataformas', amountText: 'publicidad online: US$ 12 M → 48 M', source: 'Comunicación y Medios (SciELO)', url: 'https://www.scielo.cl/scielo.php?script=sci_arttext&pid=S0719-367X2023000200012', date: '2023' },
+  { key: 'tvpaga', amountText: '−45% de abonados (2019–2025)', source: 'la diaria · encuesta Usina', url: 'https://ladiaria.com.uy/cultura/articulo/2026/4/cae-la-tv-para-abonados-y-crecen-los-servicios-de-streaming-en-uruguay-segun-encuesta-de-la-usina/', date: 'abril 2026' },
+  { key: 'futbol', amountText: 'AUF: US$ 67,5 M al año, el triple', source: 'DPL News', url: 'https://dplnews.com/uruguay-derechos-de-tv-del-futbol-uruguayo-el-ingreso-de-us-67-millones-que-pasara-con-tenfield-y-la-reaccion-de-auf/', date: 'diciembre 2025' },
+]
+
 export const CANALES_SOURCES = [
   { label: 'Gustavo Gómez (OBSERVACOM) — los tres cuadros de resultados e ingresos 2024–2025, con la marca Info&Com', url: 'https://x.com/gusgomezgermano/status/2089424906668646450' },
   { label: 'r/monte_video — el hilo donde circuló el dato', url: 'https://www.reddit.com/r/monte_video/comments/1vr500q/resultados_contables_de_los_canales_privados_de_tv/' },
   { label: 'AIN — Registro de Estados Contables: dónde se depositan los balances y cómo se consultan', url: 'https://www.gub.uy/tramites/registro-estados-contables' },
   { label: 'OBSERVACOM — Observatorio Latinoamericano de Regulación, Medios y Convergencia', url: 'https://www.observacom.org/' },
+  { label: 'IMPO — Decreto 392/022: reglamenta el 20% de la publicidad oficial a medios del interior', url: 'https://www.impo.com.uy/bases/decretos/392-2022' },
+  { label: 'la diaria — la reglamentación que obliga a destinar 20% de la publicidad oficial al interior', url: 'https://ladiaria.com.uy/politica/articulo/2021/6/gobierno-aprobara-reglamentacion-que-obliga-a-destinar-20-de-la-publicidad-oficial-a-medios-del-interior/' },
+  { label: 'El Observador — cómo se distribuye la publicidad oficial en los medios del interior', url: 'https://www.elobservador.com.uy/nota/asi-se-distribuira-la-publicidad-oficial-en-los-medios-del-interior--2021630134730' },
+  { label: 'APU — Canal 12: despidos, ruptura del convenio colectivo y un conflicto abierto', url: 'https://www.apu.uy/noticias/canal-12-despidos-ruptura-de-convenio-colectivo-y-un-conflicto-abierto' },
+  { label: 'Montevideo Portal — trabajadores de Canal 12 en paro por la ola de despidos', url: 'https://www.montevideo.com.uy/Noticias/Trabajadores-de-Canal-12-en-paro-por-ola-de-despidos--25-personas-quedarian-cesantes-uc969819' },
+  { label: 'Comunicación y Medios (SciELO) — declive de los grupos nacionales de comunicación en Uruguay', url: 'https://www.scielo.cl/scielo.php?script=sci_arttext&pid=S0719-367X2023000200012' },
+  { label: 'la diaria — cae la TV para abonados y crece el streaming (encuesta Usina)', url: 'https://ladiaria.com.uy/cultura/articulo/2026/4/cae-la-tv-para-abonados-y-crecen-los-servicios-de-streaming-en-uruguay-segun-encuesta-de-la-usina/' },
   { label: 'Compras Estatales — el portal oficial de cada adjudicación citada', url: 'https://www.comprasestatales.gub.uy/consultas/' },
 ]
 
@@ -257,6 +350,36 @@ const CANALES_CONTENT = {
       barTres: 'Canales 4, 10 y 12', barC5: 'Canal 5 (estatal)', barResto: '181 medios del resto del país',
       finding: 'Los tres canales privados de Montevideo se llevaron el 67% de esa compra. Canal 5 se llevó el 17%. Los otros 181 proveedores se repartieron el 16% restante.',
       ficha: 'Ver la adjudicación completa',
+    },
+    caida: {
+      tag: 'Por qué cayó',
+      title: 'Cae toda la pauta, y dentro de ella los canales caen más',
+      intro: 'La misma serie, pero mirando la clase entera. La primera columna es toda la publicidad oficial registrada; la segunda, la parte que cobran los canales 4, 10 y 12. Las dos van en pesos de agosto de 2026.',
+      colYear: 'Año', colClase: 'Toda la pauta', colCanales: 'A los tres canales', colShare: 'Parte de los canales', colContratos: 'Adjudicaciones',
+      finding: 'Son dos caídas superpuestas. La pauta registrada entera cae cinco veces entre 2014 y 2025. Los canales caen catorce. Y su parte dentro de la pauta pasa del 7,8% al 2,7%. También caen las operaciones: de 776 adjudicaciones en 2014 a 437 en 2025. En lo que va de 2026 los tres canales no registran ninguna.',
+      note: 'En esta tabla los montos de los canales están limitados a la clase «Publicidad y propaganda». Los totales por canal del resto de la pieza suman además unos pocos códigos de fuera de la clase, así que son algo mayores. 2026 va incompleto.',
+      whyTitle: 'Qué explica la caída, y qué no',
+      why1: 'Ninguna fuente publicada explica la caída del registro. Lo que sí está documentado es el contexto: la inversión publicitaria migró a las plataformas, con la publicidad online pasando de 12 a 48 millones de dólares mientras caía la de los medios clásicos. La televisión para abonados perdió más del 45% de sus abonados entre 2019 y 2025.',
+      why2: 'La pieza no puede ir más lejos. Que el registro muestre menos pauta no prueba que el Estado gaste menos: puede estar comprando por otra vía. Es el mismo límite que la sección del piso.',
+    },
+    regla: {
+      tag: 'La norma',
+      title: 'Por qué la lista es tan larga: el 20% al interior',
+      p1: 'El artículo 774 de la Ley 19.924 obliga a destinar al menos el 20% de la publicidad oficial de alcance nacional a medios del interior. El Decreto 392/022 lo reglamenta: 0,5% por cada departamento del interior, o 0,25% cuando el organismo está en competencia. El Ministerio de Industria, Energía y Minería valida qué medios están habilitados. Cada organismo rinde cuentas antes del 30 de marzo.',
+      p2: 'Esa norma explica la forma de la compra de arriba: una sola adjudicación con 185 proveedores de todo el país. El decreto no prevé multa. Su artículo 10 sólo habilita al Poder Ejecutivo a hacer recomendaciones u observaciones.',
+      p3: 'El cumplimiento del 20% NO se puede comprobar con esta base, y conviene decirlo antes de que alguien intente calcularlo. La norma define al medio del interior por su zona de servicio; el registro sólo trae el domicilio fiscal del proveedor, que no es lo mismo. Además, entre un quinto y dos quintos del monto anual corresponde a proveedores sin ficha en el RUPE. Cualquier porcentaje que salga de ahí sería inventado.',
+    },
+    conflicto: {
+      tag: 'El conflicto',
+      title: 'Qué pasó en Canal 12, y qué no dijo la empresa',
+      intro: 'La pérdida de 2025 se conoció mientras el canal estaba en conflicto. Esto es prensa citada, no dato de la base; cada tarjeta enlaza a su nota.',
+      despidos: 'El 27 de julio de 2026 el canal comunicó los despidos: unos 25 trabajadores de distintas áreas, más una reducción de 15 eventuales. La asamblea resolvió paro por tiempo indeterminado sin guardia gremial.',
+      convenio: 'La empresa denunció de forma unilateral el convenio colectivo vigente desde 2005, con vencimiento el 1 de diciembre de 2026. El canal aclaró que la denuncia no alcanza los ajustes salariales. El conflicto pasó al Ministerio de Trabajo y a la Comisión de Legislación del Trabajo del Senado.',
+      silencio: 'La empresa no difundió explicaciones públicas detalladas sobre los fundamentos económicos de la reestructura. El balance dice que perdió 150.267.565 pesos; el motivo no está publicado.',
+      plataformas: 'La inversión publicitaria se corrió a las plataformas: la publicidad online pasó de 12 a 48 millones de dólares mientras caía la de los medios clásicos.',
+      tvpaga: 'La televisión para abonados perdió más del 45% de sus abonados entre 2019 y 2025, y el streaming sigue creciendo.',
+      futbol: 'La licitación de los derechos de televisión del fútbol cerró en diciembre de 2025 y lleva a la AUF a unos 67,5 millones de dólares al año, el triple que antes. Eso presiona los ejercicios de 2026 en adelante, no el que cerró con la pérdida.',
+      note: 'Dos aclaraciones, porque circulan al revés. «Santo y Seña» es un programa de Canal 4, no de Canal 12. Y los nuevos derechos del fútbol rigen desde 2026: no explican el balance 2025.',
     },
     trazar: {
       tag: 'Trazar el resto',
@@ -363,6 +486,36 @@ const CANALES_CONTENT = {
       barTres: 'Channels 4, 10 and 12', barC5: 'Channel 5 (state)', barResto: '181 outlets from the rest of the country',
       finding: 'The three private Montevideo channels took 67% of that buy. Channel 5 took 17%. The other 181 suppliers shared the remaining 16%.',
       ficha: 'View the full award',
+    },
+    caida: {
+      tag: 'Why it fell',
+      title: 'All advertising falls, and the channels fall harder',
+      intro: 'The same series, looking at the whole class. The first column is all registered official advertising; the second, the share billed by channels 4, 10 and 12. Both in pesos of August 2026.',
+      colYear: 'Year', colClase: 'All advertising', colCanales: 'To the three channels', colShare: 'Channels share', colContratos: 'Awards',
+      finding: 'Two falls overlap. All registered advertising falls fivefold between 2014 and 2025. The channels fall fourteenfold. And their share of it goes from 7.8% to 2.7%. Operations fall too: from 776 awards in 2014 to 437 in 2025. So far in 2026 the three channels record none.',
+      note: 'In this table the channel amounts are limited to the "Advertising and propaganda" class. The per-channel totals elsewhere in this piece also add a few codes outside the class, so they run slightly higher. 2026 is incomplete.',
+      whyTitle: 'What explains the fall, and what does not',
+      why1: 'No published source explains the fall in the record itself. What is documented is the context: advertising money moved to the platforms, with online advertising going from 12 to 48 million dollars while classic media lost ground. Pay TV lost more than 45% of its subscribers between 2019 and 2025.',
+      why2: 'The piece cannot go further. Less advertising in the record does not prove the State spends less: it may be buying by another route. It is the same limit the floor section describes.',
+    },
+    regla: {
+      tag: 'The rule',
+      title: 'Why the list runs so long: the 20% for interior media',
+      p1: 'Article 774 of Law 19,924 requires at least 20% of nationwide official advertising to go to media outlets in the interior. Decree 392/022 sets the detail: 0.5% for each interior department, or 0.25% when the body operates in a competitive market. The Ministry of Industry, Energy and Mining validates which outlets qualify. Each body reports by 30 March.',
+      p2: 'That rule explains the shape of the buy above: a single award with 185 suppliers from across the country. The decree sets no fine. Its article 10 only allows the Executive to issue recommendations or observations.',
+      p3: 'Compliance with the 20% CANNOT be checked against this data, and it is worth saying before anyone tries. The rule defines an interior outlet by its service area; the record only carries the supplier tax address, which is not the same thing. On top of that, between a fifth and two fifths of the yearly amount belongs to suppliers with no RUPE record. Any percentage derived from that would be invented.',
+    },
+    conflicto: {
+      tag: 'The conflict',
+      title: 'What happened at Channel 12, and what the company did not say',
+      intro: 'The 2025 loss became known while the channel was in dispute. This is cited press, not data; each card links to its article.',
+      despidos: 'On 27 July 2026 the channel announced the layoffs: around 25 workers from different areas, plus a cut of 15 temporary staff. The assembly voted an indefinite strike with no union cover.',
+      convenio: 'The company unilaterally terminated the collective agreement in force since 2005, expiring on 1 December 2026. The channel clarified that the termination does not cover salary adjustments. The dispute moved to the Ministry of Labour and to the Senate Labour Legislation Committee.',
+      silencio: 'The company published no detailed explanation of the economic grounds for the restructuring. The accounts say it lost 150,267,565 pesos; the reason is not published.',
+      plataformas: 'Advertising money moved to the platforms: online advertising went from 12 to 48 million dollars while classic media lost ground.',
+      tvpaga: 'Pay TV lost more than 45% of its subscribers between 2019 and 2025, and streaming keeps growing.',
+      futbol: 'The tender for football television rights closed in December 2025 and takes the AUF to some 67.5 million dollars a year, three times the previous figure. That presses the 2026 accounts onward, not the one that closed with the loss.',
+      note: 'Two clarifications, because they circulate the other way round. "Santo y Seña" is a Channel 4 programme, not Channel 12 one. And the new football rights start in 2026: they do not explain the 2025 accounts.',
     },
     trazar: {
       tag: 'Tracing the rest',

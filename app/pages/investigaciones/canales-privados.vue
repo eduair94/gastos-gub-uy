@@ -13,8 +13,11 @@ import {
   CANAL_PAUTA,
   CANAL_PAUTA_REAL,
   CANAL_STATS,
+  CANALES_NEWS,
   CANALES_SOURCES,
   HUECO,
+  PAUTA_CLASE_SERIE,
+  REGLA_INTERIOR,
   TURISMO_FICHAS,
   TURISMO_REPARTO,
   TURISMO_TOTAL,
@@ -118,6 +121,27 @@ const antelFacts = computed(() => [
   { key: 'monto', amount: HUECO.antelPublicidadUYU, label: c.value.trazar.antelMonto },
   { key: 'tv', value: formatNumber(HUECO.antelTV), label: c.value.trazar.antelTv },
 ])
+
+/**
+ * La serie de la clase entera contra la parte de los canales. Mayor a menor por año
+ * descendente: la pieza argumenta desde el pico de 2014 hacia hoy, así que la tabla
+ * va en el mismo orden que el texto.
+ */
+const claseColumns = computed(() => [
+  { key: 'year', label: c.value.caida.colYear, mono: true, nowrap: true },
+  { key: 'clase', label: c.value.caida.colClase, align: 'end' as const },
+  { key: 'canales', label: c.value.caida.colCanales, align: 'end' as const },
+  { key: 'share', label: c.value.caida.colShare, align: 'end' as const, mono: true },
+  { key: 'contratos', label: c.value.caida.colContratos, align: 'end' as const, mono: true },
+])
+
+const newsItems = computed(() => CANALES_NEWS.map(n => ({
+  url: n.url,
+  amountText: n.amountText,
+  text: (c.value.conflicto as Record<string, string>)[n.key] ?? '',
+  source: n.source,
+  date: n.date,
+})))
 
 /** El filtro de proveedor del explorador toma ids cuando el valor trae una barra. */
 const contractsLink = (supplierId: string) =>
@@ -262,9 +286,60 @@ const contractsLink = (supplierId: string) =>
       />
     </InvSection>
 
-    <!-- Cómo se reparte -->
+    <!-- Por qué cayó: la clase entera contra la parte de los canales -->
     <InvSection
       alt
+      :eyebrow="c.caida.tag"
+      :title="c.caida.title"
+      :dek="c.caida.intro"
+    >
+      <InvLedger
+        :columns="claseColumns"
+        :rows="PAUTA_CLASE_SERIE"
+        row-key="year"
+      >
+        <template #cell:clase="{ row }">
+          <MoneyAmount
+            :amount="row.clase"
+            compact
+          />
+        </template>
+        <template #cell:canales="{ row }">
+          <MoneyAmount
+            v-if="row.canales > 0"
+            :amount="row.canales"
+            compact
+          />
+          <span
+            v-else
+            class="cn-cero u-mono"
+          >0</span>
+        </template>
+        <template #cell:share="{ row }">
+          {{ String(row.share).replace('.', ',') }}%
+        </template>
+      </InvLedger>
+
+      <p class="cn-note">
+        {{ c.caida.note }}
+      </p>
+
+      <InvFinding
+        :kicker="c.caida.tag"
+        :body="c.caida.finding"
+      />
+
+      <div class="inv-prose">
+        <h3 class="cn-h3">
+          {{ c.caida.whyTitle }}
+        </h3>
+        <p>{{ c.caida.why1 }}</p>
+        <p>{{ c.caida.why2 }}</p>
+      </div>
+    </InvSection>
+
+    <!-- Cómo se reparte -->
+    <InvSection
       :eyebrow="c.reparto.tag"
       :title="c.reparto.title"
       :dek="c.reparto.intro"
@@ -315,6 +390,7 @@ const contractsLink = (supplierId: string) =>
 
     <!-- La concentración -->
     <InvSection
+      alt
       :eyebrow="c.campana.tag"
       :title="c.campana.title"
       :dek="c.campana.intro"
@@ -343,6 +419,37 @@ const contractsLink = (supplierId: string) =>
           {{ c.campana.ficha }} →
         </NuxtLink>
       </p>
+
+      <!-- La norma que da forma a esa lista, y el límite de lo que se puede comprobar. -->
+      <div class="inv-prose">
+        <h3 class="cn-h3">
+          {{ c.regla.title }}
+        </h3>
+        <p>{{ c.regla.p1 }}</p>
+        <p>{{ c.regla.p2 }}</p>
+        <p>{{ c.regla.p3 }}</p>
+      </div>
+
+      <p class="cn-fichas chip-row">
+        <a
+          class="cn-ficha"
+          :href="REGLA_INTERIOR.decretoUrl"
+          target="_blank"
+          rel="noopener"
+        >{{ REGLA_INTERIOR.decreto }} · IMPO →</a>
+      </p>
+    </InvSection>
+
+    <!-- El conflicto de Canal 12: prensa citada, no dato de la base. -->
+    <InvSection
+      :eyebrow="c.conflicto.tag"
+      :title="c.conflicto.title"
+      :dek="c.conflicto.intro"
+    >
+      <InvNewsCards
+        :items="newsItems"
+        :note="c.conflicto.note"
+      />
     </InvSection>
 
     <!-- Trazar el resto -->
@@ -479,6 +586,25 @@ const contractsLink = (supplierId: string) =>
   color: var(--text);
 }
 .cn-down { color: var(--alerta); }
+
+/* Subtítulo dentro de una sección ya titulada: entra al hilo del texto, no compite
+   con el h2 de la sección. */
+.cn-h3 {
+  margin: var(--s-6) 0 var(--s-2);
+  font-size: var(--t-lg);
+  color: var(--text);
+}
+
+/* Nota de recorte al pie de la tabla: dice qué mide la columna, no la interpreta. */
+.cn-note {
+  margin-top: var(--s-3);
+  max-width: var(--inv-measure);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+/* Cero adjudicaciones no es un monto: sin oro y sin regla de magnitud. */
+.cn-cero { color: var(--text-muted); }
 .cn-up { color: var(--text-muted); }
 
 .cn-total {
