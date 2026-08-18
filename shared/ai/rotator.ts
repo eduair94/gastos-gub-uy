@@ -9,11 +9,12 @@
  * model for the rest of the process run and advances to the next. A single
  * rotator instance shared across many summaries keeps that cooldown between them.
  */
+import { callClaudeAgentStructured, isClaudeAgentExhausted } from "./claude-agent-client";
 import type { GeminiSchema, GeminiUsage } from "./gemini-client";
 import { callGeminiStructured, GeminiHttpError } from "./gemini-client";
 import { callGroqStructured, GroqHttpError } from "./groq-client";
 
-export type Provider = "gemini" | "groq";
+export type Provider = "claude" | "gemini" | "groq";
 
 export interface RotatorModel {
   provider: Provider;
@@ -21,12 +22,29 @@ export interface RotatorModel {
 }
 
 export interface RotatorOptions {
+  /** Base de `claude-agent-api`, por ejemplo `http://127.0.0.1:9310`. */
+  claudeAgentUrl?: string | undefined;
+  claudeAgentApiKey?: string | undefined;
+  /** Ordered Claude model ids to try before Gemini. */
+  claudeModels?: string[] | undefined;
+  /** Reasoning effort for the Claude rung: `low` … `max`. */
+  claudeEffort?: string | undefined;
+  /** Wall-clock budget for one Claude call. A call takes 5-60s, not 5s. */
+  claudeTimeoutMs?: number | undefined;
   geminiApiKey?: string | undefined;
   groqApiKey?: string | undefined;
   /** Ordered Gemini model ids to try first. */
   geminiModels?: string[] | undefined;
   /** Ordered Groq model ids to try after Gemini is exhausted. */
   groqModels?: string[] | undefined;
+  /**
+   * Set de bancados compartido entre varias instancias.
+   *
+   * Sirve para que la pared diaria de Claude valga en todo el proceso, aunque
+   * cada job arme su propio rotator con otro modelo de Gemini. Omitido, cada
+   * instancia lleva el suyo.
+   */
+  cooldown?: Set<string> | undefined;
 }
 
 export interface GenerateArgs {
@@ -84,26 +102,53 @@ const DEFAULT_GROQ_MODELS = [
   "llama-3.1-8b-instant",
 ];
 
+// El escalón Claude corre sobre la suscripción personal del servidor 104: 200
+// llamadas por día, 2 concurrentes. Va PRIMERO porque da la mejor redacción, y
+// al chocar la pared diaria el rotator lo banca y sigue con Gemini/Groq. Un solo
+// modelo alcanza: los alias de abajo comparten la MISMA cuota, así que listar
+// más no agranda el presupuesto — al revés de Gemini y Groq.
+const DEFAULT_CLAUDE_MODELS = ["sonnet"];
+
+/** Una llamada al agente tarda entre 5 y 60 segundos. 45s corta demasiado pronto. */
+const DEFAULT_CLAUDE_TIMEOUT_MS = 180_000;
+
+/** Porción máxima de la ventana total que puede consumir el escalón Claude. */
+const CLAUDE_BUDGET_SHARE = 0.6;
+
 /** A back-off this long means a daily/quota wall, not a per-minute blip → bench the model. */
 const DAILY_WALL_MS = 60_000;
 
 function label(m: RotatorModel): string {
-  return m.provider === "groq" ? `groq:${m.model}` : m.model;
+  return m.provider === "gemini" ? m.model : `${m.provider}:${m.model}`;
 }
 
 export class ProviderRotator {
   private readonly ladder: RotatorModel[] = [];
+  private readonly claudeAgentUrl: string | undefined;
+  private readonly claudeAgentApiKey: string | undefined;
+  private readonly claudeEffort: string | undefined;
+  private readonly claudeTimeoutMs: number;
   private readonly geminiApiKey: string | undefined;
   private readonly groqApiKey: string | undefined;
-  private readonly cooldown = new Set<string>();
+  private readonly cooldown: Set<string>;
 
   constructor(opts: RotatorOptions) {
+    this.cooldown = opts.cooldown ?? new Set<string>();
+    this.claudeAgentUrl = opts.claudeAgentUrl || undefined;
+    this.claudeAgentApiKey = opts.claudeAgentApiKey || undefined;
+    this.claudeEffort = opts.claudeEffort || undefined;
+    this.claudeTimeoutMs = opts.claudeTimeoutMs ?? DEFAULT_CLAUDE_TIMEOUT_MS;
     this.geminiApiKey = opts.geminiApiKey || undefined;
     this.groqApiKey = opts.groqApiKey || undefined;
 
+    const claudeModels = (opts.claudeModels && opts.claudeModels.length ? opts.claudeModels : DEFAULT_CLAUDE_MODELS);
     const geminiModels = (opts.geminiModels && opts.geminiModels.length ? opts.geminiModels : DEFAULT_GEMINI_MODELS);
     const groqModels = (opts.groqModels && opts.groqModels.length ? opts.groqModels : DEFAULT_GROQ_MODELS);
 
+    // Orden de la escalera: Claude, después Gemini, después Groq.
+    if (this.claudeAgentUrl && this.claudeAgentApiKey) {
+      for (const model of claudeModels) this.ladder.push({ provider: "claude", model });
+    }
     if (this.geminiApiKey) for (const model of geminiModels) this.ladder.push({ provider: "gemini", model });
     if (this.groqApiKey) for (const model of groqModels) this.ladder.push({ provider: "groq", model });
   }
@@ -138,13 +183,40 @@ export class ProviderRotator {
       const requestTimeoutMs = remainingMs === null
         ? args.timeoutMs
         : Math.max(1, Math.min(args.timeoutMs ?? 45_000, remainingMs));
+      // El agente Claude tarda entre 5 y 60 segundos. El timeout por defecto de
+      // los otros escalones (45s) lo cortaría a mitad de camino y gastaría la
+      // cuota igual, así que este escalón usa su propio presupuesto.
+      //
+      // Pero no puede quedarse con toda la ventana. Si tarda y después falla,
+      // los escalones de abajo tienen que llegar a tiempo: el resumen de pliego
+      // interactivo corre con 180s totales y sin esto un Claude lento devuelve
+      // un error donde antes devolvía un resumen de Gemini. Se le da como mucho
+      // el 60% de lo que queda, salvo que sea el único escalón vivo.
+      const hasFallback = this.ladder.some((x) => x.provider !== "claude" && !this.cooldown.has(label(x)));
+      const claudeTimeoutMs = remainingMs === null
+        ? this.claudeTimeoutMs
+        : Math.max(1, Math.min(this.claudeTimeoutMs, Math.floor(remainingMs * (hasFallback ? CLAUDE_BUDGET_SHARE : 1))));
 
       try {
         const onProgress = (receivedChars: number): void => {
           try { args.onProgress?.({ modelUsed: key, receivedChars }); } catch { /* diagnostics only */ }
         };
         onProgress(0);
-        if (m.provider === "gemini") {
+        if (m.provider === "claude") {
+          const { data, usage } = await callClaudeAgentStructured<T>({
+            baseUrl: this.claudeAgentUrl!,
+            apiKey: this.claudeAgentApiKey!,
+            model: m.model,
+            systemInstruction: args.systemInstruction,
+            prompt: args.prompt,
+            schema: args.schema,
+            timeoutMs: claudeTimeoutMs,
+            onProgress,
+            ...(this.claudeEffort === undefined ? {} : { effort: this.claudeEffort }),
+            ...(deadline === null ? {} : { deadlineAtMs: deadline }),
+          });
+          return { data, modelUsed: key, usage };
+        } else if (m.provider === "gemini") {
           const { data, usage } = await callGeminiStructured<T>({
             apiKey: this.geminiApiKey!,
             model: m.model,
@@ -187,8 +259,38 @@ export class ProviderRotator {
   }
 }
 
+/**
+ * Lee el escalón Claude del entorno.
+ *
+ * Devuelve un objeto vacío cuando falta la clave. Así la escalera arranca en
+ * Gemini y ningún job se rompe en una máquina sin el túnel al servidor 104.
+ * Spread el resultado dentro de las `RotatorOptions` del job.
+ */
+export function claudeRungFromEnv(): RotatorOptions {
+  const claudeAgentApiKey = process.env.CLAUDE_AGENT_API_KEY?.trim();
+  if (!claudeAgentApiKey) return {};
+
+  const claudeModels = csvEnv(process.env.CLAUDE_AGENT_MODELS);
+  const timeoutRaw = Number.parseInt(process.env.CLAUDE_AGENT_TIMEOUT_MS ?? "", 10);
+
+  return {
+    claudeAgentUrl: process.env.CLAUDE_AGENT_URL?.trim() || "http://127.0.0.1:9310",
+    claudeAgentApiKey,
+    ...(claudeModels.length ? { claudeModels } : {}),
+    ...(process.env.CLAUDE_AGENT_EFFORT?.trim() ? { claudeEffort: process.env.CLAUDE_AGENT_EFFORT.trim() } : {}),
+    ...(Number.isFinite(timeoutRaw) && timeoutRaw > 0 ? { claudeTimeoutMs: timeoutRaw } : {}),
+  };
+}
+
+function csvEnv(value: string | undefined): string[] {
+  return (value ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 /** A 429 (or a 429 whose server back-off is a daily wall) means the model is out of budget. */
 function isHardRateLimit(err: Error): boolean {
+  // El agente Claude no manda back-off. Su propio módulo decide qué código
+  // agota el escalón: la pared diaria y las dos formas de cola llena.
+  if (isClaudeAgentExhausted(err)) return true;
   if (err instanceof GeminiHttpError || err instanceof GroqHttpError) {
     if (err.status !== 429) return false;
     // No back-off info, or a long one → daily/quota wall → bench it.

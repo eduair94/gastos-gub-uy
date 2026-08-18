@@ -18,7 +18,8 @@ import type { SearchHit } from "./resolvers/web-search";
 import type { JudgeFn, MatchPair, MatchVerdict } from "./match-judge";
 import type { WebsiteSource } from "../../../shared/models/supplier_contacts";
 import { scoreMatch, contentTokens, LOW_SCORE } from "./match-score";
-import { callGeminiStructured, type GeminiSchema } from "../ai/gemini-client";
+import { type GeminiSchema } from "../ai/gemini-client";
+import { callStructured } from "../../../shared/ai/structured";
 
 /**
  * Trust ranking of a website's provenance — higher wins when the orchestrator
@@ -215,14 +216,14 @@ const WEBSITE_SCHEMA: GeminiSchema = {
 export interface WebsiteJudgeDeps {
   apiKey: string;
   model?: string;
-  call?: typeof callGeminiStructured;
+  call?: typeof callStructured;
   batchSize?: number;
 }
 
 /** Build a website-ownership judge bound to a Gemini key. Empty input → empty map (no call). */
 export function createWebsiteJudge(deps: WebsiteJudgeDeps): JudgeFn {
   const model = deps.model ?? "gemini-2.5-flash-lite";
-  const call = deps.call ?? callGeminiStructured;
+  const call = deps.call ?? callStructured;
   const batchSize = deps.batchSize ?? 25;
   return async (pairs: MatchPair[]): Promise<Map<number, MatchVerdict>> => {
     const out = new Map<number, MatchVerdict>();
