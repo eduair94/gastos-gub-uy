@@ -24,12 +24,14 @@
 import { connectToDatabase, disconnectFromDatabase } from '../../shared/connection/database'
 import mongoose from 'mongoose'
 import {
+  CAIDA,
   CAMPANA_2023,
   CANAL_BALANCES,
   CANAL_PAUTA,
   CANAL_PAUTA_REAL,
   CANAL_STATS,
   HUECO,
+  PAUTA_CLASE_SERIE,
   TURISMO_REPARTO,
   TURISMO_TOTAL,
 } from '../../app/data/investigaciones-canales'
@@ -258,6 +260,62 @@ async function main() {
   const claseTotal = clase.reduce((s, c: { totalUYU?: number }) => s + (c.totalUYU ?? 0), 0)
   check('clase «Publicidad y propaganda» · total', claseTotal, HUECO.claseTotalUYU, 1e-4)
   checkInt('clase · códigos', clase.length, HUECO.claseCodigos)
+  const adCodes = clase.map((c: { code: string }) => c.code)
+
+  // La serie de la clase entera contra la parte de los canales. Es el mismo recorte que
+  // publica la sección «Por qué cayó»: sólo códigos de la clase, en los dos lados.
+  console.log('\n· La clase entera contra la parte de los canales')
+  const claseSerie = await rel.aggregate([
+    { $match: { tag: 'award', 'awards.items.classification.id': { $in: adCodes } } },
+    { $addFields: { _fx: FX_SCALE } },
+    { $unwind: '$awards' },
+    { $unwind: '$awards.items' },
+    { $match: { 'awards.items.classification.id': { $in: adCodes } } },
+    {
+      $addFields: {
+        _uyu: SPEND,
+        _ym: { $dateToString: { date: '$date', format: '%Y-%m' } },
+        _sid: { $arrayElemAt: ['$awards.suppliers.id', 0] },
+      },
+    },
+    {
+      $group: {
+        _id: '$_ym',
+        v: { $sum: '$_uyu' },
+        canales: { $sum: { $cond: [{ $in: ['$_sid', ids] }, '$_uyu', 0] } },
+        oc: { $addToSet: '$ocid' },
+      },
+    },
+  ], AGG).toArray()
+
+  interface ClaseAcc { clase: number, canales: number, nomClase: number, nomCanales: number, oc: Set<string> }
+  const perYear = new Map<number, ClaseAcc>()
+  for (const r of claseSerie as Array<{ _id: string, v: number, canales: number, oc: string[] }>) {
+    const year = Number(r._id.slice(0, 4))
+    if (!Number.isFinite(year)) continue
+    const acc = perYear.get(year) ?? { clase: 0, canales: 0, nomClase: 0, nomCanales: 0, oc: new Set<string>() }
+    acc.clase += toTodayUyu(r.v, 'UYU', r._id, rates) ?? r.v
+    acc.canales += toTodayUyu(r.canales, 'UYU', r._id, rates) ?? r.canales
+    acc.nomClase += r.v
+    acc.nomCanales += r.canales
+    r.oc.forEach(o => acc.oc.add(o))
+    perYear.set(year, acc)
+  }
+  for (const row of PAUTA_CLASE_SERIE) {
+    const acc = perYear.get(row.year)
+    if (!acc) { failures++; console.log(`  FAIL serie de clase ${row.year} · sin datos en la base`); continue }
+    check(`clase ${row.year} · toda la pauta`, acc.clase, row.clase, 1e-3)
+    check(`clase ${row.year} · a los canales`, acc.canales, row.canales, 1e-3)
+    check(`clase ${row.year} · parte`, (acc.nomCanales / (acc.nomClase || 1)) * 100, row.share, 5e-2)
+    checkInt(`clase ${row.year} · adjudicaciones`, acc.oc.size, row.contratos)
+  }
+  const pico = perYear.get(CAIDA.anioPico)!
+  const ultimo = perYear.get(CAIDA.anioUltimo)!
+  checkInt('caída de la clase, en veces', Math.round(pico.clase / ultimo.clase), CAIDA.claseVeces)
+  checkInt('caída de los canales, en veces', Math.round(pico.canales / ultimo.canales), CAIDA.canalesVeces)
+  checkInt('adjudicaciones en el pico', pico.oc.size, CAIDA.contratosPico)
+  checkInt('adjudicaciones en el último año', ultimo.oc.size, CAIDA.contratosUltimo)
+  checkInt('canales en 2026', Math.round(perYear.get(2026)?.canales ?? -1), CAIDA.canales2026)
 
   // El puesto de cada canal en el ranking de /pauta. La pieza afirma que entre los seis
   // primeros no hay ningún canal privado, y ese ranking se recalcula solo: si un canal
@@ -280,7 +338,6 @@ async function main() {
     HUECO.rankingPrimerCanalPrivado,
   )
 
-  const adCodes = clase.map((c: { code: string }) => c.code)
   const antelAwards = await rel.countDocuments({ tag: 'award', 'buyer.id': '65-1' }, { maxTimeMS: 10 * 60 * 1000 })
   checkInt('ANTEL · adjudicaciones en el corpus', antelAwards, HUECO.antelAdjudicaciones)
 
