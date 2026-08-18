@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useTheme } from 'vuetify'
-import type { NavNode } from '~/utils/nav'
+import type { NavLeaf, NavNode } from '~/utils/nav'
 
 // `<component :is="'NuxtLink'">` does NOT resolve a string to a globally
 // registered component — it emits a literal <nuxtlink> element with no
@@ -216,6 +216,23 @@ onBeforeUnmount(() => {
 // control — both change the fit, so re-measure once the DOM has settled.
 // (authEnabled is a constant per load, so the mount-time measure covers it.)
 watch([locale, user], () => nextTick(scheduleRecompute))
+
+// ---- Footer ----
+// The footer's "Explorar" column reads the SAME nav tree as the bar, so a new
+// record directory reaches the footer with the one edit utils/nav.ts documents.
+// A hand-written copy here is exactly how the bar and the /analytics hub drifted.
+const exploreLinks = computed<NavLeaf[]>(() => {
+  const n = nav.value.find(x => x.key === 'explorar')
+  return n ? navLeaves(n) : []
+})
+
+// The ledger deliberately carries no "data as of" row. The layout's footer vnode
+// is built before the page's async setup resolves, so a date published by the
+// page (only the home page fetches the metrics snapshot) renders on the client
+// and not on the server — a hydration mismatch plus a row that pops in after
+// hydration. A `useFetch` here instead would buy one line of provenance with a
+// request on EVERY route. The snapshot date stays where its totals are, in the
+// home page's own source band.
 </script>
 
 <template>
@@ -865,62 +882,157 @@ watch([locale, user], () => nextTick(scheduleRecompute))
       </div>
     </v-main>
 
+    <!-- The colophon of the expediente: who publishes this, where the record
+         came from, and where to read it. It sits on `--ink`, a dark surface in
+         BOTH themes, so every colour here comes from the ink scale — the paper
+         tokens invert underneath it and would go dark-on-dark. -->
     <footer class="foot">
       <div class="foot__inner u-container">
-        <div class="foot__block">
-          <BrandMark :size="22" />
-          <p class="foot__note">
-            {{ t('footer.source') }}
-          </p>
+        <div class="foot__ident">
+          <NuxtLink
+            :to="localePath('/')"
+            class="foot__brand"
+          >
+            <BrandMark :size="34" />
+            <span class="foot__brandtext">
+              <span class="foot__name">{{ t('brand.name') }}</span>
+              <span class="foot__tag">{{ t('brand.tagline') }}</span>
+            </span>
+          </NuxtLink>
         </div>
-        <p class="foot__disclaimer">
-          {{ t('footer.disclaimer') }}
-        </p>
+
         <nav
-          class="foot__links"
-          :aria-label="t('nav.sections')"
+          class="foot__col foot__explore"
+          :aria-label="t('nav.explorar')"
         >
-          <NuxtLink :to="localePath('/about')">
+          <p class="foot__head">
+            {{ t('nav.explorar') }}
+          </p>
+          <NuxtLink
+            v-for="c in exploreLinks"
+            :key="c.key"
+            :to="c.to"
+            class="foot__link"
+          >
+            {{ t(`nav.${c.key}`) }}
+          </NuxtLink>
+        </nav>
+
+        <nav
+          class="foot__col foot__site"
+          :aria-label="t('footer.siteHead')"
+        >
+          <p class="foot__head">
+            {{ t('footer.siteHead') }}
+          </p>
+          <NuxtLink
+            :to="localePath('/about')"
+            class="foot__link"
+          >
             {{ t('nav.about') }}
           </NuxtLink>
-          <NuxtLink :to="localePath('/colaboradores')">
+          <NuxtLink
+            :to="localePath('/colaboradores')"
+            class="foot__link"
+          >
             {{ t('nav.colaboradores') }}
           </NuxtLink>
-          <NuxtLink :to="localePath('/developers')">
+          <NuxtLink
+            :to="localePath('/developers')"
+            class="foot__link"
+          >
             {{ t('footer.developers') }}
           </NuxtLink>
-          <a href="/docs">{{ t('footer.api') }}</a>
+          <!-- A Nitro route, not a Nuxt page: it must stay a real anchor. -->
+          <a
+            href="/docs"
+            class="foot__link"
+          >{{ t('footer.api') }}</a>
           <a
             href="https://github.com/eduair94/gastos-gub-uy"
             rel="noopener external"
             target="_blank"
-            class="foot__gh"
+            class="foot__link"
           >
-            <v-icon size="16">mdi-github</v-icon>
+            <v-icon size="15">mdi-github</v-icon>
             {{ t('footer.github') }}
-          </a>
-          <a
-            href="https://www.comprasestatales.gub.uy"
-            rel="noopener external"
-            target="_blank"
-          >
-            Compras Estatales
+            <v-icon
+              size="13"
+              class="foot__ext"
+            >mdi-open-in-new</v-icon>
           </a>
         </nav>
-        <nav
-          class="foot__legal"
-          :aria-label="t('footer.legal')"
+
+        <!-- Provenance as a ledger, not a sentence: this site's whole claim is
+             that every figure traces back to the State's own feed, so the feed
+             gets the same label/value treatment as any other record. -->
+        <section
+          class="foot__col foot__data"
+          :aria-label="t('footer.dataHead')"
         >
-          <NuxtLink :to="localePath('/privacidad')">
-            {{ t('footer.privacy') }}
-          </NuxtLink>
-          <NuxtLink :to="localePath('/terminos')">
-            {{ t('footer.terms') }}
-          </NuxtLink>
-          <NuxtLink :to="localePath('/cookies')">
-            {{ t('footer.cookies') }}
-          </NuxtLink>
-        </nav>
+          <p class="foot__head">
+            {{ t('footer.dataHead') }}
+          </p>
+          <dl class="ledger">
+            <div class="ledger__row">
+              <dt class="ledger__k">
+                {{ t('footer.sourceLabel') }}
+              </dt>
+              <dd class="ledger__v">
+                <a
+                  href="https://www.comprasestatales.gub.uy"
+                  rel="noopener external"
+                  target="_blank"
+                  class="foot__link foot__link--inline"
+                >
+                  {{ t('footer.sourceValue') }}
+                  <v-icon
+                    size="13"
+                    class="foot__ext"
+                  >mdi-open-in-new</v-icon>
+                </a>
+              </dd>
+            </div>
+            <div class="ledger__row">
+              <dt class="ledger__k">
+                {{ t('footer.viaLabel') }}
+              </dt>
+              <dd class="ledger__v ledger__v--mono">
+                {{ t('footer.viaValue') }}
+              </dd>
+            </div>
+            <div class="ledger__row">
+              <dt class="ledger__k">
+                {{ t('footer.seriesLabel') }}
+              </dt>
+              <dd class="ledger__v ledger__v--mono">
+                {{ t('footer.seriesValue') }}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+
+      <div class="foot__bottom">
+        <div class="foot__bottominner u-container">
+          <p class="foot__disclaimer">
+            {{ t('footer.disclaimer') }}
+          </p>
+          <nav
+            class="foot__legal"
+            :aria-label="t('footer.legal')"
+          >
+            <NuxtLink :to="localePath('/privacidad')">
+              {{ t('footer.privacy') }}
+            </NuxtLink>
+            <NuxtLink :to="localePath('/terminos')">
+              {{ t('footer.terms') }}
+            </NuxtLink>
+            <NuxtLink :to="localePath('/cookies')">
+              {{ t('footer.cookies') }}
+            </NuxtLink>
+          </nav>
+        </div>
       </div>
     </footer>
 
@@ -1368,64 +1480,212 @@ watch([locale, user], () => nextTick(scheduleRecompute))
 .drawer__pref:hover { color: var(--text); }
 
 /* ---- Footer ---- */
+/* An ink band closes the page. `--ink` has no dark-mode override, so this
+   surface reads identically in both themes and every value below comes from
+   the closed ink scale (14.2:1 / 9.5:1 / 6.7:1 / 7.1:1 against it). The
+   hairline is not decoration: in dark mode `--ink` and `--bg` sit at 1.2:1,
+   and without it the band's top edge dissolves. */
 .foot {
   margin-top: var(--s-9);
-  border-top: 1px solid var(--rule);
-  background: var(--surface);
+  border-top: 1px solid var(--ink-rule);
+  background: var(--ink);
+  color: var(--ink-fg);
 }
 
+/* Four zones across the band: who publishes it, the two ways in, and the
+   record's provenance. The ledger takes the last track rather than sitting
+   under the brand — at 1400px a right-hugged pair of link columns left a
+   void through the middle of the footer. */
 .foot__inner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-4) var(--s-6);
-  padding-block: var(--s-6);
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.15fr) minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(19rem, 1.35fr);
+  grid-template-areas: "ident explore site data";
+  gap: var(--s-6) var(--s-7);
+  padding-block: var(--s-7) var(--s-6);
 }
 
-.foot__block {
+.foot__ident {
+  grid-area: ident;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  /* A measure for the identity block, not for the page. */
+  max-width: 24rem;
+}
+
+.foot__explore { grid-area: explore; }
+.foot__site { grid-area: site; }
+.foot__data { grid-area: data; }
+
+.foot__brand {
   display: flex;
   align-items: center;
   gap: var(--s-3);
-}
-
-.foot__note,
-.foot__disclaimer {
-  margin: 0;
-  font-size: var(--t-sm);
-  color: var(--text-muted);
-}
-
-.foot__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-4);
-  margin-left: auto;
-}
-
-/* WCAG 2.2 SC 2.5.8: a standalone link is a control, and a control needs a
-   24×24 hit area. These rows were 17–20px tall — reachable with a mouse,
-   fiddly with a thumb. The box grows; the type does not move. */
-.foot__links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  font-size: var(--t-sm);
-  color: var(--celeste-deep);
+  color: inherit;
   text-decoration: none;
 }
 
-.foot__links a:hover { text-decoration: underline; }
+/* The mark's own field IS `--ink` — on this surface only its gold rules would
+   survive. Raise the field one step so the tile reads as a stamp. Specificity
+   deliberately exceeds BrandMark's own dark-theme override. */
+.foot .foot__brand :deep(.brandmark__field) { fill: var(--ink-2); }
 
-/* A quieter legal row on its own line, so it reads as fine print rather than
-   competing with the primary footer nav. */
+.foot__brandtext {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.foot__name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-stretch: 118%;
+  font-size: var(--t-lg);
+  letter-spacing: -0.025em;
+  color: var(--ink-fg-strong);
+}
+
+.foot__tag {
+  font-size: var(--t-sm);
+  color: var(--ink-fg-dim);
+}
+
+/* Column labels. Mono + tracking marks them as field labels rather than
+   another tappable row — the same grammar as the drawer and menu headings. */
+.foot__head {
+  margin: 0 0 var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-fg-faint);
+}
+
+.foot__col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* WCAG 2.2 SC 2.5.8: a standalone link is a control and needs a 24×24 hit
+   area. The box grows; the type does not move. */
+.foot__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 26px;
+  font-size: var(--t-sm);
+  color: var(--ink-fg-dim);
+  text-decoration: none;
+  transition: color var(--dur) var(--ease);
+}
+
+.foot__link:hover {
+  color: var(--ink-fg-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.foot__link:focus-visible,
+.foot__legal a:focus-visible,
+.foot__brand:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+
+/* Inside a ledger value the link IS the value, so it sits tighter than a
+   column row — but it is still a standalone control, so it keeps the 24px
+   target (SC 2.5.8). The row is 36px, so nothing grows. */
+.foot__link--inline {
+  min-height: 24px;
+  gap: var(--s-1);
+  color: var(--ink-link);
+}
+
+/* The glyph belongs to the word before it, so it keeps less than the row's
+   own icon gap — measured on the rendered row, not guessed. */
+.foot__ext {
+  margin-inline-start: -3px;
+  opacity: 0.6;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.foot__link:hover .foot__ext {
+  opacity: 1;
+  transform: translate(1px, -1px);
+}
+
+/* The provenance ledger: a raised cell on ink, bordered rather than shadowed. */
+.ledger {
+  width: 100%;
+  border: 1px solid var(--ink-rule);
+  border-radius: var(--r-lg);
+  background: var(--ink-fill);
+  padding-block: var(--s-1);
+}
+
+.ledger__rows { margin: 0; }
+
+.ledger__row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  border-top: 1px solid var(--ink-rule-soft);
+}
+
+.ledger__row:first-child { border-top: 0; }
+
+.ledger__k {
+  align-self: center;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.04em;
+  color: var(--ink-fg-faint);
+}
+
+.ledger__v {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--t-sm);
+  color: var(--ink-fg-dim);
+  overflow-wrap: anywhere;
+}
+
+.ledger__v--mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fine print, on its own rule so it reads as the record's footer note rather
+   than competing with the nav above it. */
+.foot__bottom { border-top: 1px solid var(--ink-rule-soft); }
+
+.foot__bottominner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-5);
+  padding-block: var(--s-4);
+}
+
+.foot__disclaimer {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--ink-fg-faint);
+}
+
 .foot__legal {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-4);
-  width: 100%;
-  margin-top: var(--s-3);
-  padding-top: var(--s-3);
-  border-top: 1px solid var(--rule);
 }
 
 .foot__legal a {
@@ -1433,17 +1693,23 @@ watch([locale, user], () => nextTick(scheduleRecompute))
   align-items: center;
   min-height: 24px;
   font-size: var(--t-xs);
-  color: var(--text-muted);
+  color: var(--ink-fg-faint);
   text-decoration: none;
+  transition: color var(--dur) var(--ease);
 }
 
-.foot__legal a:hover { color: var(--celeste-deep); text-decoration: underline; }
+.foot__legal a:hover {
+  color: var(--ink-fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
-.foot__gh {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  gap: 5px;
+@media (prefers-reduced-motion: reduce) {
+  .foot__link,
+  .foot__legal a,
+  .foot__ext { transition: none; }
+
+  .foot__link:hover .foot__ext { transform: none; }
 }
 
 /* ---- Responsive ---- */
@@ -1452,6 +1718,40 @@ watch([locale, user], () => nextTick(scheduleRecompute))
    range would make widening the window drop a section into the "Más" menu
    — a bigger screen showing fewer links. Uniform metrics keep the overflow
    count strictly monotonic in width. */
+
+/* The footer's own steps are independent of the bar's. First the ledger drops
+   beneath the identity block — it needs 19rem before its label/value rows start
+   fighting — while the two link columns keep their track and span both rows.
+   Then, on a phone, the columns pair up under the identity block. */
+@media (max-width: 1180px) {
+  .foot__inner {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "ident explore site"
+      "data  explore site";
+    row-gap: var(--s-5);
+  }
+
+  .foot__data { align-self: start; }
+}
+
+/* Below ~1050 the identity track is under ~330px, which is where the ledger
+   starts hyphenating "catalogodatos.gub.uy" — measured, not guessed. From here
+   the band stacks: identity, then the two link columns as a pair, then the
+   ledger at its own measure. */
+@media (max-width: 1050px) {
+  .foot__inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "ident   ident"
+      "explore site"
+      "data    data";
+    gap: var(--s-6);
+  }
+
+  .foot__ident,
+  .foot__data { max-width: 34rem; }
+}
 
 @media (max-width: 900px) {
   .topnav { display: none; }
@@ -1472,18 +1772,28 @@ watch([locale, user], () => nextTick(scheduleRecompute))
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .foot__links { margin-left: 0; }
-
   /* 96px above the footer plus the page's own bottom padding left a
      ~160px void on phones. Halve the footer's own contribution. */
   .foot { margin-top: var(--s-6); }
-  .foot__inner { padding-block: var(--s-5); }
+  .foot__inner {
+    padding-block: var(--s-6) var(--s-5);
+    gap: var(--s-5);
+  }
 
   /* The drawer carries the theme and language controls on a phone, so
      the bar keeps only the brand and the menu. This is also what was
      pushing 27px of horizontal overflow at 360px. */
   .topbar__actions .iconbtn:not(.iconbtn--menu) { display: none; }
   .topbar__inner { gap: var(--s-2); }
+}
+
+/* Below ~400px the 6.5rem label track leaves the value too little room for
+   "Compras Estatales (OCDS)", so the ledger reads as stacked label-over-value. */
+@media (max-width: 400px) {
+  .ledger__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
 }
 
 @media (max-width: 340px) {
