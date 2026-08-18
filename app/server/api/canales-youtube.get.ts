@@ -1,4 +1,4 @@
-import { defineEventHandler } from 'h3'
+import { defineEventHandler, getQuery } from 'h3'
 import { CHANNELS } from '../../data/canales-youtube'
 
 /**
@@ -23,10 +23,10 @@ import { CHANNELS } from '../../data/canales-youtube'
 const TTL_MS = 60 * 60 * 1000
 const CONCURRENCY = 6
 const FETCH_TIMEOUT_MS = 8_000
-/** Videos por canal que se conservan. El feed trae 15 y no hace falta tanto. */
-const PER_CHANNEL = 4
+/** Videos por canal que se conservan. El feed trae 15; la ficha de un canal muestra estos. */
+const PER_CHANNEL = 6
 /** Tope de la lista combinada. */
-const MAX_ITEMS = 80
+const MAX_ITEMS = 140
 const UA = 'Mozilla/5.0 (compatible; gastos-gub/1.0; +https://github.com/eduair94/gastos-gub-uy)'
 
 export interface FeedVideo {
@@ -122,9 +122,24 @@ async function collect(): Promise<Payload> {
   return { videos: videos.slice(0, MAX_ITEMS), fetchedAt: new Date().toISOString(), failed }
 }
 
-export default defineEventHandler(async () => {
+/**
+ * `?channel=UC…` recorta la respuesta a un canal.
+ *
+ * El barrido es el mismo y la caché también: la ficha de un canal no dispara 34 pedidos
+ * a YouTube ni tiene su propia caché. Un id que no está en el directorio devuelve vacío,
+ * porque este endpoint no consulta canales que no pasaron la prueba de identidad.
+ */
+function narrow(data: Payload, channelId: string | null): Payload {
+  if (!channelId) return data
+  return { ...data, videos: data.videos.filter(v => v.channelId === channelId) }
+}
+
+export default defineEventHandler(async (event) => {
+  const raw = getQuery(event).channel
+  const channelId = typeof raw === 'string' && CHANNELS.some(c => c.id === raw) ? raw : null
+
   if (cache && Date.now() - cache.at < TTL_MS) {
-    return { success: true, data: cache.data, stale: false }
+    return { success: true, data: narrow(cache.data, channelId), stale: false }
   }
 
   if (!inFlight) {
@@ -137,13 +152,13 @@ export default defineEventHandler(async () => {
     const data = await inFlight
     // Un barrido que no trajo nada no pisa la última respuesta buena.
     if (data.videos.length === 0 && cache) {
-      return { success: true, data: cache.data, stale: true }
+      return { success: true, data: narrow(cache.data, channelId), stale: true }
     }
     cache = { data, at: Date.now() }
-    return { success: true, data, stale: false }
+    return { success: true, data: narrow(data, channelId), stale: false }
   }
   catch {
-    if (cache) return { success: true, data: cache.data, stale: true }
+    if (cache) return { success: true, data: narrow(cache.data, channelId), stale: true }
     return { success: true, data: { videos: [], fetchedAt: new Date().toISOString(), failed: CHANNELS.map(c => c.id) }, stale: true }
   }
 })

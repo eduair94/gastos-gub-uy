@@ -316,6 +316,7 @@ export default defineNuxtConfig({
       cases: { sources: ['/api/__sitemap__/cases'] },
       blog: { sources: ['/api/__sitemap__/blog'] },
       years: { sources: ['/api/__sitemap__/years'] },
+      canales: { sources: ['/api/__sitemap__/canales'] },
     },
   },
 

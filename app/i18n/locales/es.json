@@ -2205,6 +2205,10 @@
       "title": "Canales de YouTube uruguayos sobre gasto público y política",
       "description": "Directorio verificado de canales de YouTube uruguayos que sirven para seguir el dinero público: el Parlamento, los organismos que compran, los medios que informan y los partidos. Con la prueba de identidad de cada canal y sus últimos videos."
     },
+    "canalYt": {
+      "title": "{name} en YouTube: qué publica y cuánto habla de gasto público",
+      "description": "Ficha verificada del canal de YouTube de {name}: {what} Con su prueba de identidad, sus cifras medidas y sus últimos videos sobre gasto público y política uruguaya."
+    },
     "tribunalCuentas": {
       "title": "Lo que dijo el Tribunal de Cuentas sobre las compras del Estado",
       "description": "Resoluciones del Tribunal de Cuentas sobre compras públicas uruguayas, cada una junto a la compra que nombra y con el enlace a la resolución original."
@@ -2573,7 +2577,51 @@
     "gapsTitle": "Lo que no existe",
     "methodTitle": "Cómo se armó",
     "methodFoot": "El mismo criterio que usamos para comparar plataformas de transparencia:",
-    "methodLink": "quién más vigila al Estado uruguayo"
+    "methodLink": "quién más vigila al Estado uruguayo",
+    "backToIndex": "Todos los canales",
+    "openChannel": "Ver el canal",
+    "views": "Vistas del canal",
+    "factsStamp": "Cifras verificadas el {date}. El canal se abrió el {joined}.",
+    "whyTitle": "Por qué está en el directorio",
+    "proofCountryLong": "YouTube publica «Uruguay» como país del canal, en su pestaña «Más información».",
+    "proofSiteLong": "El sitio oficial enlaza este canal:",
+    "selfTitle": "Así se describe el canal",
+    "selfNote": "Texto de la descripción que el propio canal publica en YouTube. No lo verificamos ni lo respaldamos.",
+    "measureTitle": "De qué habla, medido",
+    "measureHelp": "Sobre los {n} títulos más recientes del canal, leídos el {date}.",
+    "measureTopic": "títulos que tocan gasto público o política ({pct}%)",
+    "measureMentions": "partidos nombrados en esos títulos",
+    "measureNoMentions": "títulos nombran a un partido por su nombre",
+    "measureCaveat": "Esto no mide sesgo. Nombrar a un partido no dice si lo critica o lo apoya, y un canal que no nombra a ninguno puede estar hablando de otra cosa. La muestra es chica: por eso va con su número al lado.",
+    "topicVideosTitle": "Sus videos sobre gasto y política",
+    "topicVideosHelp": "De lo último que publicó, lo que pasa el filtro de gasto público y política. Es una lectura automática del feed del canal.",
+    "topicVideosEmpty": "Ninguno de sus últimos videos pasa el filtro de gasto y política.",
+    "otherVideosTitle": "El resto de lo último",
+    "siblingsTitle": "Otros canales de la misma categoría",
+    "activeTag": "Publica",
+    "inactiveTag": "Sin publicar hace más de 90 días",
+    "orientationTitle": "Sobre la orientación política",
+    "orientationHelp": "A los partidos se les marca si están en el gobierno o en la oposición, que es un hecho institucional. A los medios no se les pone etiqueta ideológica: no hay forma de medirla y sería nuestra opinión disfrazada de dato. En su lugar, la ficha de cada canal publica dos números sobre sus títulos recientes: cuántos tocan gasto público o política, y a qué partidos nombra.",
+    "bloc": {
+      "gobierno": "Partido de gobierno",
+      "oposicion": "Oposición"
+    },
+    "party": {
+      "fa": "Frente Amplio",
+      "pn": "Partido Nacional",
+      "pc": "Partido Colorado",
+      "ca": "Cabildo Abierto",
+      "pi": "Partido Independiente",
+      "is": "Identidad Soberana",
+      "coalicion": "Coalición Republicana"
+    },
+    "cardMeasure": "Gasto y política: {hits} de sus últimos {n} títulos.",
+    "sortLabel": "Ordenar por",
+    "sort": {
+      "tamano": "Tamaño",
+      "gasto": "Cuánto habla de gasto"
+    },
+    "orientationStamp": "La medición de cada canal se hizo el {date}, sobre sus últimos títulos. Está en su ficha, con el tamaño de la muestra al lado."
   },
   "plataformas": {
     "eyebrow": "Comparativa",

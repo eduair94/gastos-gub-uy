@@ -15,9 +15,10 @@
  */
 import {
   CHANNELS, GAPS, LIMITES, METODO, REJECTED, VERIFIED_ON,
-  channelUrl, isActive, matchesTopic,
+  channelPath, channelUrl, isActive, matchesTopic,
   type Category, type Channel,
 } from '~/data/canales-youtube'
+import { SAMPLED_ON, SAMPLES } from '~/data/canales-youtube-muestra'
 
 interface FeedVideo {
   videoId: string
@@ -53,11 +54,26 @@ const inactiveChannels = computed(() =>
 )
 
 const ORDER: Category[] = ['estado', 'medios', 'partidos', 'analisis']
+
+// Dos órdenes, porque son dos preguntas distintas: «cuál es el más grande» y «cuál
+// habla más de lo que a este sitio le importa». La medición sale de la muestra de
+// títulos; un canal sin muestra queda último en ese orden, no primero.
+type SortKey = 'tamano' | 'gasto'
+const sortBy = ref<SortKey>('tamano')
+
+function topicShare(id: string): number | null {
+  const s = SAMPLES[id]
+  if (!s || s.n === 0) return null
+  return s.topicHits / s.n
+}
+
 const groups = computed(() => ORDER.map(key => ({
   key,
   channels: activeChannels.value
     .filter(c => c.category === key)
-    .sort((a, b) => b.subscribersApprox - a.subscribersApprox),
+    .sort((a, b) => sortBy.value === 'tamano'
+      ? b.subscribersApprox - a.subscribersApprox
+      : (topicShare(b.id) ?? -1) - (topicShare(a.id) ?? -1)),
 })).filter(g => g.channels.length > 0))
 
 // Filtros del feed. `onlyTopic` arranca prendido porque la página es sobre dinero
@@ -169,6 +185,19 @@ useSeo(() => ({
         </v-card>
       </section>
 
+      <!-- Orientación política: qué hacemos y qué no -->
+      <section class="block">
+        <h2 class="block__h">
+          {{ t('canalesYt.orientationTitle') }}
+        </h2>
+        <p class="block__help">
+          {{ t('canalesYt.orientationHelp') }}
+        </p>
+        <p class="block__help">
+          {{ t('canalesYt.orientationStamp', { date: SAMPLED_ON }) }}
+        </p>
+      </section>
+
       <!-- Lo último -->
       <section class="block">
         <div class="block__head">
@@ -262,6 +291,23 @@ useSeo(() => ({
         </v-card>
       </section>
 
+      <!-- Orden del directorio -->
+      <section class="block">
+        <div class="chip-row">
+          <span class="sortlabel">{{ t('canalesYt.sortLabel') }}</span>
+          <v-chip
+            v-for="k in (['tamano', 'gasto'] as const)"
+            :key="k"
+            :variant="sortBy === k ? 'flat' : 'outlined'"
+            :color="sortBy === k ? 'primary' : undefined"
+            size="small"
+            @click="sortBy = k"
+          >
+            {{ t(`canalesYt.sort.${k}`) }}
+          </v-chip>
+        </div>
+      </section>
+
       <!-- El directorio -->
       <section
         v-for="g in groups"
@@ -287,19 +333,21 @@ useSeo(() => ({
             class="ccard"
           >
             <header class="ccard__head">
-              <a
+              <NuxtLink
                 class="ccard__name"
-                :href="channelUrl(c.id)"
-                target="_blank"
-                rel="noopener nofollow"
+                :to="localePath(channelPath(c))"
               >
                 {{ c.name }}
                 <v-icon size="14">
-                  mdi-open-in-new
+                  mdi-arrow-right
                 </v-icon>
-              </a>
+              </NuxtLink>
               <p class="ccard__handle">
                 {{ c.handle }}
+                <span
+                  v-if="c.bloc"
+                  class="ccard__bloc"
+                >· {{ t(`canalesYt.bloc.${c.bloc}`) }}</span>
               </p>
             </header>
 
@@ -325,6 +373,13 @@ useSeo(() => ({
               </div>
             </dl>
 
+            <p
+              v-if="SAMPLES[c.id] && SAMPLES[c.id]!.n > 0"
+              class="ccard__meas"
+            >
+              {{ t('canalesYt.cardMeasure', { hits: SAMPLES[c.id]!.topicHits, n: SAMPLES[c.id]!.n }) }}
+            </p>
+
             <div class="chip-row ccard__links">
               <span class="proof">
                 <v-icon size="13">
@@ -346,6 +401,14 @@ useSeo(() => ({
               >
                 {{ bi(c.related.label) }}
               </NuxtLink>
+              <a
+                class="ccard__link"
+                :href="channelUrl(c.id)"
+                target="_blank"
+                rel="noopener nofollow"
+              >
+                {{ t('canalesYt.openChannel') }}
+              </a>
               <a
                 v-if="c.site"
                 class="ccard__link"
@@ -386,11 +449,9 @@ useSeo(() => ({
                 :key="c.id"
               >
                 <td>
-                  <a
-                    :href="channelUrl(c.id)"
-                    target="_blank"
-                    rel="noopener nofollow"
-                  >{{ c.name }}</a>
+                  <NuxtLink :to="localePath(channelPath(c))">
+                    {{ c.name }}
+                  </NuxtLink>
                 </td>
                 <td>{{ t(`canalesYt.cat.${c.category}`) }}</td>
                 <td class="mono">
@@ -724,6 +785,8 @@ useSeo(() => ({
   color: var(--text-muted);
 }
 
+.ccard__bloc { color: var(--celeste-deep); }
+
 .ccard__what { margin: 0; font-size: var(--t-sm); line-height: 1.55; }
 
 .ccard__why {
@@ -753,6 +816,21 @@ useSeo(() => ({
   font-family: var(--font-mono);
   font-size: var(--t-sm);
   font-variant-numeric: tabular-nums;
+}
+
+.ccard__meas {
+  margin: var(--s-2) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  color: var(--text-muted);
+}
+
+.sortlabel {
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
 }
 
 .ccard__links { margin-top: var(--s-3); }

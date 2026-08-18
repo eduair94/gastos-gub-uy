@@ -2205,6 +2205,10 @@
       "title": "Uruguayan YouTube channels on public spending and politics",
       "description": "A verified directory of Uruguayan YouTube channels for following public money: parliament, the agencies that buy, the outlets that report and the parties. With each channel's identity proof and its latest videos."
     },
+    "canalYt": {
+      "title": "{name} on YouTube: what it publishes and how much it covers public spending",
+      "description": "Verified profile of the {name} YouTube channel: {what} With its identity proof, measured figures and latest videos on Uruguayan public spending and politics."
+    },
     "tribunalCuentas": {
       "title": "What the Court of Accounts said about state purchases",
       "description": "Court of Accounts rulings on Uruguayan public procurement, each next to the purchase it names, with a link to the original ruling."
@@ -2573,7 +2577,51 @@
     "gapsTitle": "What does not exist",
     "methodTitle": "How it was built",
     "methodFoot": "The same standard we use to compare transparency platforms:",
-    "methodLink": "who else watches the Uruguayan state"
+    "methodLink": "who else watches the Uruguayan state",
+    "backToIndex": "All channels",
+    "openChannel": "Open the channel",
+    "views": "Channel views",
+    "factsStamp": "Figures verified on {date}. The channel opened on {joined}.",
+    "whyTitle": "Why it is in the directory",
+    "proofCountryLong": "YouTube publishes “Uruguay” as the channel’s country, on its about tab.",
+    "proofSiteLong": "The official site links this channel:",
+    "selfTitle": "How the channel describes itself",
+    "selfNote": "The description the channel itself publishes on YouTube. We neither verify nor endorse it.",
+    "measureTitle": "What it talks about, measured",
+    "measureHelp": "Over the {n} most recent titles from the channel, read on {date}.",
+    "measureTopic": "titles touching public spending or politics ({pct}%)",
+    "measureMentions": "parties named in those titles",
+    "measureNoMentions": "titles name a party by its name",
+    "measureCaveat": "This does not measure bias. Naming a party says nothing about criticism or support, and a channel naming none may simply be covering something else. The sample is small, which is why its size always sits next to the number.",
+    "topicVideosTitle": "Its videos on spending and politics",
+    "topicVideosHelp": "From its latest uploads, the ones passing the public-spending and politics filter. It is an automatic read of the channel feed.",
+    "topicVideosEmpty": "None of its latest videos passes the spending and politics filter.",
+    "otherVideosTitle": "The rest of its latest",
+    "siblingsTitle": "Other channels in the same category",
+    "activeTag": "Publishing",
+    "inactiveTag": "Nothing for over 90 days",
+    "orientationTitle": "About political orientation",
+    "orientationHelp": "Parties are marked as governing or opposition, which is an institutional fact. Outlets get no ideological label: there is no way to measure one, and it would be our opinion dressed as data. Instead each channel profile publishes two numbers about its recent titles: how many touch public spending or politics, and which parties it names.",
+    "bloc": {
+      "gobierno": "Governing party",
+      "oposicion": "Opposition"
+    },
+    "party": {
+      "fa": "Frente Amplio",
+      "pn": "Partido Nacional",
+      "pc": "Partido Colorado",
+      "ca": "Cabildo Abierto",
+      "pi": "Partido Independiente",
+      "is": "Identidad Soberana",
+      "coalicion": "Coalición Republicana"
+    },
+    "cardMeasure": "Spending and politics: {hits} of its latest {n} titles.",
+    "sortLabel": "Sort by",
+    "sort": {
+      "tamano": "Size",
+      "gasto": "Spending coverage"
+    },
+    "orientationStamp": "Each channel was measured on {date}, over its latest titles. It sits on the channel profile, with the sample size next to it."
   },
   "plataformas": {
     "eyebrow": "Comparison",
