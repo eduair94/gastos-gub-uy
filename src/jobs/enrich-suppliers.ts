@@ -44,7 +44,8 @@
 import { mongoose } from "../../shared/connection/database";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
 import { SUPPLIER_CATEGORIES, SupplierEnrichmentModel } from "../../shared/models/supplier_enrichment";
-import { callGeminiStructured, estimateCostUsd, FLASH_LITE_PRICING, GeminiSchema, GeminiUsage } from "./ai/gemini-client";
+import { estimateCostUsd, FLASH_LITE_PRICING, GeminiSchema, GeminiUsage } from "./ai/gemini-client";
+import { callStructured } from "../../shared/ai/structured";
 
 const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const PAUTA_CLASS = "PUBLICIDAD Y PROPAGANDA";
@@ -263,7 +264,7 @@ async function main(): Promise<void> {
 
   for (const name of needLLM) {
     try {
-      const { data, usage } = await callGeminiStructured<EnrichResult>({
+      const { data, usage } = await callStructured<EnrichResult>({
         apiKey,
         model,
         systemInstruction: SYSTEM_INSTRUCTION,

@@ -50,6 +50,9 @@ export async function extractScannedPdfText(
     ? options.models
     : modelCandidates(process.env.PLIEGO_OCR_GEMINI_MODELS);
 
+  // Único camino de IA que NO pasa por `callStructured`. El agente Claude del
+  // servidor 104 recibe texto, no binarios, y esto manda el PDF entero en
+  // `inlineData`. Gemini es el proveedor de la escalera que lo lee.
   for (const model of models) {
     try {
       const result = await callGeminiStructured<{ text: string }>({

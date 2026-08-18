@@ -66,6 +66,9 @@ Barrel: [models/index.ts](models/index.ts) exports 32 of 39 models. Import the o
 ### Pure helpers & static tables
 | Path | Purpose |
 |---|---|
+| [ai/structured.ts](ai/structured.ts) | `callStructured()` — reemplazo directo de `callGeminiStructured` que antepone el escalón Claude. Todo job que llamaba a Gemini de forma directa pasa por acá. La única excepción es el OCR, que manda binario. |
+| [ai/claude-agent-client.ts](ai/claude-agent-client.ts) | Cliente de `claude-agent-api` (servidor 104). Pide salida estructurada con `jsonSchema` y anula el modo caveman por request. Nunca reintenta un 429: cada intento gasta cuota de suscripción. |
+| [ai/rotator.ts](ai/rotator.ts) | `ProviderRotator` — escalera Claude → Gemini → Groq. Banca un escalón ante la pared diaria y sigue con el siguiente. `claudeRungFromEnv()` lee el escalón Claude del entorno. |
 | [matching/match.ts](matching/match.ts) | `watchMatchesCall(watch, call)` — the ONLY watch↔llamado matcher. Pure. A value range never excludes a call that has no `estimatedValue`. |
 | [alerts/build-alert-content.ts](alerts/build-alert-content.ts) | ONE `AlertCard` model + per-channel renderers (`buildAlertCard`, `renderPushPayload`, `renderTelegramHtml`). es/en strings inline. |
 | [alerts/channels.ts](alerts/channels.ts) | `DEFAULT_CHANNELS` (email+inapp) + `resolveChannels(user)`. PREFERENCE only: the dispatcher still gates on a real connection / emailVerified. |
@@ -135,6 +138,8 @@ npx tsx tests/unit/webhook.test.ts            # webhooks/sign.ts
 - **Key "recent" off `firstDetectedAt`.** Every run restamps `anomalies.detectedAt`, so a rescan marks everything recent.
 - **Any job writing `release.amount` MUST call `hasVerifiedOverride()` and skip** — else a re-sync restores the inflated qty×lump-sum total.
 - **Import the 7 non-barrel models by file path** — the barrel note above the models table names them.
+- **El escalón Claude tiene una cuota dura de 200 llamadas por día, y es la MISMA que consume el Claude Code interactivo.** Corre sobre una suscripción personal en el servidor 104, no sobre una API elástica. Por eso [ai/claude-agent-client.ts](ai/claude-agent-client.ts) nunca reintenta un `429`, un `queue_full` ni un `queue_timeout`: banca el escalón y el rotator sigue con Gemini. Un job de miles de ítems agota la cuota a la llamada 200 y termina la tanda con Gemini. Eso es lo esperado, no una falla.
+- **El endpoint de 104 escucha sólo en `127.0.0.1:9310`.** Prod llega por la unit `claude-agent-tunnel.service`. Sin túnel el escalón se banca al primer intento y ningún job se rompe. Nunca abras ese puerto al exterior: el agente corre como root.
 - **`.env` beats shell env, and that is deliberate.** Importing any model runs `config.ts` → dotenv `override:true` (a stale Windows-user `GEMINI_API_KEY` once shadowed the paid key). Edit `.env`; setting the var in the shell does nothing.
 - **`buyer_patterns.suppliers[]` is `$unset`**, but the list endpoint does `.find().lean()` with no `.select()`. Re-populating it ships the whole array to the browser.
 - **Shared code must satisfy BOTH tsconfigs:** root compiles src+shared as CommonJS/node; `app/tsconfig.json` compiles shared as ESNext/bundler with `verbatimModuleSyntax`. Use `import type` for type-only imports.

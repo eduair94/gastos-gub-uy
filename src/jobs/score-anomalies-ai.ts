@@ -43,7 +43,7 @@ import path from "path";
 import type { PipelineStage } from "mongoose";
 import { AnomalyModel, ContractItemFeaturesModel, ReleaseModel } from "../../shared/models";
 import { connectToDatabase, disconnectFromDatabase } from "../../shared/connection/database";
-import { ProviderRotator } from "../../shared/ai/rotator";
+import { claudeRungFromEnv, ProviderRotator } from "../../shared/ai/rotator";
 import { canonicalUnit } from "../../shared/utils/units";
 import { estimateCostUsd, FLASH_LITE_PRICING, GeminiSchema, GeminiUsage } from "./ai/gemini-client";
 import { adjudicacionUrl, compraIdFromOcid, llamadoUrl, ScrapedItem, scrapeCompraFeatures } from "./ai/item-features";
@@ -760,10 +760,15 @@ async function main(): Promise<void> {
 
   const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? "";
   const groqApiKey = process.env.GROQ_API_KEY ?? "";
+  // El escalón Claude (servidor 104) encabeza la escalera cuando está configurado.
+  // Su cuota diaria es de 200 llamadas, así que en una tanda larga se agota y el
+  // rotator sigue con Gemini/Groq. Esos dos siguen siendo obligatorios.
+  const claudeRung = claudeRungFromEnv();
   if (!apiKey && !groqApiKey && !options.dryRun) {
     throw new Error("GEMINI_API_KEY/GOOGLE_API_KEY or GROQ_API_KEY is required. Use --dry-run to plan without it.");
   }
   const rotator = new ProviderRotator({
+    ...claudeRung,
     ...(apiKey ? { geminiApiKey: apiKey } : {}),
     ...(groqApiKey ? { groqApiKey } : {}),
     ...(options.model !== DEFAULT_MODEL ? { geminiModels: [options.model] } : {}),

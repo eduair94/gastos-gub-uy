@@ -8,7 +8,8 @@
 //
 // The Gemini call is INJECTED (`deps.call`) so the resolver stays unit-testable with
 // a stub and no network — mirroring the factory style of the other resolvers.
-import { callGeminiStructured, type GeminiSchema } from "../ai/gemini-client";
+import { type GeminiSchema } from "../ai/gemini-client";
+import { callStructured } from "../../../shared/ai/structured";
 
 export interface MatchPair {
   /** Caller-chosen id echoed back on the verdict so batches can be de-multiplexed. */
@@ -25,7 +26,7 @@ export interface JudgeDeps {
   apiKey: string;
   model?: string;
   /** Defaults to the real Gemini client; tests inject a stub. */
-  call?: typeof callGeminiStructured;
+  call?: typeof callStructured;
   /** Max pairs per Gemini request. */
   batchSize?: number;
 }
@@ -70,7 +71,7 @@ function chunk<T>(xs: T[], n: number): T[][] {
 /** Build a judge bound to a Gemini key. Returns an empty map for empty input (no call). */
 export function createGeminiJudge(deps: JudgeDeps): JudgeFn {
   const model = deps.model ?? "gemini-2.5-flash-lite";
-  const call = deps.call ?? callGeminiStructured;
+  const call = deps.call ?? callStructured;
   const batchSize = deps.batchSize ?? 25;
 
   return async (pairs: MatchPair[]): Promise<Map<number, MatchVerdict>> => {

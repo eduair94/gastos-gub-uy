@@ -21,7 +21,7 @@ import type { ExtractedPliegoDocument } from "./document-corpus";
 import { applyVerifiedPliegoFacts, extractVerifiedPliegoFacts, normalizeGeneratedPliegoSummary } from "./verified-facts";
 import type { OfficialPliegoDates } from "./verified-facts";
 import type { GeminiSchema } from "../ai/gemini-client";
-import { ProviderRotator } from "../ai/rotator";
+import { claudeRungFromEnv, ProviderRotator } from "../ai/rotator";
 import type { ModelGenerationProgress } from "../ai/rotator";
 
 const DISCLAIMER = "Resumen generado por IA. Verificá siempre el pliego oficial.";
@@ -121,7 +121,8 @@ const DOCUMENT_PRECEDENCE_INSTRUCTION =
   + "no presentes como vigente una condición sustituida.";
 
 /**
- * Builds a rotator from env. Gemini prefers the free key; Groq uses its free key.
+ * Builds a rotator from env. Claude (servidor 104) encabeza la escalera; Gemini
+ * prefers the free key; Groq uses its free key.
  * Legacy PLIEGO_AI_MODEL, if set, becomes the first Gemini model tried.
  */
 export function buildPliegoRotator(): ProviderRotator {
@@ -134,6 +135,7 @@ export function buildPliegoRotator(): ProviderRotator {
   if (legacy && !geminiModels.includes(legacy)) geminiModels.unshift(legacy);
 
   return new ProviderRotator({
+    ...claudeRungFromEnv(),
     geminiApiKey,
     groqApiKey,
     geminiModels: geminiModels.length ? geminiModels : undefined,

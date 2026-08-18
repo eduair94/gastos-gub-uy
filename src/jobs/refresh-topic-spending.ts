@@ -53,7 +53,8 @@ import type { PartyCode } from "../../shared/political-mandates";
 import { SPENDING_TOPICS, getTopic, matchTopic, topicRegex } from "../../shared/spending-topics";
 import type { SpendingTopic } from "../../shared/spending-topics";
 import { compraIdFromOcid } from "../../shared/utils/ocid";
-import { FLASH_LITE_PRICING, callGeminiStructured, estimateCostUsd } from "./ai/gemini-client";
+import { FLASH_LITE_PRICING, estimateCostUsd } from "./ai/gemini-client";
+import { callStructured } from "../../shared/ai/structured";
 import type { GeminiSchema, GeminiUsage } from "./ai/gemini-client";
 
 /** Single releases above this are data artefacts (one IM release reports ~1.8e11 UYU). */
@@ -542,7 +543,7 @@ async function runTopic(topic: SpendingTopic, opts: Options): Promise<void> {
 
     await mapPool(needsVerdict, CONCURRENCY, async ({ raw, doc }) => {
       try {
-        const res = await callGeminiStructured<Verdict>({
+        const res = await callStructured<Verdict>({
           apiKey,
           model: opts.model,
           systemInstruction: system,

@@ -19,7 +19,7 @@ import { PushSubscriptionModel } from "../../shared/models/push_subscription";
 import { ReleaseModel } from "../../shared/models/release";
 import { TopicContractModel } from "../../shared/models/topic_contract";
 import { UserModel } from "../../shared/models/user";
-import { callGeminiStructured } from "../../shared/ai/gemini-client";
+import { callStructured } from "../../shared/ai/structured";
 import type { GeminiSchema } from "../../shared/ai/gemini-client";
 import { resolveChannels } from "../../shared/alerts/channels";
 import { SPENDING_TOPICS } from "../../shared/spending-topics";
@@ -391,7 +391,7 @@ async function generateAnalysis(input: {
     },
   };
 
-  const result = await callGeminiStructured<INewsletterAiAnalysis>({
+  const result = await callStructured<INewsletterAiAnalysis>({
     apiKey,
     model,
     temperature: 0,

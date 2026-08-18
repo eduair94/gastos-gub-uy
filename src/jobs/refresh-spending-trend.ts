@@ -27,7 +27,7 @@
  */
 import { Types } from 'mongoose'
 import { connectToDatabase } from '../../shared/connection/database'
-import { callGeminiStructured } from '../../shared/ai/gemini-client'
+import { callStructured } from '../../shared/ai/structured'
 import { MACRO_URUGUAY, macroForYear } from '../../shared/macro-uruguay'
 import { ExchangeRateModel, ReleaseModel, SiceCatalogModel, SpendingTrendModel } from '../../shared/models'
 import type {
@@ -332,7 +332,7 @@ export async function polishNarrative(
   apiKey: string,
 ): Promise<PolishOutcome> {
   try {
-    const { data } = await callGeminiStructured<{ es: string, en: string }>({
+    const { data } = await callStructured<{ es: string, en: string }>({
       apiKey,
       model,
       systemInstruction:
