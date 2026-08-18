@@ -161,9 +161,9 @@ export const CORPUS = {
   to: 2026,
   measured: '2026-08-17',
   suicidOcids: 7,
-  /** Suma de las adjudicaciones, contando una sola vez el taller duplicado. */
+  /** Suma alternativa, si los dos registros idénticos del taller fueran una sola compra. No se publica: contradice el conteo de siete. */
   suicidUyu: 4_953_380,
-  /** Suma alternativa, si los dos registros idénticos fueran dos compras. */
+  /** La suma publicada. Cuenta cada registro una vez, igual que `suicidOcids`. */
   suicidUyuMax: 5_033_280,
 }
 
@@ -174,7 +174,7 @@ export const CORPUS = {
  * precio unitario) en una minoría de líneas. La cantidad de compras es exacta.
  */
 export const COMPARADORES = [
-  { key: 'suicid', ocids: 7, uyu: 4_953_380 },
+  { key: 'suicid', ocids: 7, uyu: 5_033_280 },
   { key: 'saludMental', ocids: 167, uyu: 198_626_547 },
   { key: 'desfibrilador', ocids: 2540, uyu: 493_663_582 },
 ]
@@ -308,7 +308,7 @@ export const SU_CONTENT = {
       { n: '668', l: 'muertes en 2025', s: 'la cifra más baja en diez años, según el MSP' },
       { n: '19,16', l: 'cada 100.000 habitantes', s: 'la tasa más baja desde 2015 (18,55)' },
       { n: '79%', l: 'de las muertes son de varones', s: 'y 72% de los intentos son de mujeres' },
-      { n: '$ 4,95 M', l: 'adjudicados en 24 años', s: 'pesos corrientes, sin ajustar por inflación' },
+      { n: '$ 5,03 M', l: 'adjudicados en 24 años', s: 'pesos corrientes, sin ajustar por inflación' },
     ],
 
     serieTag: 'La serie',
@@ -354,7 +354,7 @@ export const SU_CONTENT = {
       'Buscamos la raíz "suicid" en los siete campos de texto de cada registro: la descripción y la clasificación de los ítems adjudicados, el título de la adjudicación, y el título, la descripción y los ítems del llamado. Sobre 2.185.037 registros, agrupados en 1.639.165 compras, aparecen siete. Una cada 234.166.',
       'Tres son de la Dirección Nacional de Sanidad Policial y del MSP, y son las más viejas. Una es de ANEP y no tiene adjudicación cargada. Las tres últimas son de la Intendencia de Montevideo, del mismo día de 2024.',
       'La más grande es de 2015. Sanidad Policial llamó a Licitación Abreviada por "un servicio de respuesta de prevención y postvención de suicidio cumpliendo funciones para la D.N.S.P. en todo el territorio nacional". El ítem del pliego es una línea telefónica por 24 meses. La adjudicación quedó registrada en marzo de 2016, a Último Recurso, por 4.540.800 pesos. Es la única vez en el corpus en que el Estado licitó una línea de prevención.',
-      'Sumadas, las adjudicaciones dan 4.953.380 pesos corrientes en dieciséis años. Ese total tiene un supuesto: dos de los registros de la Intendencia son idénticos —mismo adjudicatario, mismo monto, misma fecha, mismo texto— y los contamos una vez. Si fueran dos compras distintas, el total sería 5.033.280.',
+      'Sumadas, las adjudicaciones dan 5.033.280 pesos corrientes en dieciséis años. Ese total cuenta cada registro una vez, igual que el conteo de siete compras. Dos de los registros de la Intendencia son idénticos: mismo adjudicatario, mismo monto, misma fecha, mismo texto. Si fueran una sola compra cargada dos veces, el total sería 4.953.380 y las compras serían seis.',
     ],
     comprasCols: { year: 'Año', buyer: 'Organismo', object: 'Objeto', supplier: 'Adjudicatario', award: 'Adjudicado' },
     comprasItems: {
@@ -488,7 +488,7 @@ export const SU_CONTENT = {
       { n: '668', l: 'deaths in 2025', s: 'the lowest figure in ten years, per the Health Ministry' },
       { n: '19.16', l: 'per 100,000 people', s: 'the lowest rate since 2015 (18.55)' },
       { n: '79%', l: 'of deaths are men', s: 'and 72% of attempts are women' },
-      { n: '$ 4.95 M', l: 'awarded in 24 years', s: 'nominal pesos, not inflation-adjusted' },
+      { n: '$ 5.03 M', l: 'awarded in 24 years', s: 'nominal pesos, not inflation-adjusted' },
     ],
 
     serieTag: 'The series',
@@ -534,7 +534,7 @@ export const SU_CONTENT = {
       'We searched the stem "suicid" across the seven text fields of every record: the description and classification of awarded line items, the award title, and the tender title, description and items. Across 2,185,037 records grouped into 1,639,165 purchases, seven come back. One in 234,166.',
       'Three belong to the police health directorate and the health ministry, and they are the oldest. One belongs to the national education body and has no award recorded. The last three belong to the Montevideo city government, all from the same day in 2024.',
       'The largest is from 2015. The police health directorate tendered "a suicide prevention and postvention response service operating for the D.N.S.P. across the whole national territory". The line item is a telephone line for 24 months. The award was recorded in March 2016, to Último Recurso, for 4,540,800 pesos. It is the only time in the corpus that the State tendered a prevention line.',
-      'Added up, the awards come to 4,953,380 nominal pesos over sixteen years. That total carries one assumption: two of the city records are identical — same supplier, same amount, same date, same text — and we count them once. If they were two separate purchases, the total would be 5,033,280.',
+      'Added up, the awards come to 5,033,280 nominal pesos over sixteen years. That total counts every record once, the same way the count of seven purchases does. Two of the city records are identical: same supplier, same amount, same date, same text. If they were one purchase filed twice, the total would be 4,953,380 and the count would be six.',
     ],
     comprasCols: { year: 'Year', buyer: 'Public body', object: 'Object', supplier: 'Supplier', award: 'Awarded' },
     comprasItems: {

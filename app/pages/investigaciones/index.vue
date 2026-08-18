@@ -9,6 +9,7 @@
  * hoping it matched the last one. Add an entry to `SERIES` instead.
  */
 import { invContent } from '~/data/investigaciones'
+import { srCard } from '~/data/investigaciones-suicidios-recursos'
 
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
@@ -31,6 +32,9 @@ function casoThemeText(th: any) {
 }
 
 const readMore = computed(() => c.value.readMore ?? t('common.viewDetail'))
+
+// Esta tarjeta vive en su propio módulo y no en `investigaciones.ts`: otra sesión tiene cambios sin commitear en ese archivo y no se barren.
+const cardSuicidiosRecursos = computed(() => srCard(locale.value))
 
 /** The published series, in the order the hub argues them. One entry per card. */
 const series = computed(() => [
@@ -81,6 +85,7 @@ const series = computed(() => [
     cards: [
       { path: '/investigaciones/mejor-o-peor', emoji: '📉', ...c.value.cardMejorPeor },
       { path: '/investigaciones/suicidios', emoji: '🕯️', ...c.value.cardSuicidios },
+      { path: '/investigaciones/suicidios-recursos', emoji: '🧮', ...cardSuicidiosRecursos.value },
       { path: '/investigaciones/documento-fa', emoji: '📄', ...c.value.cardDocumentoFa },
       { path: '/investigaciones/sunca', emoji: '🦺', ...c.value.cardSunca },
     ],
