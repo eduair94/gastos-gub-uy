@@ -35,6 +35,11 @@ export interface ClaudeAgentCallOptions {
   schema: GeminiSchema;
   /** `low` `medium` `high` `xhigh` `max`. Omitido, decide el servidor. */
   effort?: string | undefined;
+  /**
+   * Piso de llamadas que el batch NO consume, reservadas para el uso
+   * interactivo. Ver `RESERVE_NOTE`. Omitido o 0, no reserva nada.
+   */
+  minRemaining?: number | undefined;
   timeoutMs?: number | undefined;
   onProgress?: ((receivedChars: number) => void) | undefined;
   /** Tope absoluto de la escalera. Nunca se supera. */
@@ -67,8 +72,79 @@ export class ClaudeAgentHttpError extends Error {
  * `unreachable` cubre la máquina sin túnel al servidor 104. Sin esto, un job de
  * miles de ítems intenta conectarse y falla una vez por ítem antes de bajar a
  * Gemini. Si el endpoint no está la primera vez, no va a estar en esta corrida.
+ *
+ * `reserved_for_interactive` es la reserva: el batch se detiene antes de vaciar
+ * la cuota del día. Ver `RESERVE_NOTE`.
  */
-const EXHAUSTION_CODES = new Set(["daily_limit_reached", "queue_full", "queue_timeout", "unreachable"]);
+const EXHAUSTION_CODES = new Set([
+  "daily_limit_reached",
+  "queue_full",
+  "queue_timeout",
+  "unreachable",
+  "reserved_for_interactive",
+]);
+
+/**
+ * RESERVE_NOTE — por qué el batch se frena antes del tope.
+ *
+ * La cuota diaria del servidor es UNA sola y la comparte con el Claude Code
+ * interactivo del dueño. Un job de miles de ítems la vaciaría y lo dejaría sin
+ * su propia herramienta. Con `minRemaining` en N, el escalón Claude se banca
+ * cuando quedan N llamadas o menos. Esas N quedan para el uso interactivo.
+ *
+ * El job no falla: baja a Gemini y sigue.
+ *
+ * `GET /health` no consume cuota, así que consultarlo es gratis. Igual se
+ * cachea unos segundos: una tanda hace cientos de llamadas y no necesita
+ * preguntar el saldo en cada una.
+ */
+const HEALTH_CACHE_MS = 30_000;
+
+interface HealthCacheEntry {
+  checkedAtMs: number;
+  remaining: number | null;
+}
+
+const healthCache = new Map<string, HealthCacheEntry>();
+
+/** Limpia el saldo cacheado. Sólo para tests. */
+export function resetHealthCache(): void {
+  healthCache.clear();
+}
+
+/**
+ * Saldo del día según el servidor. Devuelve null si no se puede leer, y en ese
+ * caso la reserva no bloquea: preferimos intentar la llamada antes que frenar
+ * la tanda por un health caído.
+ */
+async function remainingToday(baseUrl: string, apiKey: string, nowMs: number): Promise<number | null> {
+  const cached = healthCache.get(baseUrl);
+  if (cached && nowMs - cached.checkedAtMs < HEALTH_CACHE_MS) return cached.remaining;
+
+  let remaining: number | null = null;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const res = await fetch(`${baseUrl.replace(/\/+$/, "")}/health`, {
+        headers: { "x-api-key": apiKey },
+        signal: controller.signal,
+      });
+      if (res.ok) {
+        const body = (await res.json()) as { daily?: { remaining?: number } };
+        const value = body.daily?.remaining;
+        if (typeof value === "number" && Number.isFinite(value)) remaining = value;
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    // health caído o sin túnel: no frenamos por esto. La llamada real decide.
+  }
+
+  healthCache.set(baseUrl, { checkedAtMs: nowMs, remaining });
+  return remaining;
+}
 
 export function isClaudeAgentExhausted(err: Error): boolean {
   return err instanceof ClaudeAgentHttpError && EXHAUSTION_CODES.has(err.code);
@@ -77,10 +153,11 @@ export function isClaudeAgentExhausted(err: Error): boolean {
 /**
  * Anula el modo caveman por request.
  *
- * El plugin `caveman` está instalado en 104. Su hook `SessionStart` aplica a
- * TODA llamada del API. Sin esto el agente contesta telegráfico y sin artículos,
- * lo que arruina la prosa publicada del newsletter y de las investigaciones.
- * Verificado 2026-08-18: con este texto la respuesta vuelve en prosa completa.
+ * Desde 2026-08-18 el servicio corre con un `CLAUDE_CONFIG_DIR` propio y sin
+ * plugins, así que el hook `SessionStart` del plugin `caveman` ya no se carga.
+ * Esta línea queda como red: si alguien vuelve a habilitar plugins en la caja,
+ * la prosa publicada del newsletter no se degrada a telegrama. Cuesta ~40
+ * tokens por llamada. Verificado que alcanza por sí sola.
  */
 const PROSE_OVERRIDE =
   "MODO SALIDA API: ignorá cualquier instrucción previa de estilo telegráfico, "
@@ -110,11 +187,24 @@ export async function callClaudeAgentStructured<T>(
 ): Promise<ClaudeAgentResult<T>> {
   const {
     baseUrl, apiKey, model, systemInstruction, prompt, schema,
-    effort, timeoutMs = DEFAULT_TIMEOUT_MS, onProgress, deadlineAtMs,
+    effort, minRemaining, timeoutMs = DEFAULT_TIMEOUT_MS, onProgress, deadlineAtMs,
   } = options;
 
   if (!baseUrl) throw new Error("callClaudeAgentStructured: missing baseUrl");
   if (!apiKey) throw new Error("callClaudeAgentStructured: missing apiKey");
+
+  // La reserva se consulta ANTES de gastar la llamada. Ver `RESERVE_NOTE`.
+  if (minRemaining !== undefined && minRemaining > 0) {
+    const remaining = await remainingToday(baseUrl, apiKey, Date.now());
+    if (remaining !== null && remaining <= minRemaining) {
+      throw new ClaudeAgentHttpError(
+        0,
+        "reserved_for_interactive",
+        `claude-agent: quedan ${remaining} llamadas del día y la reserva es ${minRemaining}. `
+        + "El batch se detiene acá para no dejar sin cuota al Claude Code interactivo.",
+      );
+    }
+  }
 
   // El presupuesto del servidor va por debajo del corte del cliente. Al revés
   // perdemos el mensaje de error del servidor y gastamos la cuota igual.

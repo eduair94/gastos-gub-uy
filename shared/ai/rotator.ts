@@ -29,6 +29,11 @@ export interface RotatorOptions {
   claudeModels?: string[] | undefined;
   /** Reasoning effort for the Claude rung: `low` … `max`. */
   claudeEffort?: string | undefined;
+  /**
+   * Llamadas del día que el batch deja sin usar, para el Claude Code
+   * interactivo del dueño. Al llegar al piso el escalón se banca y sigue Gemini.
+   */
+  claudeMinRemaining?: number | undefined;
   /** Wall-clock budget for one Claude call. A call takes 5-60s, not 5s. */
   claudeTimeoutMs?: number | undefined;
   geminiApiKey?: string | undefined;
@@ -102,11 +107,15 @@ const DEFAULT_GROQ_MODELS = [
   "llama-3.1-8b-instant",
 ];
 
-// El escalón Claude corre sobre la suscripción personal del servidor 104: 200
+// El escalón Claude corre sobre la suscripción personal del servidor 104: 600
 // llamadas por día, 2 concurrentes. Va PRIMERO porque da la mejor redacción, y
 // al chocar la pared diaria el rotator lo banca y sigue con Gemini/Groq. Un solo
 // modelo alcanza: los alias de abajo comparten la MISMA cuota, así que listar
 // más no agranda el presupuesto — al revés de Gemini y Groq.
+//
+// El tope de 600 sale de medir: la demanda real es ~150 llamadas por día
+// (~2,6 anomalías por corrida horaria más ~56 pliegos diarios). El resto es
+// margen para picos y para drenar el atraso de pliegos.
 const DEFAULT_CLAUDE_MODELS = ["sonnet"];
 
 /** Una llamada al agente tarda entre 5 y 60 segundos. 45s corta demasiado pronto. */
@@ -127,6 +136,7 @@ export class ProviderRotator {
   private readonly claudeAgentUrl: string | undefined;
   private readonly claudeAgentApiKey: string | undefined;
   private readonly claudeEffort: string | undefined;
+  private readonly claudeMinRemaining: number | undefined;
   private readonly claudeTimeoutMs: number;
   private readonly geminiApiKey: string | undefined;
   private readonly groqApiKey: string | undefined;
@@ -137,6 +147,7 @@ export class ProviderRotator {
     this.claudeAgentUrl = opts.claudeAgentUrl || undefined;
     this.claudeAgentApiKey = opts.claudeAgentApiKey || undefined;
     this.claudeEffort = opts.claudeEffort || undefined;
+    this.claudeMinRemaining = opts.claudeMinRemaining ?? undefined;
     this.claudeTimeoutMs = opts.claudeTimeoutMs ?? DEFAULT_CLAUDE_TIMEOUT_MS;
     this.geminiApiKey = opts.geminiApiKey || undefined;
     this.groqApiKey = opts.groqApiKey || undefined;
@@ -213,6 +224,7 @@ export class ProviderRotator {
             timeoutMs: claudeTimeoutMs,
             onProgress,
             ...(this.claudeEffort === undefined ? {} : { effort: this.claudeEffort }),
+            ...(this.claudeMinRemaining === undefined ? {} : { minRemaining: this.claudeMinRemaining }),
             ...(deadline === null ? {} : { deadlineAtMs: deadline }),
           });
           return { data, modelUsed: key, usage };
@@ -272,12 +284,14 @@ export function claudeRungFromEnv(): RotatorOptions {
 
   const claudeModels = csvEnv(process.env.CLAUDE_AGENT_MODELS);
   const timeoutRaw = Number.parseInt(process.env.CLAUDE_AGENT_TIMEOUT_MS ?? "", 10);
+  const minRemaining = Number.parseInt(process.env.CLAUDE_AGENT_MIN_REMAINING ?? "", 10);
 
   return {
     claudeAgentUrl: process.env.CLAUDE_AGENT_URL?.trim() || "http://127.0.0.1:9310",
     claudeAgentApiKey,
     ...(claudeModels.length ? { claudeModels } : {}),
     ...(process.env.CLAUDE_AGENT_EFFORT?.trim() ? { claudeEffort: process.env.CLAUDE_AGENT_EFFORT.trim() } : {}),
+    ...(Number.isFinite(minRemaining) && minRemaining > 0 ? { claudeMinRemaining: minRemaining } : {}),
     ...(Number.isFinite(timeoutRaw) && timeoutRaw > 0 ? { claudeTimeoutMs: timeoutRaw } : {}),
   };
 }

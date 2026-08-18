@@ -9,6 +9,7 @@ import {
   isClaudeAgentExhausted,
   mapUsage,
   parseStructuredResult,
+  resetHealthCache,
 } from "../../shared/ai/claude-agent-client";
 import type { GeminiSchema } from "../../shared/ai/gemini-client";
 import { claudeRungFromEnv, ProviderRotator } from "../../shared/ai/rotator";
@@ -183,6 +184,92 @@ async function main(): Promise<void> {
   await jobA.generateStructured(ARGS);
   await jobB.generateStructured(ARGS);
   ok("un rotator hermano hereda el bancado y no regasta cuota", calls.filter((c) => c === "claude").length === 1);
+  restoreFetch();
+
+  // ---- la reserva frena al batch antes de vaciar la cuota ----------------
+  // El servidor tiene UNA cuota diaria compartida con el Claude Code interactivo
+  // del dueño. Con reserva N, el batch se detiene con N llamadas sin usar.
+  calls.length = 0;
+  resetHealthCache();
+  let healthHits = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (url.endsWith("/health")) {
+      healthHits++;
+      return new Response(JSON.stringify({ ok: true, daily: { limit: 600, remaining: 150 } }), { status: 200 });
+    }
+    if (url.includes("9310")) { calls.push("claude"); return claudeOk({ veredicto: "si", razon: "ok" }); }
+    calls.push("gemini");
+    return geminiOk({ veredicto: "si", razon: "desde Gemini" });
+  }) as typeof fetch;
+
+  const reserved = new ProviderRotator({
+    claudeAgentUrl: "http://127.0.0.1:9310", claudeAgentApiKey: "k", claudeMinRemaining: 150,
+    geminiApiKey: "g", geminiModels: ["gemini-2.5-flash-lite"],
+  });
+  const heldBack = await reserved.generateStructured<{ razon: string }>(ARGS);
+  ok("con el saldo en el piso NO gasta la llamada", calls.filter((c) => c === "claude").length === 0);
+  ok("y resuelve igual por Gemini", heldBack.modelUsed === "gemini-2.5-flash-lite");
+  ok("el escalón queda bancado por la reserva", reserved.benched.includes("claude:sonnet"));
+  restoreFetch();
+
+  // Por encima del piso sí usa Claude, y no consulta el saldo una vez por ítem.
+  calls.length = 0;
+  resetHealthCache();
+  healthHits = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (url.endsWith("/health")) {
+      healthHits++;
+      return new Response(JSON.stringify({ ok: true, daily: { limit: 600, remaining: 400 } }), { status: 200 });
+    }
+    calls.push("claude");
+    return claudeOk({ veredicto: "si", razon: "ok" });
+  }) as typeof fetch;
+  const aboveFloor = new ProviderRotator({
+    claudeAgentUrl: "http://127.0.0.1:9310", claudeAgentApiKey: "k", claudeMinRemaining: 150,
+    geminiApiKey: "g", geminiModels: ["gemini-2.5-flash-lite"],
+  });
+  const r1 = await aboveFloor.generateStructured(ARGS);
+  await aboveFloor.generateStructured(ARGS);
+  await aboveFloor.generateStructured(ARGS);
+  ok("por encima del piso sí usa Claude", (r1 as { modelUsed: string }).modelUsed === "claude:sonnet");
+  ok("y el saldo se cachea (no un /health por ítem)", healthHits === 1 && calls.length === 3);
+  restoreFetch();
+
+  // Un /health caído no debe frenar la tanda.
+  calls.length = 0;
+  resetHealthCache();
+  globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (url.endsWith("/health")) return new Response("boom", { status: 500 });
+    calls.push("claude");
+    return claudeOk({ veredicto: "si", razon: "ok" });
+  }) as typeof fetch;
+  const healthDown = new ProviderRotator({
+    claudeAgentUrl: "http://127.0.0.1:9310", claudeAgentApiKey: "k", claudeMinRemaining: 150,
+    geminiApiKey: "g", geminiModels: ["gemini-2.5-flash-lite"],
+  });
+  const anyway = await healthDown.generateStructured(ARGS);
+  ok("con /health caído la reserva no bloquea", (anyway as { modelUsed: string }).modelUsed === "claude:sonnet");
+  restoreFetch();
+
+  // Sin reserva configurada no se consulta el saldo en absoluto.
+  calls.length = 0;
+  resetHealthCache();
+  let healthCalls = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (url.endsWith("/health")) { healthCalls++; return new Response("{}", { status: 200 }); }
+    calls.push("claude");
+    return claudeOk({ veredicto: "si", razon: "ok" });
+  }) as typeof fetch;
+  const noReserve = new ProviderRotator({
+    claudeAgentUrl: "http://127.0.0.1:9310", claudeAgentApiKey: "k",
+    geminiApiKey: "g", geminiModels: ["gemini-2.5-flash-lite"],
+  });
+  await noReserve.generateStructured(ARGS);
+  ok("sin reserva no consulta /health", healthCalls === 0 && calls.length === 1);
   restoreFetch();
 
   // ---- Claude no se queda con toda la ventana ----------------------------
