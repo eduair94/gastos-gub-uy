@@ -180,8 +180,9 @@ STE100 removes the padding around the voice, not the voice.
   tema `gasto-observado`: la próxima corrida del armador la borra.
 - The Express API under `src/api/**` and the `precalculate-dashboard`/`populate-analytics` scripts are
   **legacy/dead** — the live API is `app/server/api/**` and the live rollups are `src/jobs/refresh-*`.
-- **Toda la IA arranca en el escalón Claude del servidor 104, y su cuota es de 200 llamadas por día.**
-  Esa cuota es la MISMA que consume el Claude Code interactivo. El cliente nunca reintenta un `429`:
+- **Toda la IA arranca en el escalón Claude del servidor 104, y su cuota es de 600 llamadas por día.**
+  Esa cuota es la MISMA que consume el Claude Code interactivo, por eso `CLAUDE_AGENT_MIN_REMAINING`
+  reserva las últimas 150: el batch se frena ahí y sigue con Gemini. El cliente nunca reintenta un `429`:
   banca el escalón y [shared/ai/rotator.ts](shared/ai/rotator.ts) sigue con Gemini y después Groq. Un job
   masivo agota la cuota y termina con Gemini. Eso es el diseño, no una falla. Para llamar a un modelo usá
   `callStructured` de [shared/ai/structured.ts](shared/ai/structured.ts), nunca `callGeminiStructured` directo.
