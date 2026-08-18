@@ -233,6 +233,7 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'comoReportar', to: localePath('/analytics/como-reportar'), icon: 'mdi-help-circle-outline' },
             { key: 'comparativa', to: localePath('/comparativa'), icon: 'mdi-compare' },
             { key: 'plataformas', to: localePath('/comparativa-transparencia'), icon: 'mdi-account-eye-outline' },
+            { key: 'canalesYt', to: localePath('/canales-youtube'), icon: 'mdi-youtube' },
             { key: 'developers', to: localePath('/developers'), icon: 'mdi-code-tags' },
             // A Nitro server route, not a Nuxt page: vue-router resolves /docs to
             // zero matched routes and 404s without ever issuing a request, so it

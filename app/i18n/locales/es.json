@@ -41,6 +41,7 @@
     "competencia": "Competencia",
     "tribunalCuentas": "Tribunal de Cuentas",
     "plataformas": "Otras plataformas",
+    "canalesYt": "Canales de YouTube",
     "more": "Más",
     "explorar": "Explorar",
     "senales": "Qué revisar",
@@ -2298,6 +2299,10 @@
       "title": "Quién más vigila al Estado uruguayo: comparativa de plataformas de transparencia",
       "description": "Comparativa con fuentes de las plataformas que publican datos sobre el Estado uruguayo: Control Ciudadano, datospublicos.uy, DATA Uruguay, ARCE, OPP, JUTEP y este sitio. Qué cubre cada una, qué cuesta y para qué sirve."
     },
+    "canalesYt": {
+      "title": "Canales de YouTube uruguayos sobre gasto público y política",
+      "description": "Directorio verificado de canales de YouTube uruguayos que sirven para seguir el dinero público: el Parlamento, los organismos que compran, los medios que informan y los partidos. Con la prueba de identidad de cada canal y sus últimos videos."
+    },
     "tribunalCuentas": {
       "title": "Lo que dijo el Tribunal de Cuentas sobre las compras del Estado",
       "description": "Resoluciones del Tribunal de Cuentas sobre compras públicas uruguayas, cada una junto a la compra que nombra y con el enlace a la resolución original."
@@ -2614,6 +2619,59 @@
       "action": "Limpiar filtros"
     },
     "note": "Datos de contacto oficiales publicados por los organismos en comprasestatales.gub.uy."
+  },
+  "canalesYt": {
+    "eyebrow": "Directorio",
+    "title": "La política uruguaya en YouTube",
+    "lead": "Los canales uruguayos que sirven para seguir el dinero público: el Parlamento que vota el presupuesto, los organismos que compran, los medios que informan y los partidos que discuten. Cada canal entró con una prueba de identidad, no por su tamaño.",
+    "verifiedLabel": "Tabla verificada el {date}",
+    "statVerified": "canales verificados",
+    "statActive": "publicaron en los últimos 90 días",
+    "statRejected": "buscados y descartados",
+    "limitsTitle": "Qué es esto y qué no",
+    "feedTitle": "Lo último",
+    "feedHelp": "Los últimos videos de los canales de abajo, leídos de su feed público. Es una lectura automática: no elegimos ni revisamos ningún video.",
+    "feedStamp": "Leído el {date}",
+    "onlyTopic": "Sólo gasto y política",
+    "hiddenNote": "El filtro deja afuera {n} videos de estos mismos canales.",
+    "staleNote": "YouTube no respondió en la última lectura. Se muestra la anterior.",
+    "feedEmpty": "Ningún video del feed pasa los filtros activos.",
+    "filterAll": "Todos",
+    "countLabel": "{n} canales",
+    "channel": "Canal",
+    "subs": "Suscriptores",
+    "videos": "Videos",
+    "lastUpload": "Último video",
+    "notPublished": "No los publica",
+    "noVideos": "Sin videos",
+    "buyerLink": "Su gasto acá",
+    "siteLink": "Sitio oficial",
+    "cat": {
+      "header": "Categoría",
+      "estado": "El Estado filmándose a sí mismo",
+      "medios": "Medios que cubren la política nacional",
+      "partidos": "Partidos con bancas",
+      "analisis": "Centros de estudio y entrevistas"
+    },
+    "catHelp": {
+      "estado": "La fuente primaria. Acá la sesión, la conferencia y el anuncio salen sin editar, antes de que exista una nota sobre ellos.",
+      "medios": "Los que preguntan. Tres de estos canales cobran pauta oficial, y ya medimos cuánta.",
+      "partidos": "El argumento sin intermediario. Sólo el canal oficial del partido: los canales personales y los de cada sector quedan afuera por regla.",
+      "analisis": "Los que discuten el nivel del gasto, no un contrato en particular."
+    },
+    "proof": {
+      "country": "YouTube publica Uruguay",
+      "site": "Lo enlaza su sitio oficial",
+      "both": "País y sitio oficial"
+    },
+    "inactiveTitle": "Existen y no publican",
+    "inactiveHelp": "Canales que pasaron la prueba de identidad y hace más de 90 días que no suben nada. Quedan listados porque su archivo sigue en línea, y porque un canal oficial abandonado también dice algo.",
+    "rejectedTitle": "Buscados, medidos y descartados",
+    "rejectedHelp": "Cada uno apareció primero en la búsqueda. Ninguno entró, y acá está el motivo medido.",
+    "gapsTitle": "Lo que no existe",
+    "methodTitle": "Cómo se armó",
+    "methodFoot": "El mismo criterio que usamos para comparar plataformas de transparencia:",
+    "methodLink": "quién más vigila al Estado uruguayo"
   },
   "plataformas": {
     "eyebrow": "Comparativa",
