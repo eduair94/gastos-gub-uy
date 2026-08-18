@@ -70,6 +70,7 @@ const series = computed(() => [
       { path: '/investigaciones/competencia-aparente', emoji: '🤝', ...c.value.cardCompetencia },
       { path: '/investigaciones/antel-cuadrillas', emoji: '🛠️', ...c.value.cardAntel },
       { path: '/investigaciones/mensajes-del-estado', emoji: '📣', ...c.value.cardMensajes },
+      { path: '/investigaciones/canales-privados', emoji: '📺', ...c.value.cardCanales },
     ],
   },
   {

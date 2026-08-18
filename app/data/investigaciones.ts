@@ -299,6 +299,16 @@ export const INV_CONTENT = {
           "3 artefactos excluidos"
         ]
       },
+      "cardCanales": {
+        "eyebrow": "Series · Medios y pauta oficial",
+        "title": "Los canales privados: cuánto de su ingreso es pauta del Estado",
+        "dek": "Canal 12 perdió $150 millones en 2025. Los tres canales de Montevideo facturan cifras parecidas. La pauta oficial que deja rastro no llega al 0,5% de ese ingreso, y el resto no se puede seguir.",
+        "tags": [
+          "0,27% del ingreso",
+          "la pérdida = 58 veces la pauta",
+          "ANTEL: 5 líneas en 22 años"
+        ]
+      },
       "methodTag": "Método",
       "methodTitle": "Cómo se hace cada una",
       "how": [
@@ -739,6 +749,16 @@ export const INV_CONTENT = {
           "advertising leads",
           "0 content codes",
           "3 artifacts excluded"
+        ]
+      },
+      "cardCanales": {
+        "eyebrow": "Series · Media and official advertising",
+        "title": "The private channels: how much of their income is State advertising",
+        "dek": "Channel 12 lost $150 million in 2025. Montevideo's three channels bill similar figures. The official advertising that leaves a trace never reaches 0.5% of that income, and the rest cannot be followed.",
+        "tags": [
+          "0.27% of income",
+          "the loss = 58× the advertising",
+          "ANTEL: 5 lines in 22 years"
         ]
       },
       "methodTag": "Method",
