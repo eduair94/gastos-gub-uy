@@ -114,6 +114,12 @@ useSeo(() => ({
           <p class="disc__body">
             {{ t('parl.howProof') }}
           </p>
+          <NuxtLink
+            class="disc__link"
+            :to="localePath('/canales-youtube')"
+          >
+            {{ t('parl.sourceChannels') }}
+          </NuxtLink>
         </v-card>
       </section>
 
@@ -259,6 +265,14 @@ useSeo(() => ({
   flex-wrap: wrap;
   gap: var(--s-2);
   align-items: center;
+}
+
+.disc__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  font-size: var(--t-sm);
+  color: var(--celeste-deep);
 }
 
 .scard {

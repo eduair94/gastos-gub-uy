@@ -141,6 +141,7 @@ export const CHANNELS: Channel[] = [
     lastUpload: '2026-08-18',
     site: 'https://parlamento.gub.uy/',
     buyerId: '1-1',
+    related: { to: '/parlamento', label: { es: 'Sus sesiones, resumidas', en: 'Its sessions, summarised' } },
   },
   {
     id: 'UCUxioxgZ7obrP3wVJApAK1w',
@@ -163,6 +164,7 @@ export const CHANNELS: Channel[] = [
     lastUpload: '2026-08-18',
     site: 'https://parlamento.gub.uy/',
     buyerId: '1-2',
+    related: { to: '/parlamento', label: { es: 'Sus sesiones, resumidas', en: 'Its sessions, summarised' } },
   },
   {
     id: 'UCMHQqhtbpxfcnPPYpryapHA',
