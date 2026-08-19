@@ -41,6 +41,7 @@
     "tribunalCuentas": "Court of Accounts",
     "plataformas": "Other platforms",
     "canalesYt": "YouTube channels",
+    "parlamento": "What was said in Parliament",
     "more": "More",
     "explorar": "Explore",
     "senales": "What to check",
@@ -2209,6 +2210,13 @@
       "title": "{name} on YouTube: what it publishes and how much it covers public spending",
       "description": "Verified profile of the {name} YouTube channel: {what} With its identity proof, measured figures and latest videos on Uruguayan public spending and politics."
     },
+    "parl": {
+      "title": "What was said in the Uruguayan Parliament, session by session",
+      "description": "Every session of the lower house and the Senate summarised in plain language, with the exact minute of the video for each topic. Built on the automatic captions of each chamber's official channel."
+    },
+    "parlSession": {
+      "title": "{headline} — session of {date}"
+    },
     "tribunalCuentas": {
       "title": "What the Court of Accounts said about state purchases",
       "description": "Court of Accounts rulings on Uruguayan public procurement, each next to the purchase it names, with a link to the original ruling."
@@ -2525,6 +2533,36 @@
       "action": "Clear filters"
     },
     "note": "Official contact data published by the agencies on comprasestatales.gub.uy."
+  },
+  "parl": {
+    "eyebrow": "Parliament",
+    "title": "What was said in Parliament",
+    "lead": "Every session of both chambers, told in everyday language. With the minute of the video next to each topic, because a session runs six hours and nobody has them.",
+    "statSessions": "sessions summarised",
+    "statHours": "hours of session read",
+    "statSplit": "Senate / lower house",
+    "howTitle": "How this is made",
+    "howBody": "The summary comes from the video's automatic captions: one machine listens and another summarises. That is why you will find no exact figures and no quoted sentences here. Automatic captioning gets names and numbers wrong.",
+    "howProof": "Every topic carries the minute of the video. That minute is the proof: click it and hear it yourself. If you need the verbatim record, Parliament publishes the session diary weeks later.",
+    "filterAll": "Both chambers",
+    "chamber": {
+      "senadores": "Senate",
+      "representantes": "Lower house",
+      "asamblea": "General Assembly"
+    },
+    "duration": "{h} h session",
+    "seeAll": "See all {n} topics of the session",
+    "empty": "No sessions summarised yet.",
+    "backToIndex": "All sessions",
+    "sessionMeta": "{h} hours of session · {words} words auto-transcribed",
+    "topicsTitle": "What was discussed",
+    "topicsHelp": "In the order it happened. The minute opens the video right there.",
+    "whyLabel": "Who it touches",
+    "glossaryTitle": "Words from Parliament",
+    "glossaryHelp": "What was said in the session, translated.",
+    "watchFull": "Watch the full session on YouTube",
+    "prev": "Previous session",
+    "next": "Next session"
   },
   "canalesYt": {
     "eyebrow": "Directory",

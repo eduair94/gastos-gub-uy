@@ -1110,6 +1110,31 @@ class CronServer {
     );
     this.logger.info(`Court of Accounts scrape scheduled with expression: ${tcrExpression} (Uruguay timezone)`);
 
+    // Sesiones del Parlamento resumidas en lenguaje llano, cada día a las 06:40.
+    //
+    // A esa hora ya está subido el video de la sesión del día anterior, y el escalón
+    // Claude todavía tiene cuota: una sesión de seis horas son ~25 llamadas al modelo,
+    // así que se procesan de a dos por corrida. Lo que no entra hoy queda en la cola y
+    // entra mañana; la cola es "lo que no tiene resumen, lo más nuevo primero".
+    //
+    // Depende de `yt-dlp` en el PATH del servidor: es lo único que sabe firmar el
+    // pedido de subtítulos que YouTube dejó de servir abierto.
+    const parlamentoExpression = "40 6 * * *";
+    cron.schedule(
+      parlamentoExpression,
+      async () => {
+        try {
+          this.logger.info("Starting parlamento session summaries...");
+          await this.runJobProcess("jobs/parlamento/refresh-sessions", ["--limit=2"]);
+          this.logger.info("Parlamento session summaries completed successfully");
+        } catch (error) {
+          this.logger.error("Parlamento session summaries failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Parlamento summaries scheduled with expression: ${parlamentoExpression} (Uruguay timezone)`);
+
     // Press coverage of each organism procurement, nightly at 04:50 — last of the
     // scraper chain and the only one that reads a third party rather than a government
     // host. One query per organism with a delay, and only for entries older than a week:

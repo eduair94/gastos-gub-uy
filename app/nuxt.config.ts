@@ -317,6 +317,7 @@ export default defineNuxtConfig({
       blog: { sources: ['/api/__sitemap__/blog'] },
       years: { sources: ['/api/__sitemap__/years'] },
       canales: { sources: ['/api/__sitemap__/canales'] },
+      parlamento: { sources: ['/api/__sitemap__/parlamento'] },
     },
   },
 
@@ -391,6 +392,11 @@ export default defineNuxtConfig({
     // tiene su propia caché de una hora; esta la comparte entre los dos workers
     // de pm2, así que el barrido corre una vez por hora y no dos.
     '/api/canales-youtube': apiCache(60 * 60),
+
+    // Sesiones del Parlamento: el job las escribe una vez por día, así que la
+    // lista y cada ficha se pueden servir de caché por media hora.
+    '/api/parlamento': apiCache(30 * 60),
+    '/api/parlamento/**': apiCache(30 * 60),
   },
 
   nitro: {

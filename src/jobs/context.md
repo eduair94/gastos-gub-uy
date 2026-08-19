@@ -220,3 +220,21 @@ Cron schedule (all `America/Montevideo`, defined in [`src/cronserver.ts`](../cro
 - [`../../app/server/context.md`](../../app/server/context.md) — the Nitro routes that READ the collections these jobs write.
 - [`../../scripts/context.md`](../../scripts/context.md) — `ensure-indexes.ts` (the only thing that actually builds indexes; `autoIndex` is off), deploy, one-off ops.
 - Root repo guide: [`../../CLAUDE.md`](../../CLAUDE.md).
+
+## parlamento/refresh-sessions.ts — las sesiones del Parlamento en lenguaje llano
+
+Descubre las sesiones nuevas en los canales oficiales de las dos cámaras, baja los
+subtítulos AUTOMÁTICOS con `yt-dlp` y arma un resumen por sesión.
+
+**Necesita `yt-dlp` en el PATH** (o `PARL_YTDLP`). Es lo único que sabe firmar el pedido
+de `timedtext`: la API de YouTube no sirve —`captions.download` pide OAuth del dueño del
+canal— y el `baseUrl` del player devuelve 200 con cero bytes.
+
+Una sesión de seis horas son ~32.000 palabras y ~25 llamadas al modelo, así que el cron
+corre con `--limit=2` a las 06:40. La cola es «lo que no tiene resumen, lo más nuevo
+primero».
+
+Las reglas de publicación viven en `shared/parlamento/summary.ts`, no acá: el minuto de
+cada tema lo calcula el código desde el bloque de transcripción (al modelo nunca se le
+pide un timestamp), el portón tira lo que opina, saca la oración que trae una cifra que
+el subtitulado pudo inventar, y descarta el tema repetido.

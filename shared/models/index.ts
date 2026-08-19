@@ -76,3 +76,6 @@ export * from "./udeco_sanction";
 
 // UDECO × state-supplier cross-reference (udeco_supplier_stats)
 export * from "./udeco_supplier_stats";
+
+// Sesiones del Parlamento resumidas en lenguaje llano (parl_sessions + parl_transcripts)
+export * from "./parl_session";
