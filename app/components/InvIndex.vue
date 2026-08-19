@@ -29,7 +29,7 @@ interface Entrada { id: string, texto: string }
 
 const entradas = ref<Entrada[]>([])
 const activo = ref('')
-let observador: IntersectionObserver | null = null
+let tick = 0
 
 /** Un id estable y legible, sacado del propio título. */
 function slug(texto: string): string {
@@ -40,6 +40,33 @@ function slug(texto: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60)
+}
+
+/**
+ * QUÉ SECCIÓN SE ESTÁ LEYENDO. La última cuyo techo ya pasó la línea de los 120px.
+ *
+ * Antes esto lo hacía un IntersectionObserver con una banda angosta arriba del viewport. Fallaba
+ * en un caso medido el 19-08-2026: al saltar de golpe al tope de la página, ninguna sección cruza
+ * la banda, no hay callback, y el resaltado queda en la sección anterior. Una cuenta sobre el
+ * scroll no tiene ese agujero: siempre hay una respuesta correcta, se llegue como se llegue.
+ */
+function marcar() {
+  const filas = entradas.value
+  if (!filas.length) return
+  let actual = filas[0]!.id
+  for (const f of filas) {
+    const el = document.getElementById(f.id)
+    if (el && el.getBoundingClientRect().top <= 120) actual = f.id
+  }
+  activo.value = actual
+}
+
+function alScrollear() {
+  if (tick) return
+  tick = requestAnimationFrame(() => {
+    tick = 0
+    marcar()
+  })
 }
 
 function construir() {
@@ -61,34 +88,20 @@ function construir() {
   })
   entradas.value = filas
 
-  observador?.disconnect()
-  if (!filas.length) return
-  observador = new IntersectionObserver(
-    (obs) => {
-      const visible = obs.filter(o => o.isIntersecting)
-        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-      if (visible?.target.id) activo.value = visible.target.id
-    },
-    // La banda alta del viewport: marca la sección que se está leyendo, no la que asoma abajo.
-    { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
-  )
-  filas.forEach((f) => {
-    const el = document.getElementById(f.id)
-    if (el) observador!.observe(el)
-  })
+  marcar()
 }
 
 /**
- * RECONSTRUIR, y por qué no sirve adivinar tiempos.
+ * CUÁNDO SE RECONSTRUYE, y por qué no sirve adivinar tiempos.
  *
  * En una navegación de SPA el layout no se desmonta: este componente sigue vivo mientras Nuxt
  * cambia el artículo debajo. Medido el 19-08-2026 yendo de /investigaciones/casos al hub y de ahí
  * a una pieza: leía las 7 secciones del hub y los 7 enlaces apuntaban a ids que ya no existían.
  *
- * Un reintento por temporizador no lo arregla, porque el conteo se estabiliza en la página VIEJA
+ * Un reintento por temporizador tampoco alcanza, porque el conteo se estabiliza en la página VIEJA
  * antes de que monte la nueva. Así que no se adivina: se observa el contenedor y se reconstruye
- * cuando el DOM deja de cambiar. Eso cubre la hidratación, la navegación de SPA y cualquier
- * contenido que llegue después.
+ * cuando el DOM deja de cambiar. Hay que observar `characterData` además de `childList`, porque el
+ * texto de los `h2` llega como cambio de texto y no como alta de nodo.
  */
 const route = useRoute()
 let mutaciones: MutationObserver | null = null
@@ -105,6 +118,8 @@ function enganchar() {
   mutaciones?.disconnect()
   mutaciones = new MutationObserver(agendar)
   mutaciones.observe(raiz, { childList: true, subtree: true, characterData: true })
+  window.addEventListener('scroll', alScrollear, { passive: true })
+  window.addEventListener('resize', alScrollear, { passive: true })
   agendar()
 }
 
@@ -118,8 +133,10 @@ watch(() => route.path, () => {
 
 onBeforeUnmount(() => {
   if (debounce) clearTimeout(debounce)
+  if (tick) cancelAnimationFrame(tick)
   mutaciones?.disconnect()
-  observador?.disconnect()
+  window.removeEventListener('scroll', alScrollear)
+  window.removeEventListener('resize', alScrollear)
 })
 </script>
 
