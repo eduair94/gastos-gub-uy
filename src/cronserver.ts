@@ -1199,6 +1199,30 @@ class CronServer {
     );
     this.logger.info(`Court of Accounts scrape scheduled with expression: ${tcrExpression} (Uruguay timezone)`);
 
+    // Cifras de los canales del directorio de YouTube, cada día a las 05:50.
+    //
+    // Sólo remide lo que envejece —suscriptores, videos, vistas, último video y de
+    // qué habla cada canal—; quién entra al directorio y con qué prueba de identidad
+    // es una decisión editorial que vive en app/data/canales-youtube.ts. Cuando un
+    // canal deja de publicar «Uruguay», el job lo avisa en el log y no lo saca.
+    //
+    // Con YOUTUBE_API_KEY cuesta una unidad de cuota; sin ella lee la ficha pública.
+    const youtubeChannelsExpression = "50 5 * * *";
+    cron.schedule(
+      youtubeChannelsExpression,
+      async () => {
+        try {
+          this.logger.info("Starting YouTube channel stats refresh...");
+          await this.runJobProcess("jobs/refresh-youtube-channels");
+          this.logger.info("YouTube channel stats refresh completed successfully");
+        } catch (error) {
+          this.logger.error("YouTube channel stats refresh failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`YouTube channel stats scheduled with expression: ${youtubeChannelsExpression} (Uruguay timezone)`);
+
     // Sesiones del Parlamento resumidas en lenguaje llano, cada día a las 06:40.
     //
     // A esa hora ya está subido el video de la sesión del día anterior, y el escalón

@@ -393,6 +393,9 @@ export default defineNuxtConfig({
     // tiene su propia caché de una hora; esta la comparte entre los dos workers
     // de pm2, así que el barrido corre una vez por hora y no dos.
     '/api/canales-youtube': apiCache(60 * 60),
+    // Las cifras de los canales las reescribe un job de madrugada: media hora de
+    // caché alcanza y evita una consulta por visita.
+    '/api/canales-youtube/stats': apiCache(30 * 60),
 
     // Sesiones del Parlamento: el job las escribe una vez por día, así que la
     // lista y cada ficha se pueden servir de caché por media hora.

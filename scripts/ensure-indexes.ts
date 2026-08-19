@@ -535,6 +535,15 @@ async function main(): Promise<void> {
       await parlTranscripts.createIndex({ videoId: 1 }, { unique: true, background: true })
       console.log('✅ parl_sessions + parl_transcripts indexes ensured')
 
+      // youtube_channel_stats: cifras vivas de los canales de /canales-youtube,
+      // escritas por src/jobs/refresh-youtube-channels.ts. channelId unique es la
+      // clave del upsert; checkedAt ordena "lo más viejo primero" si algún día el
+      // job pasa a trabajar por tandas.
+      const ytStats = client.db(DB_NAME).collection('youtube_channel_stats')
+      await ytStats.createIndex({ channelId: 1 }, { unique: true, background: true })
+      await ytStats.createIndex({ checkedAt: 1 }, { background: true })
+      console.log('✅ youtube_channel_stats indexes ensured')
+
       // topic_contracts: per-contract classification behind a spending topic
       // (shared/spending-topics.ts), written by src/jobs/refresh-topic-spending.ts.
       // topicKey+ocid unique is the upsert key; the inTopic-prefixed compounds serve

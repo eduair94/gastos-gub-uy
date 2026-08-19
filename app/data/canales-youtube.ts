@@ -928,34 +928,13 @@ export const GAPS: Bi[] = [
 ]
 
 /**
- * Palabras que marcan un video como de gasto público o política nacional.
+ * El filtro de temas vive en `shared/youtube/topics`, no acá.
  *
- * Filtran los títulos del feed en vivo, y sólo dentro del directorio ya verificado.
- * Ese orden importa: el mismo filtro sobre YouTube entero devolvería cualquier cosa.
- * El filtro es del lector — la página muestra todo salvo que él lo pida.
- *
- * TRAMPA, y ya nos costó una vez con la búsqueda de prensa: comparar por SUBCADENA
- * convierte a «OSE» en «José» y a «ley» en «Bradley». La comparación es por PALABRA
- * COMPLETA sobre el título sin tildes, así que los términos van sin tilde y en
- * minúscula. `matchesTopic` es lo único que los lee.
+ * Lo leen tres lugares y tienen que dar el MISMO número: esta página para el feed
+ * en vivo, el job nocturno que remide cada canal y el test que ata las dos cosas.
+ * Se reexporta para que la página siga importando de un solo módulo.
  */
-export const TOPIC_TERMS = [
-  // Compras y plata
-  'licitacion', 'adjudicacion', 'compra', 'compra directa', 'contrato', 'presupuesto',
-  'presupuestal', 'rendicion de cuentas', 'deficit', 'gasto', 'impuesto', 'tarifa',
-  'subsidio', 'fideicomiso', 'salario', 'sueldo', 'jubilacion', 'inflacion', 'economia',
-  'obra publica',
-  // Instituciones
-  'ministerio', 'ministro', 'ministra', 'intendencia', 'intendente', 'senado', 'senador',
-  'senadora', 'diputado', 'parlamento', 'comision', 'sesion', 'presidencia', 'presidente',
-  'gobierno', 'oposicion', 'bancada', 'legislador', 'ley', 'decreto', 'tribunal de cuentas',
-  'jutep', 'auditoria', 'transparencia', 'corrupcion',
-  // Empresas públicas y organismos que aparecen por sigla
-  'ute', 'antel', 'ancap', 'ose', 'asse', 'bps', 'inau', 'mides', 'bcu',
-  // Actores políticos
-  'partido', 'frente amplio', 'coalicion', 'blanco', 'colorado', 'cabildo', 'sindicato',
-  'pit-cnt', 'paro', 'eleccion', 'plebiscito', 'referendum', 'politica', 'politico',
-] as const
+export { TOPIC_TERMS, matchesTopic } from '../../shared/youtube/topics'
 
 /** Qué se hizo para armar la tabla, en el orden en que se hizo. */
 export const METODO: Bi[] = [
@@ -1021,28 +1000,3 @@ export function isActive(channel: Channel, now: Date): boolean {
   return days <= ACTIVE_WINDOW_DAYS
 }
 
-/** Minúsculas y sin tildes, que es como están escritos los términos. */
-function normalize(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-}
-
-/**
- * Un término por palabra completa, con el plural español detrás.
- *
- * `(es|s)?` cubre las dos formas del plural: «senador» alcanza a «senadores» y
- * «gasto» a «gastos». Sin eso el término singular no matchea el titular plural, que
- * es como se escriben casi todos.
- *
- * Los términos son letras, números, espacios y guiones — nada de metacaracteres —,
- * así que se interpolan sin escapar. El test lo exige, para que agregar un término
- * con un paréntesis no arme una expresión regular rota en silencio.
- */
-const TOPIC_PATTERNS: RegExp[] = TOPIC_TERMS.map(term =>
-  new RegExp(`(^|[^a-z0-9])${term}(es|s)?($|[^a-z0-9])`),
-)
-
-/** Un título habla de gasto o política si alguno de los términos aparece entero. */
-export function matchesTopic(title: string): boolean {
-  const t = normalize(title)
-  return TOPIC_PATTERNS.some(re => re.test(t))
-}

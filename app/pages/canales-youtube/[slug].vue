@@ -16,10 +16,9 @@
  * están en el gobierno o en la oposición, que es un hecho institucional.
  */
 import {
-  CHANNELS, VERIFIED_ON, channelPath, channelUrl, getChannelBySlug, isActive, matchesTopic,
+  CHANNELS, channelPath, channelUrl, getChannelBySlug, isActive, matchesTopic,
   type Channel,
 } from '~/data/canales-youtube'
-import { SAMPLED_ON, SAMPLES } from '~/data/canales-youtube-muestra'
 
 interface FeedVideo {
   videoId: string
@@ -60,7 +59,10 @@ const topicVideos = computed(() => videos.value.filter(v => matchesTopic(v.title
 const otherVideos = computed(() => videos.value.filter(v => !matchesTopic(v.title)))
 const fetchedAt = computed(() => feedRes.value?.data?.fetchedAt ?? null)
 
-const sample = computed(() => SAMPLES[ch.value.id] ?? null)
+// Cifras vivas del job nocturno; si todavía no pasó por este canal, las curadas.
+const { resolve, bySize } = useChannelStats()
+const stat = computed(() => resolve(ch.value))
+const sample = computed(() => stat.value.sample)
 const mentions = computed(() => {
   const m = sample.value?.mentions ?? {}
   return (Object.entries(m) as [string, number][])
@@ -73,13 +75,13 @@ const topicShare = computed(() => {
   return Math.round((s.topicHits / s.n) * 100)
 })
 
-const active = computed(() => isActive(ch.value, new Date()))
+const active = computed(() => isActive({ ...ch.value, lastUpload: stat.value.lastUpload }, new Date()))
 
 // Vecinos de la misma categoría, para seguir mirando sin volver al índice.
 const siblings = computed(() =>
   CHANNELS
     .filter(c => c.category === ch.value.category && c.id !== ch.value.id)
-    .sort((a, b) => b.subscribersApprox - a.subscribersApprox)
+    .sort(bySize)
     .slice(0, 6),
 )
 
@@ -159,14 +161,14 @@ useSeo(() => ({
       <StatBand
         :columns="4"
         :items="[
-          { value: ch.subscribers ?? '—', label: t('canalesYt.subs') },
-          { value: ch.videos ?? '—', label: t('canalesYt.videos') },
-          { value: sample?.views ?? '—', label: t('canalesYt.views') },
-          { value: ch.lastUpload ? formatDate(ch.lastUpload) : '—', label: t('canalesYt.lastUpload') },
+          { value: stat.subscribers ?? '—', label: t('canalesYt.subs') },
+          { value: stat.videos ?? '—', label: t('canalesYt.videos') },
+          { value: stat.views ?? '—', label: t('canalesYt.views') },
+          { value: stat.lastUpload ? formatDate(stat.lastUpload) : '—', label: t('canalesYt.lastUpload') },
         ]"
       />
       <p class="stamp">
-        {{ t('canalesYt.factsStamp', { date: VERIFIED_ON, joined: sample?.joined ?? '—' }) }}
+        {{ t('canalesYt.factsStamp', { date: stat.measuredOn, joined: stat.joined ?? '—' }) }}
       </p>
 
       <!-- Por qué está en el directorio -->
@@ -250,7 +252,7 @@ useSeo(() => ({
           {{ t('canalesYt.measureTitle') }}
         </h2>
         <p class="block__help">
-          {{ t('canalesYt.measureHelp', { n: sample.n, date: SAMPLED_ON }) }}
+          {{ t('canalesYt.measureHelp', { n: sample.n, date: stat.measuredOn }) }}
         </p>
         <div class="meas">
           <div class="meas__card">
