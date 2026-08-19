@@ -238,3 +238,23 @@ Las reglas de publicación viven en `shared/parlamento/summary.ts`, no acá: el 
 cada tema lo calcula el código desde el bloque de transcripción (al modelo nunca se le
 pide un timestamp), el portón tira lo que opina, saca la oración que trae una cifra que
 el subtitulado pudo inventar, y descarta el tema repetido.
+
+## refresh-youtube-channels.ts — las cifras del directorio de canales
+
+Remide lo que envejece de `/canales-youtube`: suscriptores, videos, vistas, último video
+y la muestra de títulos con la que se calcula cuánto habla cada canal de gasto y política.
+Escribe `youtube_channel_stats`; la página la prefiere y cae al módulo curado cuando falta.
+
+**Lo que NO hace: recalcular la prueba de identidad.** Quién entra al directorio, y con
+qué prueba, vive en `app/data/canales-youtube.ts` y lo decide una persona. Si YouTube deja
+de publicar «Uruguay» para un canal que entró por esa prueba, el job lo avisa en el log.
+
+Con `YOUTUBE_API_KEY` usa `channels.list` (50 canales por llamada, 1 unidad de cuota, sin
+redondeo). Sin la key lee la ficha pública.
+
+**El feed Atom devuelve 404 intermitente** con user-agent de navegador y cuando la IP viene
+pidiendo mucho. Por eso: user-agent propio, un reintento, los tres pedidos por canal EN
+SERIE, y si aun así no responde se conserva la fecha anterior. Un 404 no puede convertir un
+canal activo en uno abandonado.
+
+Cron 05:50.
