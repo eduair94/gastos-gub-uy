@@ -79,3 +79,6 @@ export * from "./udeco_supplier_stats";
 
 // Sesiones del Parlamento resumidas en lenguaje llano (parl_sessions + parl_transcripts)
 export * from "./parl_session";
+
+// Cifras vivas de los canales del directorio (youtube_channel_stats)
+export * from "./youtube_channel_stat";

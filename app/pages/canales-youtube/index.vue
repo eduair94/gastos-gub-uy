@@ -18,7 +18,7 @@ import {
   channelPath, channelUrl, isActive, matchesTopic,
   type Category, type Channel,
 } from '~/data/canales-youtube'
-import { SAMPLED_ON, SAMPLES } from '~/data/canales-youtube-muestra'
+import { SAMPLED_ON } from '~/data/canales-youtube-muestra'
 
 interface FeedVideo {
   videoId: string
@@ -38,6 +38,9 @@ type L = 'es' | 'en'
 function bi(x: { es: string, en: string }): string {
   return x[locale.value as L] ?? x.es
 }
+
+// Las cifras vivas del job nocturno, con las curadas de respaldo.
+const { resolve, topicShare: liveTopicShare, checkedAt } = useChannelStats()
 
 const { data: feedRes } = await useFetch<{ success: boolean, data: { videos: FeedVideo[], fetchedAt: string, failed: string[] }, stale: boolean }>('/api/canales-youtube')
 
@@ -61,19 +64,13 @@ const ORDER: Category[] = ['estado', 'medios', 'partidos', 'analisis']
 type SortKey = 'tamano' | 'gasto'
 const sortBy = ref<SortKey>('tamano')
 
-function topicShare(id: string): number | null {
-  const s = SAMPLES[id]
-  if (!s || s.n === 0) return null
-  return s.topicHits / s.n
-}
-
 const groups = computed(() => ORDER.map(key => ({
   key,
   channels: activeChannels.value
     .filter(c => c.category === key)
     .sort((a, b) => sortBy.value === 'tamano'
-      ? b.subscribersApprox - a.subscribersApprox
-      : (topicShare(b.id) ?? -1) - (topicShare(a.id) ?? -1)),
+      ? resolve(b).subscribersApprox - resolve(a).subscribersApprox
+      : (liveTopicShare(b) ?? -1) - (liveTopicShare(a) ?? -1)),
 })).filter(g => g.channels.length > 0))
 
 // Filtros del feed. `onlyTopic` arranca prendido porque la página es sobre dinero
@@ -188,7 +185,7 @@ useSeo(() => ({
           {{ t('canalesYt.orientationHelp') }}
         </p>
         <p class="block__help">
-          {{ t('canalesYt.orientationStamp', { date: SAMPLED_ON }) }}
+          {{ t('canalesYt.orientationStamp', { date: checkedAt ? formatDate(checkedAt) : SAMPLED_ON }) }}
         </p>
       </section>
 
@@ -355,23 +352,23 @@ useSeo(() => ({
             <dl class="ccard__facts">
               <div>
                 <dt>{{ t('canalesYt.subs') }}</dt>
-                <dd>{{ c.subscribers ?? t('canalesYt.notPublished') }}</dd>
+                <dd>{{ resolve(c).subscribers ?? t('canalesYt.notPublished') }}</dd>
               </div>
               <div>
                 <dt>{{ t('canalesYt.videos') }}</dt>
-                <dd>{{ c.videos ?? '—' }}</dd>
+                <dd>{{ resolve(c).videos ?? '—' }}</dd>
               </div>
               <div>
                 <dt>{{ t('canalesYt.lastUpload') }}</dt>
-                <dd>{{ c.lastUpload ? formatDate(c.lastUpload) : '—' }}</dd>
+                <dd>{{ resolve(c).lastUpload ? formatDate(resolve(c).lastUpload!) : '—' }}</dd>
               </div>
             </dl>
 
             <p
-              v-if="SAMPLES[c.id] && SAMPLES[c.id]!.n > 0"
+              v-if="resolve(c).sample && resolve(c).sample!.n > 0"
               class="ccard__meas"
             >
-              {{ t('canalesYt.cardMeasure', { hits: SAMPLES[c.id]!.topicHits, n: SAMPLES[c.id]!.n }) }}
+              {{ t('canalesYt.cardMeasure', { hits: resolve(c).sample!.topicHits, n: resolve(c).sample!.n }) }}
             </p>
 
             <div class="chip-row ccard__links">
