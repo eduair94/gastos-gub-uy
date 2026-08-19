@@ -23,6 +23,7 @@ public API and an MCP server.
 
 - [What this is](#what-this-is)
 - [Feature tour](#feature-tour)
+- [Site map](#site-map)
 - [Repository map](#repository-map)
 - [Quick start](#quick-start)
 - [The data pipeline](#the-data-pipeline)
@@ -139,6 +140,140 @@ The whole site is responsive. You install it as a PWA.
 > The screenshots come from the live site. The full set (28 views) is in
 > [docs/screenshots/](docs/screenshots/). Refresh it with
 > `node scripts/capture-screenshots.mjs`.
+
+---
+
+## Site map
+
+Every link below points at the live site, [conlatuya.checkleaked.cc](https://conlatuya.checkleaked.cc).
+Spanish is the default locale and carries no prefix. Every page has an English mirror under `/en/` —
+`/en/contracts`, `/en/analytics/partidos`, and so on. The navigation tree these tables follow is
+declared once in [app/utils/nav.ts](app/utils/nav.ts).
+
+### Start here
+
+| Page | What it answers |
+|---|---|
+| [Home](https://conlatuya.checkleaked.cc/) | The overview: totals, latest records, entry points |
+| [Spending](https://conlatuya.checkleaked.cc/gastos) | Where the money went, for a reader with no case in mind |
+| [How it works](https://conlatuya.checkleaked.cc/about) | Sources, method and what a figure on this site means |
+
+### Explore the record
+
+| Page | What it holds |
+|---|---|
+| [Contracts](https://conlatuya.checkleaked.cc/contracts) | Every award, filterable; each one links back to its official record |
+| [Suppliers](https://conlatuya.checkleaked.cc/suppliers) | 42,510 firms that sell to the state, with their profile and history |
+| [Agencies](https://conlatuya.checkleaked.cc/buyers) | 397 buying agencies |
+| [Products](https://conlatuya.checkleaked.cc/products) | The SICE article catalogue: 91k articles over a 5-level rubro tree |
+| [Open calls](https://conlatuya.checkleaked.cc/llamados) | Active tenders, their pliegos, items, deadlines and bid estimate |
+
+### What to check — signals and flags
+
+| Page | What it shows |
+|---|---|
+| [What to check](https://conlatuya.checkleaked.cc/analytics) | The hub for every screening view below |
+| [Management signals](https://conlatuya.checkleaked.cc/analytics/senales) | Five indicators per agency, scored by percentile, not by a fixed threshold |
+| [Competition](https://conlatuya.checkleaked.cc/analytics/competencia) | Single-bidder rate and firms that bid from the same address |
+| [Court of Accounts](https://conlatuya.checkleaked.cc/analytics/tribunal-cuentas) | Contracts named in *Tribunal de Cuentas* resolutions |
+| [Undeclared assets](https://conlatuya.checkleaked.cc/analytics/omisos) | Officials who never filed the asset declaration the law requires |
+| [Sanctioned firms](https://conlatuya.checkleaked.cc/analytics/sanciones) | UDECO consumer sanctions crossed against purchase orders |
+| [Flags](https://conlatuya.checkleaked.cc/analytics/anomalies) | The price-outlier screening, filterable by severity and LLM verdict |
+| [Unexplained alerts](https://conlatuya.checkleaked.cc/analytics/unexplained) | The flags the LLM triage could not explain away |
+| [Data-load errors](https://conlatuya.checkleaked.cc/analytics/errores-carga) | Records that disagree with the official page; any visitor reports one |
+| [Flagged suppliers](https://conlatuya.checkleaked.cc/analytics/proveedores-anomalias) | The same screening rolled up per supplier |
+| [Suppliers with errors](https://conlatuya.checkleaked.cc/analytics/proveedores-errores-carga) | Load errors rolled up per supplier |
+| [Alerts RSS](https://conlatuya.checkleaked.cc/analytics/rss-anomalias) | The flag feed as RSS |
+
+### Spending X-ray
+
+| Page | Cut |
+|---|---|
+| [Spending by agency](https://conlatuya.checkleaked.cc/analytics/organismos) | Grouped by type — Intendencias, Ministerios, Salud, Entes, Educación |
+| [Intendencias](https://conlatuya.checkleaked.cc/analytics/intendencias) | The 19 departmental governments compared |
+| [Spending blocks](https://conlatuya.checkleaked.cc/analytics/mapa) | The whole budget as one proportional grid |
+| [Procurement by party](https://conlatuya.checkleaked.cc/analytics/partidos) | Attributed to the party governing the agency that year, on an SVG choropleth |
+| [Gender spending](https://conlatuya.checkleaked.cc/analytics/genero) | Spending recovered by subject, since the feed has no policy-area field |
+| [State advertising](https://conlatuya.checkleaked.cc/pauta) | What the state pays media |
+
+### Trends
+
+| Page | Window |
+|---|---|
+| [Today's agenda](https://conlatuya.checkleaked.cc/analytics/agenda) | What entered the register today, plus the dated official indicators |
+| [Spending over time](https://conlatuya.checkleaked.cc/analytics/evolucion-gasto) | Why the yearly total moved: inflation, coverage or real change |
+| [Statistics](https://conlatuya.checkleaked.cc/estadisticas) | The corpus in numbers |
+| [Upcoming tenders](https://conlatuya.checkleaked.cc/analytics/anticipacion) | Calls likely to reopen, from the PAC plus purchase recurrence |
+| [Opinion polls](https://conlatuya.checkleaked.cc/analytics/encuestas) | Third-party measurements, each with its own ficha técnica |
+| [Uruguayan YouTube channels](https://conlatuya.checkleaked.cc/canales-youtube) | The verified directory, and what each channel publishes |
+| [Parliament](https://conlatuya.checkleaked.cc/parlamento) | What was said in each session, in plain language |
+
+### Investigations
+
+| Page | Subject |
+|---|---|
+| [Investigations](https://conlatuya.checkleaked.cc/investigaciones) | Index of every long-form piece |
+| [Case files](https://conlatuya.checkleaked.cc/investigaciones/casos) | Over a thousand files, grouped by theme — browse here first |
+| [Cases in evidence](https://conlatuya.checkleaked.cc/curros) | Cases with a judicial process, each with sources and legal status |
+| [Spending by event](https://conlatuya.checkleaked.cc/recopilatorios) | What one event cost, assembled from the contracts behind it |
+| [Weekly briefing](https://conlatuya.checkleaked.cc/blog) | The week in the register |
+
+Individual pieces:
+
+| | |
+|---|---|
+| [Our own findings](https://conlatuya.checkleaked.cc/investigaciones/hallazgos) | [State casinos](https://conlatuya.checkleaked.cc/investigaciones/casinos) |
+| [Casino comps](https://conlatuya.checkleaked.cc/investigaciones/casinos-cortesia) | [Montevideo City Hall](https://conlatuya.checkleaked.cc/investigaciones/intendencia-montevideo) |
+| [TV Ciudad](https://conlatuya.checkleaked.cc/investigaciones/tv-ciudad) | [State monopolies](https://conlatuya.checkleaked.cc/investigaciones/monopolios) |
+| [Flagged companies](https://conlatuya.checkleaked.cc/investigaciones/empresas-senaladas) | [ASSE: ambulances](https://conlatuya.checkleaked.cc/investigaciones/asse-ambulancias) |
+| [Saturno meatpacker](https://conlatuya.checkleaked.cc/investigaciones/frigorifico-saturno) | [Apparent competition](https://conlatuya.checkleaked.cc/investigaciones/competencia-aparente) |
+| [ANTEL crews](https://conlatuya.checkleaked.cc/investigaciones/antel-cuadrillas) | [Google's data centre](https://conlatuya.checkleaked.cc/investigaciones/datacenter-google) |
+| [Construction agreement](https://conlatuya.checkleaked.cc/investigaciones/sunca) | [Gender spending](https://conlatuya.checkleaked.cc/investigaciones/gasto-en-genero) |
+| [The State messages](https://conlatuya.checkleaked.cc/investigaciones/mensajes-del-estado) | [Are we getting worse?](https://conlatuya.checkleaked.cc/investigaciones/mejor-o-peor) |
+| [The FA document, fact-checked](https://conlatuya.checkleaked.cc/investigaciones/documento-fa) | [Promoted housing](https://conlatuya.checkleaked.cc/investigaciones/vivienda-promovida) |
+| [Private channels and advertising](https://conlatuya.checkleaked.cc/investigaciones/canales-privados) | [Seven purchases against suicide](https://conlatuya.checkleaked.cc/investigaciones/suicidios) |
+| [Suicide: the State's resources](https://conlatuya.checkleaked.cc/investigaciones/suicidios-recursos) | |
+
+### Contact directories
+
+| Page | Who is in it |
+|---|---|
+| [Provider contacts](https://conlatuya.checkleaked.cc/proveedores/contactos) | Firms that already sell to the state, with a badge per data source |
+| [Agency contacts](https://conlatuya.checkleaked.cc/contactos) | The purchasing desk of each buying agency |
+
+### Developers
+
+| Resource | |
+|---|---|
+| [Developers](https://conlatuya.checkleaked.cc/developers) | API keys, quotas, webhooks and the MCP server |
+| [API docs](https://conlatuya.checkleaked.cc/docs) | The `/api/v1` reference, rendered with Scalar |
+| [openapi.json](https://conlatuya.checkleaked.cc/openapi.json) | The spec itself |
+| [llms.txt](https://conlatuya.checkleaked.cc/llms.txt) | Site summary for crawlers and LLMs |
+| [sitemap_index.xml](https://conlatuya.checkleaked.cc/sitemap_index.xml) | Every indexable URL |
+
+### Your account
+
+These need a sign-in and redirect to [/login](https://conlatuya.checkleaked.cc/login) otherwise.
+Registration is at [/registro](https://conlatuya.checkleaked.cc/registro).
+
+| Page | |
+|---|---|
+| [Dashboard](https://conlatuya.checkleaked.cc/app) | Saved calls and suppliers |
+| [Alerts](https://conlatuya.checkleaked.cc/app/alertas) | Rubro and keyword watches, and the channel each one uses |
+| [Notifications](https://conlatuya.checkleaked.cc/app/notificaciones) | The in-app inbox |
+| [Calendar](https://conlatuya.checkleaked.cc/app/calendario) | Deadlines of the calls you follow |
+| [API keys](https://conlatuya.checkleaked.cc/app/api-keys) | Create and revoke `gk_live_` keys |
+| [Webhooks](https://conlatuya.checkleaked.cc/app/webhooks) | HTTPS endpoints and their HMAC secret |
+
+### Help and legal
+
+[Contributors](https://conlatuya.checkleaked.cc/colaboradores) ·
+[Report an error](https://conlatuya.checkleaked.cc/analytics/como-reportar) ·
+[Alert services compared](https://conlatuya.checkleaked.cc/comparativa) ·
+[Other transparency platforms](https://conlatuya.checkleaked.cc/comparativa-transparencia) ·
+[Privacy](https://conlatuya.checkleaked.cc/privacidad) ·
+[Terms](https://conlatuya.checkleaked.cc/terminos) ·
+[Cookies](https://conlatuya.checkleaked.cc/cookies)
 
 ---
 
