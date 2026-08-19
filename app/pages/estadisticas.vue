@@ -82,36 +82,28 @@ useSeo(() => ({
     </section>
 
     <!-- KPIs -->
-    <section class="u-container stats">
-      <NuxtLink
-        :to="localePath('/contracts')"
-        class="stat"
+    <section class="u-container">
+      <StatBand
+        :columns="4"
+        :items="[
+          { key: 'contracts', value: formatCount(contractCount), label: t('estad.kpi.contracts'), to: localePath('/contracts') },
+          { key: 'median', money: median, label: t('estad.kpi.median') },
+          { key: 'suppliers', value: formatNumber(metrics?.totalSuppliers), label: t('estad.kpi.suppliers'), to: localePath('/suppliers') },
+          { key: 'buyers', value: formatNumber(metrics?.totalBuyers), label: t('estad.kpi.buyers'), to: localePath('/buyers') },
+        ]"
       >
-        <span class="stat__n">{{ formatCount(contractCount) }}</span>
-        <span class="stat__l">{{ t('estad.kpi.contracts') }}</span>
-      </NuxtLink>
-      <div class="stat stat--money">
-        <MoneyAmount
-          :amount="median"
-          size="xl"
-          align="start"
-        />
-        <span class="stat__l">{{ t('estad.kpi.median') }}</span>
-      </div>
-      <NuxtLink
-        :to="localePath('/suppliers')"
-        class="stat"
-      >
-        <span class="stat__n">{{ formatNumber(metrics?.totalSuppliers) }}</span>
-        <span class="stat__l">{{ t('estad.kpi.suppliers') }}</span>
-      </NuxtLink>
-      <NuxtLink
-        :to="localePath('/buyers')"
-        class="stat"
-      >
-        <span class="stat__n">{{ formatNumber(metrics?.totalBuyers) }}</span>
-        <span class="stat__l">{{ t('estad.kpi.buyers') }}</span>
-      </NuxtLink>
+        <template #value="{ item }">
+          <MoneyAmount
+            v-if="item.money != null"
+            :amount="item.money"
+            size="xl"
+            align="start"
+          />
+          <template v-else>
+            {{ item.value }}
+          </template>
+        </template>
+      </StatBand>
     </section>
 
     <!-- Spend by supplier TYPE — the differentiator -->
@@ -336,41 +328,6 @@ useSeo(() => ({
 }
 
 /* KPIs */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--s-4);
-  margin-top: calc(var(--s-6) * -1);
-  position: relative;
-  z-index: 1;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-4) var(--s-5);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-  text-decoration: none;
-  color: inherit;
-  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
-}
-
-a.stat:hover { border-color: var(--celeste); transform: translateY(-2px); }
-
-.stat__n {
-  font-family: var(--font-display);
-  font-size: var(--t-2xl);
-  font-weight: 700;
-  font-stretch: 112%;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.stat__l { font-size: var(--t-sm); color: var(--text-muted); }
 
 /* Blocks */
 .block { margin-top: var(--s-8); }
@@ -475,12 +432,10 @@ a.rank__link:hover { background: var(--surface-sunken); }
 }
 
 @media (max-width: 1000px) {
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cols { grid-template-columns: 1fr; gap: var(--s-8); }
 }
 
 @media (max-width: 640px) {
-  .stats { grid-template-columns: 1fr; margin-top: var(--s-5); }
   .block__help--right { text-align: left; }
   .rank__link { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--s-1); }
   .rank__link :deep(.money) { grid-column: 2; grid-row: 1; }

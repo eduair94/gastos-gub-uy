@@ -237,36 +237,28 @@ useSeo(() => ({
          sum, so a headline total would be an artefact, not a fact. The
          median says something true and robust instead: half of what the
          state buys is smaller than this. See /about. -->
-    <section class="u-container stats">
-      <NuxtLink
-        :to="localePath('/contracts')"
-        class="stat"
+    <section class="u-container">
+      <StatBand
+        :columns="4"
+        :items="[
+          { key: 'contracts', value: formatCount(contractCount), label: t('home.statContracts'), to: localePath('/contracts') },
+          { key: 'typical', money: stats?.medianValue ?? null, label: t('home.statTypical') },
+          { key: 'suppliers', value: formatNumber(metrics?.totalSuppliers), label: t('home.statSuppliers'), to: localePath('/suppliers') },
+          { key: 'buyers', value: formatNumber(metrics?.totalBuyers), label: t('home.statBuyers'), to: localePath('/buyers') },
+        ]"
       >
-        <span class="stat__n">{{ formatCount(contractCount) }}</span>
-        <span class="stat__l">{{ t('home.statContracts') }}</span>
-      </NuxtLink>
-      <div class="stat stat--money">
-        <MoneyAmount
-          :amount="stats?.medianValue"
-          size="xl"
-          align="start"
-        />
-        <span class="stat__l">{{ t('home.statTypical') }}</span>
-      </div>
-      <NuxtLink
-        :to="localePath('/suppliers')"
-        class="stat"
-      >
-        <span class="stat__n">{{ formatNumber(metrics?.totalSuppliers) }}</span>
-        <span class="stat__l">{{ t('home.statSuppliers') }}</span>
-      </NuxtLink>
-      <NuxtLink
-        :to="localePath('/buyers')"
-        class="stat"
-      >
-        <span class="stat__n">{{ formatNumber(metrics?.totalBuyers) }}</span>
-        <span class="stat__l">{{ t('home.statBuyers') }}</span>
-      </NuxtLink>
+        <template #value="{ item }">
+          <MoneyAmount
+            v-if="item.money != null"
+            :amount="item.money"
+            size="xl"
+            align="start"
+          />
+          <template v-else>
+            {{ item.value }}
+          </template>
+        </template>
+      </StatBand>
     </section>
 
     <!-- ============ Spending by year ============ -->
@@ -644,49 +636,6 @@ useSeo(() => ({
   line-height: 1.45;
 }
 
-/* ---- Stats ---- */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--s-4);
-  margin-top: calc(var(--s-6) * -1);
-  position: relative;
-  z-index: 1;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-4) var(--s-5);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-  text-decoration: none;
-  color: inherit;
-  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
-}
-
-a.stat:hover {
-  border-color: var(--celeste);
-  transform: translateY(-2px);
-}
-
-.stat__n {
-  font-family: var(--font-display);
-  font-size: var(--t-2xl);
-  font-weight: 700;
-  font-stretch: 112%;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.stat__l {
-  font-size: var(--t-sm);
-  color: var(--text-muted);
-}
-
 /* ---- Blocks ---- */
 .block { margin-top: var(--s-8); }
 
@@ -840,7 +789,6 @@ a.stat:hover {
     gap: var(--s-6);
   }
 
-  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cols { grid-template-columns: 1fr; }
 }
 

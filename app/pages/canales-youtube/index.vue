@@ -146,20 +146,14 @@ useSeo(() => ({
 
     <div class="u-container yt__body">
       <!-- Cifras de la propia tabla -->
-      <div class="stats">
-        <div class="stat">
-          <span class="stat__n">{{ CHANNELS.length }}</span>
-          <span class="stat__l">{{ t('canalesYt.statVerified') }}</span>
-        </div>
-        <div class="stat">
-          <span class="stat__n">{{ activeChannels.length }}</span>
-          <span class="stat__l">{{ t('canalesYt.statActive') }}</span>
-        </div>
-        <div class="stat">
-          <span class="stat__n">{{ REJECTED.length }}</span>
-          <span class="stat__l">{{ t('canalesYt.statRejected') }}</span>
-        </div>
-      </div>
+      <StatBand
+        :columns="3"
+        :items="[
+          { value: CHANNELS.length, label: t('canalesYt.statVerified') },
+          { value: activeChannels.length, label: t('canalesYt.statActive') },
+          { value: REJECTED.length, label: t('canalesYt.statRejected') },
+        ]"
+      />
 
       <!-- Qué no hace la página. Arriba, no al pie. -->
       <section class="block">
@@ -571,37 +565,6 @@ useSeo(() => ({
 
 .yt__body { padding-block: var(--s-6) 0; }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s-4);
-  margin-top: calc(var(--s-6) * -1);
-  position: relative;
-  z-index: 1;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-4) var(--s-5);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-}
-
-.stat__n {
-  font-family: var(--font-display);
-  font-size: var(--t-2xl);
-  font-weight: 700;
-  font-stretch: 112%;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.stat__l { font-size: var(--t-sm); color: var(--text-muted); }
-
 .block { margin-top: var(--s-7); }
 
 .block__head {
@@ -917,7 +880,6 @@ useSeo(() => ({
 }
 
 @media (max-width: 600px) {
-  .stats { grid-template-columns: minmax(0, 1fr); }
   .ccard__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>

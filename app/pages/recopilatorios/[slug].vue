@@ -115,23 +115,27 @@ useSeo(() => ({
       </section>
 
       <!-- KPIs -->
-      <section class="u-container kpis">
-        <div class="kpi kpi--money">
-          <MoneyAmount
-            :amount="kpis.total"
-            size="xl"
-            align="start"
-          />
-          <span class="kpi__l">{{ t('recop.kpi.total') }}</span>
-        </div>
-        <div class="kpi">
-          <span class="kpi__n">{{ formatNumber(kpis.count) }}</span>
-          <span class="kpi__l">{{ t('recop.kpi.count') }}</span>
-        </div>
-        <div class="kpi">
-          <span class="kpi__n">{{ formatNumber(kpis.suppliers) }}</span>
-          <span class="kpi__l">{{ t('recop.kpi.suppliers') }}</span>
-        </div>
+      <section class="u-container">
+        <StatBand
+          :columns="3"
+          :items="[
+            { key: 'total', money: kpis.total, label: t('recop.kpi.total') },
+            { key: 'count', value: formatNumber(kpis.count), label: t('recop.kpi.count') },
+            { key: 'suppliers', value: formatNumber(kpis.suppliers), label: t('recop.kpi.suppliers') },
+          ]"
+        >
+          <template #value="{ item }">
+            <MoneyAmount
+              v-if="item.money != null"
+              :amount="item.money"
+              size="xl"
+              align="start"
+            />
+            <template v-else>
+              {{ item.value }}
+            </template>
+          </template>
+        </StatBand>
       </section>
 
       <!-- Breakdown charts -->
@@ -294,37 +298,6 @@ useSeo(() => ({
 }
 
 /* KPIs */
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s-4);
-  margin-top: calc(var(--s-6) * -1);
-  position: relative;
-  z-index: 1;
-}
-
-.kpi {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-4) var(--s-5);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-}
-
-.kpi__n {
-  font-family: var(--font-display);
-  font-size: var(--t-2xl);
-  font-weight: 700;
-  font-stretch: 112%;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.kpi__l { font-size: var(--t-sm); color: var(--text-muted); }
-
 /* Blocks */
 .block { margin-top: var(--s-8); }
 
@@ -405,6 +378,5 @@ useSeo(() => ({
 }
 
 @media (max-width: 640px) {
-  .kpis { grid-template-columns: minmax(0, 1fr); margin-top: var(--s-5); }
 }
 </style>

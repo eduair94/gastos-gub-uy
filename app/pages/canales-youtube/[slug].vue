@@ -156,24 +156,15 @@ useSeo(() => ({
 
     <div class="u-container ch__body">
       <!-- Cifras del canal -->
-      <div class="facts">
-        <div class="fact">
-          <span class="fact__n">{{ ch.subscribers ?? '—' }}</span>
-          <span class="fact__l">{{ t('canalesYt.subs') }}</span>
-        </div>
-        <div class="fact">
-          <span class="fact__n">{{ ch.videos ?? '—' }}</span>
-          <span class="fact__l">{{ t('canalesYt.videos') }}</span>
-        </div>
-        <div class="fact">
-          <span class="fact__n">{{ sample?.views ?? '—' }}</span>
-          <span class="fact__l">{{ t('canalesYt.views') }}</span>
-        </div>
-        <div class="fact">
-          <span class="fact__n">{{ ch.lastUpload ? formatDate(ch.lastUpload) : '—' }}</span>
-          <span class="fact__l">{{ t('canalesYt.lastUpload') }}</span>
-        </div>
-      </div>
+      <StatBand
+        :columns="4"
+        :items="[
+          { value: ch.subscribers ?? '—', label: t('canalesYt.subs') },
+          { value: ch.videos ?? '—', label: t('canalesYt.videos') },
+          { value: sample?.views ?? '—', label: t('canalesYt.views') },
+          { value: ch.lastUpload ? formatDate(ch.lastUpload) : '—', label: t('canalesYt.lastUpload') },
+        ]"
+      />
       <p class="stamp">
         {{ t('canalesYt.factsStamp', { date: VERIFIED_ON, joined: sample?.joined ?? '—' }) }}
       </p>
@@ -471,35 +462,6 @@ useSeo(() => ({
 
 .ch__body { padding-block: var(--s-6) 0; }
 
-.facts {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--s-3);
-  margin-top: calc(var(--s-5) * -1);
-  position: relative;
-  z-index: 1;
-}
-
-.fact {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-3) var(--s-4);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-}
-
-.fact__n {
-  font-family: var(--font-mono);
-  font-size: var(--t-md);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.fact__l { font-size: var(--t-xs); color: var(--text-muted); }
-
 .stamp {
   margin: var(--s-3) 0 0;
   font-family: var(--font-mono);
@@ -729,7 +691,6 @@ useSeo(() => ({
 }
 
 @media (max-width: 600px) {
-  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .meas { grid-template-columns: minmax(0, 1fr); }
   .vlist li { flex-direction: column; gap: var(--s-1); }
 }
