@@ -80,3 +80,6 @@ export * from "./udeco_supplier_stats";
 // Budget lines the State pays for losing a lawsuit (judicial_spending +
 // judicial_spending_years). See shared/judicial-objects.ts for the taxonomy.
 export * from "./judicial_spending";
+
+// Sesiones del Parlamento resumidas en lenguaje llano (parl_sessions + parl_transcripts)
+export * from "./parl_session";

@@ -522,6 +522,19 @@ async function main(): Promise<void> {
       await organismNews.createIndex({ fetchedAt: 1 }, { background: true })
       console.log('✅ organism_news indexes ensured (buyerId unique, fetchedAt)')
 
+      // parl_sessions / parl_transcripts: sesiones del Parlamento resumidas en lenguaje
+      // llano, escritas por src/jobs/parlamento/refresh-sessions.ts. videoId unique es la
+      // clave del upsert; sessionDate descendente es el orden de la página; el compuesto
+      // summarizedAt+publishedAt es la cola del job (primero lo que no tiene resumen).
+      const parlSessions = client.db(DB_NAME).collection('parl_sessions')
+      await parlSessions.createIndex({ videoId: 1 }, { unique: true, background: true })
+      await parlSessions.createIndex({ sessionDate: -1 }, { background: true })
+      await parlSessions.createIndex({ chamber: 1, sessionDate: -1 }, { background: true })
+      await parlSessions.createIndex({ summarizedAt: 1, publishedAt: -1 }, { background: true })
+      const parlTranscripts = client.db(DB_NAME).collection('parl_transcripts')
+      await parlTranscripts.createIndex({ videoId: 1 }, { unique: true, background: true })
+      console.log('✅ parl_sessions + parl_transcripts indexes ensured')
+
       // topic_contracts: per-contract classification behind a spending topic
       // (shared/spending-topics.ts), written by src/jobs/refresh-topic-spending.ts.
       // topicKey+ocid unique is the upsert key; the inTopic-prefixed compounds serve

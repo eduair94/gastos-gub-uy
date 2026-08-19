@@ -42,6 +42,7 @@
     "tribunalCuentas": "Tribunal de Cuentas",
     "plataformas": "Otras plataformas",
     "canalesYt": "Canales de YouTube",
+    "parlamento": "Qué se dijo en el Parlamento",
     "more": "Más",
     "explorar": "Explorar",
     "senales": "Qué revisar",
@@ -2307,6 +2308,13 @@
       "title": "{name} en YouTube: qué publica y cuánto habla de gasto público",
       "description": "Ficha verificada del canal de YouTube de {name}: {what} Con su prueba de identidad, sus cifras medidas y sus últimos videos sobre gasto público y política uruguaya."
     },
+    "parl": {
+      "title": "Qué se dijo en el Parlamento uruguayo, sesión por sesión",
+      "description": "Cada sesión de Diputados y del Senado resumida en lenguaje llano, con el minuto exacto del video para escuchar cada tema. Hecho sobre los subtítulos automáticos del canal oficial de cada cámara."
+    },
+    "parlSession": {
+      "title": "{headline} — sesión del {date}"
+    },
     "tribunalCuentas": {
       "title": "Lo que dijo el Tribunal de Cuentas sobre las compras del Estado",
       "description": "Resoluciones del Tribunal de Cuentas sobre compras públicas uruguayas, cada una junto a la compra que nombra y con el enlace a la resolución original."
@@ -2623,6 +2631,36 @@
       "action": "Limpiar filtros"
     },
     "note": "Datos de contacto oficiales publicados por los organismos en comprasestatales.gub.uy."
+  },
+  "parl": {
+    "eyebrow": "Parlamento",
+    "title": "Qué se dijo en el Parlamento",
+    "lead": "Cada sesión de las dos cámaras, contada en el idioma de todos los días. Con el minuto del video al lado de cada tema, porque una sesión dura seis horas y nadie las tiene.",
+    "statSessions": "sesiones resumidas",
+    "statHours": "horas de sesión leídas",
+    "statSplit": "Senado / Diputados",
+    "howTitle": "Cómo se hace esto",
+    "howBody": "El resumen sale de los subtítulos automáticos del video: una máquina escucha y otra resume. Por eso acá no vas a encontrar cifras exactas ni frases entre comillas. El subtitulado se equivoca con los nombres y con los números.",
+    "howProof": "Cada tema trae el minuto del video. Ese minuto es la prueba: hacés clic y escuchás vos lo que se dijo. Si necesitás la versión textual, el Parlamento publica el diario de sesiones semanas después.",
+    "filterAll": "Las dos cámaras",
+    "chamber": {
+      "senadores": "Senado",
+      "representantes": "Diputados",
+      "asamblea": "Asamblea General"
+    },
+    "duration": "{h} h de sesión",
+    "seeAll": "Ver los {n} temas de la sesión",
+    "empty": "Todavía no hay sesiones resumidas.",
+    "backToIndex": "Todas las sesiones",
+    "sessionMeta": "{h} horas de sesión · {words} palabras transcriptas automáticamente",
+    "topicsTitle": "De qué se habló",
+    "topicsHelp": "En el orden en que pasó. El minuto abre el video justo ahí.",
+    "whyLabel": "A quién toca",
+    "glossaryTitle": "Palabras del Parlamento",
+    "glossaryHelp": "Lo que se dijo en la sesión, traducido.",
+    "watchFull": "Ver la sesión completa en YouTube",
+    "prev": "Sesión anterior",
+    "next": "Sesión siguiente"
   },
   "canalesYt": {
     "eyebrow": "Directorio",
