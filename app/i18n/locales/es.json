@@ -3698,6 +3698,10 @@
       "sources": "Fuentes:"
   },
   "inv": {
+    "index": {
+      "title": "Secciones",
+      "aria": "Índice de secciones de la investigación"
+    },
     "file": {
       "expediente": "Expediente",
       "organismo": "Organismo",

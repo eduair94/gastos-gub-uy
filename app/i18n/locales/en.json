@@ -3698,6 +3698,10 @@
       "sources": "Sources:"
   },
   "inv": {
+    "index": {
+      "title": "Sections",
+      "aria": "Index of the investigation sections"
+    },
     "file": {
       "expediente": "File",
       "organismo": "Body",
