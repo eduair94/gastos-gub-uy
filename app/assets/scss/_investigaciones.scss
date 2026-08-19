@@ -10,8 +10,13 @@
    POR QUÉ EN rem Y NO EN ch: `ch` es el ancho del "0" y se resuelve contra la tipografía del
    elemento que lo usa. La pista de la rejilla de InvSplit hereda 1rem y el párrafo corre hasta 1,4rem,
    así que el mismo `66ch` daba dos anchos distintos y la pista quedaba más ancha que el texto.
-   EL TECHO ES 80 CARACTERES, y es el de la norma: WCAG 1.4.8 (AAA) pide no pasar de 80 por línea.
-   Bringhurst da 45-75 para columna simple. 47rem a 1,4rem rinde, medido, una mediana de 74 y un máximo de 79.
+   EL TECHO ES 80 CARACTERES. Es WCAG 1.4.8 «Visual Presentation», nivel AAA, literal: «Width is
+   no more than 80 characters or glyphs (40 if CJK)», y aplica a bloques de texto.
+   https://www.w3.org/WAI/WCAG22/Understanding/visual-presentation.html
+   La banda 45-75 es de Bringhurst, «Elements of Typographic Style», p. 26: «Anything from 45 to 75
+   characters is widely regarded as a satisfactory length of line for a single-column page set in a
+   serifed text face». Es orientativa acá y no literal: esa frase habla de una página impresa a una
+   columna con tipografía con serifas, y este cuerpo es Public Sans en pantalla. 47rem a 1,4rem rinde, medido, una mediana de 74 y un máximo de 79.
    Es el máximo defendible, no una preferencia.
    NO LA ENSANCHES MÁS PARA TAPAR ESPACIO VACÍO. La banda mide 1400px: llenarla de texto daría unos
    160 caracteres por línea, el doble de lo que admite cualquier norma publicada, y a esa distancia
@@ -96,8 +101,11 @@
    La columna se ensancha con la tipografía, no sin ella: si sube la medida y el cuerpo no, la
    línea pasa de largo. Pero el cuerpo grande en un teléfono hace lo contrario, y está medido:
    a 360px con 1,4rem quedan 30 caracteres por línea, muy por debajo del piso de 45.
-   EL PISO SON 16px, que es el estándar de la industria (Material 16, Apple HIG 17) y el umbral
-   por debajo del cual iOS hace zoom en los campos. El techo son 22,4px, que a 47rem rinde una
+   EL PISO SON 16px, que es el cuerpo por defecto de las dos plataformas: Material 3 fija
+   `body-large` en 16sp y las Human Interface Guidelines de Apple fijan Body en 17pt.
+   CORRECCIÓN, porque acá decía otra cosa: el zoom automático de Safari en iOS NO justifica este
+   piso. Esa heurística se dispara sólo en un campo de formulario enfocado que renderice por
+   debajo de 16px, y no toca el texto corrido. El techo son 22,4px, que a 47rem rinde una
    mediana de 74 caracteres. La rampa termina cerca de los 800px, que es donde la columna llega a su
    tope: si el cuerpo sigue creciendo después, la línea se alarga sola.
    En un teléfono ninguna tipografía legible llega a 45 caracteres: con 313px de columna harían
