@@ -2659,6 +2659,7 @@
     "glossaryTitle": "Words from Parliament",
     "glossaryHelp": "What was said in the session, translated.",
     "watchFull": "Watch the full session on YouTube",
+    "sourceChannels": "Which channels this comes from",
     "prev": "Previous session",
     "next": "Next session"
   },
