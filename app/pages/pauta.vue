@@ -59,24 +59,29 @@ useSeo(() => ({
     </section>
 
     <!-- KPIs -->
-    <section class="u-container stats">
-      <div class="stat stat--money">
-        <MoneyAmount
-          :amount="total"
-          size="xl"
-          align="start"
-          compact
-        />
-        <span class="stat__l">{{ t('pauta.stat.total') }}</span>
-      </div>
-      <div class="stat">
-        <span class="stat__n u-mono">{{ top5Share }}%</span>
-        <span class="stat__l">{{ t('pauta.stat.top5') }}</span>
-      </div>
-      <div class="stat">
-        <span class="stat__n u-mono">{{ formatNumber(d?.formatCount) }}</span>
-        <span class="stat__l">{{ t('pauta.stat.formats') }}</span>
-      </div>
+    <section class="u-container">
+      <StatBand
+        :columns="3"
+        :items="[
+          { key: 'total', money: total, label: t('pauta.stat.total') },
+          { key: 'top5', value: `${top5Share}%`, label: t('pauta.stat.top5') },
+          { key: 'formats', value: formatNumber(d?.formatCount), label: t('pauta.stat.formats') },
+        ]"
+      >
+        <template #value="{ item }">
+          <MoneyAmount
+            v-if="item.money != null"
+            :amount="item.money"
+            size="xl"
+            align="start"
+            compact
+          />
+          <span
+            v-else
+            class="u-mono"
+          >{{ item.value }}</span>
+        </template>
+      </StatBand>
     </section>
 
     <!-- Who receives -->
@@ -264,38 +269,6 @@ useSeo(() => ({
   color: #b9c8d4;
 }
 
-/* KPIs */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s-4);
-  margin-top: calc(var(--s-6) * -1);
-  position: relative;
-  z-index: 1;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-4) var(--s-5);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-}
-
-.stat__n {
-  font-family: var(--font-display);
-  font-size: var(--t-2xl);
-  font-weight: 700;
-  font-stretch: 112%;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.stat__l { font-size: var(--t-sm); color: var(--text-muted); }
-
 /* Blocks */
 .block { margin-top: var(--s-8); }
 .block--flush { margin-top: 0; }
@@ -420,7 +393,6 @@ a.rank__link:hover .rank__go { color: var(--celeste-deep); transform: translateX
 }
 
 @media (max-width: 640px) {
-  .stats { grid-template-columns: 1fr; margin-top: var(--s-5); }
 
   /* Rank rows become cards: full wrapping name, figures stacked, whole row taps. */
   .rank__link {
