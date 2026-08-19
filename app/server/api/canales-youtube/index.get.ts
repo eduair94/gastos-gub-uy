@@ -1,5 +1,5 @@
 import { defineEventHandler, getQuery } from 'h3'
-import { CHANNELS } from '../../data/canales-youtube'
+import { CHANNELS } from '../../../data/canales-youtube'
 
 /**
  * Últimos videos de los canales uruguayos del directorio.
