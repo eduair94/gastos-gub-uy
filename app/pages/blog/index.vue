@@ -4,8 +4,21 @@ const localePath = useLocalePath()
 const route = useRoute()
 const router = useRouter()
 
+/**
+ * El archivo lista DOS formas de edición y la tarjeta tiene que soportar las dos.
+ *
+ * La semanal resume el período y trae `weekKey` y `anomalySummary`. La diaria lleva las notas
+ * del día y no trae ninguno de los dos: trae `dayKey`, `notes` y `newAnomalies`.
+ *
+ * POR QUÉ ESTÁ ESCRITO CON CAMPOS OPCIONALES Y NO CON UNA UNIÓN: el 500 que esto arregla salió
+ * de leer `issue.anomalySummary.total` sobre una edición diaria. No apareció el día que se
+ * mezclaron las dos fuentes en la API, sino recién cuando existió la primera edición diaria —
+ * así que el tipo tiene que hacer imposible volver a asumir la forma semanal.
+ */
 interface BlogIssueCard {
-  weekKey: string
+  kind?: 'weekly' | 'daily'
+  weekKey?: string
+  dayKey?: string
   slug: string
   title: string
   excerpt: string
@@ -14,8 +27,10 @@ interface BlogIssueCard {
   publishedAt: string
   eligibleExpenseCount: number
   totalAmountUyu: number
-  anomalySummary: { total: number, highCritical: number, unexplained: number }
-  ai: { model: string }
+  anomalySummary?: { total: number, highCritical: number, unexplained: number }
+  newAnomalies?: number
+  noteCount?: number
+  ai?: { model: string }
 }
 
 interface BlogResponse {
@@ -110,7 +125,7 @@ useSeo(() => ({
           class="issue"
         >
           <div class="issue__register">
-            <span class="u-mono">{{ issue.weekKey }}</span>
+            <span class="u-mono">{{ issue.weekKey ?? issue.dayKey }}</span>
             <span>{{ periodLabel(issue) }}</span>
           </div>
           <h2>{{ issue.title }}</h2>
@@ -124,7 +139,7 @@ useSeo(() => ({
                 compact
                 size="md"
               />
-              <span>{{ t('newsletter.weekTotal') }}</span>
+              <span>{{ issue.kind === 'daily' ? t('newsletter.dayTotal') : t('newsletter.weekTotal') }}</span>
             </div>
             <dl>
               <div>
@@ -133,13 +148,20 @@ useSeo(() => ({
                   {{ formatNumber(issue.eligibleExpenseCount) }}
                 </dd>
               </div>
-              <div>
-                <dt>{{ t('newsletter.anomalySignals') }}</dt>
+              <!-- La edición diaria cuenta notas y señales del día; la semanal, su resumen. -->
+              <div v-if="issue.kind === 'daily'">
+                <dt>{{ t('newsletter.dayNotes') }}</dt>
                 <dd class="u-mono">
-                  {{ formatNumber(issue.anomalySummary.total) }}
+                  {{ formatNumber(issue.noteCount ?? 0) }}
                 </dd>
               </div>
               <div>
+                <dt>{{ t('newsletter.anomalySignals') }}</dt>
+                <dd class="u-mono">
+                  {{ formatNumber(issue.anomalySummary?.total ?? issue.newAnomalies ?? 0) }}
+                </dd>
+              </div>
+              <div v-if="issue.anomalySummary">
                 <dt>{{ t('newsletter.unexplained') }}</dt>
                 <dd class="u-mono">
                   {{ formatNumber(issue.anomalySummary.unexplained) }}

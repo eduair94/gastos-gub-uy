@@ -102,6 +102,14 @@ class CronServer {
   // Self-paced under the free-tier per-model RPM ceiling; a slow (rate-limited)
   // run must not overlap the next, hence its own guard.
   private isPliegoSummaryRunning: boolean = false;
+  // Nota diaria: mide el corpus, escribe con el modelo, verifica y publica. Comparte la cuota
+  // de modelos con la triage de anomalías y con los resúmenes de pliego, así que consulta esas
+  // guardas antes de arrancar. Escribe sólo su propia colección daily_investigations.
+  private dailyInvestigationStatus: CronJobStatus;
+  private isDailyInvestigationRunning: boolean = false;
+  // Edición diaria del newsletter. Corre DESPUÉS de la nota: sin nota publicada no manda nada.
+  private dailyNewsletterStatus: CronJobStatus;
+  private isDailyNewsletterRunning: boolean = false;
 
   constructor() {
     this.app = express();
@@ -126,6 +134,8 @@ class CronServer {
     this.topicSpendingStatus = freshStatus();
     this.webhooksStatus = freshStatus();
     this.tenderForecastStatus = freshStatus();
+    this.dailyInvestigationStatus = freshStatus();
+    this.dailyNewsletterStatus = freshStatus();
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -605,6 +615,38 @@ class CronServer {
     this.app.post("/cron/newsletter", triggerNewsletter);
     this.app.get("/cron/newsletter", triggerNewsletter);
 
+    // Nota diaria: estado + disparo manual.
+    this.app.get("/cron/daily-investigation/status", (_req, res) => {
+      res.json({ ...this.dailyInvestigationStatus, isRunning: this.isDailyInvestigationRunning });
+    });
+    const triggerDailyInvestigation = (_req: express.Request, res: express.Response): void => {
+      if (this.isDailyInvestigationRunning) {
+        res.status(409).json({ error: "Daily investigation already running", status: this.dailyInvestigationStatus });
+        return;
+      }
+      this.logger.info("Manual daily investigation trigger initiated");
+      this.runDailyInvestigationJob().catch((error) => this.logger.error("Manual daily investigation trigger failed:", error));
+      res.json({ message: "Daily investigation triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/daily-investigation", triggerDailyInvestigation);
+    this.app.get("/cron/daily-investigation", triggerDailyInvestigation);
+
+    // Edición diaria del newsletter: estado + disparo manual.
+    this.app.get("/cron/daily-newsletter/status", (_req, res) => {
+      res.json({ ...this.dailyNewsletterStatus, isRunning: this.isDailyNewsletterRunning });
+    });
+    const triggerDailyNewsletter = (_req: express.Request, res: express.Response): void => {
+      if (this.isDailyNewsletterRunning) {
+        res.status(409).json({ error: "Daily newsletter already running", status: this.dailyNewsletterStatus });
+        return;
+      }
+      this.logger.info("Manual daily newsletter trigger initiated");
+      this.runDailyNewsletterJob().catch((error) => this.logger.error("Manual daily newsletter trigger failed:", error));
+      res.json({ message: "Daily newsletter triggered manually", timestamp: new Date().toISOString() });
+    };
+    this.app.post("/cron/daily-newsletter", triggerDailyNewsletter);
+    this.app.get("/cron/daily-newsletter", triggerDailyNewsletter);
+
     // SICE catalog import: status + manual trigger.
     this.app.get("/cron/import-catalog/status", (_req, res) => {
       res.json({ ...this.catalogStatus, isRunning: this.isCatalogRunning });
@@ -887,6 +929,33 @@ class CronServer {
     );
     this.logger.info(`Weekly newsletter scheduled with expression: ${newsletterExpression} (Uruguay timezone)`);
 
+    // Nota diaria a las 07:10. Va DESPUÉS de todo el pipeline nocturno: el detector de
+    // anomalías (04:15) y su triage, los tres scrapers (03:20, 03:50, 04:20), la prensa por
+    // organismo (04:50), las señales de gestión (05:30) y los dos cruces por proveedor (06:00
+    // y 06:30). Cualquier hora anterior mediría un corpus a medio actualizar.
+    const dailyInvestigationExpression = "10 7 * * *";
+    cron.schedule(
+      dailyInvestigationExpression,
+      async () => {
+        await this.runDailyInvestigationJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Daily investigation scheduled with expression: ${dailyInvestigationExpression} (Uruguay timezone)`);
+
+    // Edición diaria a las 08:30, ochenta minutos después de la nota. Las 08:00 ya son del
+    // digest de alertas, y dos envíos masivos en el mismo minuto compiten por el mismo
+    // transporte de correo.
+    const dailyNewsletterExpression = "30 8 * * *";
+    cron.schedule(
+      dailyNewsletterExpression,
+      async () => {
+        await this.runDailyNewsletterJob();
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Daily newsletter scheduled with expression: ${dailyNewsletterExpression} (Uruguay timezone)`);
+
     // AI pliego summaries (eager), every 4 hours at :40 — offset from the :20
     // open-calls sync so fresh llamados already have their pliegos. Prioritizes
     // still-biddable calls closing soonest and regenerates on pliego modifications.
@@ -1042,6 +1111,26 @@ class CronServer {
       { scheduled: true, timezone: "America/Montevideo" }
     );
     this.logger.info(`UDECO sanctions load scheduled with expression: ${udecoExpression} (Uruguay timezone)`);
+
+    // Judicial spending (OPP budget credit), monthly on the 1st at 06:00. OPP republishes the
+    // yearly files once a year at most, and the whole load is eleven SQL queries against the CKAN
+    // datastore — a monthly tick is already generous. It runs last of the monthly block so a slow
+    // third-party WAF never delays the rollups the site reads.
+    const judicialExpression = "0 6 1 * *";
+    cron.schedule(
+      judicialExpression,
+      async () => {
+        try {
+          this.logger.info("Starting judicial spending load...");
+          await this.runJobProcess("jobs/load-judicial-spending");
+          this.logger.info("Judicial spending load completed successfully");
+        } catch (error) {
+          this.logger.error("Judicial spending load failed:", error instanceof Error ? error : String(error));
+        }
+      },
+      { scheduled: true, timezone: "America/Montevideo" }
+    );
+    this.logger.info(`Judicial spending load scheduled with expression: ${judicialExpression} (Uruguay timezone)`);
 
     // Acta bidder extraction, nightly at 03:20 with a BOUNDED batch. Deliberately small and slow:
     // it pulls PDFs from comprasestatales one at a time with a delay, and every probed call is
@@ -1904,6 +1993,74 @@ class CronServer {
   }
 
   /** Publishes and delivers the previous completed week's public issue. */
+  /**
+   * La nota diaria.
+   *
+   * COMPARTE LA CUOTA DE MODELOS con la triage de anomalías y con los resúmenes de pliego. Las
+   * tres pegan contra las mismas claves gratuitas, y el límite es POR MODELO POR PROYECTO: si
+   * corren juntas se banquean modelos entre sí y las tres terminan degradadas. Por eso este
+   * trabajo consulta esas dos guardas antes de arrancar, aunque escriba en su propia colección
+   * y no toque `releases`.
+   */
+  private async runDailyInvestigationJob(): Promise<void> {
+    if (this.isDailyInvestigationRunning) {
+      this.logger.warn("Skipping daily investigation - already running");
+      return;
+    }
+    if (this.isAnomalyAiRunning || this.isPliegoSummaryRunning) {
+      this.logger.warn("Skipping daily investigation - another job is using the shared model quota");
+      return;
+    }
+    this.isDailyInvestigationRunning = true;
+    this.dailyInvestigationStatus.status = "running";
+    this.dailyInvestigationStatus.lastRun = new Date();
+    this.dailyInvestigationStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting daily investigation...");
+      await this.runJobProcess("jobs/daily-investigation");
+      this.dailyInvestigationStatus.status = "idle";
+      this.dailyInvestigationStatus.successfulRuns++;
+      this.logger.info("Daily investigation completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.dailyInvestigationStatus.status = "error";
+      this.dailyInvestigationStatus.lastError = errorMessage;
+      this.dailyInvestigationStatus.failedRuns++;
+      this.logger.error("Daily investigation failed:", errorMessage);
+    } finally {
+      this.isDailyInvestigationRunning = false;
+    }
+  }
+
+  /** La edición diaria. Sin nota publicada del día termina sin mandar nada. */
+  private async runDailyNewsletterJob(): Promise<void> {
+    if (this.isDailyNewsletterRunning) {
+      this.logger.warn("Skipping daily newsletter - already running");
+      return;
+    }
+    this.isDailyNewsletterRunning = true;
+    this.dailyNewsletterStatus.status = "running";
+    this.dailyNewsletterStatus.lastRun = new Date();
+    this.dailyNewsletterStatus.lastError = null;
+
+    try {
+      this.logger.info("Starting daily newsletter...");
+      await this.runJobProcess("jobs/daily-newsletter");
+      this.dailyNewsletterStatus.status = "idle";
+      this.dailyNewsletterStatus.successfulRuns++;
+      this.logger.info("Daily newsletter completed successfully");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.dailyNewsletterStatus.status = "error";
+      this.dailyNewsletterStatus.lastError = errorMessage;
+      this.dailyNewsletterStatus.failedRuns++;
+      this.logger.error("Daily newsletter failed:", errorMessage);
+    } finally {
+      this.isDailyNewsletterRunning = false;
+    }
+  }
+
   private async runNewsletterJob(): Promise<void> {
     if (this.isNewsletterRunning) {
       this.logger.warn("Skipping weekly newsletter - already running");

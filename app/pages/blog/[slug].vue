@@ -81,6 +81,18 @@ if (error.value || !response.value?.data) {
 }
 const issue = computed(() => response.value!.data)
 
+/**
+ * La edición diaria tiene otra forma que la semanal y por eso la página se bifurca.
+ *
+ * La diaria no trae `analysis`, ni `anomalySummary`, ni `methodology`: lleva las notas del día.
+ * Los `computed` de la rama semanal —`overview` sobre todo— son perezosos, así que mientras la
+ * rama diaria no los use en su plantilla, nunca se evalúan y nada revienta.
+ */
+const isDaily = computed(() => (issue.value as unknown as { kind?: string }).kind === 'daily')
+const dailyNotes = computed(() => (issue.value as unknown as { notes?: Array<Record<string, string | number>> }).notes ?? [])
+const dailyStamp = computed(() => (issue.value as unknown as { dayKey?: string }).dayKey ?? '')
+const newAnomalies = computed(() => Number((issue.value as unknown as { newAnomalies?: number }).newAnomalies ?? 0))
+
 const formatter = computed(() => new Intl.DateTimeFormat(locale.value === 'en' ? 'en-GB' : 'es-UY', {
   timeZone: 'America/Montevideo',
   day: 'numeric',
@@ -149,7 +161,8 @@ useSeo(() => ({
           {{ t('newsletter.archiveTitle') }}
         </NuxtLink>
         <div class="issuehero__register u-mono">
-          <span>{{ t('newsletter.weeklyStamp') }} / {{ issue.weekKey }}</span>
+          <span v-if="isDaily">{{ t('newsletter.dailyStamp') }} / {{ dailyStamp }}</span>
+          <span v-else>{{ t('newsletter.weeklyStamp') }} / {{ issue.weekKey }}</span>
           <span>{{ period }}</span>
         </div>
         <h1>{{ issue.title }}</h1>
@@ -157,13 +170,77 @@ useSeo(() => ({
           {{ issue.excerpt }}
         </p>
         <div class="issuehero__meta">
-          <span>{{ t('newsletter.generatedWith', { model: issue.ai.model }) }}</span>
+          <span v-if="!isDaily">{{ t('newsletter.generatedWith', { model: issue.ai.model }) }}</span>
           <span>{{ t('newsletter.published', { date: formatter.format(new Date(issue.publishedAt)) }) }}</span>
         </div>
       </div>
     </header>
 
-    <article class="u-container issuebody">
+    <!-- La edición diaria: las notas del día, cada una con su enlace a la nota completa. -->
+    <article
+      v-if="isDaily"
+      class="u-container issuebody"
+    >
+      <section class="lede">
+        <div class="ai-note">
+          <strong>{{ t('newsletter.aiLabel') }}</strong>
+          <span>{{ t('newsletter.aiDisclosure') }}</span>
+        </div>
+      </section>
+
+      <section class="dailynotes">
+        <article
+          v-for="note in dailyNotes"
+          :key="String(note.slug)"
+          class="dailynote"
+        >
+          <NuxtLink
+            class="dailynote__t"
+            :to="localePath(`/investigaciones/diario/${note.slug}`)"
+          >
+            {{ note.title }}
+          </NuxtLink>
+          <p class="dailynote__d">
+            {{ note.dek }}
+          </p>
+          <p class="dailynote__m">
+            {{ note.measured }}
+          </p>
+          <NuxtLink
+            class="dailynote__cta"
+            :to="localePath(`/investigaciones/diario/${note.slug}`)"
+          >
+            {{ t('newsletter.readFull') }}
+          </NuxtLink>
+        </article>
+      </section>
+
+      <section
+        v-if="issue.topExpenses?.length"
+        class="dailytop"
+      >
+        <h2>{{ t('newsletter.rankingTitle') }}</h2>
+        <ol>
+          <li
+            v-for="expense in issue.topExpenses"
+            :key="expense.ocid"
+          >
+            <span class="dailytop__t">{{ expense.title }}</span>
+            <span class="dailytop__b">{{ expense.buyerName }}</span>
+            <MoneyAmount :amount="expense.amountUyu" />
+          </li>
+        </ol>
+      </section>
+
+      <p class="dailyanoms">
+        {{ t('newsletter.dailyAnomalies', { n: formatNumber(newAnomalies) }) }}
+      </p>
+    </article>
+
+    <article
+      v-else
+      class="u-container issuebody"
+    >
       <section class="lede">
         <p
           v-for="paragraph in overview"
@@ -455,6 +532,21 @@ useSeo(() => ({
 .finding__range { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--rule); color: var(--text-muted); font-size: var(--t-sm); }
 .methodology { padding-top: var(--s-5); border-top: 1px solid var(--rule-strong); }
 .methodology > p, .methodology li { color: var(--text-muted); line-height: 1.6; }
+/* La edición diaria. Una nota por bloque, cada una con su enlace propio. */
+.dailynotes { display: grid; gap: var(--s-6); }
+.dailynote { padding-bottom: var(--s-5); border-bottom: 1px solid var(--rule); }
+.dailynote__t { display: block; font-size: var(--t-lg); font-weight: 700; line-height: 1.3; color: var(--ink); text-decoration: none; }
+.dailynote__t:hover { text-decoration: underline; }
+.dailynote__d { margin: var(--s-2) 0 var(--s-2); line-height: 1.6; }
+.dailynote__m { margin: 0 0 var(--s-3); color: var(--text-muted); line-height: 1.6; font-size: var(--t-sm); }
+.dailynote__cta { font-weight: 700; }
+.dailytop { margin-top: var(--s-7); }
+.dailytop ol { display: grid; gap: var(--s-3); margin: var(--s-4) 0 0; padding-left: var(--s-5); }
+.dailytop li { display: grid; gap: 2px; }
+.dailytop__t { font-weight: 600; }
+.dailytop__b { color: var(--text-muted); font-size: var(--t-sm); }
+.dailyanoms { margin-top: var(--s-6); color: var(--text-muted); line-height: 1.6; font-size: var(--t-sm); }
+
 @media (max-width: 760px) {
   .factsline, .patterns, .findings { grid-template-columns: 1fr; }
   .anomaly__summary { grid-template-columns: 1fr; }

@@ -25,12 +25,23 @@ firebase.json
 .playwright-mcp/
 # Local scratch: throwaway QA screenshots, ad-hoc logs. Never committed.
 .scratch/
+# Sondas de investigación: scripts tsx de una corrida, dossiers de trabajo, PDF y JSON
+# descargados para chequear una cifra. Son el borrador de una pieza, no su fuente.
+tmp-probe/
 # Stray QA captures dropped at the repo root — the keepers live in docs/screenshots/.
 /*.png
 
 # Agent-tool local state (Serena project index/memories, Codex remote attachments)
 .serena/
 .codex-remote-attachments/
+# Codex hook config: machine-local, it hard-codes an absolute $HOME path.
+.codex/
+# impeccable (design linter) local state: hook cache, per-machine config, and
+# critique reports — outputs of a run, not source. The hook config under
+# .github/hooks/ points at .github/skills/impeccable/, which is not in this
+# repo, so it is dead weight for anyone who does not have the skill installed.
+.impeccable/
+.github/hooks/
 
 # RUPE open-data CSVs — 74MB, re-downloaded by src/jobs/load-rupe.ts from catalogodatos
 rupe/

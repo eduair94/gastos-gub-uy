@@ -108,6 +108,9 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'omisos', to: localePath('/analytics/omisos'), icon: 'mdi-file-document-alert-outline' },
             // The State's own consumer agency vs the State's own purchase orders.
             { key: 'sanciones', to: localePath('/analytics/sanciones'), icon: 'mdi-gavel' },
+            // The bill for the cases the State loses: budget objects whose official name is a
+            // judgment, a judicial settlement or a health injunction.
+            { key: 'sentenciasJudiciales', to: localePath('/analytics/sentencias'), icon: 'mdi-scale-balance' },
             { key: 'anomalies', to: localePath('/analytics/anomalies'), icon: 'mdi-flag-outline' },
             { key: 'unexplained', to: localePath('/analytics/unexplained'), icon: 'mdi-help-rhombus-outline' },
             { key: 'erroresCarga', to: localePath('/analytics/errores-carga'), icon: 'mdi-database-alert-outline' },
@@ -178,10 +181,14 @@ export function buildNav(localePath: (path: string) => string): NavNode[] {
             { key: 'invAsse', to: localePath('/investigaciones/asse-ambulancias'), icon: 'mdi-ambulance' },
             { key: 'invSaturno', to: localePath('/investigaciones/frigorifico-saturno'), icon: 'mdi-cow' },
             { key: 'invMejorPeor', to: localePath('/investigaciones/mejor-o-peor'), icon: 'mdi-chart-timeline-variant' },
+            { key: 'invSuicidios', to: localePath('/investigaciones/suicidios'), icon: 'mdi-lifebuoy' },
+            { key: 'invSuicidiosRecursos', to: localePath('/investigaciones/suicidios-recursos'), icon: 'mdi-calculator-variant-outline' },
             { key: 'invDocumentoFa', to: localePath('/investigaciones/documento-fa'), icon: 'mdi-file-document-check-outline' },
             { key: 'invSunca', to: localePath('/investigaciones/sunca'), icon: 'mdi-hard-hat' },
             { key: 'invGenero', to: localePath('/investigaciones/gasto-en-genero'), icon: 'mdi-human-male-female' },
             { key: 'invMensajes', to: localePath('/investigaciones/mensajes-del-estado'), icon: 'mdi-bullhorn-variant-outline' },
+            { key: 'invVivienda', to: localePath('/investigaciones/vivienda-promovida'), icon: 'mdi-home-city-outline' },
+            { key: 'invDiario', to: localePath('/investigaciones/diario'), icon: 'mdi-calendar-text-outline' },
             { key: 'invCanales', to: localePath('/investigaciones/canales-privados'), icon: 'mdi-television-play' },
           ],
         },

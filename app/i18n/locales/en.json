@@ -20,6 +20,7 @@
     "unexplained": "Unexplained alerts",
     "omisos": "Undeclared assets",
     "sanciones": "Sanctioned firms",
+    "sentenciasJudiciales": "Lost lawsuits",
     "senalesGestion": "Management signals",
     "providerAnomalies": "Flagged suppliers",
     "providerLoadErrors": "Suppliers with errors",
@@ -85,8 +86,12 @@
     "invAsse": "ASSE: ambulances",
     "invSaturno": "Saturno meatpacker",
     "invMejorPeor": "Are we getting worse?",
+    "invSuicidios": "Seven purchases against suicide",
+    "invSuicidiosRecursos": "Suicide: the State's resources",
     "genero": "Gender spending",
     "invMensajes": "The State messages",
+    "invVivienda": "Promoted housing",
+    "invDiario": "Daily findings",
     "invCanales": "Private channels and advertising",
     "invDocumentoFa": "The FA document, fact-checked",
     "invGenero": "Gender spending"
@@ -125,6 +130,7 @@
     "next": "Next",
     "previous": "Previous",
     "viewAll": "View all",
+    "view": "View",
     "viewDetail": "View detail",
     "copy": "Copy",
     "copied": "Copied",
@@ -139,7 +145,6 @@
     "count": "Count",
     "name": "Name",
     "status": "Status",
-    "method": "Procedure",
     "currency": "Currency",
     "category": "Category",
     "supplier": "Supplier",
@@ -524,15 +529,19 @@
     "biddersSource": "See the sentence from the resolution",
     "biddersActa": "Open the award resolution (PDF)",
     "eyebrow": "Contract",
+    "ocidLabel": "Purchase ID:",
+    "ocidHelp": "Unique identifier for this purchase in the open-data system (OCDS). Use it to cite or search this record — click to copy.",
+    "tenderStatusChip": "Tender: {status}",
+    "tenderStatusHelp": "Status of the tender this award comes from — not of the award itself. It can still be active even though this lot already has a supplier, e.g. in multi-lot tenders.",
     "notFound": {
       "title": "No contract with that identifier",
       "body": "The identifier may have changed at the source. Try searching for it in the explorer.",
       "action": "Go to the explorer"
     },
     "awarded": "Awarded",
+    "awardedNet": "Awarded before taxes",
     "awardedTo": "Awarded to",
     "purchasedBy": "Bought by",
-    "publishedOn": "Published on",
     "officialSource": "View on Compras Estatales",
     "officialSourceHelp": "Opens the official record for this contract on comprasestatales.gub.uy.",
     "verifiedTotalBadge": "Verified amount",
@@ -544,15 +553,14 @@
       "tcr": "What the Court of Accounts said",
       "summary": "Summary",
       "items": "What was bought",
-      "parties": "Who is involved",
       "timeline": "Timeline",
       "documents": "Official documents",
-      "raw": "Raw data",
       "amendments": "Amendments",
       "provenance": "Record origin",
       "amount": "Amount detail",
       "itemsTender": "What is requested",
-      "reference": "Price reference"
+      "reference": "Price reference",
+      "technical": "Amount detail and record origin"
     },
     "ai": {
       "title": "AI review of the price flag"
@@ -567,15 +575,15 @@
     },
     "noItems": "The official record lists no items for this contract.",
     "noDocuments": "No documents are published for this contract.",
+    "showAllDocs": "Show all {n} documents",
     "timeline": {
       "enquiry": "Enquiries",
       "tender": "Bid submission",
       "award": "Award",
       "published": "Publication"
     },
-    "relatedTitle": "Other contracts from this agency",
+    "relatedTitle": "Other awards from this agency",
     "supplierHistoryTitle": "This supplier's history",
-    "rawHelp": "The OCDS document as the state publishes it.",
     "contextTitle": "How it compares",
     "contextBiggerThan": "Larger than {pct}% of contracts in {year}.",
     "contextRank": "Ranked {rank} among {buyer} contracts in {year}.",
@@ -613,13 +621,23 @@
       "tenderCancellation": "Tender cancelled"
     },
     "stageHelp": {
-      "award": "The state awarded the purchase to a supplier. This is the stage that reports amounts.",
+      "award": "The state awarded the purchase. Supplier and amount are now known.",
       "awardUpdate": "A correction to an already published award.",
       "awardCancellation": "The award was set aside.",
       "tender": "Published call. No supplier or amount yet.",
       "tenderUpdate": "A clarification or answer to questions about a tender.",
       "tenderAmendment": "A change to the tender conditions.",
       "tenderCancellation": "The tender was cancelled."
+    },
+    "status": {
+      "active": "Active",
+      "cancelled": "Cancelled",
+      "complete": "Finished",
+      "unsuccessful": "Unsuccessful"
+    },
+    "initiationTypes": {
+      "tender": "Tender",
+      "planning": "Planning"
     },
     "stageTitle": {
       "award": "Award {ref}",
@@ -636,18 +654,20 @@
       "initiationType": "Initiation type",
       "tenderId": "Tender no.",
       "awardId": "Award no.",
+      "awardDate": "Award date",
       "awardStatus": "Award status",
       "legalName": "Legal name",
       "rut": "Tax ID / identifier",
       "roles": "Role",
-      "classification": "Catalogue code",
+      "classification": "Code",
       "unit": "Unit",
       "hasEnquiries": "Accepts enquiries",
       "submissionMethod": "Submission method",
       "submissionMethodDetails": "Submission conditions",
       "procuringEntity": "Procuring entity",
+      "buyingOffice": "Contracting unit",
+      "buyingOfficeHelp": "The specific desk that ran this purchase, inside the procuring entity. The procuring entity is the body (e.g. OSE); the contracting unit is the desk that issued the call and answers questions about it.",
       "sourceFile": "Source file",
-      "sourceYear": "Source year",
       "fetched": "Imported on",
       "rssLink": "Source link",
       "totalItems": "Items",
@@ -656,7 +676,7 @@
       "exchangeRateDate": "Exchange rate as of",
       "originalUYU": "Original amount in pesos",
       "converted": "Includes conversion",
-      "ocdsJson": "OCDS document (JSON)",
+      "sourceDoc": "Source OCDS document",
       "contact": "Contact"
     },
     "amendmentOf": "Amends {id}",
@@ -667,7 +687,7 @@
       "ajuste_llamado": "Tender adjustment",
       "items_compra": "Items adjustment"
     },
-    "referenceHelp": "Each item compared against purchases of the same item over the last 36 months — the same baseline the flags use.",
+    "referenceHelp": "Each item compared against purchases of the same item over the last 36 months.",
     "features": {
       "variation": "Variation"
     },
@@ -675,26 +695,34 @@
       "totalWithTax": "Total with taxes",
       "withTax": "With taxes",
       "subtotal": "Subtotal before taxes",
-      "taxes": "Taxes",
-      "help": "Purchase total from the official site. Open-data feed prices are tax-exclusive.",
-      "source": "View on comprasestatales"
+      "taxes": "Taxes"
     },
     "reference": {
-      "paid": "Paid",
       "typical": "Typical (median)",
       "range": "Usual range",
+      "stats": "Median {median} · range {range} · {n} comparables",
       "comparables": "Comparables",
       "viewComparables": "View comparable purchases",
       "viewProduct": "Product page",
+      "noBaseline": "Not enough comparables",
       "presNote": "The open-data unit price does not carry the article's presentation (e.g. a 250 g container vs. 1 g), which can change how this comparison reads. When we can recover it, it appears next to the article; you can always check it on",
       "presNoteSource": "the official purchase page.",
       "method": "How price flags are calculated",
+      "ratio": "{ratio}× the median",
+      "coverage": "{missing} of {total} priced lines have no baseline to compare against (at least 5 purchases of the same item over the last 36 months are needed).",
       "pos": {
         "below": "Below usual",
         "typical": "In range",
         "high": "Above",
         "veryHigh": "Well above",
-        "listPrice": "Known tariff"
+        "listPrice": "List price"
+      },
+      "posHelp": {
+        "below": "Below the usual range paid for purchases of the same item over the last 36 months.",
+        "typical": "Within the usual range paid for purchases of the same item over the last 36 months.",
+        "high": "Above the usual range, without reaching the threshold that triggers a price flag.",
+        "veryHigh": "Well above the usual range — the same threshold price flags use.",
+        "listPrice": "Matches a known tariff or legal denomination for this item (e.g. a fixed stamp fee), so it isn't compared against the median."
       }
     },
     "officialAward": "View award",
@@ -1559,6 +1587,10 @@
           "title": "Suppliers sanctioned by consumer protection",
           "dek": "Companies fined or cautioned by the Consumer Protection Unit that also sell to the State, cross-referenced by tax ID against public procurement."
         },
+        "sentenciasJudiciales": {
+          "title": "What the State pays for losing lawsuits",
+          "dek": "Budget credit set aside for court judgments, judicial settlements and health injunctions, year by year and body by body."
+        },
         "genero": {
           "title": "Spending on gender and diversity",
           "dek": "How much the State spends on gender and diversity policy, which body buys it and which supplier receives it. The feed carries no topic label: it is rebuilt from each purchase\u2019s text."
@@ -1663,6 +1695,70 @@
     "panelBodyOne": "The Consumer Protection Unit applied 1 sanction to this company in {to}, totalling {ur} UR in fines.",
     "panelBody": "The Consumer Protection Unit applied {n} sanctions to this company between {from} and {to}, totalling {ur} UR in fines.",
     "panelLink": "See the full cross-reference"
+  },
+  "sentencias": {
+    "title": "What the State pays for losing lawsuits",
+    "lead": "When a public body loses a lawsuit, the damages come out of the budget. Uruguay's national budget breaks spending down by expense object, and seven of those objects name a judicial cause: court judgments, judicial settlements and health injunctions. This is what was set aside to pay them, year by year and body by body.",
+    "caveat": "The budget names no cases and no people. No figure on this page says whom the State compensated or why; it says how much money was set aside under an expense object whose official name is a judgment, a judicial settlement or an injunction. The case-by-case record is not public data: judgments sit as prose in the National Jurisprudence Database, and the registry that does hold the amounts, RUJE, is not published.",
+    "notComputed": "Judicial spending has not been loaded yet. Run the load-judicial-spending job.",
+    "kpi": {
+      "latest": "budgeted for judicial causes in {year}",
+      "total": "total {from}-{to}, in today's pesos",
+      "growth": "growth between {from} and {to}, inflation already removed",
+      "fullySpent": "judicial budget lines spent in full, of those with published execution"
+    },
+    "series": {
+      "title": "Year by year",
+      "dek": "Current budget credit for expense objects with a judicial cause, converted to today's pesos via the Unidad Indexada. Without that conversion, eleven years of inflation lift any series while nothing has actually changed.",
+      "note": "The bar shows budgeted credit, not what was actually paid. Files from 2019 onward publish execution as zero for every row, not only the judicial ones. In the years that do carry it, the judgments line is spent almost in full, which is why the credit is the best available measure of what the State ends up paying.",
+      "endsAt": "The series ends in {year} because the source ends there: OPP stopped updating budget credit broken down by expense object in July 2022, and no other body publishes the national budget at that level of detail. We checked the open-data catalogue for later years — there are none."
+    },
+    "flag": {
+      "partial": "partial year: {n} bodies",
+      "noExecution": "no execution published"
+    },
+    "cats": {
+      "title": "For what reason",
+      "dek": "The official name of each expense object declares the cause. Compensation with no declared cause is listed separately: it may be a judgment or an expropriation, and the budget does not say.",
+      "rows": "{n} budget lines"
+    },
+    "cat": {
+      "sentencia": "Court judgments",
+      "acuerdo": "Judicial settlements",
+      "amparo": "Health injunctions (drugs and supplies)",
+      "indemnizacion": "Compensation with no declared cause"
+    },
+    "orgs": {
+      "title": "Which bodies",
+      "dek": "Eleven-year total in today's pesos. The central line sits with the Ministry of Economy, which pays judgments against the State under article 52 of Law 17.930."
+    },
+    "rows": {
+      "title": "The detail",
+      "noData": "no data",
+      "count": "{n} budget lines · the filters narrow this table, not the figures above",
+      "empty": "No budget line matches those filters. That is a valid result: not every reason appears in every year."
+    },
+    "col": {
+      "year": "Year",
+      "organismo": "Body",
+      "objeto": "Expense object",
+      "vigente": "Budget credit",
+      "ejecutado": "Executed"
+    },
+    "filters": {
+      "year": "Year",
+      "category": "Reason",
+      "allYears": "All years",
+      "allCategories": "All reasons"
+    },
+    "gap": {
+      "title": "What still cannot be known",
+      "body": "Uruguay has no public list of the damages the State pays under court judgment. These are the three sources that would hold the case-by-case record, and why none of them is enough.",
+      "bjn": "The National Jurisprudence Database publishes over 100,000 judgments, but the award amount sits inside the text rather than in a field, and there is no way to query it in bulk.",
+      "ruje": "The Single Registry of State Lawsuits (Decree 98/019) does hold the amounts for every lawsuit the State is party to. It is not public: in 2024 a freedom-of-information request returned 3,076 lawsuits for 2023 and roughly USD 132 million identified, without naming the body or the cause.",
+      "tca": "The Administrative Claims Court annuls administrative acts but does not award damages, so its rulings carry no amounts."
+    },
+    "source": "Source: Office of Planning and Budget, budget credit at"
   },
   "senales": {
     "title": "Management signals",
@@ -1969,9 +2065,9 @@
       "monto": "Typical amount"
     },
     "confidence": { "alta": "High", "media": "Medium", "baja": "Low" },
+    "confidenceHelp": "How repeated and regular the historical buying pattern is: High = stable, recent cadence; Medium = a visible cadence with more variation; Low = a weak pattern, close to the display minimum.",
     "overdue": "Overdue",
     "overdueHelp": "This tender should already have been published based on the agency's historical cadence: it could appear any time now, not on the window's exact date.",
-    "confidenceHelp": "How repeated and regular the historical buying pattern is: High = stable, recent cadence; Medium = a visible cadence with more variation; Low = a weak pattern, close to the display minimum.",
     "everyDays": "every ~{n} day(s)",
     "everyWeeks": "every ~{n} week(s)",
     "everyMonths": "every ~{n} months",
@@ -2154,6 +2250,10 @@
     "sanciones": {
       "title": "State suppliers sanctioned by consumer protection",
       "description": "Companies sanctioned by Uruguay’s Consumer Protection Unit that also sell to the State, cross-referenced by tax ID against public procurement."
+    },
+    "sentencias": {
+      "title": "What the Uruguayan State pays for losing lawsuits",
+      "description": "Budget credit for court judgments, judicial settlements, compensation and health injunctions, by year and by public body, since 2011."
     },
     "genero": {
         "title": "Public spending on gender and diversity policy in Uruguay",
@@ -3056,6 +3156,15 @@
     "indexTitle": "The state's largest purchases, week by week",
     "indexLead": "A verifiable record of the largest awards published and new statistical signals. Facts come from the data; Gemini helps read them.",
     "weeklyStamp": "Weekly public record",
+    "dailyStamp": "Daily edition",
+    "dayTotal": "awarded that day",
+    "dayNotes": "Findings",
+    "readFull": "Read the full note",
+    "dailyAnomalies": "{n} new price signal(s) in the last 24 hours. A statistical alert does not prove wrongdoing.",
+    "frequencyTitle": "How often you want it",
+    "frequencyDaily": "Every day",
+    "frequencyWeekly": "Only the Monday round-up",
+    "frequencySaved": "Done, we changed the frequency.",
     "everyMonday": "New issue every Monday",
     "archiveTitle": "Issue archive",
     "weekTotal": "Total eligible amount for the week",
@@ -3589,6 +3698,10 @@
       "sources": "Sources:"
   },
   "inv": {
+    "index": {
+      "title": "Sections",
+      "aria": "Index of the investigation sections"
+    },
     "file": {
       "expediente": "File",
       "organismo": "Body",

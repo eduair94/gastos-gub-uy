@@ -88,6 +88,8 @@ const series = computed(() => [
       { path: '/investigaciones/suicidios-recursos', emoji: '🧮', ...cardSuicidiosRecursos.value },
       { path: '/investigaciones/documento-fa', emoji: '📄', ...c.value.cardDocumentoFa },
       { path: '/investigaciones/sunca', emoji: '🦺', ...c.value.cardSunca },
+      { path: '/investigaciones/vivienda-promovida', emoji: '🏘️', ...c.value.cardVivienda },
+      { path: '/investigaciones/diario', emoji: '🗓️', ...c.value.cardDiario },
     ],
   },
 ])

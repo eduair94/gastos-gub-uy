@@ -8,12 +8,21 @@
 /* LA MEDIDA DE LECTURA, en un solo lugar. Estaba escrita como `66ch` en cinco reglas distintas y
    había que cambiarla en cinco lugares.
    POR QUÉ EN rem Y NO EN ch: `ch` es el ancho del "0" y se resuelve contra la tipografía del
-   elemento que lo usa. La pista de la rejilla de InvSplit hereda 1rem y el párrafo corre a 1,15rem,
+   elemento que lo usa. La pista de la rejilla de InvSplit hereda 1rem y el párrafo corre hasta 1,4rem,
    así que el mismo `66ch` daba dos anchos distintos y la pista quedaba más ancha que el texto.
-   41rem rinde 74 caracteres por línea a 1,15rem: el techo de la banda 45-75 de app/DESIGN.md, el
-   mismo recuento que antes de subir el cuerpo. NO la ensanches para tapar espacio vacío: el hueco
-   se llena con contenido en el carril de InvSplit. */
-:root { --inv-measure: 41rem; }
+   EL TECHO ES 80 CARACTERES. Es WCAG 1.4.8 «Visual Presentation», nivel AAA, literal: «Width is
+   no more than 80 characters or glyphs (40 if CJK)», y aplica a bloques de texto.
+   https://www.w3.org/WAI/WCAG22/Understanding/visual-presentation.html
+   La banda 45-75 es de Bringhurst, «Elements of Typographic Style», p. 26: «Anything from 45 to 75
+   characters is widely regarded as a satisfactory length of line for a single-column page set in a
+   serifed text face». Es orientativa acá y no literal: esa frase habla de una página impresa a una
+   columna con tipografía con serifas, y este cuerpo es Public Sans en pantalla. 47rem a 1,4rem rinde, medido, una mediana de 74 y un máximo de 79.
+   Es el máximo defendible, no una preferencia.
+   NO LA ENSANCHES MÁS PARA TAPAR ESPACIO VACÍO. La banda mide 1400px: llenarla de texto daría unos
+   160 caracteres por línea, el doble de lo que admite cualquier norma publicada, y a esa distancia
+   el ojo pierde el renglón al volver al principio de la línea siguiente. El hueco que sobra lo
+   ocupa el índice de InvIndex y el carril de InvSplit. */
+:root { --inv-measure: 47rem; }
 
 .inv { padding-block: 0; }
 
@@ -88,9 +97,24 @@
   margin: var(--s-7) 0 var(--s-4);
 }
 
-/* 1,15rem = 18,4px. El long-form actual va de 18 a 21px y esto estaba en 16,8. Sube el cuerpo sin
-   mover el recuento de caracteres por línea, porque la medida subió en la misma proporción. */
-.inv-prose { max-width: var(--inv-measure); font-size: 1.15rem; }
+/* EL CUERPO SIGUE AL ANCHO, en rampa y sin salto.
+   La columna se ensancha con la tipografía, no sin ella: si sube la medida y el cuerpo no, la
+   línea pasa de largo. Pero el cuerpo grande en un teléfono hace lo contrario, y está medido:
+   a 360px con 1,4rem quedan 30 caracteres por línea, muy por debajo del piso de 45.
+   EL PISO SON 16px, que es el cuerpo por defecto de las dos plataformas: Material 3 fija
+   `body-large` en 16sp y las Human Interface Guidelines de Apple fijan Body en 17pt.
+   CORRECCIÓN, porque acá decía otra cosa: el zoom automático de Safari en iOS NO justifica este
+   piso. Esa heurística se dispara sólo en un campo de formulario enfocado que renderice por
+   debajo de 16px, y no toca el texto corrido. El techo son 22,4px, que a 47rem rinde una
+   mediana de 74 caracteres. La rampa termina cerca de los 800px, que es donde la columna llega a su
+   tope: si el cuerpo sigue creciendo después, la línea se alarga sola.
+   En un teléfono ninguna tipografía legible llega a 45 caracteres: con 313px de columna harían
+   falta 15px, que están debajo del piso. Esa banda no se puede cumplir a ese ancho, y se prefiere
+   el piso de tamaño antes que el de medida. */
+.inv-prose {
+  max-width: var(--inv-measure);
+  font-size: clamp(1rem, 0.55rem + 2.2vw, 1.4rem);
+}
 .inv-prose p { margin: 0 0 var(--s-4); }
 .inv-prose strong { font-weight: 600; }
 .inv-note { font-size: 0.9rem; color: var(--text-muted); max-width: 74ch; }

@@ -55,10 +55,12 @@ export default defineEventHandler(async (event) => {
     }
   }
   catch (error: any) {
-    console.error('Error fetching anomaly details:', error)
+    // El re-lanzamiento va primero: un 404 no es una falla del servidor y no debe ensuciar
+    // el log de errores. Ver el mismo arreglo en suppliers/[id].get.ts.
     if (error.statusCode) {
       throw error
     }
+    console.error('Error fetching anomaly details:', error)
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to fetch anomaly details',

@@ -209,6 +209,26 @@ export const INV_CONTENT = {
           "brecha yo/país: 46 pts"
         ]
       },
+      "cardDiario": {
+        "eyebrow": "Se publica todas las mañanas",
+        "title": "Hallazgos del día",
+        "dek": "Un hallazgo medido por día sobre el registro de compras: saltos de gasto, rubros concentrados, licitaciones con una sola oferta, precios que el control automático no pudo explicar. Cada uno dice qué falta para afirmar más.",
+        "tags": [
+          "8 carriles de medición",
+          "verificador automático",
+          "sin veredictos"
+        ]
+      },
+      "cardVivienda": {
+        "eyebrow": "Ley 18.795 · 2011–2026",
+        "title": "La vivienda que el Estado no compra",
+        "dek": "El régimen de vivienda promovida lleva 52.713 viviendas promovidas y 30.525 terminadas, y no deja un solo contrato en el registro de compras. La DGI publica su costo en cinco líneas sueltas y ningún total. El Ministerio de Vivienda contestó que sólo podía informar el IVA.",
+        "tags": [
+          "cero contratos",
+          "61% monoambiente o 1 dormitorio",
+          "sin apertura territorial"
+        ]
+      },
       "cardSuicidios": {
         "eyebrow": "MSP 1997–2025 · corpus 2002–2026",
         "title": "Siete compras contra el suicidio en veinticuatro años",
@@ -292,7 +312,7 @@ export const INV_CONTENT = {
       "cardAntel": {
         "eyebrow": "Investigación propia · Tercerización",
         "title": "«La cuadrilla de Antel»: quién instala la fibra y qué cobra",
-        "dek": "La cuadrilla sí es de una empresa contratada: está en el pliego. El precio del dicho no cierra. Y buscándolo apareció que de 164 llamados de obra de red, uno solo dice quién construye la red.",
+        "dek": "La cuadrilla trabaja para una empresa contratista: está en el pliego. El precio del dicho no cierra. Y de 164 llamados de obra de red, uno solo dice quién construye la red.",
         "tags": [
           "6 de 164 con adjudicatario",
           "3,3 % vs 82,7 % de OSE",
@@ -671,6 +691,26 @@ export const INV_CONTENT = {
           "me/country gap: 46 pts"
         ]
       },
+      "cardDiario": {
+        "eyebrow": "Published every morning",
+        "title": "Daily findings",
+        "dek": "One measured finding a day from the procurement record: spending jumps, concentrated categories, tenders with a single bid, prices the automatic review could not explain. Each one states what is still missing to say more.",
+        "tags": [
+          "8 measurement lanes",
+          "automatic checker",
+          "no verdicts"
+        ]
+      },
+      "cardVivienda": {
+        "eyebrow": "Law 18.795 · 2011-2026",
+        "title": "The housing the state does not buy",
+        "dek": "The promoted housing regime has 52,713 homes promoted and 30,525 finished, and leaves not one contract in the procurement record. The tax office publishes its cost in five loose lines and no total. The Housing Ministry answered that it could only report VAT.",
+        "tags": [
+          "zero contracts",
+          "61% studio or 1-bedroom",
+          "no territorial breakdown"
+        ]
+      },
       "cardSuicidios": {
         "eyebrow": "Health Ministry 1997-2025 · corpus 2002-2026",
         "title": "Seven purchases against suicide in twenty-four years",
@@ -754,7 +794,7 @@ export const INV_CONTENT = {
       "cardAntel": {
         "eyebrow": "Own investigation · Outsourcing",
         "title": "\"The Antel crew\": who installs the fibre and what they charge",
-        "dek": "The crew does work for a contractor: it is in the tender documents. The price in the rumour does not add up. And looking for it turned up that of 164 network-works tenders, exactly one says who builds the network.",
+        "dek": "The crew works for a contractor: it is in the tender documents. The price in the saying does not add up. And of 164 network-works tenders, exactly one says who builds the network.",
         "tags": [
           "6 of 164 name a winner",
           "3.3% vs OSE's 82.7%",

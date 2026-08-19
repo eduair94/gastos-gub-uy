@@ -10,6 +10,14 @@ const NuxtLinkC = resolveComponent('NuxtLink')
 
 const { t, locale, locales, setLocale } = useI18n()
 const localePath = useLocalePath()
+
+/* El índice del carril va sólo en las piezas de investigación, no en su hub ni en las fichas
+   de caso, que no están escritas en secciones con `h2`. */
+const rutaActual = useRoute()
+const esInvestigacion = computed(() => {
+  const p = rutaActual.path.replace(/^\/[a-z]{2}(?=\/|$)/, '')
+  return p.startsWith('/investigaciones/') && !p.startsWith('/investigaciones/casos')
+})
 const route = useRoute()
 const router = useRouter()
 const theme = useTheme()
@@ -880,6 +888,13 @@ const exploreLinks = computed<NavLeaf[]>(() => {
       <div id="contenido">
         <slot />
       </div>
+
+      <!-- El carril de las investigaciones. Se cuelga del artículo y lee sus `h2`, así que
+           sirve para las 21 piezas sin tocar ninguna. Sólo aparece arriba de 1888px, que es
+           donde sobra margen fuera del contenedor de 1400px. Ver InvIndex.vue. -->
+      <ClientOnly>
+        <InvIndex v-if="esInvestigacion" />
+      </ClientOnly>
     </v-main>
 
     <!-- The colophon of the expediente: who publishes this, where the record

@@ -128,6 +128,7 @@ const conv = computed(() => {
 
 <style scoped>
 .mconv {
+  position: relative;
   display: inline-flex;
   align-items: center;
   padding: 0;
@@ -139,6 +140,19 @@ const conv = computed(() => {
   line-height: 1.1;
   color: inherit;
   font: inherit;
+}
+
+/* An absolutely-positioned pseudo-element extends the CLICKABLE area
+   without touching the button's own box — real padding would shove the
+   underline away from the text and grow every dense money-table row it
+   sits in. Measured tap target was 15px tall (well under the 44px
+   baseline); this reaches close to it while staying inside the table
+   cell's own vertical padding, so it can never overlap the row above
+   or below. */
+.mconv::after {
+  content: '';
+  position: absolute;
+  inset: calc(var(--s-3) * -1) calc(var(--s-2) * -1);
 }
 .mconv:hover,
 .mconv--open { border-bottom-color: var(--celeste-deep); }

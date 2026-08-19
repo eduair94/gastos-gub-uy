@@ -20,6 +20,7 @@
     "unexplained": "Alertas sin explicar",
     "omisos": "Declaraciones omitidas",
     "sanciones": "Sancionadas",
+    "sentenciasJudiciales": "Juicios perdidos",
     "senalesGestion": "Señales de gestión",
     "providerAnomalies": "Proveedores señalados",
     "providerLoadErrors": "Proveedores con errores",
@@ -85,8 +86,12 @@
     "invAsse": "ASSE: ambulancias",
     "invSaturno": "Frigorífico Saturno",
     "invMejorPeor": "¿Cada vez estamos peor?",
+    "invSuicidios": "Siete compras contra el suicidio",
+    "invSuicidiosRecursos": "Suicidio: los recursos del Estado",
     "genero": "Gasto en género",
     "invMensajes": "Mensajes del Estado",
+    "invVivienda": "Vivienda promovida",
+    "invDiario": "Hallazgos del día",
     "invCanales": "Canales privados y pauta",
     "invDocumentoFa": "El documento del FA, chequeado",
     "invGenero": "Gasto en género"
@@ -125,6 +130,7 @@
     "next": "Siguiente",
     "previous": "Anterior",
     "viewAll": "Ver todo",
+    "view": "Ver",
     "viewDetail": "Ver detalle",
     "copy": "Copiar",
     "copied": "Copiado",
@@ -139,7 +145,6 @@
     "count": "Cantidad",
     "name": "Nombre",
     "status": "Estado",
-    "method": "Procedimiento",
     "currency": "Moneda",
     "category": "Categoría",
     "supplier": "Proveedor",
@@ -524,15 +529,19 @@
     "biddersSource": "Ver la frase del acta",
     "biddersActa": "Abrir el acta de adjudicación (PDF)",
     "eyebrow": "Contrato",
+    "ocidLabel": "ID de la compra:",
+    "ocidHelp": "Identificador único de esta compra en el sistema de datos abiertos (OCDS). Sirve para citarla o buscarla — clic para copiarlo.",
+    "tenderStatusChip": "Llamado: {status}",
+    "tenderStatusHelp": "Estado del llamado del que viene esta adjudicación — no de la adjudicación en sí. Puede seguir vigente aunque este lote ya tenga proveedor, por ejemplo en llamados con varios lotes.",
     "notFound": {
       "title": "No encontramos ese contrato",
       "body": "El identificador puede haber cambiado en el origen. Probá buscarlo en el explorador.",
       "action": "Ir al explorador"
     },
     "awarded": "Adjudicado",
+    "awardedNet": "Adjudicado sin impuestos",
     "awardedTo": "Adjudicado a",
     "purchasedBy": "Comprado por",
-    "publishedOn": "Publicado el",
     "officialSource": "Ver en Compras Estatales",
     "officialSourceHelp": "Abre la ficha oficial de este contrato en comprasestatales.gub.uy.",
     "verifiedTotalBadge": "Monto verificado",
@@ -544,15 +553,14 @@
       "tcr": "Lo que dijo el Tribunal de Cuentas",
       "summary": "Resumen",
       "items": "Qué se compró",
-      "parties": "Quiénes participan",
       "timeline": "Cronología",
       "documents": "Documentos oficiales",
-      "raw": "Datos crudos",
       "amendments": "Modificaciones",
       "provenance": "Origen del registro",
       "amount": "Detalle del monto",
       "itemsTender": "Qué se pide",
-      "reference": "Precios de referencia"
+      "reference": "Precios de referencia",
+      "technical": "Detalle del monto y origen del registro"
     },
     "ai": {
       "title": "Análisis IA de la alerta de precio"
@@ -567,15 +575,15 @@
     },
     "noItems": "El registro oficial no detalla artículos para este contrato.",
     "noDocuments": "No hay documentos publicados para este contrato.",
+    "showAllDocs": "Ver los {n} documentos",
     "timeline": {
       "enquiry": "Consultas",
       "tender": "Recepción de ofertas",
       "award": "Adjudicación",
       "published": "Publicación"
     },
-    "relatedTitle": "Otros contratos de este organismo",
+    "relatedTitle": "Otras adjudicaciones de este organismo",
     "supplierHistoryTitle": "Historial de este proveedor",
-    "rawHelp": "El documento OCDS tal como lo publica el Estado.",
     "contextTitle": "Cómo se compara",
     "contextBiggerThan": "Mayor que el {pct} % de los contratos de {year}.",
     "contextRank": "Puesto {rank} entre los contratos de {buyer} en {year}.",
@@ -613,13 +621,23 @@
       "tenderCancellation": "Llamado anulado"
     },
     "stageHelp": {
-      "award": "El Estado adjudicó la compra a un proveedor. Es la etapa que informa montos.",
+      "award": "El Estado adjudicó la compra: ya hay proveedor y monto definidos.",
       "awardUpdate": "Corrección de una adjudicación ya publicada.",
       "awardCancellation": "La adjudicación fue dejada sin efecto.",
       "tender": "Convocatoria publicada. Todavía no hay proveedor ni monto.",
       "tenderUpdate": "Aclaración o respuesta a consultas sobre un llamado.",
       "tenderAmendment": "Cambio en las condiciones del llamado.",
       "tenderCancellation": "El llamado fue anulado."
+    },
+    "status": {
+      "active": "Vigente",
+      "cancelled": "Anulado",
+      "complete": "Finalizado",
+      "unsuccessful": "Desierto"
+    },
+    "initiationTypes": {
+      "tender": "Llamado",
+      "planning": "Planificación"
     },
     "stageTitle": {
       "award": "Adjudicación {ref}",
@@ -636,18 +654,20 @@
       "initiationType": "Tipo de inicio",
       "tenderId": "N.º de llamado",
       "awardId": "N.º de adjudicación",
+      "awardDate": "Fecha de adjudicación",
       "awardStatus": "Estado de la adjudicación",
       "legalName": "Razón social",
       "rut": "RUT / identificador",
       "roles": "Rol",
-      "classification": "Código de catálogo",
+      "classification": "Código",
       "unit": "Unidad",
       "hasEnquiries": "Admite consultas",
       "submissionMethod": "Forma de presentación",
       "submissionMethodDetails": "Condiciones de presentación",
       "procuringEntity": "Unidad ejecutora",
+      "buyingOffice": "Unidad compradora",
+      "buyingOfficeHelp": "La oficina concreta que tramitó esta compra, dentro de la unidad ejecutora. La unidad ejecutora es el organismo (p. ej. OSE); la unidad compradora es la mesa que hizo el llamado y a la que se le consulta.",
       "sourceFile": "Archivo de origen",
-      "sourceYear": "Año de origen",
       "fetched": "Importado el",
       "rssLink": "Enlace del origen",
       "totalItems": "Artículos",
@@ -656,7 +676,7 @@
       "exchangeRateDate": "Tipo de cambio al",
       "originalUYU": "Importe original en pesos",
       "converted": "Incluye conversión",
-      "ocdsJson": "Documento OCDS (JSON)",
+      "sourceDoc": "Documento OCDS de origen",
       "contact": "Contacto"
     },
     "amendmentOf": "Modifica a {id}",
@@ -667,7 +687,7 @@
       "ajuste_llamado": "Ajuste del llamado",
       "items_compra": "Ajuste de ítems"
     },
-    "referenceHelp": "Cada artículo comparado con las compras del mismo ítem en los últimos 36 meses — la misma referencia que usan las alertas.",
+    "referenceHelp": "Cada artículo comparado con las compras del mismo ítem en los últimos 36 meses.",
     "features": {
       "variation": "Variación"
     },
@@ -675,26 +695,34 @@
       "totalWithTax": "Total con impuestos",
       "withTax": "Con impuestos",
       "subtotal": "Subtotal sin impuestos",
-      "taxes": "Impuestos",
-      "help": "Monto total de la compra según el sitio oficial. Los precios del feed de datos abiertos son sin impuestos.",
-      "source": "Ver en comprasestatales"
+      "taxes": "Impuestos"
     },
     "reference": {
-      "paid": "Se pagó",
       "typical": "Habitual (mediana)",
       "range": "Rango usual",
+      "stats": "Mediana {median} · rango {range} · {n} comparables",
       "comparables": "Comparables",
       "viewComparables": "Ver compras comparables",
       "viewProduct": "Ficha del producto",
+      "noBaseline": "Sin comparables suficientes",
       "presNote": "El precio unitario de los datos abiertos no incluye la presentación del artículo (p. ej. envase de 250 g vs. 1 g), y eso puede cambiar la lectura de la comparación. Cuando la conseguimos figura junto al artículo; siempre podés verificarla en",
       "presNoteSource": "la página oficial de la compra.",
       "method": "Cómo se calculan las alertas de precio",
+      "ratio": "{ratio}× la mediana",
+      "coverage": "{missing} de {total} líneas con precio no tienen comparables suficientes para compararse (hacen falta al menos 5 compras del mismo artículo en los últimos 36 meses).",
       "pos": {
         "below": "Bajo lo habitual",
         "typical": "En rango",
         "high": "Por encima",
         "veryHigh": "Muy por encima",
-        "listPrice": "Tarifa conocida"
+        "listPrice": "Precio de lista"
+      },
+      "posHelp": {
+        "below": "Por debajo del rango habitual pagado por compras del mismo artículo en los últimos 36 meses.",
+        "typical": "Dentro del rango habitual pagado por compras del mismo artículo en los últimos 36 meses.",
+        "high": "Por encima del rango habitual, sin llegar al umbral que dispara una alerta de precio.",
+        "veryHigh": "Muy por encima del rango habitual — el mismo umbral que usan las alertas de precio.",
+        "listPrice": "Coincide con una tarifa o denominación ya conocida para este artículo (p. ej. una estampilla legal), por eso no se compara contra la mediana."
       }
     },
     "officialAward": "Ver adjudicación",
@@ -1559,6 +1587,10 @@
           "title": "Proveedores sancionados por Defensa del Consumidor",
           "dek": "Empresas multadas o apercibidas por la Unidad de Defensa del Consumidor que adem\u00e1s le venden al Estado, cruzadas por RUT contra las compras p\u00fablicas."
         },
+        "sentenciasJudiciales": {
+          "title": "Lo que el Estado paga por perder juicios",
+          "dek": "El cr\u00e9dito presupuestal reservado para sentencias, acuerdos judiciales y amparos de salud, a\u00f1o por a\u00f1o y organismo por organismo."
+        },
         "genero": {
           "title": "Gasto en g\u00e9nero y diversidad",
           "dek": "Cu\u00e1nto gasta el Estado en pol\u00edticas de g\u00e9nero y diversidad, qu\u00e9 organismo lo compra y a qu\u00e9 proveedor va. El feed no trae etiqueta de tema: se reconstruye desde el texto de cada compra."
@@ -1663,6 +1695,70 @@
     "panelBodyOne": "La Unidad de Defensa del Consumidor aplicó 1 sanción a esta empresa en {to}, por un total de {ur} UR en multas.",
     "panelBody": "La Unidad de Defensa del Consumidor aplicó {n} sanciones a esta empresa entre {from} y {to}, por un total de {ur} UR en multas.",
     "panelLink": "Ver el cruce completo"
+  },
+  "sentencias": {
+    "title": "Lo que el Estado paga por perder juicios",
+    "lead": "Cuando un organismo público pierde un juicio, la indemnización sale del presupuesto. El presupuesto nacional abre el gasto por objeto, y siete de esos objetos nombran una causa judicial: sentencias, acuerdos judiciales y amparos de salud. Esto es lo que se reservó para pagarlos, año por año y organismo por organismo.",
+    "caveat": "El presupuesto no nombra causas ni personas. Ninguna cifra de esta página dice a quién indemnizó el Estado ni por qué; dice cuánto dinero se reservó bajo un objeto del gasto cuyo nombre oficial es una sentencia, un acuerdo judicial o un amparo. El caso a caso no existe como dato público: las sentencias están en prosa en la Base de Jurisprudencia Nacional, y el registro que sí tiene los montos, el RUJE, no se publica.",
+    "notComputed": "Todavía no cargamos el gasto judicial. Corré el job load-judicial-spending.",
+    "kpi": {
+      "latest": "de crédito para causas judiciales en {year}",
+      "total": "acumulado {from}-{to}, en pesos de hoy",
+      "growth": "creció entre {from} y {to}, ya descontada la inflación",
+      "fullySpent": "partidas judiciales que se gastaron enteras, de las que tienen ejecución publicada"
+    },
+    "series": {
+      "title": "Año por año",
+      "dek": "Crédito vigente para objetos del gasto con causa judicial, convertido a pesos de hoy por Unidad Indexada. Sin esa conversión, once años de inflación suben cualquier serie sin que nada haya cambiado.",
+      "note": "La barra muestra el crédito vigente, no lo efectivamente pagado. Los archivos de 2019 en adelante publican la ejecución en cero para todas sus filas, no sólo las judiciales. En los años que sí la traen, la partida de sentencias se gasta prácticamente entera, y por eso el crédito es la mejor medida disponible de lo que el Estado termina pagando.",
+      "endsAt": "La serie termina en {year} porque ahí termina la fuente: OPP dejó de actualizar el crédito presupuestal abierto por objeto del gasto en julio de 2022, y ningún otro organismo publica el presupuesto nacional con ese nivel de detalle. Revisamos el catálogo de datos abiertos por años posteriores y no existen."
+    },
+    "flag": {
+      "partial": "año parcial: {n} organismos",
+      "noExecution": "sin ejecución publicada"
+    },
+    "cats": {
+      "title": "Por qué motivo",
+      "dek": "El nombre oficial de cada objeto del gasto declara la causa. Las indemnizaciones sin causa declarada van aparte: pueden ser una condena o una expropiación, y el presupuesto no lo aclara.",
+      "rows": "{n} partidas"
+    },
+    "cat": {
+      "sentencia": "Sentencias judiciales",
+      "acuerdo": "Acuerdos o convenios judiciales",
+      "amparo": "Amparos de salud (medicamentos e insumos)",
+      "indemnizacion": "Indemnizaciones sin causa declarada"
+    },
+    "orgs": {
+      "title": "Qué organismos",
+      "dek": "Acumulado de los once años en pesos de hoy. La partida central vive en el Ministerio de Economía, que es quien paga las condenas contra el Estado por el artículo 52 de la Ley 17.930."
+    },
+    "rows": {
+      "title": "El detalle",
+      "noData": "sin dato",
+      "count": "{n} partidas · los filtros acotan esta tabla, no las cifras de arriba",
+      "empty": "No hay ninguna partida con esos filtros. Es un resultado válido: no todos los motivos aparecen todos los años."
+    },
+    "col": {
+      "year": "Año",
+      "organismo": "Organismo",
+      "objeto": "Objeto del gasto",
+      "vigente": "Crédito vigente",
+      "ejecutado": "Ejecutado"
+    },
+    "filters": {
+      "year": "Año",
+      "category": "Motivo",
+      "allYears": "Todos los años",
+      "allCategories": "Todos los motivos"
+    },
+    "gap": {
+      "title": "Lo que todavía no se puede saber",
+      "body": "No existe en Uruguay una lista pública de las indemnizaciones que el Estado paga por sentencia. Estas son las tres fuentes que tendrían el caso a caso, y por qué ninguna alcanza.",
+      "bjn": "La Base de Jurisprudencia Nacional publica más de 100.000 sentencias, pero el monto de la condena está adentro del texto, no en un campo, y no hay forma de consultarla en bloque.",
+      "ruje": "El Registro Único de Juicios del Estado (Decreto 98/019) sí tiene los montos de todos los juicios del Estado. No es público: en 2024 un pedido de acceso a la información devolvió 3.076 juicios en 2023 y unos 132 millones de dólares identificados, sin decir qué organismo ni por qué causa.",
+      "tca": "El Tribunal de lo Contencioso Administrativo anula actos administrativos, pero no fija indemnizaciones, así que sus fallos no traen montos."
+    },
+    "source": "Fuente: Oficina de Planeamiento y Presupuesto, crédito presupuestal en"
   },
   "senales": {
     "title": "Señales de gestión",
@@ -2154,6 +2250,10 @@
     "sanciones": {
       "title": "Proveedores del Estado sancionados por Defensa del Consumidor",
       "description": "Empresas sancionadas por la Unidad de Defensa del Consumidor que además venden al Estado uruguayo, cruzadas por RUT contra las compras públicas."
+    },
+    "sentencias": {
+      "title": "Cuánto paga el Estado uruguayo por perder juicios",
+      "description": "Crédito presupuestal para sentencias judiciales, acuerdos judiciales, indemnizaciones y amparos de salud, por año y por organismo, desde 2011."
     },
     "genero": {
         "title": "Gasto público en políticas de género y diversidad en Uruguay",
@@ -3056,6 +3156,15 @@
     "indexTitle": "Lo más grande que compró el Estado, semana a semana",
     "indexLead": "Un registro verificable de las adjudicaciones más grandes publicadas y de las señales estadísticas nuevas. Los hechos salen de los datos; Gemini ayuda a leerlos.",
     "weeklyStamp": "Expediente semanal",
+    "dailyStamp": "Edición diaria",
+    "dayTotal": "adjudicado en el día",
+    "dayNotes": "Hallazgos",
+    "readFull": "Leer la nota completa",
+    "dailyAnomalies": "{n} señal(es) de precio nueva(s) en las últimas 24 horas. Una alerta estadística no prueba irregularidad.",
+    "frequencyTitle": "Cada cuánto lo querés",
+    "frequencyDaily": "Todos los días",
+    "frequencyWeekly": "Sólo el resumen del lunes",
+    "frequencySaved": "Listo, cambiamos la frecuencia.",
     "everyMonday": "Nueva edición los lunes",
     "archiveTitle": "Archivo de ediciones",
     "weekTotal": "Monto total elegible de la semana",
@@ -3589,6 +3698,10 @@
       "sources": "Fuentes:"
   },
   "inv": {
+    "index": {
+      "title": "Secciones",
+      "aria": "Índice de secciones de la investigación"
+    },
     "file": {
       "expediente": "Expediente",
       "organismo": "Organismo",

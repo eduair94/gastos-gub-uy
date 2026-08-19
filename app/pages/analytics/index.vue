@@ -48,6 +48,7 @@ const CARD_EMOJI: Record<string, string> = {
   anticipacion: '🔮',
   agenda: '🗓️',
   encuestas: '📋',
+  sentenciasJudiciales: '💸',
 }
 /** The two surfaces worth a double-width card. */
 const FEATURED = new Set(['erroresCarga', 'evolucion'])

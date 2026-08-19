@@ -98,12 +98,15 @@ export default defineEventHandler(async (event) => {
     }
   }
   catch (error) {
-    console.error('Error fetching supplier details:', error)
-
+    // El re-lanzamiento va PRIMERO. Un 404 es una respuesta correcta a un id que no existe,
+    // no una falla del servidor: loguearlo con su stack llenó el log de errores de producción
+    // con 262 «Supplier not found» cada 5.000 líneas, y ahí adentro un error real no se ve.
+    // Mismo orden que app/server/api/contracts/index.get.ts, que ya lo hacía bien.
     if (error.statusCode) {
       throw error
     }
 
+    console.error('Error fetching supplier details:', error)
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to fetch supplier details',

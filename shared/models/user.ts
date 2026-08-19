@@ -42,6 +42,19 @@ const UserSchema = new Schema<IUser>(
           subscribedAt: { type: Date },
           unsubscribedAt: { type: Date },
           source: { type: String, enum: ["registration", "login", "account"] },
+          /**
+           * Cadencia del envío. Ausente se lee como "daily".
+           *
+           * POR QUÉ EL DEFECTO ES DIARIO. La migración pasó a todos los suscriptos a cadencia
+           * diaria por decisión de producto. Un documento sin el campo es uno que la migración
+           * no alcanzó, y tiene que recibir lo mismo que sus pares.
+           *
+           * La salida existe y está en cada correo: `to=weekly` en /api/newsletter/frequency
+           * baja la cadencia con un clic, sin login. Es la válvula que evita que el que se
+           * molesta use el botón de spam, que castiga la entrega de todo el resto.
+           */
+          frequency: { type: String, enum: ["daily", "weekly"], default: "daily" },
+          frequencyChangedAt: { type: Date },
         },
         { _id: false },
       ),
