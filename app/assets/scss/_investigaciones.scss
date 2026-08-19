@@ -68,7 +68,9 @@
 }
 
 /* ---- Sections ---- */
-.inv-sec { padding-block: var(--s-8); }
+/* `scroll-margin-top` deja el `h2` abajo de la barra pegajosa de 62px cuando el índice lateral
+   salta a la sección. Sin esto el título aterriza tapado por la barra. */
+.inv-sec { padding-block: var(--s-8); scroll-margin-top: var(--header-h); }
 .inv-sec--alt { background: var(--surface); }
 .inv-sec + .inv-sec { border-top: 1px solid var(--rule); }
 
