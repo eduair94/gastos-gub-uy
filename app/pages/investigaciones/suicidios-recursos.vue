@@ -440,20 +440,7 @@ const leakFacts = computed(() => [
 
 <template>
   <div class="inv">
-    <InvCover
-      tone="celeste"
-      :fields="[
-        { label: t('inv.file.alcance'), value: cx.fileScope },
-        { label: t('inv.file.periodo'), value: cx.filePeriod },
-        { value: cx.fileSource },
-      ]"
-      :kicker="cx.kicker"
-      :title="cx.title"
-      :dek="cx.dek"
-      :chips="cx.chips"
-    />
-
-    <!-- 1 · Las líneas de ayuda van primero. Nada se pone antes de esto. -->
+    <!-- 1 · Las líneas de ayuda van primero, y eso incluye la portada. Nada se pone antes de esto. -->
     <InvSection
       alt
       :eyebrow="cx.ayudaTag"
@@ -473,6 +460,19 @@ const leakFacts = computed(() => [
         {{ cx.ayudaNota }}
       </p>
     </InvSection>
+
+    <InvCover
+      tone="celeste"
+      :fields="[
+        { label: t('inv.file.alcance'), value: cx.fileScope },
+        { label: t('inv.file.periodo'), value: cx.filePeriod },
+        { value: cx.fileSource },
+      ]"
+      :kicker="cx.kicker"
+      :title="cx.title"
+      :dek="cx.dek"
+      :chips="cx.chips"
+    />
 
     <!-- 2 · La portada de cifras -->
     <InvSection>
