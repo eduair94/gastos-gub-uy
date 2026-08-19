@@ -25,6 +25,9 @@ firebase.json
 .playwright-mcp/
 # Local scratch: throwaway QA screenshots, ad-hoc logs. Never committed.
 .scratch/
+# Sondas de investigación: scripts tsx de una corrida, dossiers de trabajo, PDF y JSON
+# descargados para chequear una cifra. Son el borrador de una pieza, no su fuente.
+tmp-probe/
 # Stray QA captures dropped at the repo root — the keepers live in docs/screenshots/.
 /*.png
 
