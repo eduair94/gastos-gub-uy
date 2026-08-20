@@ -58,6 +58,7 @@ import {
   type TranscriptSegment,
 } from "../../../shared/parlamento/summary";
 import {
+  dropRepeatedFigures,
   gateFigures,
   topicWindow,
   type FigureDraft,
@@ -813,7 +814,8 @@ async function extractFigures(
     }
   }
 
-  return { figures, rejected };
+  // La misma cifra no se cuelga de dos temas: el lector la leería como dos datos.
+  return { figures: dropRepeatedFigures(figures), rejected };
 }
 
 // ─── Orquestación ────────────────────────────────────────────────────────────

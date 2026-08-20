@@ -12,6 +12,7 @@ import assert from 'node:assert/strict'
 import {
   belongsToTopic,
   digitsOf,
+  dropRepeatedFigures,
   findFigureEvidence,
   gateFigures,
   isBareYear,
@@ -70,6 +71,10 @@ assert.equal(isProceduralFigure('13 12', '13 12 votos se votó el envío de la e
 assert.equal(isProceduralFigure('11/21', 'Se considera la resolución 11/21 del grupo Mercado Común.'), true)
 assert.equal(isProceduralFigure('26 de agosto del 2021', 'La resolución es del 26 de agosto del 2021.'), true)
 assert.equal(isProceduralFigure('184', 'La redacción dada por el artículo 184 de la ley.'), true)
+
+// El reloj de la sesión y la lista de oradores tampoco son un dato.
+assert.equal(isProceduralFigure('10 horas', 'Se llevan 10 horas de sesión.'), true)
+assert.equal(isProceduralFigure('22', 'Hay 22 oradores anotados de un total de 70.'), true)
 
 // Y el dato del país no se toca.
 assert.equal(isProceduralFigure('160 millones', 'Los juicios de amparo alcanzaron los 160 millones de dólares.'), false)
@@ -139,6 +144,21 @@ const offTopic = gateFigures(
 )
 assert.deepEqual(offTopic.kept.map(f => f.value), ['160 millones'])
 assert.ok(offTopic.rejected.some(r => r.includes('año suelto')))
+
+// ─── La misma cifra en dos temas ─────────────────────────────────────────────
+
+// Dos temas que arrancan cerca aceptan la misma cifra por cercanía. El lector la
+// leería como dos datos distintos.
+const repeated = dropRepeatedFigures([
+  [{ value: '9345', sentence: 'Se terminaron 9345 soluciones habitacionales.', t: 1444 }],
+  [
+    { value: '9.345', sentence: 'Fueron 9.345 las soluciones terminadas.', t: 1444 },
+    { value: '19674', sentence: 'Hay 19674 soluciones en ejecución.', t: 1449 },
+  ],
+])
+assert.equal(repeated[0]!.length, 1, 'la primera se queda con la cifra')
+assert.deepEqual(repeated[1]!.map(f => f.value), ['19674'], 'la repetida se cae, la propia queda')
+assert.deepEqual(dropRepeatedFigures([[], []]), [[], []])
 
 // ─── El tramo de cada tema ───────────────────────────────────────────────────
 

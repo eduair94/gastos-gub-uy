@@ -126,6 +126,9 @@ const NOISE_PATTERNS: RegExp[] = [
   /\d{1,2}\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|setiembre|septiembre|octubre|noviembre|diciembre)/i,
   // Un artículo o una ley por su número.
   /art[ií]culo\s+\d|ley\s+(n[uú]mero|n[°º])?\s*\d/i,
+  // El reloj de la sesión y la lista de oradores. La sesión de Diputados del
+  // 16/08 publicó «se llevan 10 horas de sesión» y «hay 22 oradores anotados».
+  /orador|horas\s+de\s+sesi[oó]n|lista\s+de\s+anotad|tiempo\s+de\s+que/i,
 ]
 
 /**
@@ -253,6 +256,23 @@ export function gateFigures(
   }
 
   return { kept, rejected }
+}
+
+/**
+ * La misma cifra colgada de dos temas.
+ *
+ * Dos temas que arrancan cerca aceptan la misma cifra por cercanía, y el lector
+ * la lee dos veces como si fueran dos datos. Se queda en el primero, que es el
+ * que arranca antes.
+ */
+export function dropRepeatedFigures(perTopic: VerifiedFigure[][]): VerifiedFigure[][] {
+  const seen = new Set<string>()
+  return perTopic.map(figures => figures.filter((figure) => {
+    const key = `${digitsOf(figure.value)[0] ?? figure.value}@${figure.t}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  }))
 }
 
 /**
