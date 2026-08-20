@@ -10,9 +10,11 @@
  */
 import assert from 'node:assert/strict'
 import {
+  belongsToTopic,
   digitsOf,
   findFigureEvidence,
   gateFigures,
+  isBareYear,
   isProceduralFigure,
   sameNumber,
   scaleOf,
@@ -100,6 +102,43 @@ assert.ok(gated.rejected.some(r => r.includes('la frase no trae el número')), '
 assert.equal(gated.rejected.length, 3)
 
 assert.deepEqual(gateFigures([], segments, 0, 4000), { kept: [], rejected: [] })
+
+// ─── El año suelto y el tema ajeno ───────────────────────────────────────────
+
+// Las tres salieron del homenaje a Circe Maia. Un año no dice de cuánto se hablaba.
+assert.equal(isBareYear('2023'), true)
+assert.equal(isBareYear('1972'), true)
+assert.equal(isBareYear('160 millones'), false)
+assert.equal(isBareYear('2.200'), false, 'un número de cuatro dígitos con punto no es un año')
+assert.equal(isBareYear('30%'), false)
+
+// El tramo de un tema llega hasta el tema siguiente, y eso puede ser media hora.
+// En la sesión del 18/08 el tramo del tema arrocero se tragó una exposición sobre
+// enfermería y le colgó «20.262 auxiliares de enfermería».
+const arrocero = {
+  title: 'Conexión ferroviaria para el sector arrocero',
+  explanation: 'Se planteó recuperar servicios ferroviarios para conectar la producción arrocera con el puerto.',
+  t: 1898,
+}
+assert.equal(belongsToTopic('En la zona este está el 70% de la producción nacional de arroz.', arrocero, 1988), true)
+assert.equal(belongsToTopic('Hay 20.262 auxiliares de enfermería en actividad en Uruguay.', arrocero, 2235), false)
+// Pegada al minuto del tema, la cifra es suya aunque las palabras no crucen.
+assert.equal(belongsToTopic('Son 8.000 los que esperan.', arrocero, 1950), true)
+assert.equal(belongsToTopic('Son 8.000 los que esperan.', arrocero, 2400), false)
+assert.equal(belongsToTopic('Son 8.000 los que esperan.', arrocero, null), false, 'sin minuto no hay vínculo')
+
+const offTopic = gateFigures(
+  [
+    { value: '160 millones', sentence: 'Los juicios por medicamentos alcanzaron 160 millones de dólares.' },
+    { value: '1987', sentence: 'La obra se publicó en 1987.' },
+  ],
+  segments,
+  0,
+  4000,
+  { title: 'Juicios por medicamentos caros', explanation: 'Se habló del gasto en juicios de amparo.', t: 880 },
+)
+assert.deepEqual(offTopic.kept.map(f => f.value), ['160 millones'])
+assert.ok(offTopic.rejected.some(r => r.includes('año suelto')))
 
 // ─── El tramo de cada tema ───────────────────────────────────────────────────
 

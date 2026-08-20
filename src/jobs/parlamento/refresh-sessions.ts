@@ -763,7 +763,7 @@ const FIGURES_WINDOW_WORDS = 1_200;
  * que no suena, no se guarda. Lo que suena viaja con el segundo donde suena.
  */
 async function extractFigures(
-  topics: { title: string; t: number }[],
+  topics: { title: string; explanation: string; t: number }[],
   segments: TranscriptSegment[],
   durationSeconds: number,
   apiKey: string
@@ -805,7 +805,7 @@ async function extractFigures(
         }
         return true;
       });
-      const gated = gateFigures(clean, window, from, to);
+      const gated = gateFigures(clean, window, from, to, topic);
       figures[i] = gated.kept;
       rejected.push(...gated.rejected.map(r => `${r} [${topic.title}]`));
     } catch (error) {

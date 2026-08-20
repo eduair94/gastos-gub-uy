@@ -15,9 +15,10 @@
  * MÁQUINA QUE ESCUCHÓ escribió ese número, no que el legislador lo dijo. El
  * subtitulado sigue pudiendo haberlo cambiado. La cifra se publica con su aviso.
  *
- * Este módulo no tiene imports ni I/O: `tests/unit/test-parlamento-figures.ts` lo
- * corre entero.
+ * Su único import es `sharedWords`, de `./votes`, que es puro. No hay I/O:
+ * `tests/unit/test-parlamento-figures.ts` lo corre entero.
  */
+import { sharedWords } from './votes'
 
 export interface FigureSegment {
   t: number
@@ -127,6 +128,20 @@ const NOISE_PATTERNS: RegExp[] = [
   /art[ií]culo\s+\d|ley\s+(n[uú]mero|n[°º])?\s*\d/i,
 ]
 
+/**
+ * El año suelto no es una cifra: es una fecha.
+ *
+ * «El premio fue en 2023», «la obra se publicó en 1987», «fue detenido en 1972».
+ * Las tres salieron de la primera corrida sobre el homenaje a Circe Maia. Ninguna
+ * dice de cuánto se hablaba, que es para lo que existe el bloque.
+ */
+export function isBareYear(value: string): boolean {
+  const digits = digitsOf(value)
+  if (digits.length !== 1) return false
+  const n = Number(digits[0])
+  return /^\d{4}$/.test(digits[0]!) && n > 1800 && n < 2100
+}
+
 /** `true` cuando el número describe la sesión y no lo que la sesión trata. */
 export function isProceduralFigure(value: string, sentence: string): boolean {
   const text = `${value} ${sentence}`
@@ -154,6 +169,33 @@ export interface FigureGate {
 /** Cifras por tema. Más que esto es una tabla, y una tabla no es un resumen. */
 export const MAX_FIGURES_PER_TOPIC = 4
 
+export interface FigureTopic {
+  title: string
+  explanation: string
+  /** Segundo donde la transcripción NOMBRA el tema. */
+  t: number
+}
+
+/**
+ * Cuánto puede alejarse una cifra del minuto del tema y seguir siendo suya.
+ *
+ * Dos minutos. El tramo de un tema llega hasta el tema siguiente, y eso puede ser
+ * media hora: en la sesión del 18/08, el tramo del tema arrocero se tragó una
+ * exposición sobre enfermería y le colgó «20.262 auxiliares de enfermería».
+ */
+const NEAR_TOPIC_SECONDS = 120
+
+/**
+ * La cifra es del tema si habla de lo mismo, o si suena pegada a su minuto.
+ *
+ * Una palabra con contenido en común alcanza. El reloj solo no: el tramo es
+ * ancho y en el medio pasan asuntos que el resumen no cuenta.
+ */
+export function belongsToTopic(sentence: string, topic: FigureTopic, seconds: number | null): boolean {
+  if (sharedWords(sentence, `${topic.title} ${topic.explanation}`) >= 1) return true
+  return seconds !== null && Math.abs(seconds - topic.t) <= NEAR_TOPIC_SECONDS
+}
+
 /**
  * El portón de las cifras. Entra la que suena en la transcripción, y nada más.
  *
@@ -165,6 +207,7 @@ export function gateFigures(
   segments: FigureSegment[],
   fromSeconds: number,
   toSeconds: number,
+  topic?: FigureTopic,
 ): FigureGate {
   const kept: VerifiedFigure[] = []
   const rejected: string[] = []
@@ -188,9 +231,17 @@ export function gateFigures(
       rejected.push(`número de la mecánica de la sesión ("${value}"): ${sentence}`)
       continue
     }
+    if (isBareYear(value)) {
+      rejected.push(`año suelto, no es una cifra ("${value}"): ${sentence}`)
+      continue
+    }
     const t = findFigureEvidence(segments, value, fromSeconds, toSeconds)
     if (t === null) {
       rejected.push(`la transcripción no dice "${value}" en ese tramo: ${sentence}`)
+      continue
+    }
+    if (topic && !belongsToTopic(sentence, topic, t)) {
+      rejected.push(`la cifra no habla del tema ("${value}"): ${sentence}`)
       continue
     }
     if (kept.some(k => sameNumber(digitsOf(k.value)[0]!, digitsOf(value)[0]!) && k.t === t)) {
