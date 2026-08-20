@@ -15,7 +15,7 @@ import {
   dropRepeatedFigures,
   findFigureEvidence,
   gateFigures,
-  isBareYear,
+  isDateLike,
   isProceduralFigure,
   sameNumber,
   scaleOf,
@@ -75,6 +75,7 @@ assert.equal(isProceduralFigure('184', 'La redacción dada por el artículo 184 
 // El reloj de la sesión y la lista de oradores tampoco son un dato.
 assert.equal(isProceduralFigure('10 horas', 'Se llevan 10 horas de sesión.'), true)
 assert.equal(isProceduralFigure('22', 'Hay 22 oradores anotados de un total de 70.'), true)
+assert.equal(isProceduralFigure('20 horas', 'Faltarían 20 horas más si se sigue al mismo ritmo.'), true)
 
 // Y el dato del país no se toca.
 assert.equal(isProceduralFigure('160 millones', 'Los juicios de amparo alcanzaron los 160 millones de dólares.'), false)
@@ -111,11 +112,14 @@ assert.deepEqual(gateFigures([], segments, 0, 4000), { kept: [], rejected: [] })
 // ─── El año suelto y el tema ajeno ───────────────────────────────────────────
 
 // Las tres salieron del homenaje a Circe Maia. Un año no dice de cuánto se hablaba.
-assert.equal(isBareYear('2023'), true)
-assert.equal(isBareYear('1972'), true)
-assert.equal(isBareYear('160 millones'), false)
-assert.equal(isBareYear('2.200'), false, 'un número de cuatro dígitos con punto no es un año')
-assert.equal(isBareYear('30%'), false)
+assert.equal(isDateLike('2023'), true)
+assert.equal(isDateLike('1972'), true)
+// El período de años del Plan Quinquenal tampoco dice de cuánto se hablaba.
+assert.equal(isDateLike('2025-2029'), true)
+assert.equal(isDateLike('160 millones'), false)
+assert.equal(isDateLike('2.200'), false, 'un número de cuatro dígitos con punto no es un año')
+assert.equal(isDateLike('30%'), false)
+assert.equal(isDateLike('sin dígitos'), false)
 
 // El tramo de un tema llega hasta el tema siguiente, y eso puede ser media hora.
 // En la sesión del 18/08 el tramo del tema arrocero se tragó una exposición sobre
@@ -143,7 +147,7 @@ const offTopic = gateFigures(
   { title: 'Juicios por medicamentos caros', explanation: 'Se habló del gasto en juicios de amparo.', t: 880 },
 )
 assert.deepEqual(offTopic.kept.map(f => f.value), ['160 millones'])
-assert.ok(offTopic.rejected.some(r => r.includes('año suelto')))
+assert.ok(offTopic.rejected.some(r => r.includes('fecha, no es una cifra')))
 
 // ─── La misma cifra en dos temas ─────────────────────────────────────────────
 
@@ -159,6 +163,13 @@ const repeated = dropRepeatedFigures([
 assert.equal(repeated[0]!.length, 1, 'la primera se queda con la cifra')
 assert.deepEqual(repeated[1]!.map(f => f.value), ['19674'], 'la repetida se cae, la propia queda')
 assert.deepEqual(dropRepeatedFigures([[], []]), [[], []])
+
+// La misma frase con otra cifra es un solo hecho: salió tres veces, una por número.
+const sameSentence = dropRepeatedFigures([[
+  { value: '2500', sentence: 'El bono de 2500 pesos alcanzó a 114.337 estudiantes.', t: 1679 },
+  { value: '114337', sentence: 'El bono de 2500 pesos alcanzó a 114.337 estudiantes.', t: 1679 },
+]])
+assert.equal(sameSentence[0]!.length, 1)
 
 // ─── El tramo de cada tema ───────────────────────────────────────────────────
 

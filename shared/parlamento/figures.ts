@@ -129,20 +129,25 @@ const NOISE_PATTERNS: RegExp[] = [
   // El reloj de la sesión y la lista de oradores. La sesión de Diputados del
   // 16/08 publicó «se llevan 10 horas de sesión» y «hay 22 oradores anotados».
   /orador|horas\s+de\s+sesi[oó]n|lista\s+de\s+anotad|tiempo\s+de\s+que/i,
+  // El ritmo de la sesión: «faltarían 20 horas más si se sigue al mismo ritmo».
+  /faltar[ií]an|al\s+mismo\s+ritmo/i,
 ]
 
 /**
- * El año suelto no es una cifra: es una fecha.
+ * El año, y el período de años, no son una cifra: son una fecha.
  *
- * «El premio fue en 2023», «la obra se publicó en 1987», «fue detenido en 1972».
- * Las tres salieron de la primera corrida sobre el homenaje a Circe Maia. Ninguna
- * dice de cuánto se hablaba, que es para lo que existe el bloque.
+ * «El premio fue en 2023», «la obra se publicó en 1987», «fue detenido en 1972»
+ * salieron del homenaje a Circe Maia. «El Plan Quinquenal 2025-2029» salió de la
+ * rendición de cuentas. Ninguno dice de cuánto se hablaba, que es para lo que
+ * existe el bloque.
  */
-export function isBareYear(value: string): boolean {
+export function isDateLike(value: string): boolean {
   const digits = digitsOf(value)
-  if (digits.length !== 1) return false
-  const n = Number(digits[0])
-  return /^\d{4}$/.test(digits[0]!) && n > 1800 && n < 2100
+  if (!digits.length) return false
+  return digits.every((d) => {
+    const n = Number(d)
+    return /^\d{4}$/.test(d) && n > 1800 && n < 2100
+  })
 }
 
 /** `true` cuando el número describe la sesión y no lo que la sesión trata. */
@@ -234,8 +239,8 @@ export function gateFigures(
       rejected.push(`número de la mecánica de la sesión ("${value}"): ${sentence}`)
       continue
     }
-    if (isBareYear(value)) {
-      rejected.push(`año suelto, no es una cifra ("${value}"): ${sentence}`)
+    if (isDateLike(value)) {
+      rejected.push(`fecha, no es una cifra ("${value}"): ${sentence}`)
       continue
     }
     const t = findFigureEvidence(segments, value, fromSeconds, toSeconds)
@@ -263,14 +268,20 @@ export function gateFigures(
  *
  * Dos temas que arrancan cerca aceptan la misma cifra por cercanía, y el lector
  * la lee dos veces como si fueran dos datos. Se queda en el primero, que es el
- * que arranca antes.
+ * que arranca antes. La misma frase con otra cifra también es un solo hecho.
  */
 export function dropRepeatedFigures(perTopic: VerifiedFigure[][]): VerifiedFigure[][] {
-  const seen = new Set<string>()
+  const seenNumbers = new Set<string>()
+  const seenSentences = new Set<string>()
   return perTopic.map(figures => figures.filter((figure) => {
+    // La MISMA frase con otra cifra sigue siendo un solo hecho. «El bono de 2500
+    // pesos alcanzó a 114.337 estudiantes» salió tres veces, una por número.
+    const sentence = fold(figure.sentence).replace(/[^a-z0-9]+/g, ' ').trim()
+    if (seenSentences.has(sentence)) return false
     const key = `${digitsOf(figure.value)[0] ?? figure.value}@${figure.t}`
-    if (seen.has(key)) return false
-    seen.add(key)
+    if (seenNumbers.has(key)) return false
+    seenSentences.add(sentence)
+    seenNumbers.add(key)
     return true
   }))
 }
