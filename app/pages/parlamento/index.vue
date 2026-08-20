@@ -7,13 +7,18 @@
  * sesión dura seis horas. Nadie que trabaje mira seis horas de Senado.
  *
  * QUÉ SE PUBLICA Y QUÉ NO. El resumen sale de los subtítulos AUTOMÁTICOS del
- * video: una máquina escucha y otra resume. Por eso ningún tema trae cifras
- * exactas ni citas textuales, y por eso cada uno lleva el minuto del video. La
- * prueba es el video, no nuestro texto — el aviso va arriba, no al pie.
+ * video: una máquina escucha y otra resume. Por eso la prosa de un tema no trae
+ * cifras exactas ni citas textuales, y por eso cada uno lleva el minuto del
+ * video. La prueba es el video, no nuestro texto — el aviso va arriba, no al pie.
+ *
+ * El RESULTADO de cada tema es otra cosa y por eso se muestra acá: sale del
+ * recuento que canta la presidencia, no del resumen. Las cifras y el detalle de
+ * cada votación viven en la ficha de la sesión.
  */
 import { formatTimestamp } from '#shared/parlamento/summary'
 
-interface Topic { title: string, explanation: string, whyItMatters: string, t: number }
+/** La lista sólo trae el título, el minuto y el resultado de cada tema. */
+interface Topic { title: string, t: number, outcome: 'aprobado' | 'rechazado' | 'mixto' | 'sin-votacion' }
 interface SessionRow {
   videoId: string
   chamber: string
@@ -24,6 +29,8 @@ interface SessionRow {
   summary: string
   topics: Topic[]
   topicCount: number
+  /** Votaciones de la sesión, sin contar la marcha de la sesión. */
+  voteCount: number
   transcriptWords: number
 }
 
@@ -154,6 +161,10 @@ useSeo(() => ({
               <span>{{ formatDate(s.sessionDate) }}</span>
               <span class="scard__sep">·</span>
               <span>{{ t('parl.duration', { h: Math.round(s.durationSeconds / 3600) }) }}</span>
+              <template v-if="s.voteCount">
+                <span class="scard__sep">·</span>
+                <span>{{ s.voteCount === 1 ? t('parl.voteOne') : t('parl.voteCount', { n: s.voteCount }) }}</span>
+              </template>
             </p>
             <h2 class="scard__title">
               <NuxtLink :to="localePath(`/parlamento/${s.videoId}`)">
@@ -173,9 +184,17 @@ useSeo(() => ({
             <li
               v-for="topic in s.topics"
               :key="topic.t + topic.title"
+              class="chip-row"
             >
               <span class="scard__at">{{ formatTimestamp(topic.t) }}</span>
-              {{ topic.title }}
+              <span>{{ topic.title }}</span>
+              <span
+                v-if="topic.outcome && topic.outcome !== 'sin-votacion'"
+                class="vchip"
+                :class="`vchip--${topic.outcome}`"
+              >
+                {{ t(`parl.outcome.${topic.outcome}`) }}
+              </span>
             </li>
           </ul>
 
@@ -331,6 +350,35 @@ useSeo(() => ({
   font-size: var(--t-xs);
   color: var(--text-muted);
 }
+
+.scard__topics .chip-row { align-items: baseline; }
+
+/* El color va en el punto: `--verde` y `--alerta` como letra chica no llegan al piso. */
+.vchip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 1px var(--s-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.vchip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-full);
+  background: var(--text-muted);
+}
+
+.vchip--aprobado::before { background: var(--verde); }
+.vchip--rechazado::before { background: var(--alerta); }
+.vchip--mixto::before { background: var(--celeste); }
 
 .scard__more {
   display: inline-flex;

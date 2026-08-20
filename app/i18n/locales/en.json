@@ -2663,7 +2663,37 @@
     "watchFull": "Watch the full session on YouTube",
     "sourceChannels": "Which channels this comes from",
     "prev": "Previous session",
-    "next": "Next session"
+    "next": "Next session",
+    "outcome": {
+      "aprobado": "Passed",
+      "rechazado": "Did not pass",
+      "mixto": "Voted in parts",
+      "sin-votacion": "No vote recorded"
+    },
+    "votesTitle": "How it was voted",
+    "votesSessionTitle": "Every vote in the session",
+    "votesHelp": "The tally called out by the chair. The minute opens the video at that vote.",
+    "votesCaveat": "The numbers come from automatic captions and may be wrong. Every vote carries the minute of the video: check it there.",
+    "votesEmpty": "No vote was found in this session.",
+    "voteTally": "{inFavor} of {present}",
+    "voteCount": "{n} votes",
+    "voteOne": "1 vote",
+    "voteProcedural": "{n} procedural votes are left out: leaves of absence, referrals and recesses.",
+    "voteNone": "This entry records no vote on this topic.",
+    "result": {
+      "afirmativa": "Passed",
+      "negativa": "Failed"
+    },
+    "majority": {
+      "unanimidad": "unanimously",
+      "dos-tercios": "over two thirds",
+      "simple": "simple majority"
+    },
+    "majorityWarn": "A simple majority passes almost everything. Some confirmations need two thirds.",
+    "figuresTag": "from the automatic captions",
+    "votesTag": "tally from the automatic captions",
+    "figuresTitle": "Figures that were said",
+    "figuresCaveat": "A machine heard these numbers and may have changed them. It heard «four» where the speaker said «fourteen». Open the minute of the video before quoting any of them."
   },
   "canalesYt": {
     "eyebrow": "Directory",

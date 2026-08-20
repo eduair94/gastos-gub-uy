@@ -64,7 +64,8 @@ const stripped = stripRiskyNumbers('Se debatió el proyecto. La cuota sería de 
 assert.ok(!stripped.text.includes('30%'), 'la oración con la cifra se va')
 assert.ok(stripped.text.includes('Se debatió el proyecto'), 'el resto del tema queda')
 assert.ok(stripped.text.includes('Pasa a Diputados'), 'y también lo que venía después')
-assert.deepEqual(stripped.removed, ['30%'])
+// La oración cortada no se tira: viaja al bloque de cifras con su contexto.
+assert.deepEqual(stripped.removed, [{ value: '30%', sentence: 'La cuota sería de 30% del total.' }])
 
 // ─── El portón ───────────────────────────────────────────────────────────────
 
@@ -83,7 +84,11 @@ assert.ok(kept.includes('Presupuesto'), 'el tema con cifra entra sin la oración
 // Un tema cuya ÚNICA oración era la cifra sí se cae: sin ella no queda nada que contar.
 const onlyNumber = gateTopics([{ title: 'Partida', explanation: 'Se votó una partida de 1.500.000 pesos.', whyItMatters: '', t: 100 }], 22_000)
 assert.equal(onlyNumber.kept.length, 0)
-assert.ok(!gated.kept.find(k => k.title === 'Presupuesto')!.explanation.includes('1.500.000'))
+const presupuesto = gated.kept.find(k => k.title === 'Presupuesto')!
+assert.ok(!presupuesto.explanation.includes('1.500.000'), 'la cifra sale de la prosa')
+assert.equal(presupuesto.figures?.length, 1, 'y queda guardada aparte')
+assert.equal(presupuesto.figures![0]!.value, '1.500.000')
+assert.ok(presupuesto.figures![0]!.sentence.includes('El monto sería'), 'la cifra se guarda con su oración')
 assert.ok(!kept.includes('Fuera del video'), 'un minuto que no existe en el video no entra')
 assert.ok(!kept.includes(''), 'un tema vacío no entra')
 assert.ok(gated.rejected.length >= 3, 'lo descartado queda registrado para poder auditarlo')

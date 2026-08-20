@@ -14,6 +14,9 @@
  *   3. RESUMIR. Bloques de ~1.400 palabras → temas por bloque → una síntesis en
  *      lenguaje llano. El minuto de cada tema lo pone el CÓDIGO desde el bloque,
  *      no el modelo.
+ *   4. VOTAR. El código busca el recuento cantado («27 en 27») con las reglas de
+ *      shared/parlamento/votes. El modelo sólo pone el asunto de cada votación.
+ *      De ahí sale el «se aprobó» o «no se aprobó» de cada tema.
  *
  * LO QUE ESTO NO ES. Ni la transcripción ni el resumen son la versión oficial.
  * El subtitulado automático se come nombres y cambia cifras; el modelo resume a
@@ -25,6 +28,11 @@
  *   npx tsx src/jobs/parlamento/refresh-sessions.ts --limit=2
  *   npx tsx src/jobs/parlamento/refresh-sessions.ts --video=Hy9MRMOllfs --force
  *   npx tsx src/jobs/parlamento/refresh-sessions.ts --discover-only
+ *   npx tsx src/jobs/parlamento/refresh-sessions.ts --votes-only --limit=20
+ *
+ * `--votes-only` recalcula las votaciones de sesiones YA resumidas. No vuelve a
+ * bajar la transcripción ni a reescribir el resumen: cuesta dos llamadas al
+ * modelo por sesión en vez de veinticinco.
  *
  * Requiere `yt-dlp` en el PATH (o PARL_YTDLP con la ruta al binario).
  */
@@ -39,12 +47,24 @@ import { ParlSessionModel, ParlTranscriptModel, type ParlChamber } from "../../.
 import { callStructured } from "../../../shared/ai/structured";
 import {
   chunkSegments,
+  findOpinion,
+  formatTimestamp,
   gateTopics,
   looksMojibake,
   refineTimestamp,
   sessionDateFromTitle,
   type TranscriptSegment,
 } from "../../../shared/parlamento/summary";
+import {
+  findVoteMoments,
+  isProceduralContext,
+  matchVotesToTopics,
+  topicOutcome,
+  type LabelledVote,
+  type TopicOutcome,
+  type VoteMoment,
+  type VoteScope,
+} from "../../../shared/parlamento/votes";
 
 const execFileAsync = promisify(execFile);
 
@@ -62,20 +82,56 @@ const MAX_BLOCKS = Number(process.env.PARL_MAX_BLOCKS || 40);
 /** Debajo de esto no hay sesión que resumir: es un saludo o un video institucional. */
 const MIN_WORDS = 2_000;
 const YTDLP_TIMEOUT_MS = 5 * 60 * 1000;
+/**
+ * Intentos de bajar la transcripción antes de sacar el video de la cola.
+ *
+ * Un video sin pista de subtítulos se come un cupo de cada corrida y no avanza
+ * nunca: medido el 19/08/2026, once sesiones sin resumir y las dos de arriba
+ * irrecuperables desde julio.
+ *
+ * ATENCIÓN AL TECHO. Doce intentos son seis días a dos corridas por día. Tiene
+ * que ser generoso porque YouTube tarda en subtitular: los dos videos de la
+ * sesión del 19/08/2026 seguían sin pista al otro día. Un techo de tres perdía
+ * para siempre una sesión que sólo tardaba en llegar.
+ */
+const MAX_TRANSCRIPT_ATTEMPTS = Number(process.env.PARL_MAX_ATTEMPTS || 12);
+/**
+ * Reintentos del feed Atom de YouTube.
+ *
+ * Medido el 20/08/2026 desde dos IPs: cuatro de cada cinco pedidos devuelven 404
+ * y el quinto devuelve el feed entero. Sin reintento, la fase de descubrir no
+ * encuentra nada la mayoría de los días y las sesiones nuevas aparecen tarde.
+ */
+const FEED_ATTEMPTS = Number(process.env.PARL_FEED_ATTEMPTS || 6);
+const FEED_RETRY_MS = 2_500;
+/** Votaciones por llamada al modelo. Una sesión del Senado tiene ~50. */
+const VOTES_PER_CALL = 12;
+/**
+ * Contexto que ve el modelo que escribe el asunto.
+ *
+ * Corto a propósito. Con el contexto entero, el modelo clasificó como «general»
+ * la votación de una licencia: leyó el debate que venía antes y no la fórmula.
+ */
+const LABEL_CONTEXT_CHARS = 320;
+/** Renglón simple y renglón en blanco, para armar los prompts. */
+const NL = "\n";
+const BLANK = "\n\n";
 
 interface Options {
   limit: number;
   video: string | null;
   force: boolean;
   discoverOnly: boolean;
+  votesOnly: boolean;
   dryRun: boolean;
 }
 
 function parseArgs(argv: string[]): Options {
-  const o: Options = { limit: 3, video: null, force: false, discoverOnly: false, dryRun: false };
+  const o: Options = { limit: 3, video: null, force: false, discoverOnly: false, votesOnly: false, dryRun: false };
   for (const arg of argv) {
     if (arg === "--force") o.force = true;
     else if (arg === "--discover-only") o.discoverOnly = true;
+    else if (arg === "--votes-only") o.votesOnly = true;
     else if (arg === "--dry-run") o.dryRun = true;
     else if (arg.startsWith("--video=")) o.video = arg.slice("--video=".length).trim() || null;
     else if (arg.startsWith("--limit=")) {
@@ -95,13 +151,71 @@ interface FeedVideo {
   publishedAt: Date;
 }
 
+/**
+ * El feed Atom del canal, con reintentos.
+ *
+ * ATENCIÓN: el 404 de este feed casi nunca significa que el canal no existe.
+ * Medido el 20/08/2026, cuatro de cada cinco pedidos devuelven 404 y el
+ * siguiente devuelve el feed completo. El pedido único que había acá hacía que
+ * la fase de descubrir fallara la mayoría de los días, en silencio.
+ */
+async function fetchFeedXml(channelId: string): Promise<string> {
+  let last = "";
+  for (let attempt = 1; attempt <= FEED_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, {
+        headers: { "user-agent": UA },
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (res.ok) return await res.text();
+      last = `${res.status}`;
+    } catch (error) {
+      last = String(error).slice(0, 80);
+    }
+    if (attempt < FEED_ATTEMPTS) await sleep(FEED_RETRY_MS);
+  }
+  throw new Error(`feed ${channelId} → ${last} tras ${FEED_ATTEMPTS} intentos`);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * El respaldo cuando el feed no contesta: la lista de subidas por `yt-dlp`.
+ *
+ * Es la MISMA herramienta que ya baja los subtítulos, así que no suma
+ * dependencias. La lista de subidas (`UU…`) viene ordenada de la más nueva a la
+ * más vieja; la pestaña `/videos` del canal NO, así que no sirve.
+ *
+ * TRAMPA: en modo `--flat-playlist` no viene la fecha de publicación. No hace
+ * falta: la fecha de la sesión sale del título, y la de publicación sólo ordena
+ * la cola. Cuando falta, se usa la del título.
+ */
+async function ytdlpVideos(channelId: string): Promise<FeedVideo[]> {
+  const uploads = `https://www.youtube.com/playlist?list=UU${channelId.slice(2)}`;
+  const { stdout } = await execFileAsync(
+    YTDLP,
+    ["--no-update", "--flat-playlist", "--playlist-end", "15", "-J", uploads],
+    { timeout: YTDLP_TIMEOUT_MS, maxBuffer: 32 * 1024 * 1024 }
+  );
+  const parsed = JSON.parse(stdout) as { entries?: { id?: string; title?: string; timestamp?: number; release_timestamp?: number }[] };
+  const out: FeedVideo[] = [];
+  for (const entry of parsed.entries ?? []) {
+    if (!entry.id || !entry.title) continue;
+    const stamp = entry.timestamp ?? entry.release_timestamp ?? null;
+    const title = entry.title;
+    out.push({
+      videoId: entry.id,
+      title,
+      publishedAt: stamp ? new Date(stamp * 1000) : sessionDateFromTitle(title, new Date()),
+    });
+  }
+  return out;
+}
+
 async function feedVideos(channelId: string): Promise<FeedVideo[]> {
-  const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`, {
-    headers: { "user-agent": UA },
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!res.ok) throw new Error(`feed ${channelId} → ${res.status}`);
-  const xml = await res.text();
+  const xml = await fetchFeedXml(channelId);
   const out: FeedVideo[] = [];
   for (const m of xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)) {
     const entry = m[1] ?? "";
@@ -416,6 +530,187 @@ async function summarize(
   };
 }
 
+// ─── 4. Votar ────────────────────────────────────────────────────────────────
+
+const VOTES_SYSTEM = `Leés fragmentos de una sesión del Parlamento uruguayo. Cada fragmento termina en un recuento de votos. Decís QUÉ se estaba votando.
+
+REGLAS DURAS:
+- Respondé sólo con el asunto que se vota. Máximo doce palabras. Sin comillas.
+- No opines. No digas si estuvo bien o mal. No agregues nada que no esté en el fragmento.
+- No repitas el recuento ni inventes números.
+- Mirá primero si es trámite. "alcance" es "tramite" cuando se vota la marcha de la sesión o el simple ENVÍO de un pedido a otro organismo: licencias de legisladores, envío de una nota, de una solicitud o de una exposición escrita a un ministerio, a una intendencia o a una junta, cuartos intermedios, prórrogas de hora, suprimir la lectura, levantar la sesión, alterar el orden del día.
+- "alcance" es "general" si se vota el asunto entero: un proyecto de ley en general, una designación, una venia, un artículo único, un proyecto de resolución.
+- "alcance" es "parcial" si se vota una parte del asunto: un artículo, un aditivo, un sustitutivo, un desglose, una reconsideración.
+- Si el fragmento dice "artículo único", el alcance es "general": ese artículo ES el asunto entero.
+- Si el fragmento no deja claro qué se votaba, devolvé "asunto" vacío.`;
+
+const VOTES_SCHEMA = {
+  type: "object",
+  properties: {
+    votaciones: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          indice: { type: "integer" },
+          asunto: { type: "string" },
+          alcance: { type: "string" },
+        },
+        required: ["indice", "asunto", "alcance"],
+      },
+    },
+  },
+  required: ["votaciones"],
+} as const;
+
+const SCOPES: VoteScope[] = ["general", "parcial", "tramite"];
+
+/**
+ * Le pone asunto a cada recuento.
+ *
+ * El recuento y el resultado ya están calculados: acá el modelo sólo lee lo que
+ * se dijo antes y dice qué se votaba. Si opina, si el texto llega roto o si no
+ * entendió, la votación queda sin asunto y no se ata a ningún tema — pero el
+ * recuento igual se publica en la lista de la sesión, porque es dato duro.
+ */
+async function labelVotes(moments: VoteMoment[], apiKey: string): Promise<LabelledVote[]> {
+  const out: LabelledVote[] = moments.map(m => ({ ...m, subject: "", scope: "parcial" as VoteScope, topicHint: -1 }));
+
+  for (let from = 0; from < moments.length; from += VOTES_PER_CALL) {
+    const batch = moments.slice(from, from + VOTES_PER_CALL);
+    try {
+      const { data } = await callStructured<{ votaciones: { indice: number; asunto: string; alcance: string }[] }>({
+        apiKey,
+        model: MODEL,
+        systemInstruction: VOTES_SYSTEM,
+        schema: VOTES_SCHEMA as any,
+        temperature: 0,
+        prompt:
+          'Fragmentos numerados desde 0. Cada uno termina en el recuento de esa votación.' +
+          BLANK + batch.map((m, i) => `${i}. […] ${m.context.slice(-LABEL_CONTEXT_CHARS)}`).join(BLANK),
+      });
+      for (const row of data.votaciones ?? []) {
+        const target = out[from + Number(row.indice)];
+        if (!target) continue;
+        const scope = SCOPES.includes(row.alcance as VoteScope) ? (row.alcance as VoteScope) : "parcial";
+        const subject = String(row.asunto ?? "").trim().replace(/^[«"']|[»"']$/g, "");
+        // La fórmula de sala le gana al modelo: marcó como decisión de la cámara
+        // once licencias de la sesión de Diputados del 18/08.
+        target.scope = isProceduralContext(target.context.slice(-LABEL_CONTEXT_CHARS)) ? "tramite" : scope;
+        // Un asunto que califica o que llegó roto no se publica. El recuento sí.
+        if (subject && !findOpinion(subject) && !looksMojibake(subject)) target.subject = subject;
+      }
+    } catch (error) {
+      console.warn(`    votaciones ${from}-${from + batch.length}: ${String(error).slice(0, 100)}`);
+    }
+  }
+
+  return out;
+}
+
+const MAP_SYSTEM = `Tenés los temas de una sesión del Parlamento uruguayo y una lista de votaciones de esa misma sesión. Decís a qué tema pertenece cada votación.
+
+REGLAS DURAS:
+- La mayoría de las votaciones NO pertenece a ningún tema. La lista de temas cuenta ocho asuntos de una sesión de seis horas. Poné -1.
+- Dos asuntos seguidos y parecidos son asuntos distintos: la venia de una jueza no es la venia de un policía.
+- Una votación pertenece a un tema sólo si vota ESE asunto: el proyecto entero, uno de sus artículos, un aditivo suyo o un sustitutivo suyo.
+- "Artículo único", "sustitutivo" y "en general" no nombran nada. Ahí mirá el texto que viene después, que es lo que se estaba leyendo en sala.
+- Una votación es POSTERIOR al minuto en que arranca su tema. Nunca la mandes a un tema que arranca después.
+- No cambies el asunto. No inventes votaciones. Devolvé una respuesta por cada votación que recibís.`;
+
+const MAP_SCHEMA = {
+  type: "object",
+  properties: {
+    votaciones: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          indice: { type: "integer" },
+          tema: { type: "integer" },
+        },
+        required: ["indice", "tema"],
+      },
+    },
+  },
+  required: ["votaciones"],
+} as const;
+
+/** Votaciones por llamada de mapeo. Cada una lleva su asunto y su contexto. */
+const MAP_PER_CALL = 20;
+/**
+ * Contexto que viaja al mapeo. Acá va entero.
+ *
+ * «Proyecto en general» no dice nada. Lo que identifica el asunto es el texto
+ * que se estaba leyendo en sala medio minuto antes.
+ */
+const MAP_CONTEXT_CHARS = 900;
+
+/**
+ * A qué tema pertenece cada votación, según el modelo.
+ *
+ * VA APARTE DEL ETIQUETADO A PROPÓSITO. La primera versión hacía las dos cosas
+ * en una llamada, con los temas a la vista, y el modelo copiaba el título del
+ * tema como asunto de la votación: seis votaciones distintas quedaron con el
+ * mismo nombre. Separadas, el asunto sale del fragmento y el mapeo sólo elige.
+ *
+ * Lo que devuelve es una PISTA. `matchVotesToTopics` la acepta o la tira.
+ */
+async function mapVotesToTopics(
+  votes: LabelledVote[],
+  topics: { title: string; explanation: string; t: number }[],
+  apiKey: string
+): Promise<void> {
+  if (!topics.length) return;
+  const candidates = votes.filter(v => v.scope !== "tramite" && v.subject.trim());
+  const topicList = `Temas, numerados desde 0, con el minuto en que arrancan:${BLANK}${
+    topics.map((t, i) => `${i}. [${formatTimestamp(t.t)}] ${t.title} — ${t.explanation}`).join(NL)
+  }`;
+
+  for (let from = 0; from < candidates.length; from += MAP_PER_CALL) {
+    const batch = candidates.slice(from, from + MAP_PER_CALL);
+    try {
+      const { data } = await callStructured<{ votaciones: { indice: number; tema: number }[] }>({
+        apiKey,
+        model: MODEL,
+        systemInstruction: MAP_SYSTEM,
+        schema: MAP_SCHEMA as any,
+        temperature: 0,
+        prompt:
+          topicList + BLANK +
+          `Votaciones, numeradas desde 0, con su minuto. Cada una trae el asunto y lo que se dijo alrededor:` + BLANK +
+          batch
+            .map((v, i) => `${i}. [${formatTimestamp(v.t)}] ${v.subject} […] ${v.context.slice(-MAP_CONTEXT_CHARS)}`)
+            .join(NL),
+      });
+      for (const row of data.votaciones ?? []) {
+        const target = batch[Number(row.indice)];
+        if (!target) continue;
+        const topic = Number(row.tema);
+        target.topicHint = Number.isInteger(topic) && topic >= 0 && topic < topics.length ? topic : -1;
+      }
+    } catch (error) {
+      console.warn(`    mapeo ${from}-${from + batch.length}: ${String(error).slice(0, 100)}`);
+    }
+  }
+}
+
+/** Ata cada votación a su tema y deja escrito el resultado de cada tema. */
+function attachVotes<T extends { title: string; explanation: string; t: number }>(
+  topics: T[],
+  votes: LabelledVote[]
+): (T & { votes: LabelledVote[]; outcome: TopicOutcome })[] {
+  const matched = matchVotesToTopics(votes, topics);
+  const buckets: LabelledVote[][] = topics.map(() => []);
+  for (const [i, target] of matched.entries()) {
+    if (target >= 0) buckets[target]!.push(votes[i]!);
+  }
+  return topics.map((topic, i) => {
+    const mine = buckets[i]!.slice().sort((a, b) => a.t - b.t);
+    return { ...topic, votes: mine, outcome: topicOutcome(mine) };
+  });
+}
+
 // ─── Orquestación ────────────────────────────────────────────────────────────
 
 async function main() {
@@ -428,7 +723,13 @@ async function main() {
   let discovered = 0;
   for (const channel of CHANNELS) {
     try {
-      const videos = await feedVideos(channel.id);
+      let videos: FeedVideo[] = [];
+      try {
+        videos = await feedVideos(channel.id);
+      } catch (error) {
+        console.warn(`  ${channel.name}: feed caído (${String(error).slice(0, 60)}), voy por yt-dlp`);
+        videos = await ytdlpVideos(channel.id);
+      }
       for (const v of videos) {
         if (!looksLikeSession(v.title)) continue;
         const exists = await ParlSessionModel.exists({ videoId: v.videoId });
@@ -462,14 +763,47 @@ async function main() {
   }
 
   // 2 y 3. La cola: lo que no tiene resumen, lo más nuevo primero.
+  // ATENCIÓN: `$lt` no matchea el documento que no tiene el campo, y los que se
+  // crearon antes de esta guarda no lo tienen. Por eso el `$or` con `$exists`.
+  const withinAttempts = {
+    $or: [{ transcriptAttempts: { $lt: MAX_TRANSCRIPT_ATTEMPTS } }, { transcriptAttempts: { $exists: false } }],
+  };
   const query = opts.video
     ? { videoId: opts.video }
-    : opts.force
-      ? {}
-      : { $or: [{ summarizedAt: null }, { transcriptWords: 0 }] };
+    : opts.votesOnly
+      ? { summarizedAt: { $ne: null } }
+      : opts.force
+        ? {}
+        : { $and: [{ $or: [{ summarizedAt: null }, { transcriptWords: 0 }] }, withinAttempts] };
 
-  const pending = await ParlSessionModel.find(query).sort({ publishedAt: -1 }).limit(opts.limit);
+  const pending = await ParlSessionModel.find(query)
+    .sort(opts.votesOnly ? { sessionDate: -1 } : { publishedAt: -1 })
+    .limit(opts.limit);
   console.log(`Por procesar: ${pending.length}`);
+
+  // `--votes-only` no toca el resumen: recalcula el recuento y vuelve a atarlo.
+  if (opts.votesOnly) {
+    for (const session of pending) {
+      const stored = await ParlTranscriptModel.findOne({ videoId: session.videoId });
+      if (!stored) {
+        console.log(`  ${session.videoId}: sin transcripción guardada`);
+        continue;
+      }
+      const moments = findVoteMoments(stored.segments as TranscriptSegment[], session.chamber);
+      const stale = session.topics as unknown as { title: string; explanation: string; t: number }[];
+      const votes = moments.length ? await labelVotes(moments, apiKey) : [];
+      if (votes.length) await mapVotesToTopics(votes, stale, apiKey);
+      const topics = attachVotes(stale, votes);
+      session.votes = votes as any;
+      session.topics = topics as any;
+      await session.save();
+      const named = votes.filter(v => v.subject).length;
+      const tied = topics.filter((t: any) => t.votes.length).length;
+      console.log(`  ✓ ${session.videoId}: ${votes.length} votaciones (${named} con asunto), ${tied}/${topics.length} temas con resultado`);
+    }
+    await disconnectFromDatabase();
+    return;
+  }
 
   for (const session of pending) {
     console.log(`\n▶ ${session.videoTitle} (${session.videoId})`);
@@ -480,7 +814,14 @@ async function main() {
         segments = stored.segments as TranscriptSegment[];
         console.log(`  transcripción en base: ${stored.words} palabras`);
       } else {
-        const fetched = await fetchTranscript(session.videoId);
+        const fetched = await fetchTranscript(session.videoId).catch(async (error) => {
+          // El intento se cuenta acá y no en el catch de abajo: sólo la bajada de
+          // subtítulos es la que nunca se recupera.
+          session.transcriptAttempts = (session.transcriptAttempts ?? 0) + 1;
+          session.transcriptError = String(error).slice(0, 200);
+          await session.save();
+          throw error;
+        });
         segments = fetched.segments;
         const words = segments.reduce((a, s) => a + s.txt.split(/\s+/).length, 0);
         await ParlTranscriptModel.updateOne(
@@ -528,9 +869,16 @@ async function main() {
       if (process.env.PARL_DUMP) {
         (await import("node:fs")).writeFileSync(process.env.PARL_DUMP, JSON.stringify(result, null, 1), "utf8");
       }
+      // 4. Las votaciones. El recuento lo saca el código; el asunto, el modelo.
+      const moments = findVoteMoments(segments, session.chamber);
+      const votes = moments.length ? await labelVotes(moments, apiKey) : [];
+      if (votes.length) await mapVotesToTopics(votes, result.topics, apiKey);
+      const topics = attachVotes(result.topics, votes);
+
       session.headline = result.headline;
       session.summary = result.summary;
-      session.topics = result.topics;
+      session.topics = topics as any;
+      session.votes = votes as any;
       session.glossary = result.glossary;
       session.rejectedPhrases = result.rejected;
       session.model = result.model;
@@ -538,7 +886,8 @@ async function main() {
       session.summarizedAt = new Date();
       await session.save();
 
-      console.log(`  ✓ ${result.topics.length} temas · ${result.glossary.length} términos · ${result.rejected.length} rechazados (${result.model})`);
+      const tied = topics.filter(t => t.votes.length).length;
+      console.log(`  ✓ ${result.topics.length} temas · ${votes.length} votaciones (${tied} temas con resultado) · ${result.glossary.length} términos · ${result.rejected.length} rechazados (${result.model})`);
       console.log(`    ${result.headline}`);
       for (const r of result.rejected.slice(0, 3)) console.log(`    ✗ ${r.slice(0, 100)}`);
     } catch (error) {

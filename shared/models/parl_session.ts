@@ -15,6 +15,10 @@ import { mongoose } from "../connection/database";
  * un hecho verificado. Lo que se publica es "de esto se habló, y acá está el
  * minuto del video para que lo escuches vos". El minuto es la prueba, no el texto.
  *
+ * La VOTACIÓN es una cuarta capa, y es la más firme de las tres últimas: el
+ * recuento («27 en 27») lo canta la presidencia y el subtitulado lo escribe en
+ * dígitos. Aun así pasa por el video: `IParlVote.t` abre el minuto exacto.
+ *
  * `topics[].t` NO lo elige el modelo. Sale del bloque de transcripción que el
  * modelo estaba leyendo, calculado en código: un modelo al que se le pide un
  * timestamp devuelve el número que le parece, y en la primera prueba devolvió
@@ -26,6 +30,37 @@ import { mongoose } from "../connection/database";
 /** De qué cámara es la sesión. `asamblea` es la Asamblea General (las dos juntas). */
 export type ParlChamber = "senadores" | "representantes" | "asamblea";
 
+/**
+ * Una votación de la sesión.
+ *
+ * El recuento (`inFavor` en `present`) lo canta la presidencia y lo escribe el
+ * subtitulado en dígitos. `subject` lo escribe el modelo leyendo lo que se dijo
+ * antes del recuento. Las dos cosas pueden estar mal, y por eso cada votación
+ * lleva su `t`: el lector abre el video y lo escucha. Ver shared/parlamento/votes.ts.
+ */
+export interface IParlVote {
+  /** Segundo del video donde se cantó el recuento. */
+  t: number;
+  /** Votos a favor. */
+  inFavor: number;
+  /** Legisladores presentes en sala. */
+  present: number;
+  /** `afirmativa` cuando los votos a favor pasan la mitad de los presentes. */
+  result: "afirmativa" | "negativa";
+  /** Qué mayoría alcanzó el recuento. Una venia de ascenso pide dos tercios. */
+  majority: "unanimidad" | "dos-tercios" | "simple";
+  /** Qué se votó, en una frase corta. */
+  subject: string;
+  /** `general` es el asunto entero. `parcial` es un artículo. `tramite` es la casa. */
+  scope: "general" | "parcial" | "tramite";
+}
+
+/** Una cifra que se dijo, con la oración que la contiene. */
+export interface IParlFigure {
+  value: string;
+  sentence: string;
+}
+
 export interface IParlTopic {
   /** Título corto, en palabras de todos los días. */
   title: string;
@@ -35,6 +70,12 @@ export interface IParlTopic {
   whyItMatters: string;
   /** Segundo del video donde empieza. Calculado del bloque, nunca pedido al modelo. */
   t: number;
+  /** Las votaciones que se ataron a este tema, en orden. */
+  votes: IParlVote[];
+  /** Qué pasó con el asunto. `sin-votacion` = no se le encontró votación. */
+  outcome: "aprobado" | "rechazado" | "mixto" | "sin-votacion";
+  /** Las cifras que el portón sacó de la prosa. Se publican aparte y con aviso. */
+  figures: IParlFigure[];
 }
 
 export interface IParlTerm {
@@ -66,6 +107,15 @@ export interface IParlSession {
   transcribedAt: Date | null;
   /** Por qué no hay transcripción, cuando no la hay. */
   transcriptError: string | null;
+  /**
+   * Intentos fallidos de bajar la transcripción.
+   *
+   * Un video sin pista de subtítulos se come un cupo de cada corrida y el atraso
+   * no baja nunca. A partir de `MAX_TRANSCRIPT_ATTEMPTS` el video sale de la
+   * cola. Ese techo es alto a propósito: YouTube tarda días en subtitular una
+   * sesión de seis horas, y un video que todavía no llegó no está perdido.
+   */
+  transcriptAttempts: number;
 
   // ─── Resumen ──────────────────────────────────────────────────────────────
   /** Una línea que dice qué pasó en la sesión. */
@@ -73,6 +123,11 @@ export interface IParlSession {
   /** Cinco a ocho frases llanas. */
   summary: string | null;
   topics: IParlTopic[];
+  /**
+   * Todas las votaciones de la sesión, en orden, incluso las de trámite y las
+   * que ningún tema reclamó. `topics[].votes` es un subconjunto de esta lista.
+   */
+  votes: IParlVote[];
   /** Jerga parlamentaria traducida. */
   glossary: IParlTerm[];
   /** Modelo que escribió el resumen, para trazabilidad (`claude:sonnet`, `gemini-…`). */
@@ -84,12 +139,36 @@ export interface IParlSession {
   rejectedPhrases: string[];
 }
 
+const ParlVoteSchema = new Schema<IParlVote>(
+  {
+    t: { type: Number, required: true },
+    inFavor: { type: Number, required: true },
+    present: { type: Number, required: true },
+    result: { type: String, required: true },
+    majority: { type: String, required: true },
+    subject: { type: String, default: "" },
+    scope: { type: String, default: "parcial" },
+  },
+  { _id: false }
+);
+
+const ParlFigureSchema = new Schema<IParlFigure>(
+  {
+    value: { type: String, required: true },
+    sentence: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const ParlTopicSchema = new Schema<IParlTopic>(
   {
     title: { type: String, required: true },
     explanation: { type: String, required: true },
     whyItMatters: { type: String, default: "" },
     t: { type: Number, required: true },
+    votes: { type: [ParlVoteSchema], default: [] },
+    outcome: { type: String, default: "sin-votacion" },
+    figures: { type: [ParlFigureSchema], default: [] },
   },
   { _id: false }
 );
@@ -115,10 +194,12 @@ const ParlSessionSchema = new Schema<IParlSession>(
     transcriptTrack: { type: String, default: null },
     transcribedAt: { type: Date, default: null },
     transcriptError: { type: String, default: null },
+    transcriptAttempts: { type: Number, default: 0 },
 
     headline: { type: String, default: null },
     summary: { type: String, default: null },
     topics: { type: [ParlTopicSchema], default: [] },
+    votes: { type: [ParlVoteSchema], default: [] },
     glossary: { type: [ParlTermSchema], default: [] },
     model: { type: String, default: null },
     blocks: { type: Number, default: 0 },

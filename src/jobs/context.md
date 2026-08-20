@@ -230,14 +230,53 @@ subtítulos AUTOMÁTICOS con `yt-dlp` y arma un resumen por sesión.
 de `timedtext`: la API de YouTube no sirve —`captions.download` pide OAuth del dueño del
 canal— y el `baseUrl` del player devuelve 200 con cero bytes.
 
-Una sesión de seis horas son ~32.000 palabras y ~25 llamadas al modelo, así que el cron
-corre con `--limit=2` a las 06:40. La cola es «lo que no tiene resumen, lo más nuevo
-primero».
+Una sesión de seis horas son ~32.000 palabras, ~25 llamadas al modelo para el resumen y
+~6 para las votaciones. El cron corre con `--limit=3` a las 06:40 y a las 18:40. La cola
+es «lo que no tiene resumen, lo más nuevo primero».
 
 Las reglas de publicación viven en `shared/parlamento/summary.ts`, no acá: el minuto de
 cada tema lo calcula el código desde el bloque de transcripción (al modelo nunca se le
 pide un timestamp), el portón tira lo que opina, saca la oración que trae una cifra que
 el subtitulado pudo inventar, y descarta el tema repetido.
+
+### Las votaciones
+
+`shared/parlamento/votes.ts` saca de la transcripción el recuento que canta la
+presidencia: «votamos la moción. 26 en 27». Ese par se valida solo —los votos a favor no
+pasan a los presentes, y los presentes no pasan las bancas de la cámara (31, 99, 130)—,
+así que la basura del tipo «8 en 202», que es un número de ley leído en voz alta, no
+entra. De ahí salen el resultado y el tipo de mayoría, calculados, no pedidos al modelo.
+
+**El asunto y el tema son DOS llamadas separadas, y tiene que seguir siendo así.** La
+primera versión hacía las dos cosas en una llamada, con la lista de temas a la vista: el
+modelo copiaba el título del tema como asunto de la votación y seis votaciones distintas
+quedaban con el mismo nombre. Ahora `labelVotes` ve el fragmento y no los temas, y
+`mapVotesToTopics` ve los temas y el asunto ya escrito.
+
+**El largo del contexto no es el mismo para las dos.** `labelVotes` recorta a 320
+caracteres: con el contexto entero clasificó como votación «general» la licencia de una
+senadora, porque leyó el debate anterior en vez de la fórmula. `mapVotesToTopics` lo
+recibe entero (900), porque «lo votamos en general» sólo se reconoce por lo que se estaba
+leyendo medio minuto antes.
+
+**Una votación no se ata a un tema por el reloj.** El resumen cuenta ocho temas de seis
+horas, así que el tema en curso casi nunca es el que se vota. Atar por cercanía le colgó
+al proyecto de horas escolares dos votaciones de un plan de ciencia y tecnología. Sin
+evidencia, la votación sale en la lista de la sesión y en ningún tema.
+
+### Por qué el atraso no bajaba
+
+Dos guardas, las dos de agosto de 2026:
+
+- **El feed Atom contesta 404 cuatro de cada cinco veces.** Medido desde dos IPs el
+  20/08. Había un solo pedido sin reintento, así que descubrir fallaba casi todos los
+  días, en silencio. Ahora hay seis intentos y, si igual no contesta, `ytdlpVideos` lee la
+  lista de subidas (`UU…`) con `yt-dlp`. La pestaña `/videos` del canal NO sirve: no viene
+  ordenada de la más nueva a la más vieja.
+- **Un video sin pista de subtítulos se come un cupo de cada corrida.** Dos de julio
+  congelaban el atraso entero. `transcriptAttempts` los saca de la cola a los doce
+  intentos, que son seis días. El techo es alto porque YouTube tarda: los dos videos de
+  la sesión del 19/08/2026 seguían sin pista al otro día.
 
 ## refresh-youtube-channels.ts — las cifras del directorio de canales
 

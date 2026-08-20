@@ -1223,22 +1223,27 @@ class CronServer {
     );
     this.logger.info(`YouTube channel stats scheduled with expression: ${youtubeChannelsExpression} (Uruguay timezone)`);
 
-    // Sesiones del Parlamento resumidas en lenguaje llano, cada día a las 06:40.
+    // Sesiones del Parlamento resumidas en lenguaje llano, dos veces por día.
     //
-    // A esa hora ya está subido el video de la sesión del día anterior, y el escalón
-    // Claude todavía tiene cuota: una sesión de seis horas son ~25 llamadas al modelo,
-    // así que se procesan de a dos por corrida. Lo que no entra hoy queda en la cola y
-    // entra mañana; la cola es "lo que no tiene resumen, lo más nuevo primero".
+    // DOS CORRIDAS Y TRES SESIONES POR CORRIDA, no una y dos. Las cámaras subían
+    // hasta cinco sesiones en dos días y la cola tomaba dos por día: medido el
+    // 19/08/2026, once sesiones esperaban resumen y las más viejas eran de julio.
+    // A las 06:40 ya está el video de la sesión de ayer; a las 18:40 entra lo que
+    // se subió durante el día.
     //
-    // Depende de `yt-dlp` en el PATH del servidor: es lo único que sabe firmar el
-    // pedido de subtítulos que YouTube dejó de servir abierto.
-    const parlamentoExpression = "40 6 * * *";
+    // Una sesión de seis horas son ~25 llamadas al modelo para el resumen y ~6
+    // para las votaciones. Tres por corrida son ~93, sobre una cuota de 600.
+    //
+    // Depende de `yt-dlp` en el PATH del servidor: firma el pedido de subtítulos
+    // que YouTube dejó de servir abierto, y además descubre las sesiones nuevas
+    // cuando el feed Atom del canal contesta 404, que es lo que hace casi siempre.
+    const parlamentoExpression = "40 6,18 * * *";
     cron.schedule(
       parlamentoExpression,
       async () => {
         try {
           this.logger.info("Starting parlamento session summaries...");
-          await this.runJobProcess("jobs/parlamento/refresh-sessions", ["--limit=2"]);
+          await this.runJobProcess("jobs/parlamento/refresh-sessions", ["--limit=3"]);
           this.logger.info("Parlamento session summaries completed successfully");
         } catch (error) {
           this.logger.error("Parlamento session summaries failed:", error instanceof Error ? error : String(error));

@@ -2663,7 +2663,37 @@
     "watchFull": "Ver la sesión completa en YouTube",
     "sourceChannels": "De qué canales sale esto",
     "prev": "Sesión anterior",
-    "next": "Sesión siguiente"
+    "next": "Sesión siguiente",
+    "outcome": {
+      "aprobado": "Se aprobó",
+      "rechazado": "No se aprobó",
+      "mixto": "Se votó por partes",
+      "sin-votacion": "Sin votación registrada"
+    },
+    "votesTitle": "Cómo se votó",
+    "votesSessionTitle": "Todas las votaciones de la sesión",
+    "votesHelp": "El recuento que cantó la presidencia. El minuto abre el video en esa votación.",
+    "votesCaveat": "Los números salen del subtitulado automático y pueden estar equivocados. Cada votación trae el minuto del video: ahí se verifica.",
+    "votesEmpty": "No se encontró ninguna votación en esta sesión.",
+    "voteTally": "{inFavor} en {present}",
+    "voteCount": "{n} votaciones",
+    "voteOne": "1 votación",
+    "voteProcedural": "Quedan afuera {n} votaciones de trámite: licencias, envíos de exposiciones y cuartos intermedios.",
+    "voteNone": "Esta ficha no registra una votación de este tema.",
+    "result": {
+      "afirmativa": "Afirmativa",
+      "negativa": "Negativa"
+    },
+    "majority": {
+      "unanimidad": "por unanimidad",
+      "dos-tercios": "más de dos tercios",
+      "simple": "mayoría simple"
+    },
+    "majorityWarn": "La mayoría simple aprueba casi todo. Algunas venias piden dos tercios.",
+    "figuresTag": "según el subtitulado automático",
+    "votesTag": "recuento del subtitulado automático",
+    "figuresTitle": "Cifras que se dijeron",
+    "figuresCaveat": "Una máquina escuchó estos números y puede haberlos cambiado. Escuchó «cuatro» donde decía «catorce». Abrí el minuto del video antes de citar cualquiera."
   },
   "canalesYt": {
     "eyebrow": "Directorio",

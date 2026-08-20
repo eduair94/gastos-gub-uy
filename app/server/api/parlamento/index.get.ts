@@ -41,6 +41,7 @@ export default defineEventHandler(async (event) => {
           headline: 1,
           summary: 1,
           topics: 1,
+          votes: 1,
           transcriptWords: 1,
           summarizedAt: 1,
         },
@@ -57,12 +58,23 @@ export default defineEventHandler(async (event) => {
   return {
     success: true,
     data: {
-      sessions: sessions.map(s => ({
-        ...s,
-        // La lista muestra los tres primeros temas; la ficha muestra todos.
-        topics: (s.topics ?? []).slice(0, 3),
-        topicCount: (s.topics ?? []).length,
-      })),
+      sessions: sessions.map((row) => {
+        // Los recuentos no viajan a la lista: se cuentan acá y se deja el número.
+        const { votes = [], ...s } = row as typeof row & { votes?: { subject?: string, scope?: string }[] }
+        return {
+          ...s,
+          // La lista muestra los tres primeros temas, y de cada uno sólo el título,
+          // el minuto y el resultado. La explicación entera vive en la ficha.
+          topics: (s.topics ?? []).slice(0, 3).map((t: Record<string, unknown>) => ({
+            title: t.title,
+            t: t.t,
+            outcome: t.outcome ?? 'sin-votacion',
+          })),
+          topicCount: (s.topics ?? []).length,
+          // Cuántas veces votó la cámara, sin contar la marcha de la sesión.
+          voteCount: votes.filter(v => v.scope !== 'tramite' && (v.subject ?? '').trim()).length,
+        }
+      }),
       byChamber: Object.fromEntries(counts.map((c: any) => [c._id, c.n])),
       total: counts.reduce((a: number, c: any) => a + c.n, 0),
     },

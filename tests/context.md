@@ -33,6 +33,8 @@ The table covers the load-bearing files. It does not list all 137 files in `unit
 | [unit/test-comprasestatales-total.ts](unit/test-comprasestatales-total.ts) | `src/jobs/lib/comprasestatales-total` against the HTML fixture. |
 | [unit/test-bcu-historical-rates.ts](unit/test-bcu-historical-rates.ts) | `src/jobs/lib/bcu-historical-rates` against the XML fixture. |
 | [unit/test-matcher.ts](unit/test-matcher.ts) | `watchMatchesCall` from `shared/matching/match` + `shared/utils/text`. |
+| [unit/test-parlamento-summary.ts](unit/test-parlamento-summary.ts) | `shared/parlamento/summary`: troceo, filtro de opinión, cifras que salen de la prosa, minutos y guarda de encoding. |
+| [unit/test-parlamento-votes.ts](unit/test-parlamento-votes.ts) | `shared/parlamento/votes`: recuento cantado, basura descartada por bancas, votación de trámite, atado al tema y resultado. |
 | [unit/test-text-normalize.ts](unit/test-text-normalize.ts) | `shared/utils/text` normalizeText / normalizeKeyword / phraseMatches. |
 | [unit/test-sice.ts](unit/test-sice.ts) | `src/jobs/sice/parse` + `shared/utils/rubro-tokens` + `shared/utils/units` + `src/jobs/open-calls/project`. |
 | [unit/test-open-call-project.ts](unit/test-open-call-project.ts) | `src/jobs/open-calls/project` (deriveStatus, projectOpenCall). |
