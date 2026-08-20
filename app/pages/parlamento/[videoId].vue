@@ -580,11 +580,15 @@ useSeo(() => ({
 .vlist { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-2); }
 .vlist--session { margin-top: var(--s-4); gap: var(--s-3); }
 
+/*
+ * Grilla y no flex envuelto: con flex, «por unanimidad» caía al renglón de abajo
+ * pegado al asunto y las dos cosas se leían como una sola frase.
+ */
 .vote {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto auto auto auto minmax(0, 1fr);
   align-items: baseline;
-  gap: var(--s-2) var(--s-3);
+  gap: var(--s-1) var(--s-3);
   font-size: var(--t-sm);
   line-height: 1.5;
 }
@@ -611,7 +615,7 @@ useSeo(() => ({
 }
 
 .vote__maj { font-size: var(--t-xs); color: var(--text-muted); }
-.vote__subject { flex: 1 1 18ch; min-width: 0; }
+.vote__subject { min-width: 0; }
 
 .vnote {
   margin: var(--s-4) 0 0;
@@ -696,7 +700,15 @@ useSeo(() => ({
 @media (max-width: 700px) {
   .topic { grid-template-columns: minmax(0, 1fr); gap: var(--s-2); }
   .vbox, .figs { padding: var(--s-3); }
-  .vote { gap: var(--s-1) var(--s-2); }
+  .vlist { gap: var(--s-3); }
+
+  /* En teléfono cada votación son tres renglones: quién, cuánto y qué. */
+  .vote { grid-template-columns: auto minmax(0, 1fr); gap: var(--s-1) var(--s-2); }
+  .vote__at { grid-column: 1; }
+  .vote .vchip { grid-column: 2; justify-self: start; }
+  .vote__tally { grid-column: 1; }
+  .vote__maj { grid-column: 2; }
+  .vote__subject { grid-column: 1 / -1; }
   .gloss__row { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
   .neigh { grid-template-columns: minmax(0, 1fr); }
   .neigh__card--next { text-align: left; }
