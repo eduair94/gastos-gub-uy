@@ -28,7 +28,7 @@ interface Vote {
   subject: string
   scope: 'general' | 'parcial' | 'tramite'
 }
-interface Figure { value: string, sentence: string }
+interface Figure { value: string, sentence: string, t: number }
 interface Topic {
   title: string
   explanation: string
@@ -264,8 +264,18 @@ useSeo(() => ({
                   <li
                     v-for="(f, i) in topic.figures"
                     :key="i"
+                    class="fig"
                   >
-                    {{ f.sentence }}
+                    <a
+                      class="vote__at"
+                      :href="youtubeAt(session.videoId, f.t)"
+                      target="_blank"
+                      rel="noopener nofollow"
+                    >
+                      <v-icon size="12">mdi-play-circle-outline</v-icon>
+                      {{ formatTimestamp(f.t) }}
+                    </a>
+                    <span>{{ f.sentence }}</span>
                   </li>
                 </ul>
               </div>
@@ -624,10 +634,15 @@ useSeo(() => ({
   color: var(--text-muted);
 }
 
-.figs__list { margin: 0; padding-left: var(--s-4); display: grid; gap: var(--s-2); }
+.figs__list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-2); }
 
-.figs__list li {
-  max-width: 70ch;
+/* El minuto es la prueba de la cifra, igual que en la votación. */
+.fig {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--s-1) var(--s-3);
+  max-width: 74ch;
   font-size: var(--t-sm);
   line-height: 1.55;
 }
@@ -709,6 +724,7 @@ useSeo(() => ({
   .vote__tally { grid-column: 1; }
   .vote__maj { grid-column: 2; }
   .vote__subject { grid-column: 1 / -1; }
+  .fig { grid-template-columns: minmax(0, 1fr); }
   .gloss__row { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
   .neigh { grid-template-columns: minmax(0, 1fr); }
   .neigh__card--next { text-align: left; }

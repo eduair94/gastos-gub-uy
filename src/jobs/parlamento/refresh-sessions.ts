@@ -17,6 +17,8 @@
  *   4. VOTAR. El código busca el recuento cantado («27 en 27») con las reglas de
  *      shared/parlamento/votes. El modelo sólo pone el asunto de cada votación.
  *      De ahí sale el «se aprobó» o «no se aprobó» de cada tema.
+ *   5. CONTAR. El modelo lista las cifras del tramo de cada tema, y el código las
+ *      busca en la transcripción. La que no suena, no se guarda.
  *
  * LO QUE ESTO NO ES. Ni la transcripción ni el resumen son la versión oficial.
  * El subtitulado automático se come nombres y cambia cifras; el modelo resume a
@@ -28,11 +30,11 @@
  *   npx tsx src/jobs/parlamento/refresh-sessions.ts --limit=2
  *   npx tsx src/jobs/parlamento/refresh-sessions.ts --video=Hy9MRMOllfs --force
  *   npx tsx src/jobs/parlamento/refresh-sessions.ts --discover-only
- *   npx tsx src/jobs/parlamento/refresh-sessions.ts --votes-only --limit=20
+ *   npx tsx src/jobs/parlamento/refresh-sessions.ts --enrich --limit=20
  *
- * `--votes-only` recalcula las votaciones de sesiones YA resumidas. No vuelve a
- * bajar la transcripción ni a reescribir el resumen: cuesta dos llamadas al
- * modelo por sesión en vez de veinticinco.
+ * `--enrich` recalcula las votaciones y las cifras de sesiones YA resumidas. No
+ * vuelve a bajar la transcripción ni a reescribir el resumen: cuesta unas diez
+ * llamadas al modelo por sesión en vez de veinticinco.
  *
  * Requiere `yt-dlp` en el PATH (o PARL_YTDLP con la ruta al binario).
  */
@@ -55,6 +57,12 @@ import {
   sessionDateFromTitle,
   type TranscriptSegment,
 } from "../../../shared/parlamento/summary";
+import {
+  gateFigures,
+  topicWindow,
+  type FigureDraft,
+  type VerifiedFigure,
+} from "../../../shared/parlamento/figures";
 import {
   findVoteMoments,
   isProceduralContext,
@@ -131,7 +139,7 @@ function parseArgs(argv: string[]): Options {
   for (const arg of argv) {
     if (arg === "--force") o.force = true;
     else if (arg === "--discover-only") o.discoverOnly = true;
-    else if (arg === "--votes-only") o.votesOnly = true;
+    else if (arg === "--enrich" || arg === "--votes-only") o.votesOnly = true;
     else if (arg === "--dry-run") o.dryRun = true;
     else if (arg.startsWith("--video=")) o.video = arg.slice("--video=".length).trim() || null;
     else if (arg.startsWith("--limit=")) {
@@ -711,6 +719,103 @@ function attachVotes<T extends { title: string; explanation: string; t: number }
   });
 }
 
+// ─── 5. Las cifras ───────────────────────────────────────────────────────────
+
+const FIGURES_SYSTEM = `Leés el tramo de una sesión del Parlamento uruguayo donde se trató un tema, y listás las cifras que se dicen.
+
+REGLAS DURAS:
+- Copiá la cifra tal como suena, con su escala: "160 millones", "30%", "1.500".
+- Escribí una frase corta que diga qué mide esa cifra. La frase TIENE que incluir la cifra.
+- Nunca inventes una cifra. Si el tramo no dice ninguna, devolvé la lista vacía.
+- No opines. No digas si el número es alto o bajo, ni si está bien o mal.
+- Ignorá los números de artículo, de ley, de carpeta, de expediente y los recuentos de votos.
+- Ignorá las horas del reloj y las fechas.
+- Máximo cuatro cifras: las que le cambian algo a una persona común.`;
+
+const FIGURES_SCHEMA = {
+  type: "object",
+  properties: {
+    cifras: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          valor: { type: "string" },
+          frase: { type: "string" },
+        },
+        required: ["valor", "frase"],
+      },
+    },
+  },
+  required: ["cifras"],
+} as const;
+
+/** Palabras del tramo que ve el modelo. Más que esto es media sesión. */
+const FIGURES_WINDOW_WORDS = 1_200;
+
+/**
+ * Las cifras de cada tema, verificadas contra la transcripción.
+ *
+ * VA EN SU PROPIA PASADA, y no dentro del resumen. Al resumen se le prohíben las
+ * cifras porque el subtitulado cambia los números, y esa prohibición se queda:
+ * la prosa del tema sigue sin cifras. Acá se le pide al modelo que las liste, y
+ * después el código busca los dígitos en el tramo de transcripción del tema. Lo
+ * que no suena, no se guarda. Lo que suena viaja con el segundo donde suena.
+ */
+async function extractFigures(
+  topics: { title: string; t: number }[],
+  segments: TranscriptSegment[],
+  durationSeconds: number,
+  apiKey: string
+): Promise<{ figures: VerifiedFigure[][]; rejected: string[] }> {
+  const figures: VerifiedFigure[][] = topics.map(() => []);
+  const rejected: string[] = [];
+
+  for (const [i, topic] of topics.entries()) {
+    const { from, to } = topicWindow(topics, i, durationSeconds);
+    const window = segments.filter(seg => seg.t >= from && seg.t <= to);
+    if (!window.length) continue;
+
+    const text = window.map(seg => seg.txt).join(" ").split(/\s+/).slice(0, FIGURES_WINDOW_WORDS).join(" ");
+    if (!/\d/.test(text)) continue;
+
+    try {
+      const { data } = await callStructured<{ cifras: { valor: string; frase: string }[] }>({
+        apiKey,
+        model: MODEL,
+        systemInstruction: FIGURES_SYSTEM,
+        schema: FIGURES_SCHEMA as any,
+        temperature: 0,
+        prompt: `Tema: ${topic.title}${BLANK}Tramo de la sesión:${BLANK}${text}`,
+      });
+      const drafts: FigureDraft[] = (data.cifras ?? []).map(row => ({
+        value: String(row.valor ?? "").trim(),
+        sentence: String(row.frase ?? "").trim(),
+      }));
+      // La frase que opina o que llegó rota se cae antes del portón de la cifra.
+      const clean = drafts.filter((draft) => {
+        const opinion = findOpinion(`${draft.sentence}`);
+        if (opinion) {
+          rejected.push(`cifra con opinión ("${opinion}"): ${draft.sentence}`);
+          return false;
+        }
+        if (looksMojibake(draft.sentence) || looksMojibake(draft.value)) {
+          rejected.push(`cifra con encoding roto: ${draft.value}`);
+          return false;
+        }
+        return true;
+      });
+      const gated = gateFigures(clean, window, from, to);
+      figures[i] = gated.kept;
+      rejected.push(...gated.rejected.map(r => `${r} [${topic.title}]`));
+    } catch (error) {
+      console.warn(`    cifras de "${topic.title.slice(0, 40)}": ${String(error).slice(0, 90)}`);
+    }
+  }
+
+  return { figures, rejected };
+}
+
 // ─── Orquestación ────────────────────────────────────────────────────────────
 
 async function main() {
@@ -781,7 +886,8 @@ async function main() {
     .limit(opts.limit);
   console.log(`Por procesar: ${pending.length}`);
 
-  // `--votes-only` no toca el resumen: recalcula el recuento y vuelve a atarlo.
+  // `--enrich` no toca el resumen: recalcula el recuento, lo vuelve a atar a su
+  // tema y busca las cifras. Las tres cosas son aditivas sobre la prosa ya escrita.
   if (opts.votesOnly) {
     for (const session of pending) {
       const stored = await ParlTranscriptModel.findOne({ videoId: session.videoId });
@@ -789,17 +895,23 @@ async function main() {
         console.log(`  ${session.videoId}: sin transcripción guardada`);
         continue;
       }
-      const moments = findVoteMoments(stored.segments as TranscriptSegment[], session.chamber);
+      const segments = stored.segments as TranscriptSegment[];
+      const moments = findVoteMoments(segments, session.chamber);
       const stale = session.topics as unknown as { title: string; explanation: string; t: number }[];
       const votes = moments.length ? await labelVotes(moments, apiKey) : [];
       if (votes.length) await mapVotesToTopics(votes, stale, apiKey);
-      const topics = attachVotes(stale, votes);
+      const withVotes = attachVotes(stale, votes);
+      const figs = await extractFigures(stale, segments, session.durationSeconds, apiKey);
+      const topics = withVotes.map((topic, i) => ({ ...topic, figures: figs.figures[i] ?? [] }));
       session.votes = votes as any;
       session.topics = topics as any;
+      // El registro del filtro se acumula: la pasada anterior también dejó el suyo.
+      session.rejectedPhrases = [...(session.rejectedPhrases ?? []), ...figs.rejected].slice(-120);
       await session.save();
       const named = votes.filter(v => v.subject).length;
       const tied = topics.filter((t: any) => t.votes.length).length;
-      console.log(`  ✓ ${session.videoId}: ${votes.length} votaciones (${named} con asunto), ${tied}/${topics.length} temas con resultado`);
+      const cifras = topics.reduce((a: number, t: any) => a + t.figures.length, 0);
+      console.log(`  ✓ ${session.videoId}: ${votes.length} votaciones (${named} con asunto), ${tied}/${topics.length} temas con resultado, ${cifras} cifras`);
     }
     await disconnectFromDatabase();
     return;
@@ -873,7 +985,12 @@ async function main() {
       const moments = findVoteMoments(segments, session.chamber);
       const votes = moments.length ? await labelVotes(moments, apiKey) : [];
       if (votes.length) await mapVotesToTopics(votes, result.topics, apiKey);
-      const topics = attachVotes(result.topics, votes);
+      const withVotes = attachVotes(result.topics, votes);
+
+      // 5. Las cifras, verificadas contra la transcripción.
+      const figs = await extractFigures(result.topics, segments, session.durationSeconds, apiKey);
+      const topics = withVotes.map((topic, i) => ({ ...topic, figures: figs.figures[i] ?? [] }));
+      result.rejected.push(...figs.rejected);
 
       session.headline = result.headline;
       session.summary = result.summary;
@@ -887,7 +1004,8 @@ async function main() {
       await session.save();
 
       const tied = topics.filter(t => t.votes.length).length;
-      console.log(`  ✓ ${result.topics.length} temas · ${votes.length} votaciones (${tied} temas con resultado) · ${result.glossary.length} términos · ${result.rejected.length} rechazados (${result.model})`);
+      const cifras = topics.reduce((a, t) => a + t.figures.length, 0);
+      console.log(`  ✓ ${result.topics.length} temas · ${votes.length} votaciones (${tied} con resultado) · ${cifras} cifras · ${result.glossary.length} términos · ${result.rejected.length} rechazados (${result.model})`);
       console.log(`    ${result.headline}`);
       for (const r of result.rejected.slice(0, 3)) console.log(`    ✗ ${r.slice(0, 100)}`);
     } catch (error) {

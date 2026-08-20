@@ -230,8 +230,10 @@ subtítulos AUTOMÁTICOS con `yt-dlp` y arma un resumen por sesión.
 de `timedtext`: la API de YouTube no sirve —`captions.download` pide OAuth del dueño del
 canal— y el `baseUrl` del player devuelve 200 con cero bytes.
 
-Una sesión de seis horas son ~32.000 palabras, ~25 llamadas al modelo para el resumen y
-~6 para las votaciones. El cron corre con `--limit=3` a las 06:40 y a las 18:40. La cola
+Una sesión de seis horas son ~32.000 palabras, ~25 llamadas al modelo para el resumen, ~6
+para las votaciones y una por tema para las cifras. El cron corre con `--limit=3` a las
+06:40 y a las 18:40. `--enrich` recalcula votaciones y cifras de sesiones ya resumidas sin
+tocar la prosa. La cola
 es «lo que no tiene resumen, lo más nuevo primero».
 
 Las reglas de publicación viven en `shared/parlamento/summary.ts`, no acá: el minuto de
@@ -263,6 +265,28 @@ leyendo medio minuto antes.
 horas, así que el tema en curso casi nunca es el que se vota. Atar por cercanía le colgó
 al proyecto de horas escolares dos votaciones de un plan de ciencia y tecnología. Sin
 evidencia, la votación sale en la lista de la sesión y en ningún tema.
+
+### Las cifras
+
+`shared/parlamento/figures.ts` es una pasada aparte, y aparte tiene que quedarse. Al
+resumen se le PROHÍBEN las cifras, porque el subtitulado escucha «cuatro» donde dice
+«catorce»; esa prohibición no se toca y la prosa del tema sigue sin números. Después, el
+modelo lista las cifras del tramo de cada tema, y **el código busca los dígitos en la
+transcripción de ese tramo**. La cifra que no suena, no se guarda. La que suena viaja con
+el segundo donde suena, y la ficha lo publica como enlace al video.
+
+Eso verifica que la MÁQUINA QUE ESCUCHÓ escribió ese número. No verifica que el
+legislador lo dijo. Por eso la cifra sale igual con su aviso.
+
+**La escala va pegada al número o el cruce es falso.** «160 millones» y el «artículo 160»
+comparten dígitos. `findFigureEvidence` exige que la palabra de escala esté a 40
+caracteres del número.
+
+**El modelo devuelve la mecánica de la sesión como si fuera un dato**, con la instrucción
+de ignorarla puesta: la primera corrida trajo «12 en 13 votos se votó el envío de la
+exposición escrita». `isProceduralFigure` tira el recuento, el número de resolución, la
+fecha escrita y el número de artículo. Bajó de 17 cifras a 10 en la sesión de prueba, y
+las 10 son datos del país.
 
 ### Por qué el atraso no bajaba
 

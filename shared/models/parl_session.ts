@@ -55,10 +55,20 @@ export interface IParlVote {
   scope: "general" | "parcial" | "tramite";
 }
 
-/** Una cifra que se dijo, con la oración que la contiene. */
+/**
+ * Una cifra que se dijo, con la frase que dice qué mide y el minuto donde suena.
+ *
+ * `t` no es decorativo: es la prueba. El código busca los dígitos en la
+ * transcripción antes de guardar la cifra, y `t` es dónde los encontró. Una cifra
+ * que el modelo escribió y la transcripción no dice, no se guarda.
+ */
 export interface IParlFigure {
+  /** La cifra tal como suena, con su escala: «160 millones», «30%». */
   value: string;
+  /** Frase corta que dice qué mide la cifra. Siempre incluye la cifra. */
   sentence: string;
+  /** Segundo del video donde la transcripción dice el número. */
+  t: number;
 }
 
 export interface IParlTopic {
@@ -74,7 +84,7 @@ export interface IParlTopic {
   votes: IParlVote[];
   /** Qué pasó con el asunto. `sin-votacion` = no se le encontró votación. */
   outcome: "aprobado" | "rechazado" | "mixto" | "sin-votacion";
-  /** Las cifras que el portón sacó de la prosa. Se publican aparte y con aviso. */
+  /** Las cifras verificadas contra la transcripción. Se publican aparte y con aviso. */
   figures: IParlFigure[];
 }
 
@@ -156,6 +166,7 @@ const ParlFigureSchema = new Schema<IParlFigure>(
   {
     value: { type: String, required: true },
     sentence: { type: String, required: true },
+    t: { type: Number, required: true },
   },
   { _id: false }
 );

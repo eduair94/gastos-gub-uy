@@ -17,11 +17,12 @@
  *      registrada.
  *   3. `findRiskyNumbers` marca las cifras exactas. El ASR escucha «cuatro» donde
  *      dice «catorce». Una cifra con dos decimales salida de un subtítulo
- *      automático es una cifra inventada. La cifra sale de la prosa, pero ya no
- *      se tira: va a `TopicFigure`, que la ficha publica aparte y con aviso.
+ *      automático es una cifra inventada.
  *
- * El resultado de cada votación NO se calcula acá. Vive en `./votes`, porque sale
- * del recuento cantado y no del resumen.
+ * Ni las cifras publicables ni el resultado de las votaciones se calculan acá.
+ * Las cifras viven en `./figures`, que las busca en la transcripción antes de
+ * dejarlas salir. Las votaciones viven en `./votes`, porque salen del recuento
+ * cantado y no del resumen.
  */
 
 export interface TranscriptSegment {
@@ -119,10 +120,11 @@ export function findRiskyNumbers(text: string): string | null {
 }
 
 /**
- * Una cifra que se dijo en la sesión, con la oración que la contiene.
+ * La oración que el portón le saca a la prosa, con la cifra que la condenó.
  *
- * Sale del resumen, no del tema: es la oración que el portón le saca a la prosa.
- * Se publica en su propio bloque y con su propio aviso.
+ * Se registra para poder auditar el filtro. NO es lo que se publica: la cifra
+ * publicable pasa por `shared/parlamento/figures`, que la busca en la
+ * transcripción antes de dejarla salir.
  */
 export interface TopicFigure {
   /** La cifra tal como quedó escrita: «30%», «1.500 millones». */
@@ -136,7 +138,6 @@ export interface TopicDraft {
   explanation: string
   whyItMatters?: string
   t: number
-  figures?: TopicFigure[]
 }
 
 /**
@@ -147,10 +148,10 @@ export interface TopicDraft {
  * de la sesión: en la primera corrida se perdió la cuota de género en la música
  * porque el resumen decía «30%». Se corta la oración, no el tema.
  *
- * La oración cortada YA NO SE TIRA. Un lector pidió los números y tiene razón:
- * un resumen sin ninguna cifra obliga a mirar seis horas de video para saber de
- * cuánto se hablaba. La oración va al bloque de cifras, que lleva su aviso y su
- * minuto del video al lado. La prosa queda limpia; el número queda marcado.
+ * La oración cortada se devuelve para poder auditar el filtro, no para publicarla.
+ * Un lector pidió los números y tiene razón, pero la respuesta no es bajar esta
+ * guarda: es `shared/parlamento/figures`, que busca la cifra en la transcripción
+ * antes de dejarla salir. La prosa queda limpia; el número se gana su lugar.
  */
 export function stripRiskyNumbers(text: string): { text: string, removed: TopicFigure[] } {
   const removed: TopicFigure[] = []
@@ -208,15 +209,15 @@ export function gateTopics(topics: TopicDraft[], durationSeconds: number): GateR
     // La cifra se saca de su oración; el tema sobrevive.
     const explanation = stripRiskyNumbers(topic.explanation)
     const why = stripRiskyNumbers(topic.whyItMatters ?? '')
-    const figures = [...explanation.removed, ...why.removed]
     const cleaned: TopicDraft = {
       ...topic,
       explanation: explanation.text,
       whyItMatters: why.text,
-      figures,
     }
-    for (const f of figures) {
-      rejected.push(`cifra sin respaldo ("${f.value}") movida al bloque de cifras: ${topic.title}`)
+    // La cifra sale de la prosa y se registra. Al bloque de cifras entra por otro
+    // camino: `shared/parlamento/figures`, que la verifica contra la transcripción.
+    for (const f of [...explanation.removed, ...why.removed]) {
+      rejected.push(`cifra sin respaldo ("${f.value}") quitada de: ${topic.title}`)
     }
 
     // La opinión no se limpia: si el resumen califica, el resumen no sirve.

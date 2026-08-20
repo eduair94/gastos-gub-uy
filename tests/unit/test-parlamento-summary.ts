@@ -86,9 +86,9 @@ const onlyNumber = gateTopics([{ title: 'Partida', explanation: 'Se votó una pa
 assert.equal(onlyNumber.kept.length, 0)
 const presupuesto = gated.kept.find(k => k.title === 'Presupuesto')!
 assert.ok(!presupuesto.explanation.includes('1.500.000'), 'la cifra sale de la prosa')
-assert.equal(presupuesto.figures?.length, 1, 'y queda guardada aparte')
-assert.equal(presupuesto.figures![0]!.value, '1.500.000')
-assert.ok(presupuesto.figures![0]!.sentence.includes('El monto sería'), 'la cifra se guarda con su oración')
+// Y queda registrada, con su oración, para poder auditar el filtro. Lo que se
+// PUBLICA no sale de acá: pasa por shared/parlamento/figures, que lo verifica.
+assert.ok(gated.rejected.some(r => r.includes('1.500.000') && r.includes('Presupuesto')))
 assert.ok(!kept.includes('Fuera del video'), 'un minuto que no existe en el video no entra')
 assert.ok(!kept.includes(''), 'un tema vacío no entra')
 assert.ok(gated.rejected.length >= 3, 'lo descartado queda registrado para poder auditarlo')
