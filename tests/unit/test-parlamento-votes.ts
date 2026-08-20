@@ -110,11 +110,18 @@ assert.equal(isProceduralContext('Se vota el envío de la exposición escrita. 2
 assert.equal(isProceduralContext('para solicitar un cuarto intermedio de 20 minutos. Votamos la moción. 13 en 13.'), true)
 assert.equal(isProceduralContext('Que se levante la sesión, señor presidente, está votando. 64 en 65.'), true)
 
+// El asunto que escribió el modelo también es evidencia: en la sesión del 19/08 la
+// fórmula quedó fuera de la cola del contexto y estas dos entraron como decisiones.
+assert.equal(isProceduralContext('licencia del representante Walter Servini'), true)
+assert.equal(isProceduralContext('convocatoria'), true)
+assert.equal(isProceduralContext('convocándose al suplente siguiente'), true)
+
 // Y lo que sí decide algo no se toca.
 assert.equal(isProceduralContext('Se está considerando el artículo único. 27 en 27. Por tanto, queda aprobada.'), false)
 assert.equal(isProceduralContext('Lo votamos en general. 28 en 28.'), false)
 assert.equal(isProceduralContext('en el cargo de fiscal letrado departamental a la doctora Graciani. Se está considerando 20 en 20.'), false)
 assert.equal(isProceduralContext('sin perjuicio económico. Votamos el sustitutivo 28 en 28.'), false)
+assert.equal(isProceduralContext('artículos 170, 173, 174, 175, 176, 182 y 183'), false, 'desglosar artículos decide algo')
 // Sólo se mira la cola: el trámite de hace cinco minutos no es lo que se vota.
 assert.equal(
   isProceduralContext('Votamos la licencia del senador Pérez. 24 en 25. ' + 'x'.repeat(200) + ' Votamos el proyecto en general. 28 en 28.'),

@@ -604,8 +604,11 @@ async function labelVotes(moments: VoteMoment[], apiKey: string): Promise<Labell
         const scope = SCOPES.includes(row.alcance as VoteScope) ? (row.alcance as VoteScope) : "parcial";
         const subject = String(row.asunto ?? "").trim().replace(/^[«"']|[»"']$/g, "");
         // La fórmula de sala le gana al modelo: marcó como decisión de la cámara
-        // once licencias de la sesión de Diputados del 18/08.
-        target.scope = isProceduralContext(target.context.slice(-LABEL_CONTEXT_CHARS)) ? "tramite" : scope;
+        // once licencias del 18/08 y una del 19/08. El asunto cuenta como
+        // evidencia, porque a veces la fórmula queda fuera de la cola del contexto.
+        const procedural =
+          isProceduralContext(target.context.slice(-LABEL_CONTEXT_CHARS)) || isProceduralContext(subject);
+        target.scope = procedural ? "tramite" : scope;
         // Un asunto que califica o que llegó roto no se publica. El recuento sí.
         if (subject && !findOpinion(subject) && !looksMojibake(subject)) target.subject = subject;
       }

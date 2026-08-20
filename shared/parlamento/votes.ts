@@ -157,8 +157,13 @@ export function findVoteMoments(segments: VoteSegment[], chamber: string): VoteM
  * suplentes: la fórmula de Diputados es «se está votando. 68 en 69», sin decir
  * qué. Publicar once licencias como decisiones de la cámara es ruido.
  *
- * Se mira sólo la COLA del contexto, lo que se dijo pegado al recuento. Más
- * atrás está el debate anterior, que habla de otra cosa.
+ * Se mira la COLA del contexto, lo que se dijo pegado al recuento. Más atrás
+ * está el debate anterior, que habla de otra cosa.
+ *
+ * SE MIRA TAMBIÉN EL ASUNTO que escribió el modelo. En la sesión del 19/08 la
+ * fórmula quedó fuera de la cola y entraron como decisiones «licencia del
+ * representante Walter Servini» y «convocatoria». El modelo no supo clasificarlo,
+ * pero lo NOMBRÓ: ese nombre es evidencia igual que el contexto.
  *
  * La única marca ambigua es «licencia». En plural es la fórmula de sala. En
  * singular puede ser un proyecto de ley sobre licencias laborales, así que pide
@@ -168,6 +173,9 @@ const PROCEDURAL_MARKS: RegExp[] = [
   /licencias/i,
   /licencia/i,
   /suplente/i,
+  // Llamar al suplente de quien pidió licencia. Junto a una votación es siempre
+  // eso: la Cámara no convoca otra cosa en medio de una sesión.
+  /convocatoria|convoc[aá]ndose|conv[oó]quese/i,
   /cuarto intermedio/i,
   /levant(ar|amos|ada|e)\s+la\s+sesi[oó]n/i,
   /suprimir\s+la\s+lectura/i,
