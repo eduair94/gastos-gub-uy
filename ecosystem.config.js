@@ -80,7 +80,30 @@ module.exports = {
       //
       // CUIDADO: `max_memory_restart` NO es la red de contención. El monitor de
       // pm2 en el server 167 informa 0 b para todos los procesos, así que ese
-      // tope nunca dispara. El flag de V8 sí actúa siempre.
+      // tope nunca dispara.
+      //
+      // NO verifiques este flag con `/proc/<pid>/cmdline`: sale vacío igual.
+      // En modo cluster pm2 forkea al worker desde su daemon y le pasa el flag
+      // por `execArgv`, así que nunca aparece en la línea de comandos.
+      //
+      // Tampoco lo pongas en `NODE_OPTIONS`: en modo cluster no sirve. Node lee
+      // esa variable sólo cuando arranca un proceso, y un worker de cluster es
+      // un fork. Medido en el server 167 el 2026-09-04, con una app de prueba
+      // que imprime `v8.getHeapStatistics().heap_size_limit`:
+      //
+      //   node_args --max-old-space-size=333  ->  381 MB  (funciona)
+      //   NODE_OPTIONS --max-old-space-size=444 -> 2096 MB  (ignorado)
+      //   sin nada                            -> 2096 MB  (el default)
+      //
+      // Esos 2096 MB de default son los que dejaban a cada worker crecer hasta
+      // 2 GB. Para comprobar el techo, medí el RSS: con el tope puesto se
+      // estabiliza cerca de 1,2 GB, no de 1,5 GB.
+      //
+      // CUIDADO: el deploy NO aplica ningún cambio de este archivo.
+      // `deploy-dashboard.mjs` recarga por NOMBRE (`pm2 reload gastos-gub-dashboard`),
+      // y pm2 reusa la definición guardada. Para que un cambio acá tome efecto hay
+      // que correr a mano en el server 167:
+      //   pm2 delete gastos-gub-dashboard && pm2 start ecosystem.config.js --only gastos-gub-dashboard && pm2 save
       node_args: ['--max-old-space-size=1024'],
       // PM2 configuration
       watch: false,
