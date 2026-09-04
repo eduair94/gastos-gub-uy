@@ -73,6 +73,20 @@ const INDEX_SPECS: IndexSpec[] = [
     key: { 'buyer.name': 1, 'amount.primaryAmount': -1 },
     rationale: 'Buyer filter + amount sort',
   },
+  // La ficha de organismo filtra por `buyer.id`, no por nombre: el id sortea a
+  // los organismos que se escriben distinto en cada colección. Sin estos dos
+  // índices esa consulta escanea los 2,17M documentos. Medido: 13 s contra un
+  // presupuesto de 9 s por endpoint. Ver app/server/context.md.
+  {
+    name: 'buyer.id_1_amount.primaryAmount_-1',
+    key: { 'buyer.id': 1, 'amount.primaryAmount': -1 },
+    rationale: 'Buyer-id filter + amount sort (ficha de organismo, lista y $facet)',
+  },
+  {
+    name: 'buyer.id_1_sourceYear_1',
+    key: { 'buyer.id': 1, 'sourceYear': 1 },
+    rationale: 'Buyer-id filter + per-year histogram in the stats facet',
+  },
   {
     name: 'awards.suppliers.name_1_date_-1',
     key: { 'awards.suppliers.name': 1, 'date': -1 },
