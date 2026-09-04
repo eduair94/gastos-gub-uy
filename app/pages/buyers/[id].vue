@@ -99,6 +99,16 @@ const [
       limit: 8,
       sortBy: 'amount',
       sortOrder: 'desc',
+      // Esta tabla muestra ocho filas fijas y nunca pagina, así que nadie lee el
+      // total. Pedirlo costaba un `countDocuments` sobre `buyer.id`, que no
+      // tiene índice: el tope de 10.001 corta a las 10.001 COINCIDENCIAS, así
+      // que un organismo con menos adjudicaciones barría los 2,17M documentos y
+      // moría a los 4 s. Ese era el `[contracts] count failed` del log de prod.
+      count: 'false',
+      // No pidas `slim=true` acá. La proyección recorta `awards.items.unit` y
+      // `awards.items.quantity`, y el panel de categorías de esta página deriva
+      // su monto de `unit.value.amount × quantity`. Con `slim` cada total da 0 y
+      // el panel queda vacío, sin error.
     })),
     immediate: Boolean(buyerId.value),
   }),
@@ -118,9 +128,12 @@ const name = computed(() => buyer.value?.name ?? '')
  *  which the explorer would otherwise read as its list separator. */
 const explorerLink = computed(() => `/contracts?buyers=${toQueryListParam(name.value)}`)
 
-// Live breakdowns are keyed by id, not name: `buyer.id` is the field the
-// release indexes, and it sidesteps agencies whose name differs between
-// collections.
+// Live breakdowns are keyed by id, not name, because the id sidesteps agencies
+// whose name differs between collections.
+//
+// CUIDADO: `releases.buyer.id` NO tiene índice. Una consulta que lo lidera
+// escanea los 2,17M documentos. El campo indexado es `buyer.name`. Ver
+// [app/server/context.md](../../server/context.md).
 const stats = computed(() => statsRes.value?.data ?? null)
 
 /** Live spending total. Only ever a denominator here — never a headline. */
