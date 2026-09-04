@@ -9,7 +9,6 @@ export default defineEventHandler(async (event) => {
     const query = getQuery(event)
     const { year, limit = 15 } = query
 
-    console.log('Fetching pre-calculated category distribution')
 
     // Build query filter.
     //

@@ -10,7 +10,6 @@ export default defineEventHandler(async (event) => {
     const query = getQuery(event)
     const { years, groupBy = 'year' } = query
 
-    console.log('Fetching pre-calculated spending trends')
 
     // Build query filter
     const filter: Record<string, any> = {

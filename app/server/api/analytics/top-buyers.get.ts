@@ -9,7 +9,6 @@ export default defineEventHandler(async (event) => {
     const query = getQuery(event)
     const { limit = 10, year } = query
 
-    console.log('Fetching pre-calculated top buyers')
 
     // Build query filter for buyers
     const filter: Record<string, unknown> = {

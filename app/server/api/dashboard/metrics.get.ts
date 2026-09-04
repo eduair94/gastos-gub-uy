@@ -7,7 +7,6 @@ export default defineEventHandler(async (_event) => {
     // Ensure database connection
     await ensureConnection()
 
-    console.log('Fetching pre-calculated dashboard metrics')
 
     // Get the latest pre-calculated metrics
     const metrics = await DashboardMetricsModel.findOne()

@@ -10,7 +10,6 @@ export default defineEventHandler(async (event) => {
     const query = getQuery(event)
     const { limit = 10, year } = query
 
-    console.log('Fetching pre-calculated top suppliers')
 
     // Build query filter for suppliers.
     //
