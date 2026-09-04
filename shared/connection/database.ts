@@ -20,10 +20,28 @@ export function maskMongoUri(uri: string): string {
   )
 }
 
+/**
+ * Decide si el host de Mongo está en la misma caja.
+ *
+ * La compresión zlib del wire sirve cuando el driver cruza una red. Contra
+ * loopback sólo gasta CPU en los dos extremos: mongod deflata cada respuesta y
+ * Node la infla. Medido en prod el 2026-09-04, una página de 250 documentos
+ * tarda 1,61 veces más con zlib que sin él.
+ *
+ * En prod el URI apunta a `localhost`. Una máquina de desarrollo apunta a la IP
+ * del server, y ahí la compresión sí paga: son 13,7 MB por página de 3.000
+ * documentos que viajan por internet.
+ */
+export function isLocalMongoHost(uri: string): boolean {
+  const host = (uri.match(/^mongodb(?:\+srv)?:\/\/(?:[^@/]*@)?([^/?,]+)/i) || [])[1]
+  if (!host) return false
+  const hostname = host.replace(/:\d+$/, '').replace(/^\[|\]$/g, '').toLowerCase()
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+}
+
 export async function connectToDatabase() {
   // If already connected and healthy, return immediately
   if (mongoose.connection.readyState === 1) {
-    console.log('✓ Already connected to MongoDB')
     return mongoose
   }
 
@@ -111,8 +129,8 @@ export async function connectToDatabase() {
       // Read preference for better distribution
       readPreference: 'primaryPreferred' as const,
       
-      // Compression to reduce network traffic
-      compressors: ['zlib'] as ('zlib' | 'none' | 'snappy' | 'zstd')[],
+      // Comprimí el wire sólo cuando el driver cruza una red. Ver isLocalMongoHost.
+      compressors: (isLocalMongoHost(mongoUri) ? ['none'] : ['zlib']) as ('zlib' | 'none' | 'snappy' | 'zstd')[],
       
       // Application name for monitoring
       appName: 'gastos-gub-dashboard',
