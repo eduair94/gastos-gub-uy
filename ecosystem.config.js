@@ -66,6 +66,22 @@ module.exports = {
         NITRO_PORT: 3600,
         HOST: '0.0.0.0'
       },
+      // Poné techo al heap de V8.
+      //
+      // Sin este flag V8 dimensiona su old space contra la RAM total de la caja
+      // y deja crecer cada worker hasta ~2 GB. Los dos juntos comían 4 GB de los
+      // 11,9 GB del server 167, mongod terminaba con 1 GB en swap y sus
+      // agregaciones morían con MaxTimeMSExpired. Incidente del 2026-09-04.
+      //
+      // 1024 MB sale de una medición, no de una corazonada: tras un reinicio
+      // limpio cada worker se estabiliza en ~1,5 GB de RSS, y de eso sólo una
+      // parte es heap de JS. El resto es el binario, los buffers de socket y los
+      // chunks del bundle, que este flag no toca.
+      //
+      // CUIDADO: `max_memory_restart` NO es la red de contención. El monitor de
+      // pm2 en el server 167 informa 0 b para todos los procesos, así que ese
+      // tope nunca dispara. El flag de V8 sí actúa siempre.
+      node_args: ['--max-old-space-size=1024'],
       // PM2 configuration
       watch: false,
       max_memory_restart: '1G',
