@@ -99,11 +99,6 @@ module.exports = {
       // 2 GB. Para comprobar el techo, medí el RSS: con el tope puesto se
       // estabiliza cerca de 1,2 GB, no de 1,5 GB.
       //
-      // CUIDADO: el deploy NO aplica ningún cambio de este archivo.
-      // `deploy-dashboard.mjs` recarga por NOMBRE (`pm2 reload gastos-gub-dashboard`),
-      // y pm2 reusa la definición guardada. Para que un cambio acá tome efecto hay
-      // que correr a mano en el server 167:
-      //   pm2 delete gastos-gub-dashboard && pm2 start ecosystem.config.js --only gastos-gub-dashboard && pm2 save
       node_args: ['--max-old-space-size=1024'],
       // PM2 configuration
       watch: false,

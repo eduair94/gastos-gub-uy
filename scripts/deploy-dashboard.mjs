@@ -195,8 +195,19 @@ function pm2(args, { check = false } = {}) {
 
 function pm2RollingReload() {
   // Cluster reload starts replacement workers before retiring the old ones.
-  // Do NOT use --update-env: reusing the launch env preserves app/.env values.
-  const r = pm2(['reload', PM2_APP])
+  //
+  // Reload from the ECOSYSTEM FILE, not from the app name. Reloading by name
+  // reuses the process definition pm2 already has stored, so any change to
+  // ecosystem.config.js — a new `node_args`, a changed instance count — never
+  // reaches production. That is how the dashboard ran for a day with no heap
+  // cap after the cap had already been committed and deployed (2026-09-04).
+  // Verified on the 167 host: editing `node_args` and reloading from the file
+  // moves what `pm2 describe` reports; reloading by name does not.
+  //
+  // Do NOT add --update-env. That flag is a different thing: it re-reads the
+  // SHELL environment, and reusing the launch env is what preserves app/.env
+  // values. Reloading from the file re-reads the config, not the shell.
+  const r = pm2(['reload', ECOSYSTEM, '--only', PM2_APP])
   if (r.status === 0) return
 
   // Starting a genuinely missing app is safe. If the app exists, however, a
