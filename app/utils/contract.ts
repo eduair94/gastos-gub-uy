@@ -309,28 +309,55 @@ export function statusTagClass(status?: string | null): string {
  * contradicting the government's own page. Reading in UTC returns the
  * date the source actually recorded.
  */
+/**
+ * Formateadores memoizados. NUNCA construyas un `Intl.DateTimeFormat` por llamada.
+ *
+ * Construirlo resuelve el locale y arma un formateador ICU, que cuesta órdenes
+ * de magnitud más que formatear una fecha con uno ya armado. Una tabla del
+ * explorador formatea una fecha por fila.
+ *
+ * El mismo defecto en `app/utils/money.ts` era el 21% del CPU de un worker de
+ * producción; ver el perfil del 05-09-2026 y `tests/unit/test-money-formatters.ts`.
+ *
+ * Las tres formas son fijas, así que alcanzan tres constantes: no hace falta
+ * cachear por clave. `timeZone: 'UTC'` es obligatorio en las tres — leelo arriba.
+ */
+const DATE_SHORT = new Intl.DateTimeFormat('es-UY', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
+const DATE_LONG = new Intl.DateTimeFormat('es-UY', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
+const DATE_TIME = new Intl.DateTimeFormat('es-UY', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+  timeZone: 'UTC',
+})
+
 export function formatDate(d?: Date | string | null): string {
   if (!d) return '—'
   const date = d instanceof Date ? d : new Date(d)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat('es-UY', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(date)
+  return DATE_SHORT.format(date)
 }
 
 export function formatDateLong(d?: Date | string | null): string {
   if (!d) return '—'
   const date = d instanceof Date ? d : new Date(d)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat('es-UY', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(date)
+  return DATE_LONG.format(date)
 }
 
 /**
@@ -360,15 +387,7 @@ export function formatDateTime(d?: Date | string | null): string {
   const date = d instanceof Date ? d : new Date(d)
   if (Number.isNaN(date.getTime())) return '—'
   if (!hasTimeOfDay(date)) return formatDate(date)
-  return new Intl.DateTimeFormat('es-UY', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-  }).format(date)
+  return DATE_TIME.format(date)
 }
 
 /**
