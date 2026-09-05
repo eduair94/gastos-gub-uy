@@ -293,13 +293,47 @@ function safeRename(from, to) {
 // V8's default old-space ceiling (~2GB on the 167 box, independent of the box's
 // actual 11GB) OOM-killed the Nitro server build outright — attempt 5/5, staging
 // bundle missing, live site untouched by the guarantee above but no deploy went
-// out either. Give the build half the machine's RAM, capped so a small dev box
-// doesn't get told to reserve more than it has; 2048 MB is the floor a build has
-// ever needed here. An operator's own NODE_OPTIONS (if it already sets
+// out either. So the build needs more than the default. It must not get half the
+// machine, though: the build runs ON the production box, beside the very workers
+// it is replacing.
+//
+// The old ceiling was 6144 MB, and half of the 167 box resolves to 5980 MB. The
+// site does not have that to give. Measured during the 2026-09-04 deploys, the
+// build reached 3.9 GB of RSS and a full core, the box went into swap, and the
+// site answered 502 for the ~4 minutes the build lasted — while the local worker
+// still answered 200. Nothing was wedged; the box was simply oversubscribed.
+//
+// 4096 MB is twice the ceiling that actually failed, and it leaves the two
+// capped workers (1 GB of heap each) plus mongod's 2 GB WiredTiger cache room to
+// keep serving. Raise it only with a measurement, and check `free -m` on 167
+// first. An operator's own NODE_OPTIONS (if it already sets
 // --max-old-space-size) wins — this only fills the gap when nothing was asked for.
 function buildHeapMb() {
   const halfSystemMb = Math.floor(totalmem() / 1024 / 1024 / 2)
-  return Math.max(2048, Math.min(6144, halfSystemMb))
+  return Math.max(2048, Math.min(4096, halfSystemMb))
+}
+
+// Ceder CPU y disco a los workers que están sirviendo.
+//
+// El build compite por 6 cores con dos workers de SSR que ya usan un core cada
+// uno. `nice` no lo hace más lento cuando la caja está libre: sólo lo manda al
+// fondo de la cola cuando hay con quién competir, que es exactamente el caso
+// durante un deploy. `ionice -c3` hace lo mismo con el disco, que importa porque
+// el build escribe cientos de MB en .output-next mientras mongod lee sus índices.
+//
+// Los dos son opcionales a propósito: si el binario no está, o no es Linux, el
+// build corre igual sin prefijo.
+function buildLauncher(buildNode) {
+  if (IS_WIN) return { cmd: buildNode, prefix: [] }
+  const prefix = []
+  if (hasBin('nice')) prefix.push('nice', '-n', '19')
+  if (hasBin('ionice')) prefix.push('ionice', '-c3')
+  if (!prefix.length) return { cmd: buildNode, prefix: [] }
+  return { cmd: prefix[0], prefix: [...prefix.slice(1), buildNode] }
+}
+
+function hasBin(name) {
+  return spawnSync('sh', ['-c', `command -v ${name}`], { encoding: 'utf8' }).status === 0
 }
 
 function buildEnv() {
@@ -322,7 +356,9 @@ function build(buildNode) {
     log(`build attempt ${attempt}/${BUILD_RETRIES} (node ${buildNode === process.execPath ? process.versions.node : buildNode})`)
     rmrf(NEXT)
     rmrf(NUXT_CACHE)
-    const r = spawnSync(buildNode, [NUXT_BIN, 'build'], {
+    const { cmd, prefix } = buildLauncher(buildNode)
+    if (prefix.length) log(`build priority: ${cmd} ${prefix.slice(0, -1).join(' ')} (cede CPU y disco a los workers)`)
+    const r = spawnSync(cmd, [...prefix, NUXT_BIN, 'build'], {
       cwd: APP,
       stdio: 'inherit',
       env: buildEnv(),
