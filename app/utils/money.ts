@@ -35,6 +35,37 @@ const CURRENCY_SYMBOL: Record<string, string> = {
 }
 
 /**
+ * Formateadores memoizados. NUNCA construyas un `Intl.NumberFormat` por llamada.
+ *
+ * Construirlo resuelve el locale y arma un formateador ICU, que cuesta órdenes
+ * de magnitud más que formatear un número con uno ya armado. Este archivo lo
+ * hacía siete veces, una por cada sitio de llamada.
+ *
+ * Medido con un perfil de CPU sobre un worker de producción el 05-09-2026:
+ * `formatNumber` sola era el 20% del tiempo de CPU del proceso, el consumo más
+ * grande de todo el perfil. Una página del explorador formatea un número por
+ * celda, así que un render son cientos de llamadas.
+ *
+ * La caché no crece sin control: las claves salen de literales del código y de
+ * un único ternario, así que el máximo son seis entradas.
+ */
+const FORMATTERS = new Map<string, Intl.NumberFormat>()
+
+function numberFormat(max?: number, min?: number): Intl.NumberFormat {
+  const key = `${max ?? ''}:${min ?? ''}`
+  const cached = FORMATTERS.get(key)
+  if (cached) return cached
+
+  const opts: Intl.NumberFormatOptions = {}
+  if (max !== undefined) opts.maximumFractionDigits = max
+  if (min !== undefined) opts.minimumFractionDigits = min
+
+  const created = new Intl.NumberFormat('es-UY', opts)
+  FORMATTERS.set(key, created)
+  return created
+}
+
+/**
  * Formats an amount the way a Uruguayan reader expects: 1.234.567,89.
  * `compact` gives the short form used in dense tables and tiles.
  */
@@ -50,37 +81,28 @@ export function formatMoney(
   if (opts.compact && Math.abs(amount) >= 1_000_000) {
     const millions = amount / 1_000_000
     if (Math.abs(amount) >= 1_000_000_000) {
-      return `${symbol} ${new Intl.NumberFormat('es-UY', {
-        maximumFractionDigits: 2,
-        minimumFractionDigits: 0,
-      }).format(amount / 1_000_000_000)} mil M`
+      return `${symbol} ${numberFormat(2, 0).format(amount / 1_000_000_000)} mil M`
     }
-    return `${symbol} ${new Intl.NumberFormat('es-UY', {
-      maximumFractionDigits: millions >= 100 ? 0 : 1,
-      minimumFractionDigits: 0,
-    }).format(millions)} M`
+    return `${symbol} ${numberFormat(millions >= 100 ? 0 : 1, 0).format(millions)} M`
   }
 
-  return `${symbol} ${new Intl.NumberFormat('es-UY', {
-    maximumFractionDigits: opts.decimals ? 2 : 0,
-    minimumFractionDigits: opts.decimals ? 2 : 0,
-  }).format(amount)}`
+  return `${symbol} ${numberFormat(opts.decimals ? 2 : 0, opts.decimals ? 2 : 0).format(amount)}`
 }
 
 /** Plain integer formatting (contract counts, item counts). */
 export function formatNumber(n?: number | null): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return '—'
-  return new Intl.NumberFormat('es-UY').format(n)
+  return numberFormat().format(n)
 }
 
 /** Compact integer for tiles: 2.171.928 -> "2,17 M" */
 export function formatCount(n?: number | null): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return '—'
   if (Math.abs(n) >= 1_000_000) {
-    return `${new Intl.NumberFormat('es-UY', { maximumFractionDigits: 2 }).format(n / 1_000_000)} M`
+    return `${numberFormat(2).format(n / 1_000_000)} M`
   }
   if (Math.abs(n) >= 10_000) {
-    return `${new Intl.NumberFormat('es-UY', { maximumFractionDigits: 1 }).format(n / 1000)} mil`
+    return `${numberFormat(1).format(n / 1000)} mil`
   }
-  return new Intl.NumberFormat('es-UY').format(n)
+  return numberFormat().format(n)
 }
