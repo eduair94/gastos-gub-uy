@@ -65,9 +65,15 @@ const BUILD_RETRIES = 5
  * verificación del ROLLBACK es la última línea de defensa: se le da más tiempo que al deploy,
  * porque si ésa se declara enferma no queda nada atrás.
  */
+// 06-09-2026: dos deploys seguidos fallaron acá con 120s, y el rollback con 180s, sin que el
+// build tuviera nada malo. La causa era congestión: los workers arrancaban en frío mientras les
+// entraban cientos de pedidos encolados, y tardaban más que la ventana en contestar la primera
+// sonda. Con el limitador de renders (app/server/middleware/ssrConcurrency.ts) el arranque deja
+// de competir contra la avalancha, pero la ventana igual tiene que tolerar un arranque lento:
+// si se declara enfermo un build sano, el rollback tampoco levanta y el sitio queda caído.
 const HEALTH_PROBE_TIMEOUT_MS = 20_000
-const HEALTH_TIMEOUT_MS = 120_000
-const ROLLBACK_TIMEOUT_MS = 180_000
+const HEALTH_TIMEOUT_MS = 180_000
+const ROLLBACK_TIMEOUT_MS = 240_000
 const SMOKE_TIMEOUT_MS = 60_000
 const STALE_LOCK_MS = 30 * 60 * 1000
 
