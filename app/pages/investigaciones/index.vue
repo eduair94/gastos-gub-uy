@@ -9,6 +9,7 @@
  * hoping it matched the last one. Add an entry to `SERIES` instead.
  */
 import { invContent } from '~/data/investigaciones'
+import { sorianoCard } from '~/data/investigaciones-soriano'
 import { srCard } from '~/data/investigaciones-suicidios-recursos'
 
 const { t, locale } = useI18n()
@@ -35,6 +36,7 @@ const readMore = computed(() => c.value.readMore ?? t('common.viewDetail'))
 
 // Esta tarjeta vive en su propio módulo y no en `investigaciones.ts`: otra sesión tiene cambios sin commitear en ese archivo y no se barren.
 const cardSuicidiosRecursos = computed(() => srCard(locale.value))
+const cardSoriano = computed(() => sorianoCard(locale.value))
 
 /** The published series, in the order the hub argues them. One entry per card. */
 const series = computed(() => [
@@ -56,6 +58,7 @@ const series = computed(() => [
     cards: [
       { path: '/investigaciones/intendencia-montevideo', emoji: '🏙️', ...c.value.cardIm },
       { path: '/investigaciones/tv-ciudad', emoji: '📺', ...c.value.cardTvciudad },
+      { path: '/investigaciones/soriano-talleres', emoji: '🔧', ...cardSoriano.value },
     ],
   },
   {
