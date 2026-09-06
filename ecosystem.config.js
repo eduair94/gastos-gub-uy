@@ -99,10 +99,28 @@ module.exports = {
       // 2 GB. Para comprobar el techo, medí el RSS: con el tope puesto se
       // estabiliza cerca de 1,2 GB, no de 1,5 GB.
       //
-      node_args: ['--max-old-space-size=1024'],
+      // 1024 ERA MUY POCO Y TIRÓ PRODUCCIÓN ABAJO el 06-09-2026. Con ese techo
+      // los dos workers arrancaban, escuchaban en :3600, conectaban a Mongo y
+      // después quemaban 145% de CPU cada uno sin contestar un solo pedido, ni
+      // siquiera `/robots.txt`. Se acumularon 4.603 sockets en CLOSE-WAIT. El
+      // deploy falló el health-check y el rollback al build anterior falló
+      // igual, que es la prueba de que no era el código.
+      //
+      // La comparación que lo cierra: el MISMO build, arrancado a mano con
+      // `--max-old-space-size=2048`, sirvió `/robots.txt` en 19 ms y el home en
+      // 0,52 s. Es GC en espiral contra un techo demasiado bajo, no una
+      // regresión. Con 1792 los workers estabilizan cerca de 570 MB de RSS.
+      //
+      // Si hay que volver a bajarlo, medí el heap real primero:
+      // `v8.getHeapStatistics().heap_size_limit` dentro de un worker, y el RSS
+      // con `ps -eo pid,pcpu,rss,args` — el monitor de pm2 informa 0b acá.
+      node_args: ['--max-old-space-size=1792'],
       // PM2 configuration
       watch: false,
-      max_memory_restart: '1G',
+      // Acompaña al techo de heap: con 1792 el RSS pasa de 1 GB sin ser un
+      // problema. El monitor de pm2 está roto en el 167 y nunca dispara esto,
+      // pero dejarlo en 1G contradice al flag de arriba.
+      max_memory_restart: '2G',
       time: true,
       // Auto restart configuration
       restart_delay: 4000,
