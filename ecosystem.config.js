@@ -111,10 +111,20 @@ module.exports = {
       // 0,52 s. Es GC en espiral contra un techo demasiado bajo, no una
       // regresión. Con 1792 los workers estabilizan cerca de 570 MB de RSS.
       //
+      // 1792 TAMPOCO ALCANZÓ. Medido el mismo día bajo tráfico real: los dos
+      // workers treparon a 1.735-1.743 MB, se clavaron contra ese techo y
+      // dejaron de contestar otra vez. El techo que aguanta es 2560.
+      //
+      // NO es una fuga. Una instancia aislada del mismo build, golpeada endpoint
+      // por endpoint, sube 21 MB por render y se estabiliza en 247 MB. Los 1,7 GB
+      // salen de la CONCURRENCIA: ~100 conexiones simultáneas × el costo de un
+      // render SSR. El perfil de 45 s lo confirma — 16% del CPU es GC, y el
+      // driver de mongodb no llega al 1%. La base no es el cuello; el render sí.
+      //
       // Si hay que volver a bajarlo, medí el heap real primero:
       // `v8.getHeapStatistics().heap_size_limit` dentro de un worker, y el RSS
       // con `ps -eo pid,pcpu,rss,args` — el monitor de pm2 informa 0b acá.
-      node_args: ['--max-old-space-size=1792'],
+      node_args: ['--max-old-space-size=2560'],
       // PM2 configuration
       watch: false,
       // Acompaña al techo de heap: con 1792 el RSS pasa de 1 GB sin ser un
