@@ -1,5 +1,6 @@
 import { defineEventHandler, setResponseHeader } from 'h3'
 import { createSemaphore } from '../utils/ssr-semaphore'
+import { releaseSlotWhenDone } from '../utils/ssr-slot'
 
 /**
  * Limita cuántas páginas se renderizan a la vez, y descarta el resto.
@@ -28,7 +29,13 @@ import { createSemaphore } from '../utils/ssr-semaphore'
  *     pasa por la red y no tiene `remoteAddress`. Estrangular eso trabaría el render que ya tiene
  *     el lugar, contra sí mismo.
  *
- * CÓMO SE AJUSTA. Las tres variables se leen del entorno al arrancar. El valor por defecto de
+ * EL LUGAR SIEMPRE VUELVE, y ese es el punto delicado. El 10-09-2026 el limitador tiró abajo el
+ * sitio él solo: contestaba 503 en toda página con la caja libre, dos workers sanos y 13 sockets
+ * abiertos. Perdía un lugar por cada cliente que se cansaba esperando en la cola. Con seis, el
+ * worker no servía una página más y no se recuperaba nunca. La devolución vive ahora en
+ * `../utils/ssr-slot.ts`, con prueba propia. No la vuelvas a cablear a mano acá.
+ *
+ * CÓMO SE AJUSTA. Las cuatro variables se leen del entorno al arrancar. El valor por defecto de
  * `SSR_MAX_INFLIGHT` es 6: con dos workers son 12 renders simultáneos, unos 250 MB de pico, que
  * entra cómodo en el techo de 2560 MB por worker.
  */
@@ -36,6 +43,8 @@ import { createSemaphore } from '../utils/ssr-semaphore'
 const MAX_INFLIGHT = Number(process.env.SSR_MAX_INFLIGHT || 6)
 const MAX_QUEUE = Number(process.env.SSR_MAX_QUEUE || 48)
 const QUEUE_TIMEOUT_MS = Number(process.env.SSR_QUEUE_TIMEOUT_MS || 8000)
+/** Tope duro de un render. Pasado eso el lugar vuelve igual, aunque el render siga. */
+const MAX_HOLD_MS = Number(process.env.SSR_MAX_HOLD_MS || 30000)
 
 /** Extensiones que sirve Nitro sin renderizar nada. */
 const ASSET_RE = /\.(?:js|mjs|css|map|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|txt|xml|json|webmanifest|pdf)$/i
@@ -66,13 +75,8 @@ export default defineEventHandler(async (event) => {
     return
   }
 
-  // El lugar se libera cuando la respuesta termina, se corte como se corte.
-  let released = false
-  const done = () => {
-    if (released) return
-    released = true
-    sem.release()
-  }
-  event.node.res.once('close', done)
-  event.node.res.once('finish', done)
+  // El lugar vuelve al semáforo cuando el pedido termina, se corte como se corte.
+  // Ver app/server/utils/ssr-slot.ts: cablear esto a mano acá perdía un lugar por cada cliente
+  // que se cansaba en la cola, y con seis el worker dejaba de servir páginas para siempre.
+  releaseSlotWhenDone(event.node.req, event.node.res, () => sem.release(), MAX_HOLD_MS)
 })
