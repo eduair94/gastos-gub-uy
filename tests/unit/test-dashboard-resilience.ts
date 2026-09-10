@@ -20,7 +20,14 @@ assert.ok(dashboard, 'dashboard pm2 definition must exist')
 assert.equal(dashboard.instances, 2, 'dashboard must retain two redundant workers')
 
 const deploy = readFileSync(join(root, 'scripts/deploy-dashboard.mjs'), 'utf8')
-assert.match(deploy, /pm2\(\['reload', PM2_APP\]\)/, 'deploy must use pm2 rolling reload')
+// Recargá desde el ECOSYSTEM FILE, no por nombre. Recargar por nombre reusa la definición que
+// pm2 ya tiene guardada, así que un `node_args` nuevo nunca llega a producción. Ver el comentario
+// de pm2RollingReload() en scripts/deploy-dashboard.mjs.
+assert.match(
+  deploy,
+  /pm2\(\['reload', ECOSYSTEM, '--only', PM2_APP\]\)/,
+  'deploy must use pm2 rolling reload from the ecosystem file',
+)
 assert.doesNotMatch(deploy, /pm2\(\['stop', PM2_APP\]/, 'deploy must never stop every dashboard worker')
 assert.match(
   deploy,
